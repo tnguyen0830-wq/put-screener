@@ -1,0 +1,229 @@
+{
+  "_comment": "Snapshot tu Earnings Whispers, lay ngay 2026-08-19 qua phien dang nhap Chrome cua nguoi dung (endpoint /api/getstocksdata/<ticker>). confirmed=true nghia la truong confirmDate cua ho khac null, tuc cong ty da cong bo lich. KHONG tu dong cap nhat duoc: scripts/earnings-sync.js chi doc file nay neu co, con lay moi thi phai chay lai qua trinh duyet. Ngay da qua va ETF da bi loai khoi file.",
+  "dates": {
+    "AAPL": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "ABBV": {
+      "date": "2026-10-30",
+      "confirmed": false
+    },
+    "AMZN": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "BRK/B": {
+      "date": "2026-11-09",
+      "confirmed": false
+    },
+    "CAT": {
+      "date": "2026-11-03",
+      "confirmed": false
+    },
+    "COP": {
+      "date": "2026-11-05",
+      "confirmed": false
+    },
+    "COST": {
+      "date": "2026-09-24",
+      "confirmed": true
+    },
+    "CVX": {
+      "date": "2026-10-30",
+      "confirmed": false
+    },
+    "DUK": {
+      "date": "2026-11-03",
+      "confirmed": false
+    },
+    "EQIX": {
+      "date": "2026-10-28",
+      "confirmed": false
+    },
+    "FCX": {
+      "date": "2026-10-22",
+      "confirmed": false
+    },
+    "FSLR": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "GE": {
+      "date": "2026-10-26",
+      "confirmed": false
+    },
+    "GOOGL": {
+      "date": "2026-10-21",
+      "confirmed": false
+    },
+    "INTC": {
+      "date": "2026-10-22",
+      "confirmed": false
+    },
+    "JNJ": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "JPM": {
+      "date": "2026-10-14",
+      "confirmed": false
+    },
+    "KO": {
+      "date": "2026-10-27",
+      "confirmed": false
+    },
+    "KULR": {
+      "date": "2026-11-12",
+      "confirmed": false
+    },
+    "LCID": {
+      "date": "2026-11-03",
+      "confirmed": false
+    },
+    "LIN": {
+      "date": "2026-10-30",
+      "confirmed": false
+    },
+    "LLY": {
+      "date": "2026-11-04",
+      "confirmed": false
+    },
+    "LYV": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "META": {
+      "date": "2026-10-28",
+      "confirmed": false
+    },
+    "MS": {
+      "date": "2026-10-16",
+      "confirmed": false
+    },
+    "MSFT": {
+      "date": "2026-10-28",
+      "confirmed": false
+    },
+    "MSTR": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "NEE": {
+      "date": "2026-10-23",
+      "confirmed": false
+    },
+    "NEM": {
+      "date": "2026-10-22",
+      "confirmed": false
+    },
+    "NFLX": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "NIO": {
+      "date": "2026-08-31",
+      "confirmed": false
+    },
+    "NVDA": {
+      "date": "2026-08-26",
+      "confirmed": true
+    },
+    "O": {
+      "date": "2026-11-04",
+      "confirmed": false
+    },
+    "OXY": {
+      "date": "2026-11-04",
+      "confirmed": false
+    },
+    "PLD": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "PYPL": {
+      "date": "2026-10-27",
+      "confirmed": false
+    },
+    "QCOM": {
+      "date": "2026-10-28",
+      "confirmed": false
+    },
+    "RBLX": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "RIVN": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "RKLB": {
+      "date": "2026-11-09",
+      "confirmed": false
+    },
+    "ROKU": {
+      "date": "2026-11-05",
+      "confirmed": false
+    },
+    "RTX": {
+      "date": "2026-10-22",
+      "confirmed": false
+    },
+    "SBUX": {
+      "date": "2026-10-28",
+      "confirmed": false
+    },
+    "SLV": {
+      "date": "2026-08-31",
+      "confirmed": false
+    },
+    "SNOW": {
+      "date": "2026-09-02",
+      "confirmed": true
+    },
+    "SO": {
+      "date": "2026-10-29",
+      "confirmed": false
+    },
+    "T": {
+      "date": "2026-10-21",
+      "confirmed": false
+    },
+    "TSLA": {
+      "date": "2026-10-21",
+      "confirmed": false
+    },
+    "TSM": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "UAL": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "UNH": {
+      "date": "2026-10-19",
+      "confirmed": false
+    },
+    "V": {
+      "date": "2026-10-27",
+      "confirmed": false
+    },
+    "VFS": {
+      "date": "2026-09-14",
+      "confirmed": false
+    },
+    "WELL": {
+      "date": "2026-10-26",
+      "confirmed": false
+    },
+    "WMT": {
+      "date": "2026-08-20",
+      "confirmed": true
+    },
+    "XOM": {
+      "date": "2026-10-30",
+      "confirmed": false
+    }
+  }
+}

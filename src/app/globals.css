@@ -1,0 +1,1384 @@
+/* Bảng màu định nghĩa hai lần: :root là sáng, [data-theme="dark"] là tối.
+   Mọi thứ khác trong file chỉ dùng biến, nên đổi theme không cần đụng tới rule
+   nào khác. Người dùng chưa chọn thì theo prefers-color-scheme của hệ điều
+   hành; chọn rồi thì thuộc tính data-theme thắng. */
+:root {
+  --paper: #f4f6f9;
+  --card: #ffffff;
+  --ink: #0f1419;
+  --muted: #5f6b7a;
+  --label: #35425a;
+  --ticker: #0f6ba8;
+  --gold: #8a6a12;
+  --navy: #12315e;
+  --on-navy: #ffffff;
+  --title: #2b4fe0;
+  --rule: #d8dee7;
+  --rule-soft: #eaeef3;
+  --hover: #f1f4f8;
+  --credit: #0e7a58;
+  --credit-tint: #dcf1e7;
+  --risk: #b93a24;
+  --risk-tint: #fbe4de;
+  --warn: #9a6400;
+  --warn-tint: #fdf0d8;
+  --stamp: #2b4fe0;
+  /* Ô trung tính trên bản đồ nhiệt; đủ tối để chữ trắng còn đọc được. */
+  --heat-flat: #767f8b;
+
+  --shadow-1: 0 1px 2px rgba(15, 20, 25, 0.06), 0 1px 3px rgba(15, 20, 25, 0.04);
+  --shadow-2: 0 2px 6px rgba(15, 20, 25, 0.08), 0 8px 24px rgba(15, 20, 25, 0.06);
+
+  /* Hệ font lấy theo Tạp Chí Phố Wall: Be Vietnam Pro cho chữ (font thiết kế
+     riêng cho tiếng Việt, dấu không bị chạm nhau), Inter cho số và giao diện.
+     Họ không dùng monospace cho số mà dùng Inter + tabular-nums — chữ số vẫn
+     thẳng cột nhưng không khô như máy đánh chữ. */
+  --display: 'Be Vietnam Pro', system-ui, sans-serif;
+  --body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --data: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --ease: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --paper: #0d1117;
+  --card: #161c24;
+  --ink: #e4ecf4;
+  --muted: #8b98a8;
+  --rule: #2c343f;
+  --label: #bdc9d9;
+  --ticker: #9fd7ff;
+  --gold: #e8c874;
+  --navy: #1b4587;
+  --on-navy: #eef3fb;
+  --title: #7d9bff;
+  --rule-soft: #1d242d;
+  --hover: #1c232c;
+  /* Xanh và đỏ phải sáng hơn bản sáng, nếu không sẽ chìm vào nền tối. */
+  --credit: #3fbc8c;
+  --credit-tint: #102c20;
+  --risk: #f27054;
+  --risk-tint: #351711;
+  --warn: #e0a13a;
+  --warn-tint: #3a2c10;
+  --stamp: #7d9bff;
+  --heat-flat: #59616c;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  color-scheme: dark;
+}
+
+/* Chưa chọn tay thì theo hệ điều hành. :not([data-theme]) để lựa chọn sáng của
+   người dùng không bị máy tối đè lên. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --paper: #0d1117;
+    --card: #161c24;
+    --ink: #e4ecf4;
+    --muted: #8b98a8;
+    --rule: #2c343f;
+  --label: #bdc9d9;
+  --ticker: #9fd7ff;
+  --gold: #e8c874;
+  --navy: #1b4587;
+  --on-navy: #eef3fb;
+  --title: #7d9bff;
+    --rule-soft: #1d242d;
+    --hover: #1c232c;
+    --credit: #3fbc8c;
+    --credit-tint: #102c20;
+    --risk: #f27054;
+    --risk-tint: #351711;
+  --warn: #e0a13a;
+  --warn-tint: #3a2c10;
+    --stamp: #7d9bff;
+    --heat-flat: #59616c;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
+}
+
+/* ---------- header ---------- */
+
+.rail {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--card);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rail h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.rail .sub {
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.rail .spacer {
+  flex: 1;
+}
+
+.pill {
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  text-transform: uppercase;
+}
+
+.pill.live {
+  color: var(--credit);
+  border-color: var(--credit);
+  background: var(--credit-tint);
+}
+
+.pill.cold {
+  color: var(--risk);
+  border-color: var(--risk);
+  background: var(--risk-tint);
+}
+
+/* ---------- shell ---------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: 296px minmax(0, 1fr);
+  gap: 22px;
+  padding: 22px 24px 80px;
+  align-items: start;
+}
+
+@media (max-width: 940px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+}
+
+.panel-head {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--muted);
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.sticky-col {
+  position: sticky;
+  top: 76px;
+}
+
+/* ---------- form ---------- */
+
+.field {
+  margin-bottom: 13px;
+}
+
+.field > label {
+  display: block;
+  font-family: var(--data);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.field input[type='number'],
+.field select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-family: var(--data);
+  font-size: 13px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-size: 13px;
+}
+
+.run {
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px;
+  background: var(--ink);
+  color: var(--card);
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.run:hover:not(:disabled) {
+  background: var(--stamp);
+}
+
+.run:disabled {
+  opacity: 0.45;
+  cursor: progress;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 10px 0 0;
+  line-height: 1.45;
+}
+
+/* ---------- progress ---------- */
+
+.bar {
+  height: 3px;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  background: var(--stamp);
+  transition: width 0.25s ease;
+}
+
+/* ---------- table ---------- */
+
+.tablewrap {
+  overflow-x: auto;
+}
+
+table.results {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--data);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+table.results th {
+  text-align: right;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+table.results th:first-child,
+table.results th.left {
+  text-align: left;
+}
+
+table.results td {
+  padding: 9px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--rule-soft);
+  white-space: nowrap;
+}
+
+table.results td.left {
+  text-align: left;
+}
+
+table.results tbody tr:hover {
+  background: var(--hover);
+}
+
+.sym {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.sub2 {
+  display: block;
+  font-family: var(--body);
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.good {
+  color: var(--credit);
+}
+
+.bad {
+  color: var(--risk);
+}
+
+.flag {
+  display: inline-block;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  margin-left: 4px;
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  background: var(--warn-tint);
+  border-radius: var(--r-sm);
+  vertical-align: 1px;
+}
+
+.scorecell {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+tr.row-in {
+  animation: rowin 0.28s ease both;
+}
+
+@keyframes rowin {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  tr.row-in {
+    animation: none;
+  }
+  .bar > i {
+    transition: none;
+  }
+}
+
+.empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.disclaimer {
+  max-width: 720px;
+  margin: 26px auto 0;
+  padding: 0 24px;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---------- detail drawer ---------- */
+
+table.results tbody tr.clickable {
+  cursor: pointer;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 21, 27, 0.32);
+  z-index: 30;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 100vw);
+  background: var(--card);
+  border-left: 1px solid var(--rule);
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  animation: slidein 0.22s ease both;
+}
+
+@keyframes slidein {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
+}
+
+.drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer-head .x {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.drawer-head .x:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.drawer-body {
+  overflow-y: auto;
+  padding: 16px 18px 40px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 10px;
+  margin: 0 0 14px;
+}
+
+.stats dt {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font-family: var(--data);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.assigned {
+  background: var(--paper);
+  border-left: 2px solid var(--ink);
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.warnlist {
+  margin: 0 0 16px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--warn);
+}
+
+.dsec {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 22px 0 9px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.tv-wrap {
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.tv-credit {
+  display: block;
+  padding: 5px 8px;
+  font-family: var(--data);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-decoration: none;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.cap {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 9px 0 0;
+}
+
+.linkrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.linkrow a {
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.linkrow a:hover {
+  border-color: var(--stamp);
+  color: var(--stamp);
+}
+
+.gexstats {
+  grid-template-columns: repeat(4, 1fr);
+  margin: 10px 0 0;
+}
+
+.gexstats dd {
+  font-size: 13px;
+}
+
+/* ---------- watchlist ---------- */
+
+.leftcol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.segmented button {
+  padding: 8px 6px;
+  background: var(--paper);
+  border: none;
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--rule);
+}
+
+.segmented button.on {
+  background: var(--ink);
+  color: var(--card);
+}
+
+.saving {
+  font-family: var(--body);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--stamp);
+}
+
+.addrow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+
+.addrow input {
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-family: var(--data);
+  font-size: 13px;
+  min-width: 0;
+}
+
+.addrow button {
+  padding: 7px 12px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--card);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 12px;
+}
+
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  font-family: var(--data);
+  font-size: 11.5px;
+  background: var(--paper);
+}
+
+.chips button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.chips button:hover {
+  color: var(--risk);
+}
+
+.headacts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wl {
+  border: 1px solid var(--rule);
+  background: none;
+  border-radius: var(--r-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.wl:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.wl.on {
+  border-color: var(--credit);
+  background: var(--credit-tint);
+  color: var(--credit);
+}
+
+/* ---------------- tab phân tích mã ---------------- */
+
+.rail .tabs {
+  margin-left: 18px;
+}
+
+.shell.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Hàng mã bấm nhanh, gọn hơn .chips của watchlist vì chỉ để nhảy mã. */
+.chips.quick {
+  margin: 10px 0 4px;
+}
+.chips.quick button {
+  padding: 3px 9px;
+  font-size: 11.5px;
+}
+.chips.quick button.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.pxhead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 18px 0 10px;
+}
+.pxhead .pxbig {
+  font: 600 30px/1 var(--data);
+  letter-spacing: -0.02em;
+}
+.pxhead .spacer {
+  flex: 1;
+}
+
+/* Thanh biên độ 52 tuần: vạch đứng cho biết giá hiện tại nằm đâu trong dải. */
+.r52 {
+  margin: 4px 0 22px;
+}
+.r52bar {
+  position: relative;
+  height: 6px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--rule), var(--muted));
+}
+.r52bar > i {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+.r52ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font: 400 11px/1.4 var(--data);
+  color: var(--muted);
+}
+
+/* Chú thích ngắn cạnh mỗi số liệu, ví dụ "quá mua" hay "+5.7%". */
+.anote {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Danh sách tin trong tab phân tích mã. */
+.newslist {
+  list-style: none;
+  margin: 12px 0 6px;
+  padding: 0;
+}
+.newslist li {
+  padding: 9px 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.newslist li:first-child {
+  border-top: 0;
+}
+.newslist a {
+  display: block;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-decoration: none;
+}
+.newslist a:hover {
+  text-decoration: underline;
+}
+.newslist .nmeta {
+  display: block;
+  margin-top: 3px;
+  font: 400 11px/1.4 var(--data);
+  color: var(--muted);
+}
+
+/* ---------------- tab bản đồ nhiệt ---------------- */
+
+.hmranges {
+  margin: 4px 0 12px;
+}
+
+.hmlegend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font: 400 11px/1 var(--data);
+  color: var(--muted);
+}
+.hmlegend > i {
+  width: 130px;
+  height: 8px;
+  border-radius: var(--r-sm);
+}
+.hmlegend .spacer {
+  flex: 1;
+}
+
+/* Bản đồ tự sơn nền tối bên trong SVG nên khung ngoài chỉ cần viền mảnh;
+   đặt nền trùng màu bản đồ để không thấy viền sáng lòi ra ở góc bo. */
+.hmwrap {
+  border: 1px solid var(--rule);
+  background: #14161c;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* Dòng chi tiết khi rê chuột: cao cố định để bản đồ không nhảy lên xuống. */
+.hmhover {
+  min-height: 18px;
+  margin: 8px 0 2px;
+  font: 400 11.5px/1.5 var(--data);
+  color: var(--muted);
+}
+
+/* .segmented mặc định là lưới 2 cột (dùng cho nút gạt S&P 500 / Watchlist).
+   Thanh tab và bộ chọn khung thời gian cần một hàng ngang, số cột tự co. */
+.rail .tabs,
+.hmranges {
+  display: flex;
+  margin-bottom: 0;
+}
+.rail .tabs button,
+.hmranges button {
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+.hmranges {
+  margin: 4px 0 12px;
+  width: max-content;
+}
+
+/* Bảng nâng/hạ bậc của giới phân tích trong tab phân tích mã. */
+.ratings {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 6px;
+  font: 400 11.5px/1.5 var(--data);
+}
+.ratings th {
+  text-align: left;
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.ratings td {
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  white-space: nowrap;
+}
+.ratings td.good {
+  color: var(--credit);
+}
+.ratings td.bad {
+  color: var(--risk);
+}
+
+/* ---------------- lớp hoàn thiện: độ nổi, chuyển động, chuyển theme ----------------
+   Đặt cuối file để đè lên các rule cơ bản mà không phải sửa từng chỗ. */
+
+/* Chrome không khởi động lại transition khi giá trị đến từ một biến CSS vừa
+   đổi: thuộc tính đang được transition sẽ kẹt ở màu cũ trong khi biến đã mang
+   giá trị mới. Vì vậy tắt sạch transition đúng lúc đổi theme, rồi bật lại ở
+   khung hình sau — hover vẫn mượt, còn chuyển theme thì đổi tức thì. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+.rail {
+  border-bottom: 1px solid var(--rule);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: saturate(1.4) blur(6px);
+}
+
+.panel {
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.drawer {
+  box-shadow: var(--shadow-2);
+}
+
+.pill,
+.run,
+.wl,
+.segmented button,
+.chips button,
+.addrow button,
+.linkrow a {
+  transition: background-color var(--ease), color var(--ease),
+    border-color var(--ease);
+}
+
+.field input,
+.field select,
+.addrow input {
+  background: var(--card);
+  border-radius: var(--r-sm);
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+
+.field input:focus,
+.field select:focus,
+.addrow input:focus {
+  border-color: var(--stamp);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stamp) 18%, transparent);
+  outline: none;
+}
+
+.hmwrap {
+  border-radius: var(--r-sm);
+}
+
+/* ---------------- nút chuyển sáng/tối ---------------- */
+
+.themetoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background-color var(--ease), color var(--ease),
+    border-color var(--ease);
+}
+
+.themetoggle:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--hover);
+}
+
+.themetoggle .tico {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Người dùng bật "giảm chuyển động" thì bỏ hết transition. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------------- nhận diện thương hiệu ---------------- */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brandmark {
+  display: block;
+  flex: none;
+  /* Khung nền của icon luôn trắng cố định (xem Logo.tsx), nên ở theme sáng nó
+     gần như hoà vào nền header trắng nếu chỉ có shadow — thêm viền mảnh để
+     luôn thấy rõ ranh giới khung ở cả hai theme. */
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-1);
+  border-radius: var(--r-sm);
+}
+
+/* Lưới 3 cột: "tyler" | chấm | (tag/sub). INVESTMENT TOOL và CASH IS KING đều
+   rơi vào cột 3 nên luôn thẳng lề trái với nhau, bất kể "tyler" rộng bao nhiêu
+   — .wordmark chỉ còn là nhóm ngữ nghĩa (display:contents), không tạo hộp
+   riêng, để 3 phần tử con của nó tham gia thẳng vào lưới của .brandtext cùng
+   với .brandsub. */
+.brandtext {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  column-gap: 8px;
+  row-gap: 1px;
+  align-items: end;
+  min-width: 0;
+}
+
+.wordmark {
+  display: contents;
+}
+
+.wm-name {
+  grid-column: 1;
+  grid-row: 1;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Chấm điểm nhấn: đứng riêng thay vì nằm trên một chữ cái, vì "tyler" không có
+   chữ "i" để mượn chỗ như "finviz" có. Vẫn giữ đúng vai trò — một khối màu bật
+   lên giữa hai khối chữ trung tính. */
+.wm-dot {
+  grid-column: 2;
+  grid-row: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  align-self: center;
+}
+
+.wm-tag {
+  grid-column: 3;
+  grid-row: 1;
+  font-family: var(--data);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.brandsub {
+  grid-column: 3;
+  grid-row: 2;
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rail {
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .wm-tag,
+  .brandsub {
+    display: none;
+  }
+}
+
+/* ---------------- quy ước màu số liệu ----------------
+
+   Trước đây xanh và đỏ gánh bốn nghĩa khác nhau — hướng giá, mức độ hấp dẫn,
+   cảnh báo, và cả trang trí cố định cho cột lợi suất — nên nhìn vào bảng không
+   biết một ô xanh đang nói điều gì. Giờ mỗi màu đúng một nghĩa:
+
+     .good  xanh  — đi LÊN / nằm TRÊN mốc.        Chỉ hướng, không phán xét.
+     .bad   đỏ    — đi XUỐNG / nằm DƯỚI mốc.      Chỉ hướng, không phán xét.
+     .warn  vàng  — CẦN CHÚ Ý.                    Không phải hướng.
+     (không màu) — dữ kiện thuần: strike, vốn, credit, ngày.
+
+   Số quan trọng thì làm nổi bằng độ đậm, không phải bằng màu. */
+
+.warn {
+  color: var(--warn);
+}
+
+/* Con số chủ đạo của một hàng — nổi bằng cỡ chữ và độ đậm thay vì tô màu, để
+   màu còn dành riêng cho việc mang nghĩa. */
+.num-key {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Chú giải màu, đặt đầu bảng kết quả và tab phân tích. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 2px 0 12px;
+  font: 400 11px/1.4 var(--data);
+  color: var(--muted);
+}
+.legend b {
+  font-weight: 400;
+}
+.legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: 0;
+}
+.legend .k-good { background: var(--credit); }
+.legend .k-bad { background: var(--risk); }
+.legend .k-warn { background: var(--warn); }
+
+/* ---------------- thứ bậc chữ ----------------
+
+   Trước đây 25 rule cùng dùng var(--muted): tiêu đề mục, nhãn trường, ghi chú,
+   chú thích đều một màu xám, nên nhìn vào không biết đâu là tiêu đề đâu là
+   chú thích. Giờ ba tầng rõ ràng:
+
+     tiêu đề  var(--ink)     đậm nhất, có vạch màu dẫn đầu
+     nhãn     var(--label)   tầng giữa
+     ghi chú  var(--muted)   nhạt nhất
+
+   Giá trị số vẫn dùng var(--ink), và màu xanh/đỏ/vàng chỉ dành cho ngữ nghĩa.
+   Đặt cuối file để đè lên các rule cũ mà không phải sửa từng chỗ. */
+
+/* --- tầng 1: tiêu đề --- */
+
+.panel-head {
+  color: var(--ink);
+}
+
+.dsec {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+
+/* Vạch màu dẫn đầu mỗi tiêu đề mục: tách tiêu đề khỏi chữ thường mà không cần
+   đổi màu chữ, nên vẫn đọc tốt ở cả hai theme. */
+.dsec::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--stamp);
+  flex: none;
+}
+
+/* --- tầng 2: nhãn --- */
+
+.field > label,
+.stats dt,
+.ratings th,
+.r52ends,
+.hmlegend,
+.legend {
+  color: var(--label);
+}
+
+/* --- tầng 3: ghi chú --- */
+
+.cap,
+.anote,
+.hint,
+.disclaimer,
+.newslist .nmeta,
+.hmhover,
+.tv-credit,
+.brandsub {
+  color: var(--muted);
+}
+
+/* Ghi chú dài đặt dưới một khối số liệu: thêm vạch dọc mảnh để mắt biết đây là
+   chú thích của khối bên trên chứ không phải nội dung mới. */
+.cap {
+  border-left: 2px solid var(--rule-soft);
+  padding-left: 9px;
+  margin-left: 1px;
+}
+
+/* ---------------- ticker và tiêu đề: hai màu riêng ----------------
+
+   Tham khảo Yahoo Finance và Finviz: cả hai đều tô ticker bằng xanh dương
+   (Yahoo dùng rgb(159,215,255) trên nền tối) vì ticker là định danh, thường
+   bấm được — khác hẳn con số dữ liệu.
+
+   Hai trang đó tách tiêu đề với nội dung bằng độ đậm chứ không bằng màu, nhưng
+   ở đây tách hẳn bằng màu cho rõ:
+
+     ticker   var(--ticker)  xanh da trời   — định danh
+     tiêu đề  var(--title)   xanh tím       — cấu trúc
+     giá trị  var(--ink)     đen / trắng    — dữ liệu
+
+   Hai sắc xanh khác hệ màu nhau (da trời vs tím) nên đứng cạnh vẫn phân biệt
+   được, không phải hai sắc độ của cùng một màu. */
+
+.sym {
+  color: var(--ticker);
+}
+
+.dsec,
+.panel-head {
+  color: var(--title);
+}
+
+.dsec::before {
+  background: var(--title);
+}
+
+/* Mã trong hàng bấm nhanh và trong watchlist cũng là định danh. */
+.chips button {
+  color: var(--ticker);
+}
+.chips button.on,
+.chips.quick button.on {
+  color: var(--paper);
+}
+
+/* Tên mã ở đầu tab phân tích. */
+.hmhover b {
+  color: var(--ticker);
+}
+
+/* ---------------- trạng thái đang chọn ----------------
+
+   Nút đang chọn dùng nền xanh var(--stamp). Chữ để var(--paper) là đủ cho cả
+   hai theme mà không cần viết riêng: bản sáng có stamp đậm + paper nhạt, bản
+   tối có stamp nhạt + paper đậm, nên tương phản tự đảo chiều đúng. */
+
+.segmented button.on,
+.chips button.on,
+.chips.quick button.on {
+  background: var(--stamp);
+  border-color: var(--stamp);
+  color: var(--paper);
+}
+
+/* Nút lưu watchlist trước đây dùng xanh lá — mà xanh lá trong app này đã mang
+   nghĩa "giá đi lên". Đưa về xanh dương cho thống nhất với mọi trạng thái chọn
+   khác, trả xanh lá lại đúng việc của nó. */
+.wl.on {
+  border-color: var(--stamp);
+  background: var(--stamp);
+  color: var(--paper);
+}
+
+/* ---------------- nhãn tiêu chí lọc ----------------
+
+   Panel lọc là nơi nhập liệu, không phải nơi đọc số, nên nhãn ở đây tô vàng để
+   tách hẳn khỏi vùng dữ liệu. Vàng này khác var(--warn): warn chỉ dùng cho cảnh
+   báo trong bảng số liệu, và hai thứ không bao giờ xuất hiện cùng một panel. */
+
+.field > label {
+  color: var(--gold);
+}
+
+/* ---------------- navy cho trạng thái đang chọn ----------------
+
+   Navy chỉ dùng làm NỀN, không dùng làm màu chữ: nó vốn là màu tối, đặt lên
+   nền tối thì chữ chìm hẳn. Vì vậy chữ trên nền navy cố định sáng
+   (var(--on-navy)) ở cả hai theme, thay vì đảo chiều theo var(--paper).
+
+   Bản tối dùng navy nhạt hơn bản sáng — navy đậm đúng chuẩn đặt trên card
+   #161c24 thì gần như không thấy nút đâu. */
+
+.segmented button.on,
+.chips button.on,
+.chips.quick button.on,
+.wl.on {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--on-navy);
+}
+
+/* ---------------- chữ số thẳng cột ----------------
+
+   Inter mặc định dùng chữ số tỉ lệ (mỗi số một bề rộng), nên bảng kết quả sẽ
+   so le từng dòng. tabular-nums ép mọi chữ số về cùng bề rộng — đây chính là
+   cách Tạp Chí Phố Wall làm, và là lý do họ bỏ được monospace mà cột vẫn thẳng. */
+body {
+  font-variant-numeric: tabular-nums;
+}
+

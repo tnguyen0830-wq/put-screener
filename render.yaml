@@ -1,0 +1,44 @@
+# Render Blueprint for deploying put-screener as the Pro Sell Put Scanner backend.
+#
+# Why a persistent disk: Schwab's OAuth tokens rotate on every refresh and are
+# stored as a file (src/lib/schwab.ts). On an ephemeral filesystem they would be
+# lost on every deploy and every cold start, forcing a fresh browser re-auth each
+# time. TOKEN_PATH below points at the mounted disk so they survive.
+#
+# The ./.cache/* directories deliberately do NOT need the disk - losing them just
+# means the next request refetches and repopulates.
+#
+# Secrets are marked `sync: false`, so Render prompts for them in the dashboard
+# instead of ever storing them in this file.
+
+services:
+  - type: web
+    name: put-screener
+    runtime: node
+    plan: starter # required for a persistent disk; free instances have none
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /api/auth/status
+    disk:
+      name: tokens
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TOKEN_PATH
+        value: /var/data/.tokens.json
+      # Must exactly match the callback registered in the Schwab developer
+      # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
+      - key: SCHWAB_CALLBACK_URL
+        sync: false
+      - key: SCHWAB_APP_KEY
+        sync: false
+      - key: SCHWAB_APP_SECRET
+        sync: false
+      - key: FMP_API_KEY
+        sync: false
+      # Gates /api/md/* (src/middleware.ts). Must match the app's
+      # EXPO_PUBLIC_BACKEND_TOKEN. Use Render's "Generate" button.
+      - key: MD_API_TOKEN
+        sync: false
