@@ -1,100 +1,87 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import TradingViewWidget from './TradingViewWidget';
-import { resolveTheme } from './ThemeToggle';
+
+type Item = {
+  title: string;
+  last: number;
+  change: number;
+  changePercent: number;
+};
 
 /**
- * What a cash-secured put seller glances at before deciding whether today is a
- * day to sell: the three indices this screener draws from, the volatility
- * regime that sets how rich the premium is, and the macro row that usually
- * explains why it moved.
+ * The scrolling market bar, quoted from Schwab rather than embedded from
+ * TradingView.
  *
- * VIX earns its place more than any single index here - the whole screener is a
- * bet on implied vol being generous, and VIX says whether it is.
+ * The embed had to go once VIX needed to be in it: the free tier serves no VIX
+ * symbol at all, the same way it served no US10Y and no DXY. Quoting Schwab
+ * instead carries VIX, drops the 15-minute delay on the equity lines, and ends
+ * the colour mismatch, since the bar is now the app's own markup.
+ *
+ * What it costs: the bar is empty while the Schwab session is lapsed, where the
+ * embed kept running. The screener cannot scan in that state either, and the
+ * settings dot says so, so the bar is not where that news should break.
  */
-const SYMBOLS = [
-  { proName: 'AMEX:SPY', title: 'S&P 500' },
-  { proName: 'NASDAQ:QQQ', title: 'Nasdaq 100' },
-  { proName: 'AMEX:IWM', title: 'Russell 2000' },
-  { proName: 'TVC:GOLD', title: 'Vàng' },
-  { proName: 'TVC:USOIL', title: 'Dầu WTI' },
-  { proName: 'BITSTAMP:BTCUSD', title: 'Bitcoin' },
-];
-
-// Dropped: TVC:US10Y, TVC:DXY and TVC:VIX. All three came back with the
-// widget's red error badge and no price - the free tape does not serve them.
-// Guessing at replacements costs a deploy per attempt and cannot be checked
-// from here, since every tradingview.com host is unreachable from the build
-// environment.
-//
-// VIX did not just leave: it moved to VixPill, quoted from Schwab. It is the
-// one number this screener actually trades on, so it deserved a source that
-// works rather than a proxy symbol that renders.
-
-/**
- * The app's own theme, kept current. ThemeToggle writes data-theme on <html>
- * and removes it for 'system', so both the attribute and the OS preference
- * have to be watched - neither alone tells the whole story.
- */
-function useAppTheme(): 'light' | 'dark' | null {
-  // null until resolved on the client. The widget must not be built before
-  // then: it reads colorTheme once at construction, and building it with a
-  // placeholder theme first leaves two copies racing to load, where the stale
-  // light one can win and the bar ends up white inside a dark app.
-  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+export default function TickerTape() {
+  const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
-    const read = () => {
-      const attr = document.documentElement.getAttribute('data-theme');
-      setTheme(
-        attr === 'light' || attr === 'dark' ? attr : resolveTheme('system')
-      );
+    let alive = true;
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/tape');
+        if (!res.ok) throw new Error(String(res.status));
+        const data = (await res.json()) as { items: Item[] };
+        if (alive && data.items?.length) setItems(data.items);
+      } catch {
+        // Keep whatever is already on screen. A blink to empty on one failed
+        // poll is worse than a price that is a minute stale.
+        if (alive) setItems((prev) => prev);
+      }
     };
-    read();
 
-    const obs = new MutationObserver(read);
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    mq.addEventListener('change', read);
+    load();
+    const timer = setInterval(load, 60_000);
 
     return () => {
-      obs.disconnect();
-      mq.removeEventListener('change', read);
+      alive = false;
+      clearInterval(timer);
     };
   }, []);
 
-  return theme;
-}
+  // Holds the strip's height so the page does not jump when quotes land.
+  if (!items) return <div className="tape tape-placeholder" />;
 
-export default function TickerTape() {
-  const theme = useAppTheme();
-
-  // Holds the bar's height so the page does not jump when the widget lands.
-  if (!theme) return <div className="tape tape-placeholder" />;
+  const row = items.map((it) => {
+    const up = it.change >= 0;
+    return (
+      <span className="tapeitem" key={it.title}>
+        <b>{it.title}</b>
+        <span className="tapelast">
+          {it.last.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+        {/* House rule (globals.css): green is up, red is down, direction only. */}
+        <span className={up ? 'good' : 'bad'}>
+          {up ? '▲' : '▼'} {Math.abs(it.changePercent).toFixed(2)}%
+        </span>
+      </span>
+    );
+  });
 
   return (
     <div className="tape">
-      <TradingViewWidget
-        type="ticker-tape"
-        height={46}
-        config={{
-          symbols: SYMBOLS,
-          showSymbolLogo: true,
-          // Deliberately opaque. Transparent stops TradingView painting a
-          // background while colorTheme still drives the text, so under the
-          // dark theme the bar kept a light backdrop and the text turned
-          // white on it - invisible. Opaque means one theme decides both.
-          isTransparent: false,
-          displayMode: 'adaptive',
-          colorTheme: theme,
-          locale: 'en',
-        }}
-      />
+      {/* Rendered twice so the loop has an identical second copy to slide into
+          as the first leaves - a single copy would visibly snap back. */}
+      <div className="tapeline">
+        <div className="tapeset">{row}</div>
+        <div className="tapeset" aria-hidden="true">
+          {row}
+        </div>
+      </div>
     </div>
   );
 }
