@@ -71,6 +71,15 @@ export default function FilterPanel({
     </label>
   );
 
+  /**
+   * Inputs collapse when a criterion is switched off rather than sitting there
+   * greyed out. On a phone the panel is most of the screen, and eight disabled
+   * rows push the run button below the fold for numbers that are not in play.
+   * The values live in state, so ticking one back brings its numbers with it.
+   */
+  const body = (group: FilterKey, children: React.ReactNode) =>
+    on(group) ? children : null;
+
   // Only criteria that normally apply count as "loosened"; the ones that ship
   // switched off are the baseline, so having them off is not worth a warning.
   const loosened = (value.off ?? []).filter(
@@ -103,86 +112,122 @@ export default function FilterPanel({
 
         <div className={field('capital')}>
           {head('capital', t('filters.capital'))}
-          <input step={1000} {...num('maxCapital', 'capital')} />
+          {body(
+            'capital',
+            <>
+              <input step={1000} {...num('maxCapital', 'capital')} />
+              <p className="hint">{t('filters.capitalNote')}</p>
+            </>
+          )}
+          {/* The consequence of switching this off is not a number, so it
+              stays visible once the inputs are gone. */}
           {!on('capital') && (
-            <p className="hint hint-warn">
-              {t('filters.capitalOff')}
-            </p>
+            <p className="hint hint-warn">{t('filters.capitalOff')}</p>
           )}
         </div>
 
         <div className={field('delta')}>
           {head('delta', t('filters.delta'))}
-          <div className="pair">
-            <input
-              step={0.01}
-              {...num('minDelta', 'delta')}
-              aria-label={t('filters.deltaMin')}
-            />
-            <input
-              step={0.01}
-              {...num('maxDelta', 'delta')}
-              aria-label={t('filters.deltaMax')}
-            />
-          </div>
+          {body(
+            'delta',
+            <>
+              <div className="pair">
+                <input
+                  step={0.01}
+                  {...num('minDelta', 'delta')}
+                  aria-label={t('filters.deltaMin')}
+                />
+                <input
+                  step={0.01}
+                  {...num('maxDelta', 'delta')}
+                  aria-label={t('filters.deltaMax')}
+                />
+              </div>
+              <p className="hint">{t('filters.deltaNote')}</p>
+            </>
+          )}
         </div>
 
         <div className={field('dte')}>
           {head('dte', t('filters.dte'))}
-          <div className="pair">
-            <input {...num('minDte', 'dte')} aria-label={t('filters.dteMin')} />
-            <input {...num('maxDte', 'dte')} aria-label={t('filters.dteMax')} />
-          </div>
+          {body(
+            'dte',
+            <>
+              <div className="pair">
+                <input {...num('minDte', 'dte')} aria-label={t('filters.dteMin')} />
+                <input {...num('maxDte', 'dte')} aria-label={t('filters.dteMax')} />
+              </div>
+              <p className="hint">{t('filters.dteNote')}</p>
+            </>
+          )}
           {!on('dte') && (
-            <p className="hint hint-warn">
-              {t('filters.dteOff')}
-            </p>
+            <p className="hint hint-warn">{t('filters.dteOff')}</p>
           )}
         </div>
 
         <div className={field('roc')}>
           {head('roc', t('filters.roc'))}
-          <input {...num('minAnnualRoc', 'roc')} />
+          {body(
+            'roc',
+            <>
+              <input {...num('minAnnualRoc', 'roc')} />
+              <p className="hint">{t('filters.rocNote')}</p>
+            </>
+          )}
         </div>
 
         <div className={field('liquidity')}>
           {head('liquidity', t('filters.liquidity'))}
-          <div className="pair">
-            <input
-              {...num('minOpenInterest', 'liquidity')}
-              aria-label={t('filters.oiMin')}
-            />
-            <input
-              step={0.5}
-              {...num('maxSpreadPct', 'liquidity')}
-              aria-label={t('filters.spreadMax')}
-            />
-          </div>
-          <p className="hint">{t('filters.liquidityHint')}</p>
+          {body(
+            'liquidity',
+            <>
+              <div className="pair">
+                <input
+                  {...num('minOpenInterest', 'liquidity')}
+                  aria-label={t('filters.oiMin')}
+                />
+                <input
+                  step={0.5}
+                  {...num('maxSpreadPct', 'liquidity')}
+                  aria-label={t('filters.spreadMax')}
+                />
+              </div>
+              <p className="hint">{t('filters.liquidityHint')}</p>
+            </>
+          )}
         </div>
 
         <div className={field('drawdown')}>
           {head('drawdown', t('filters.drawdown'))}
-          <input {...num('minDrawdownPct', 'drawdown')} />
-          <p className="hint">
-            {t('filters.drawdownHint')}
-          </p>
+          {body(
+            'drawdown',
+            <>
+              <input {...num('minDrawdownPct', 'drawdown')} />
+              <p className="hint">{t('filters.drawdownHint')}</p>
+            </>
+          )}
         </div>
 
         <div className={field('ivhv')}>
           {head('ivhv', t('filters.ivhv'))}
-          <input step={0.05} {...num('minIvHv', 'ivhv')} />
-          <p className="hint">
-            {t('filters.ivhvHint')}
-          </p>
+          {body(
+            'ivhv',
+            <>
+              <input step={0.05} {...num('minIvHv', 'ivhv')} />
+              <p className="hint">{t('filters.ivhvHint')}</p>
+            </>
+          )}
         </div>
 
         <div className={field('iv')}>
           {head('iv', t('filters.iv'))}
-          <input {...num('minIv', 'iv')} />
-          <p className="hint">
-            {t('filters.ivHint')}
-          </p>
+          {body(
+            'iv',
+            <>
+              <input {...num('minIv', 'iv')} />
+              <p className="hint">{t('filters.ivHint')}</p>
+            </>
+          )}
         </div>
 
         <div
