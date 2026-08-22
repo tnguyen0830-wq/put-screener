@@ -9,7 +9,7 @@ import DetailDrawer from '@/components/DetailDrawer';
 import WatchlistPanel from '@/components/WatchlistPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
-import ThemeToggle from '@/components/ThemeToggle';
+import SettingsMenu from '@/components/SettingsMenu';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
 import { DEFAULT_OFF, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
@@ -192,25 +192,7 @@ export default function Page() {
         </nav>
         <span className="spacer" />
         <VixPill />
-        <ThemeToggle />
-        {status && !status.configured && (
-          <span className="pill cold">Chưa cấu hình .env</span>
-        )}
-        {status?.configured && !status.connected && (
-          <a className="pill cold" href="/api/auth/login">
-            Kết nối Schwab
-          </a>
-        )}
-        {status?.connected && (
-          <>
-            <span className="pill live">
-              Đã kết nối · còn {status.daysLeft?.toFixed(1)} ngày
-            </span>
-            <a className="pill" href="/api/auth/login">
-              Kết nối lại
-            </a>
-          </>
-        )}
+        <SettingsMenu status={status} />
       </header>
 
       <TickerTape />
