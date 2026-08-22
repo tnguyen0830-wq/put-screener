@@ -4,6 +4,7 @@ import { loadEarnings } from '@/lib/screener';
 import { normalizeSymbol } from '@/lib/watchlist';
 import { symbolNews } from '@/lib/news';
 import { finvizQuote } from '@/lib/finviz';
+import { fmpCompanyProfile, mergeProfile } from '@/lib/profile';
 import {
   atr,
   bollinger,
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   const symbol = normalizeSymbol(raw);
 
   try {
-    const [q, hist, chain, earnings, news, finviz] = await Promise.all([
+    const [q, hist, chain, earnings, news, finviz, fmpProfile] = await Promise.all([
       quotes([symbol]),
       dailyHistory(symbol, 2),
       // Cửa sổ 20–60 ngày: đủ để lấy IV của kỳ đáo hạn gần nhất đáng quan tâm
@@ -46,6 +47,8 @@ export async function GET(req: NextRequest) {
       symbolNews(symbol).catch(() => []),
       // Finviz là đọc HTML, dễ hỏng khi họ đổi giao diện: hỏng thì bỏ qua.
       finvizQuote(symbol).catch(() => null),
+      // Hồ sơ công ty: tự nuốt lỗi, lý do trả về trong `note`.
+      fmpCompanyProfile(symbol),
     ]);
 
     const row = q[symbol];
@@ -164,6 +167,9 @@ export async function GET(req: NextRequest) {
 
       news,
       finviz,
+      // Công ty này làm gì — Schwab không có dòng nào về chuyện đó, nên ghép từ
+      // FMP và Finviz. null nghĩa là cả hai nguồn đều không nói gì.
+      profile: mergeProfile(fmpProfile, finviz?.profile ?? null),
 
       meta: {
         bars: candles.length,

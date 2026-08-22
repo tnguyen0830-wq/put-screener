@@ -15,6 +15,8 @@
  * hỏng. Mọi trường đều có thể null và route gọi hàm này phải chịu được điều đó.
  */
 
+import type { FinvizProfile } from './profile';
+
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36';
 
@@ -47,7 +49,7 @@ const WANTED = [
   'Short Float', 'Short Ratio', 'Short Interest',
   'Rel Volume', 'Avg Volume', 'Inst Own', 'Insider Own',
   'Perf Month', 'Perf Quarter', 'Perf Year', 'Perf YTD',
-  '52W High', '52W Low', 'Earnings',
+  '52W High', '52W Low', 'Earnings', 'Employees',
 ] as const;
 
 export type FinvizRating = {
@@ -61,7 +63,54 @@ export type FinvizRating = {
 export type FinvizData = {
   metrics: Record<string, string>;
   ratings: FinvizRating[];
+  /** Lĩnh vực / ngành / quốc gia và mô tả doanh nghiệp, cho khối hồ sơ công ty. */
+  profile: FinvizProfile;
 };
+
+/**
+ * Bóc phần hồ sơ công ty từ cùng trang quote.
+ *
+ * Lĩnh vực, ngành và quốc gia không đọc theo class CSS mà đọc theo tham số của
+ * link screener — `f=sec_`, `f=ind_`, `f=geo_`. Đó là hợp đồng của chính bộ lọc
+ * Finviz, đổi giao diện cũng không đổi, trong khi tên class thì đổi luôn.
+ *
+ * Mô tả thì ngược lại: phải bám vào layout, nên có kiểm tra độ dài trước khi
+ * nhận — thà trống còn hơn đổ một mảnh HTML lạc lên màn hình.
+ */
+export function parseFinvizProfile(
+  html: string,
+  metrics: Record<string, string> = {}
+): FinvizProfile {
+  const found: Record<string, string> = {};
+  // Dấu & trong href thường bị escape thành &amp;, nên ký tự ngay trước `f=`
+  // có thể là ? hoặc & hoặc ; — cả ba đều tính, còn chữ khác thì không (tránh
+  // khớp nhầm một tham số nào đó kết thúc bằng chữ f).
+  const link = /href="[^"]*[?&;]f=(sec|ind|geo)_[^"]*"[^>]*>([^<]{1,60})</g;
+  for (let m = link.exec(html); m; m = link.exec(html)) {
+    const value = stripTags(m[2]);
+    if (value && !found[m[1]]) found[m[1]] = value;
+  }
+
+  let description: string | null = null;
+  const bi = html.search(/profile-bio/i);
+  if (bi >= 0) {
+    const chunk = html.slice(bi, bi + 8000);
+    const end = chunk.indexOf('</div>');
+    const text = stripTags(end > 0 ? chunk.slice(0, end) : chunk).replace(/^[^>]*>/, '').trim();
+    if (text.length >= 100 && text.length <= 4000) description = text;
+  }
+
+  // Số nhân viên nằm trong chính bảng số liệu, không phải trong phần hồ sơ.
+  const emp = parseInt((metrics['Employees'] ?? '').replace(/[^0-9]/g, ''), 10);
+
+  return {
+    sector: found.sec ?? null,
+    industry: found.ind ?? null,
+    country: found.geo ?? null,
+    employees: Number.isFinite(emp) && emp > 0 ? emp : null,
+    description,
+  };
+}
 
 export async function finvizQuote(symbol: string): Promise<FinvizData> {
   // Finviz dùng gạch ngang cho cổ phiếu nhiều lớp: BRK/B -> BRK-B.
@@ -114,5 +163,5 @@ export async function finvizQuote(symbol: string): Promise<FinvizData> {
     }
   }
 
-  return { metrics, ratings };
+  return { metrics, ratings, profile: parseFinvizProfile(html, metrics) };
 }
