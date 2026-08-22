@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import CushionBar from './CushionBar';
 import type { Candidate } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 type SortKey =
   | 'score'
@@ -15,21 +16,22 @@ type SortKey =
   | 'iv'
   | 'drawdownPct';
 
+/** Column labels are dictionary keys; the header resolves them per language. */
 const COLS: { key: SortKey | null; label: string; left?: boolean }[] = [
-  { key: null, label: 'Mã', left: true },
-  { key: 'score', label: 'Điểm' },
-  { key: 'annualRocPct', label: 'LS/năm' },
-  { key: null, label: 'Credit' },
-  { key: 'capital', label: 'Vốn' },
-  { key: null, label: 'Strike' },
+  { key: null, label: 'res.symbol', left: true },
+  { key: 'score', label: 'res.score' },
+  { key: 'annualRocPct', label: 'res.roc' },
+  { key: null, label: 'res.credit' },
+  { key: 'capital', label: 'res.capital' },
+  { key: null, label: 'res.strike' },
   { key: 'delta', label: 'Δ' },
-  { key: 'dte', label: 'DTE' },
-  { key: 'cushionPct', label: 'Đệm' },
-  { key: null, label: 'Break-even' },
-  { key: 'ivHv', label: 'IV/HV' },
-  { key: 'iv', label: 'IV' },
-  { key: 'drawdownPct', label: 'Rớt đỉnh' },
-  { key: null, label: 'Biên độ 52T', left: true },
+  { key: 'dte', label: 'res.dte' },
+  { key: 'cushionPct', label: 'res.cushion' },
+  { key: null, label: 'res.breakeven' },
+  { key: 'ivHv', label: 'res.ivhv' },
+  { key: 'iv', label: 'res.iv' },
+  { key: 'drawdownPct', label: 'res.drawdown' },
+  { key: null, label: 'res.range52', left: true },
 ];
 
 const usd = (n: number) =>
@@ -42,6 +44,7 @@ export default function ResultsTable({
   rows: Candidate[];
   onSelect: (r: Candidate) => void;
 }) {
+  const { t } = useLang();
   const [sort, setSort] = useState<SortKey>('score');
 
   const sorted = useMemo(
@@ -52,8 +55,8 @@ export default function ResultsTable({
   if (!rows.length) {
     return (
       <div className="empty">
-        <strong>Chưa có kết quả</strong>
-        Chỉnh tiêu chí bên trái rồi bấm Quét. Kết quả hiện dần theo từng mã.
+        <strong>{t('res.emptyTitle')}</strong>
+        {t('res.emptyBody')}
       </div>
     );
   }
@@ -68,9 +71,9 @@ export default function ResultsTable({
                 key={c.label}
                 className={c.left ? 'left' : undefined}
                 onClick={() => c.key && setSort(c.key)}
-                title={c.key ? 'Bấm để sắp xếp' : undefined}
+                title={c.key ? t('res.sortHint') : undefined}
               >
-                {c.label}
+                {c.label === 'Δ' ? c.label : t(c.label)}
                 {sort === c.key ? ' ↓' : ''}
               </th>
             ))}

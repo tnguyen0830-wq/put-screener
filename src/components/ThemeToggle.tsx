@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLang } from '@/lib/i18n';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -58,15 +59,12 @@ export const themeBootScript = `
 `;
 
 const ORDER: Theme[] = ['light', 'dark', 'system'];
-const LABEL: Record<Theme, { icon: string; text: string }> = {
-  light: { icon: '☀', text: 'Sáng' },
-  dark: { icon: '☾', text: 'Tối' },
-  system: { icon: '◐', text: 'Hệ thống' },
-};
+const ICON: Record<Theme, string> = { light: '☀', dark: '☾', system: '◐' };
 
 export default function ThemeToggle() {
   // Khởi tạo bằng 'system' để lần render đầu ở server và ở client khớp nhau;
   // giá trị thật đọc từ localStorage sau khi mount.
+  const { t } = useLang();
   const [theme, setTheme] = useState<Theme>('system');
   const [ready, setReady] = useState(false);
 
@@ -89,21 +87,21 @@ export default function ThemeToggle() {
     apply(next);
   };
 
-  const l = LABEL[theme];
+  const label = t(`theme.${theme}`);
 
   return (
     <button
       className="themetoggle"
       onClick={cycle}
-      title="Chuyển sáng / tối / theo hệ thống"
-      aria-label={`Giao diện: ${l.text}. Bấm để đổi.`}
+      title={t('theme.cycle')}
+      aria-label={t('theme.aria', label)}
       // Trước khi đọc xong localStorage thì ẩn chữ đi để không nháy sai nhãn.
       style={{ visibility: ready ? 'visible' : 'hidden' }}
     >
       <span className="tico" aria-hidden="true">
-        {l.icon}
+        {ICON[theme]}
       </span>
-      {l.text}
+      {label}
     </button>
   );
 }

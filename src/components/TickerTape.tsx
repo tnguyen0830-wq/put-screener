@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLang } from '@/lib/i18n';
 
 type Item = {
-  title: string;
+  key: string;
   last: number;
   change: number;
   changePercent: number;
@@ -23,6 +24,7 @@ type Item = {
  * settings dot says so, so the bar is not where that news should break.
  */
 export default function TickerTape() {
+  const { t } = useLang();
   const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
@@ -56,8 +58,8 @@ export default function TickerTape() {
   const row = items.map((it) => {
     const up = it.change >= 0;
     return (
-      <span className="tapeitem" key={it.title}>
-        <b>{it.title}</b>
+      <span className="tapeitem" key={it.key}>
+        <b>{t(`tape.${it.key}`)}</b>
         <span className="tapelast">
           {it.last.toLocaleString('en-US', {
             minimumFractionDigits: 2,

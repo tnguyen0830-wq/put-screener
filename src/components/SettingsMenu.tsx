@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ThemeToggle from './ThemeToggle';
+import { useLang, type Lang } from '@/lib/i18n';
 
 export type ConnStatus = {
   configured: boolean;
@@ -30,6 +31,7 @@ function attentionOf(s: ConnStatus | null): 'none' | 'warn' | 'bad' {
 }
 
 export default function SettingsMenu({ status }: { status: ConnStatus | null }) {
+  const { t, lang, setLang } = useLang();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -60,8 +62,8 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label="Cài đặt: giao diện và kết nối Schwab"
-        title="Cài đặt"
+        aria-label={t('settings.label')}
+        title={t('settings.title')}
       >
         <span aria-hidden="true">⚙</span>
         {attention !== 'none' && (
@@ -71,23 +73,35 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
 
       {open && (
         <div className="settingspop" role="menu">
-          <div className="popsec">Giao diện</div>
+          <div className="popsec">{t('settings.appearance')}</div>
           <ThemeToggle />
 
-          <div className="popsec">Kết nối Schwab</div>
-          {!status && <p className="pophint">Đang kiểm tra…</p>}
+          <div className="popsec">{t('settings.language')}</div>
+          <div className="segmented langpick" role="group">
+            {(['vi', 'en'] as Lang[]).map((l) => (
+              <button
+                key={l}
+                className={lang === l ? 'on' : undefined}
+                onClick={() => setLang(l)}
+                lang={l}
+              >
+                {l === 'vi' ? 'Tiếng Việt' : 'English'}
+              </button>
+            ))}
+          </div>
+
+          <div className="popsec">{t('settings.connection')}</div>
+          {!status && <p className="pophint">{t('settings.checking')}</p>}
 
           {status && !status.configured && (
-            <p className="pophint">
-              Chưa cấu hình <code>.env</code> — thiếu khoá Schwab trên server.
-            </p>
+            <p className="pophint">{t('settings.unconfigured')}</p>
           )}
 
           {status?.configured && !status.connected && (
             <>
-              <p className="pophint">Chưa kết nối. Quét sẽ không chạy được.</p>
+              <p className="pophint">{t('settings.disconnected')}</p>
               <a className="popaction" href="/api/auth/login">
-                Kết nối Schwab
+                {t('settings.connect')}
               </a>
             </>
           )}
@@ -95,11 +109,10 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
           {status?.connected && (
             <>
               <p className="pophint">
-                Còn <strong>{status.daysLeft?.toFixed(1)} ngày</strong>. Schwab
-                giới hạn cứng 7 ngày, hết hạn là phải đăng nhập lại.
+                {t('settings.daysLeft', status.daysLeft?.toFixed(1) ?? '?')}
               </p>
               <a className="popaction" href="/api/auth/login">
-                Kết nối lại
+                {t('settings.reconnect')}
               </a>
             </>
           )}

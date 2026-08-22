@@ -150,6 +150,12 @@ select {
 }
 
 .rail {
+  /* Above the tape, which follows it in the DOM. The tape's marquee runs on a
+     transform, and that gives it a stacking context of its own - enough to
+     paint over the settings popup hanging out of this row, no matter what
+     z-index the popup carries, because the popup is nested in here. */
+  position: relative;
+  z-index: 1;
   background: var(--card);
   border-bottom: 1px solid var(--rule);
   padding: 14px 24px;
@@ -261,6 +267,17 @@ select {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--rule-soft);
+}
+
+/* The two-up language picker reuses .segmented, which is sized for a toolbar;
+   inside the popup it needs to be quieter and narrower. */
+.langpick {
+  margin-bottom: 4px;
+}
+
+.langpick button {
+  padding: 6px 8px;
+  font-size: 12px;
 }
 
 .pophint {

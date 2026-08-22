@@ -1,6 +1,7 @@
 'use client';
 
 import { DEFAULT_OFF, isOn, type FilterKey, type Filters } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 const SECTORS = [
   'Communication Services',
@@ -31,6 +32,7 @@ export default function FilterPanel({
   running,
   watchlistCount,
 }: Props) {
+  const { t } = useLang();
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -77,114 +79,109 @@ export default function FilterPanel({
 
   return (
     <section className="panel">
-      <div className="panel-head">Tiêu chí lọc</div>
+      <div className="panel-head">{t('filters.head')}</div>
       <div className="panel-body">
-        <div className="segmented" role="group" aria-label="Phạm vi quét">
+        <div className="segmented" role="group" aria-label={t('filters.scope')}>
           <button
             className={value.universe === 'sp500' ? 'on' : ''}
             onClick={() => set('universe', 'sp500')}
           >
-            Cả S&amp;P 500
+            {t('filters.sp500')}
           </button>
           <button
             className={value.universe === 'watchlist' ? 'on' : ''}
             onClick={() => set('universe', 'watchlist')}
           >
-            Watchlist{watchlistCount ? ` (${watchlistCount})` : ''}
+            {t('filters.watchlist')}
+            {watchlistCount ? ` (${watchlistCount})` : ''}
           </button>
         </div>
 
         <p className="hint hint-lead">
-          Bỏ tick một tiêu chí để <strong>không áp dụng</strong> tiêu chí đó. Số đã
-          nhập vẫn được giữ, tick lại là dùng nguyên như cũ.
+          {t('filters.lead')}
         </p>
 
         <div className={field('capital')}>
-          {head('capital', 'Vốn tối đa mỗi vị thế (USD)')}
+          {head('capital', t('filters.capital'))}
           <input step={1000} {...num('maxCapital', 'capital')} />
           {!on('capital') && (
             <p className="hint hint-warn">
-              Không loại mã đắt trước khi tải chuỗi quyền chọn, nên quét sẽ lâu hơn
-              đáng kể.
+              {t('filters.capitalOff')}
             </p>
           )}
         </div>
 
         <div className={field('delta')}>
-          {head('delta', 'Delta (tuyệt đối)')}
+          {head('delta', t('filters.delta'))}
           <div className="pair">
             <input
               step={0.01}
               {...num('minDelta', 'delta')}
-              aria-label="Delta tối thiểu"
+              aria-label={t('filters.deltaMin')}
             />
             <input
               step={0.01}
               {...num('maxDelta', 'delta')}
-              aria-label="Delta tối đa"
+              aria-label={t('filters.deltaMax')}
             />
           </div>
         </div>
 
         <div className={field('dte')}>
-          {head('dte', 'Số ngày đến đáo hạn')}
+          {head('dte', t('filters.dte'))}
           <div className="pair">
-            <input {...num('minDte', 'dte')} aria-label="DTE tối thiểu" />
-            <input {...num('maxDte', 'dte')} aria-label="DTE tối đa" />
+            <input {...num('minDte', 'dte')} aria-label={t('filters.dteMin')} />
+            <input {...num('maxDte', 'dte')} aria-label={t('filters.dteMax')} />
           </div>
           {!on('dte') && (
             <p className="hint hint-warn">
-              Vẫn giới hạn 180 ngày tới — quét mọi đáo hạn xa hơn thì chuỗi quyền
-              chọn phình quá to mà không dùng để bán put.
+              {t('filters.dteOff')}
             </p>
           )}
         </div>
 
         <div className={field('roc')}>
-          {head('roc', 'Lợi suất quy năm tối thiểu (%)')}
+          {head('roc', t('filters.roc'))}
           <input {...num('minAnnualRoc', 'roc')} />
         </div>
 
         <div className={field('liquidity')}>
-          {head('liquidity', 'Thanh khoản')}
+          {head('liquidity', t('filters.liquidity'))}
           <div className="pair">
             <input
               {...num('minOpenInterest', 'liquidity')}
-              aria-label="Open interest tối thiểu"
+              aria-label={t('filters.oiMin')}
             />
             <input
               step={0.5}
               {...num('maxSpreadPct', 'liquidity')}
-              aria-label="Spread tối đa phần trăm"
+              aria-label={t('filters.spreadMax')}
             />
           </div>
-          <p className="hint">Trái: OI tối thiểu. Phải: spread tối đa (% của mid).</p>
+          <p className="hint">{t('filters.liquidityHint')}</p>
         </div>
 
         <div className={field('drawdown')}>
-          {head('drawdown', 'Rớt từ đỉnh 52 tuần tối thiểu (%)')}
+          {head('drawdown', t('filters.drawdown'))}
           <input {...num('minDrawdownPct', 'drawdown')} />
           <p className="hint">
-            Chỉ lấy mã đã rớt ít nhất bấy nhiêu % so với đỉnh 52 tuần. Gõ 10 hoặc
-            20 tuỳ mức chiết khấu bạn muốn.
+            {t('filters.drawdownHint')}
           </p>
         </div>
 
         <div className={field('ivhv')}>
-          {head('ivhv', 'IV / HV20 tối thiểu')}
+          {head('ivhv', t('filters.ivhv'))}
           <input step={0.05} {...num('minIvHv', 'ivhv')} />
           <p className="hint">
-            IV cao so với biến động thực tế 20 phiên. 1.0 = quyền chọn đang được
-            trả đúng bằng mức dao động thật.
+            {t('filters.ivhvHint')}
           </p>
         </div>
 
         <div className={field('iv')}>
-          {head('iv', 'IV tối thiểu (%)')}
+          {head('iv', t('filters.iv'))}
           <input {...num('minIv', 'iv')} />
           <p className="hint">
-            IV tuyệt đối của chính hợp đồng. Khác ô trên: ô trên so IV với biến
-            động thật, ô này chỉ hỏi IV có cao hay không.
+            {t('filters.ivHint')}
           </p>
         </div>
 
@@ -192,7 +189,7 @@ export default function FilterPanel({
           className="field"
           hidden={value.universe === 'watchlist'}
         >
-          <label htmlFor="sector">Ngành</label>
+          <label htmlFor="sector">{t('filters.sector')}</label>
           <select
             id="sector"
             value={value.sectors[0] ?? ''}
@@ -200,7 +197,7 @@ export default function FilterPanel({
               set('sectors', e.target.value ? [e.target.value] : [])
             }
           >
-            <option value="">Tất cả</option>
+            <option value="">{t('filters.allSectors')}</option>
             {SECTORS.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -215,7 +212,7 @@ export default function FilterPanel({
             checked={value.requireAboveSma200}
             onChange={(e) => set('requireAboveSma200', e.target.checked)}
           />
-          Chỉ lấy mã trên SMA200
+          {t('filters.sma200')}
         </label>
 
         <label className="check">
@@ -224,27 +221,27 @@ export default function FilterPanel({
             checked={value.excludeEarnings}
             onChange={(e) => set('excludeEarnings', e.target.checked)}
           />
-          Loại hợp đồng vắt qua earnings
+          {t('filters.earnings')}
         </label>
 
         <button className="run" onClick={onRun} disabled={running}>
           {running
-            ? 'Đang quét…'
+            ? t('filters.running')
             : value.universe === 'watchlist'
-              ? 'Quét watchlist'
-              : 'Quét S&P 500'}
+              ? t('filters.runWatchlist')
+              : t('filters.runSp500')}
         </button>
 
         {loosened > 0 && (
           <p className="hint hint-warn">
-            Đang tắt {loosened} tiêu chí — kết quả sẽ nhiều và lỏng hơn bình thường.
+            {t('filters.loosened', loosened)}
           </p>
         )}
 
         <p className="hint">
           {value.universe === 'watchlist'
-            ? 'Quét watchlist mất vài chục giây, chạy lại thoải mái trong phiên.'
-            : 'Quét toàn rổ mất khoảng 4–8 phút vì Schwab giới hạn 120 request/phút. Đặt vốn thấp hơn để loại bớt mã đắt và chạy nhanh hơn.'}
+            ? t('filters.hintWatchlist')
+            : t('filters.hintSp500')}
         </p>
       </div>
     </section>
