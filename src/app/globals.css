@@ -196,6 +196,55 @@ select {
   text-transform: uppercase;
 }
 
+/* ---------- Claude's read ---------- */
+
+.airead {
+  margin: 18px 0 4px;
+  padding: 14px;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+
+.aihead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.aihead .dsec {
+  margin: 0;
+}
+
+.aibtn {
+  padding: 6px 12px;
+  font-family: var(--data);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--on-navy);
+  background: var(--navy);
+  border: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.aibtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Claude writes short labelled sections in plain text, so newlines are the
+   whole of the formatting and have to survive. */
+.aitext {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
 /* ---------- settings menu ---------- */
 
 .settings {

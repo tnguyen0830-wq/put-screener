@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import TradingViewWidget from './TradingViewWidget';
+import AiRead from './AiRead';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl, tcpwGexUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
@@ -264,6 +265,8 @@ export default function AnalysisPanel({
             </div>
 
             <ColorLegend />
+
+            <AiRead analysis={data} />
 
             <h3 className="dsec">Kỹ thuật</h3>
             <dl className="stats">

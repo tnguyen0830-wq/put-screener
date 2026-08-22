@@ -218,6 +218,40 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (s: string) => `Remove ${s}`,
   },
 
+  // ---- AI read ----
+  'ai.title': { vi: 'Claude đọc chỉ số', en: 'Claude reads the indicators' },
+  'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },
+  'ai.rerun': { vi: 'Phân tích lại', en: 'Run again' },
+  'ai.running': { vi: 'Đang đọc…', en: 'Reading…' },
+  'ai.idle': {
+    vi: 'Claude đọc các chỉ số ngay bên dưới và nói chúng hợp nhau hay mâu thuẫn ở đâu. Mỗi lần bấm tốn khoảng 3 cent tiền API, nên nó chỉ chạy khi bạn bấm.',
+    en: 'Claude reads the indicators below and says where they agree and where they contradict each other. Each run costs a few cents of API credit, so it only runs when you ask.',
+  },
+  'ai.caveat': {
+    vi: 'Claude chỉ đọc đúng những con số hiện trên trang này, không có tin tức hay dữ liệu ngoài. Đây là cách diễn giải chỉ số, không phải khuyến nghị mua bán — quyết định vẫn là của bạn.',
+    en: 'Claude reads only the numbers on this page — no news, no outside data. This is a reading of the indicators, not a recommendation to buy or sell; the decision stays yours.',
+  },
+  'ai.notConfigured': {
+    vi: 'Server chưa có ANTHROPIC_API_KEY. Thêm biến đó trên Render rồi thử lại.',
+    en: 'The server has no ANTHROPIC_API_KEY. Add it on Render and try again.',
+  },
+  'ai.badKey': {
+    vi: 'Khoá API bị từ chối. Kiểm tra lại ANTHROPIC_API_KEY trên Render.',
+    en: 'The API key was rejected. Check ANTHROPIC_API_KEY on Render.',
+  },
+  'ai.rateLimited': {
+    vi: 'Anthropic đang giới hạn tần suất. Đợi một lát rồi bấm lại.',
+    en: 'Anthropic is rate limiting. Wait a moment and try again.',
+  },
+  'ai.refused': {
+    vi: 'Claude từ chối trả lời yêu cầu này.',
+    en: 'Claude declined to answer this request.',
+  },
+  'ai.failed': {
+    vi: 'Gọi Claude thất bại. Xem log trên Render để biết lý do.',
+    en: 'The call to Claude failed. Check the Render logs for the reason.',
+  },
+
   // ---- misc ----
   'common.saving': { vi: ' đang lưu…', en: ' saving…' },
   'phase.quotes': { vi: 'Đang lấy báo giá…', en: 'Fetching quotes…' },
