@@ -768,15 +768,64 @@ table.results tbody tr.clickable {
   background: var(--card);
 }
 
-.tape .tv-wrap {
-  border: 0;
-  border-radius: 0;
+.tape {
+  overflow: hidden;
 }
 
-/* The widget needs a beat to load; without a reserved height the whole page
-   jumps down the moment it arrives. */
-.tape .tradingview-widget-container {
-  min-height: 46px;
+.tapeline {
+  display: flex;
+  width: max-content;
+  animation: tape-scroll 90s linear infinite;
+}
+
+/* Each copy is exactly half the track, so sliding by 50% lands the second copy
+   where the first began and the loop has no seam. */
+@keyframes tape-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Reading a number off a moving strip is hard; hovering or touching holds it. */
+.tape:hover .tapeline,
+.tape:active .tapeline {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tapeline {
+    animation: none;
+  }
+}
+
+.tapeset {
+  display: flex;
+}
+
+.tapeitem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 0 18px;
+  height: 46px;
+  line-height: 46px;
+  white-space: nowrap;
+  font-family: var(--data);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--rule-soft);
+}
+
+.tapeitem b {
+  font-weight: 600;
+  color: var(--label);
+}
+
+.tapelast {
+  color: var(--ink);
 }
 
 /* Same height as the loaded bar, so resolving the theme costs no layout jump. */
