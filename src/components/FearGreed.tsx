@@ -13,7 +13,10 @@ type Data = {
   history: [number, number][];
 };
 
-/** CNN's own bands. Upper bound exclusive except the last. */
+/**
+ * CNN's own band boundaries, upper bound exclusive except the last. Kept
+ * matching theirs so a score reads the same word on both pages.
+ */
 const BANDS = [
   { to: 25, key: 'fg.extremeFear', tone: 'fear' },
   { to: 45, key: 'fg.fear', tone: 'fear' },
@@ -34,6 +37,9 @@ const R_IN = 100;
 /** Tick numbers ride outside the ring, leaving the mouth free for the score.
  *  Inside, the 0 and 100 labels land at exactly the score's height. */
 const R_TICK = R_OUT + 15;
+/** Band names ride down the middle of the ring. */
+const R_LABEL = (R_OUT + R_IN) / 2;
+const LABEL_SIZE = 8.5;
 
 /** 0 sits at 180°, 100 at 0°, so the dial sweeps left to right. */
 const deg = (v: number) => 180 - (Math.max(0, Math.min(100, v)) / 100) * 180;
@@ -41,6 +47,26 @@ const pt = (d: number, r: number) => [
   CX + r * Math.cos((d * Math.PI) / 180),
   CY - r * Math.sin((d * Math.PI) / 180),
 ];
+
+/** Arc down the centre of the ring, for a band name to sit on. */
+function labelPath(from: number, to: number) {
+  const [x1, y1] = pt(deg(from), R_LABEL);
+  const [x2, y2] = pt(deg(to), R_LABEL);
+  return `M${x1},${y1} A${R_LABEL},${R_LABEL} 0 0 1 ${x2},${y2}`;
+}
+
+/**
+ * Whether a band name fits along its own arc.
+ *
+ * Neutral is only five points wide, so its name is several times longer than
+ * the arc it would have to follow - CNN hits the same problem and answers it by
+ * lifting that label out of the ring. Measured rather than hard-coded, so
+ * changing a boundary moves the label without anyone remembering to.
+ */
+function fitsOnArc(chars: number, from: number, to: number) {
+  const arc = ((to - from) / 100) * Math.PI * R_LABEL;
+  return chars * LABEL_SIZE * 0.62 <= arc * 0.9;
+}
 
 /** One band of the ring: out along the top, back along the inside. */
 function bandPath(from: number, to: number) {
@@ -180,6 +206,61 @@ export default function FearGreed() {
                   /* A surface-coloured stroke is the 2px gap between bands. */
                   strokeWidth="2"
                 />
+              );
+            })}
+
+            <defs>
+              {BANDS.map((b, i) => (
+                <path
+                  key={b.key}
+                  id={`fgarc-${i}`}
+                  d={labelPath(i === 0 ? 0 : BANDS[i - 1].to, Math.min(b.to, 100))}
+                  fill="none"
+                />
+              ))}
+            </defs>
+
+            {BANDS.map((b, i) => {
+              const from = i === 0 ? 0 : BANDS[i - 1].to;
+              const to = Math.min(b.to, 100);
+              const name = t(b.key).toUpperCase();
+              const on = b === live;
+              const fill = on ? 'var(--ink)' : 'var(--muted)';
+
+              if (fitsOnArc(name.length, from, to)) {
+                return (
+                  <text
+                    key={b.key}
+                    fontSize={LABEL_SIZE}
+                    letterSpacing="0.08em"
+                    fill={fill}
+                    fontFamily="var(--data)"
+                    fontWeight={on ? 600 : 400}
+                  >
+                    <textPath href={`#fgarc-${i}`} startOffset="50%" textAnchor="middle">
+                      {name}
+                    </textPath>
+                  </text>
+                );
+              }
+
+              // Too narrow for its own arc: sits just inside the ring instead,
+              // where nothing else is drawn at that height.
+              const [lx, ly] = pt(deg((from + to) / 2), R_IN - 13);
+              return (
+                <text
+                  key={b.key}
+                  x={lx}
+                  y={ly + 3}
+                  textAnchor="middle"
+                  fontSize={LABEL_SIZE}
+                  letterSpacing="0.08em"
+                  fill={fill}
+                  fontFamily="var(--data)"
+                  fontWeight={on ? 600 : 400}
+                >
+                  {name}
+                </text>
               );
             })}
 
