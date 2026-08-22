@@ -352,6 +352,73 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Tile area comes from market cap computed on Schwab data (price × shares outstanding), so the sizing is always live. The 1-day colouring is Schwab too; longer ranges come from Finviz\u2019s map endpoint, because computing them from Schwab would cost 503 price-history requests. The colour scale follows Finviz\u2019s own thresholds so it reads familiarly, but every figure here is computed locally — this is not a screenshot of their map.',
   },
 
+  // ---- sector rotation (RRG) ----
+  'rrg.title': { vi: 'Luân chuyển dòng tiền (RRG)', en: 'Sector rotation (RRG)' },
+  'rrg.loading': { vi: 'Đang tính vòng xoay ngành…', en: 'Computing the rotation…' },
+  'rrg.loadFailed': {
+    vi: 'Chưa dựng được biểu đồ luân chuyển. Các phần khác vẫn chạy.',
+    en: 'Could not build the rotation chart. Everything else still works.',
+  },
+  'rrg.aria': {
+    vi: 'Biểu đồ luân chuyển dòng tiền giữa 11 ngành của S&P 500',
+    en: 'Rotation chart for the 11 S&P 500 sectors',
+  },
+  'rrg.xAxis': { vi: 'RS-Ratio → mạnh hơn', en: 'RS-Ratio → stronger' },
+  'rrg.yAxis': { vi: '↑ RS-Momentum', en: '↑ RS-Momentum' },
+
+  'rrg.q.leading': { vi: 'Dẫn đầu', en: 'Leading' },
+  'rrg.q.weakening': { vi: 'Đuối dần', en: 'Weakening' },
+  'rrg.q.lagging': { vi: 'Tụt lại', en: 'Lagging' },
+  'rrg.q.improving': { vi: 'Đang hồi', en: 'Improving' },
+  'rrg.qNote.leading': {
+    vi: 'mạnh hơn mặt bằng và còn mạnh thêm',
+    en: 'stronger than the pack and still gaining',
+  },
+  'rrg.qNote.weakening': {
+    vi: 'còn mạnh nhưng đà đang mất',
+    en: 'still strong but losing steam',
+  },
+  'rrg.qNote.lagging': {
+    vi: 'yếu hơn mặt bằng và còn yếu thêm',
+    en: 'weaker than the pack and still slipping',
+  },
+  'rrg.qNote.improving': {
+    vi: 'còn yếu nhưng đang lấy lại đà',
+    en: 'still weak but picking up',
+  },
+
+  'rrg.s.tech': { vi: 'Công nghệ', en: 'Technology' },
+  'rrg.s.fin': { vi: 'Tài chính', en: 'Financials' },
+  'rrg.s.health': { vi: 'Y tế', en: 'Health care' },
+  'rrg.s.discretionary': { vi: 'Tiêu dùng ko thiết yếu', en: 'Discretionary' },
+  'rrg.s.staples': { vi: 'Tiêu dùng thiết yếu', en: 'Staples' },
+  'rrg.s.energy': { vi: 'Năng lượng', en: 'Energy' },
+  'rrg.s.industrial': { vi: 'Công nghiệp', en: 'Industrials' },
+  'rrg.s.material': { vi: 'Vật liệu', en: 'Materials' },
+  'rrg.s.realestate': { vi: 'Bất động sản', en: 'Real estate' },
+  'rrg.s.utility': { vi: 'Tiện ích', en: 'Utilities' },
+  'rrg.s.comm': { vi: 'Truyền thông', en: 'Communications' },
+
+  'rrg.hover': {
+    vi: (v: any) =>
+      `${v.name} (${v.symbol}) · RS-Ratio ${v.ratio} · RS-Momentum ${v.momentum} · ${v.quadrant}`,
+    en: (v: any) =>
+      `${v.name} (${v.symbol}) · RS-Ratio ${v.ratio} · RS-Momentum ${v.momentum} · ${v.quadrant}`,
+  },
+  'rrg.hoverIdle': {
+    vi: (v: any) =>
+      `Mỗi cái đuôi là ${v.weeks} tuần gần nhất (${v.from} → ${v.to}). Rê chuột hoặc chạm vào một ngành để xem số.`,
+    en: (v: any) =>
+      `Each tail is the last ${v.weeks} weeks (${v.from} → ${v.to}). Hover or tap a sector for its numbers.`,
+  },
+  'rrg.tableToggle': { vi: 'Xem bảng số', en: 'Show the numbers' },
+  'rrg.colSector': { vi: 'Ngành', en: 'Sector' },
+  'rrg.colQuadrant': { vi: 'Góc phần tư', en: 'Quadrant' },
+  'rrg.note': {
+    vi: 'Toạ độ tính từ giá tuần của 11 quỹ ngành SPDR so với SPY, lấy từ Schwab: chênh lệch hai đường EMA của sức mạnh tương đối, rồi so với mặt bằng của cả 11 ngành trong cùng tuần — nên 100 nghĩa là ngang bằng mặt bằng chung, không phải ngang bằng SPY. Công thức RS-Ratio/RS-Momentum gốc của JdK không được công bố, đây là bản dựng lại: vòng xoay và thứ tự ngành đọc như bản gốc, con số tuyệt đối thì không nhất thiết trùng. Vị trí góc phần tư mô tả trạng thái, không phải khuyến nghị mua bán.',
+    en: 'Coordinates are computed from weekly Schwab prices for the 11 SPDR sector funds against SPY: the gap between two EMAs of relative strength, then scored against where all 11 sectors sit that same week — so 100 means level with the pack, not level with SPY. JdK\u2019s original RS-Ratio/RS-Momentum formula is unpublished; this is a reconstruction, so the rotation and the ordering read like the original while the absolute numbers need not match. A quadrant describes a state, not a recommendation.',
+  },
+
   // ---- analyze tab ----
   'an.rsiOver': { vi: 'quá mua', en: 'overbought' },
   'an.rsiUnder': { vi: 'quá bán', en: 'oversold' },
