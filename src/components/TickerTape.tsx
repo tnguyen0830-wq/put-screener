@@ -20,19 +20,25 @@ const SYMBOLS = [
   { proName: 'TVC:VIX', title: 'VIX' },
   { proName: 'TVC:GOLD', title: 'Vàng' },
   { proName: 'TVC:USOIL', title: 'Dầu WTI' },
-  { proName: 'TVC:US10Y', title: 'Lợi suất 10 năm' },
-  { proName: 'TVC:DXY', title: 'Chỉ số USD' },
   { proName: 'BITSTAMP:BTCUSD', title: 'Bitcoin' },
 ];
+
+// Dropped: TVC:US10Y and TVC:DXY. Both came back with the widget's red error
+// badge and no price at all - the free tape does not serve them. Guessing at
+// replacements costs a deploy per attempt and cannot be checked from here,
+// so they are simply out until a working symbol is confirmed on a device.
 
 /**
  * The app's own theme, kept current. ThemeToggle writes data-theme on <html>
  * and removes it for 'system', so both the attribute and the OS preference
  * have to be watched - neither alone tells the whole story.
  */
-function useAppTheme(): 'light' | 'dark' {
-  // 'light' on the first pass so server and client agree; corrected on mount.
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+function useAppTheme(): 'light' | 'dark' | null {
+  // null until resolved on the client. The widget must not be built before
+  // then: it reads colorTheme once at construction, and building it with a
+  // placeholder theme first leaves two copies racing to load, where the stale
+  // light one can win and the bar ends up white inside a dark app.
+  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
 
   useEffect(() => {
     const read = () => {
@@ -63,6 +69,9 @@ function useAppTheme(): 'light' | 'dark' {
 
 export default function TickerTape() {
   const theme = useAppTheme();
+
+  // Holds the bar's height so the page does not jump when the widget lands.
+  if (!theme) return <div className="tape tape-placeholder" />;
 
   return (
     <div className="tape">
