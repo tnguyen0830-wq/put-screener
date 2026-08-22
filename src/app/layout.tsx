@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { themeBootScript } from '@/components/ThemeToggle';
+import { LangProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'Tyler Investment Tool',
@@ -27,7 +28,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <LangProvider>{children}</LangProvider>
+      </body>
     </html>
   );
 }

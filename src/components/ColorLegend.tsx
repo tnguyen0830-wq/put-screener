@@ -5,22 +5,28 @@
  * mua / nên tránh". Ở đây chúng chỉ nói hướng đi của con số; phần đáng lưu ý
  * dùng màu vàng riêng để không lẫn với đỏ.
  */
+'use client';
+
+import { useLang } from '@/lib/i18n';
+
 export default function ColorLegend() {
+  const { t } = useLang();
+
   return (
-    <div className="legend" aria-label="Quy ước màu số liệu">
+    <div className="legend" aria-label={t('legend.aria')}>
       <span>
         <i className="k-good" />
-        <b>Lên / trên mốc</b>
+        <b>{t('legend.good')}</b>
       </span>
       <span>
         <i className="k-bad" />
-        <b>Xuống / dưới mốc</b>
+        <b>{t('legend.bad')}</b>
       </span>
       <span>
         <i className="k-warn" />
-        <b>Cần chú ý</b>
+        <b>{t('legend.warn')}</b>
       </span>
-      <span>Số không màu là dữ kiện thuần — màu chỉ hướng, không phải khuyến nghị.</span>
+      <span>{t('legend.note')}</span>
     </div>
   );
 }

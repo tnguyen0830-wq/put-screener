@@ -18,13 +18,13 @@ export const dynamic = 'force-dynamic';
  * quietly passing GLD off as the price of gold.
  */
 const TAPE = [
-  { symbol: '$VIX', title: 'VIX' },
-  { symbol: '$SPX', title: 'S&P 500' },
-  { symbol: 'QQQ', title: 'Nasdaq 100' },
-  { symbol: 'IWM', title: 'Russell 2000' },
-  { symbol: 'GLD', title: 'Vàng · GLD' },
-  { symbol: 'USO', title: 'Dầu · USO' },
-  { symbol: 'IBIT', title: 'Bitcoin · IBIT' },
+  { symbol: '$VIX', key: 'vix' },
+  { symbol: '$SPX', key: 'spx' },
+  { symbol: 'QQQ', key: 'ndx' },
+  { symbol: 'IWM', key: 'rut' },
+  { symbol: 'GLD', key: 'gold' },
+  { symbol: 'USO', key: 'oil' },
+  { symbol: 'IBIT', key: 'btc' },
 ];
 
 export async function GET() {
@@ -38,7 +38,9 @@ export async function GET() {
       const quote = q[t.symbol]?.quote;
       if (!quote?.lastPrice) return null;
       return {
-        title: t.title,
+        // A key, not a label: the bar is bilingual and the server does not
+        // know which language the browser is showing.
+        key: t.key,
         last: quote.lastPrice,
         change: quote.netChange ?? 0,
         changePercent: quote.netPercentChange ?? 0,

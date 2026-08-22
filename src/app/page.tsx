@@ -9,6 +9,7 @@ import WatchlistPanel from '@/components/WatchlistPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
 import SettingsMenu from '@/components/SettingsMenu';
+import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
 import { DEFAULT_OFF, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
@@ -42,6 +43,7 @@ type Status = {
 type Tab = 'screener' | 'analyze' | 'heatmap';
 
 export default function Page() {
+  const { t } = useLang();
   const [tab, setTab] = useState<Tab>('screener');
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULTS);
@@ -90,7 +92,7 @@ export default function Page() {
     setRows([]);
     setError(null);
     setProgress({ done: 0, total: 0 });
-    setPhase('Đang lấy báo giá…');
+    setPhase(t('phase.quotes'));
 
     try {
       const res = await fetch('/api/screen', {
@@ -158,7 +160,7 @@ export default function Page() {
     <>
       <div className="topstack">
       <header className="rail">
-        <a className="brand" href="/" aria-label="Tyler Investment Tool — về trang chính">
+        <a className="brand" href="/" aria-label={t('brand.home')}>
           <Logo height={32} />
           <span className="brandtext">
             <span className="wordmark">
@@ -166,7 +168,7 @@ export default function Page() {
               <span className="wm-dot" aria-hidden="true" />
               <span className="wm-tag">INVESTMENT TOOL</span>
             </span>
-            <span className="brandsub">Cash is king</span>
+            <span className="brandsub">{t('brand.sub')}</span>
           </span>
         </a>
         <nav className="segmented tabs">
@@ -174,19 +176,19 @@ export default function Page() {
             className={tab === 'screener' ? 'on' : undefined}
             onClick={() => setTab('screener')}
           >
-            Sell Put Screener
+            {t('tab.screener')}
           </button>
           <button
             className={tab === 'analyze' ? 'on' : undefined}
             onClick={() => setTab('analyze')}
           >
-            Phân tích mã
+            {t('tab.analyze')}
           </button>
           <button
             className={tab === 'heatmap' ? 'on' : undefined}
             onClick={() => setTab('heatmap')}
           >
-            Bản đồ nhiệt
+            {t('tab.heatmap')}
           </button>
         </nav>
         <span className="spacer" />
@@ -223,7 +225,7 @@ export default function Page() {
             <div className="panel-head">
               {error
                 ? error
-                : phase || `${rows.length} cơ hội`}
+                : phase || t('res.count', rows.length)}
             </div>
             <div className="panel-body" style={{ paddingBottom: 0 }}>
               <ColorLegend />
@@ -258,9 +260,7 @@ export default function Page() {
       />
 
       <p className="disclaimer">
-        Công cụ sàng lọc, không phải khuyến nghị đầu tư. Bán put là cam kết mua
-        100 cổ phiếu tại giá strike — chỉ lọc những mã bạn thực sự muốn sở hữu.
-        Dữ liệu quyền chọn có độ trễ theo quyền truy cập tài khoản Schwab của bạn.
+        {t('disclaimer')}
       </p>
     </>
   );

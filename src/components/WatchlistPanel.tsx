@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang } from '@/lib/i18n';
+
 import { useState } from 'react';
 
 type Props = {
@@ -9,6 +11,7 @@ type Props = {
 };
 
 export default function WatchlistPanel({ symbols, onChange, saving }: Props) {
+  const { t } = useLang();
   const [draft, setDraft] = useState('');
 
   const add = () => {
@@ -26,26 +29,25 @@ export default function WatchlistPanel({ symbols, onChange, saving }: Props) {
     <section className="panel">
       <div className="panel-head">
         Watchlist {symbols.length > 0 && `· ${symbols.length}`}
-        {saving && <span className="saving"> đang lưu…</span>}
+        {saving && <span className="saving">{t('common.saving')}</span>}
       </div>
       <div className="panel-body">
         <div className="addrow">
           <input
             value={draft}
             placeholder="AAPL MSFT NVDA"
-            aria-label="Thêm mã vào watchlist"
+            aria-label={t('wl.addAria')}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
           />
-          <button onClick={add} aria-label="Thêm mã">
-            Thêm
+          <button onClick={add} aria-label={t('wl.addBtnAria')}>
+            {t('wl.add')}
           </button>
         </div>
 
         {symbols.length === 0 ? (
           <p className="hint">
-            Danh sách những mã bạn thực sự muốn sở hữu. Quét watchlist chạy trong
-            vài chục giây nên dùng được nhiều lần trong phiên.
+            {t('wl.empty')}
           </p>
         ) : (
           <ul className="chips">
@@ -54,7 +56,7 @@ export default function WatchlistPanel({ symbols, onChange, saving }: Props) {
                 {s}
                 <button
                   onClick={() => onChange(symbols.filter((x) => x !== s))}
-                  aria-label={`Bỏ ${s}`}
+                  aria-label={t('wl.remove', s)}
                 >
                   ✕
                 </button>
