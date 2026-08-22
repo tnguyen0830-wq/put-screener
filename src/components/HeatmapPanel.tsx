@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang } from '@/lib/i18n';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { squarify } from '@/lib/treemap';
 
@@ -16,9 +18,9 @@ type Sector = { name: string; marketCap: number; change: number; industries: Ind
 type Data = { range: string; source: string; sectors: Sector[]; count: number };
 
 const RANGES = [
-  { id: '1d', label: '1 ngày', cap: 3 },
-  { id: '1w', label: '1 tuần', cap: 6 },
-  { id: '1m', label: '1 tháng', cap: 12 },
+  { id: '1d', label: 'hm.range1d', cap: 3 },
+  { id: '1w', label: 'hm.range1w', cap: 6 },
+  { id: '1m', label: 'hm.range1m', cap: 12 },
   { id: 'ytd', label: 'YTD', cap: 30 },
 ] as const;
 
@@ -97,6 +99,7 @@ export default function HeatmapPanel({
 }: {
   onSelectSymbol: (symbol: string) => void;
 }) {
+  const { t } = useLang();
   const [range, setRange] = useState<string>('1d');
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(false);
@@ -109,7 +112,7 @@ export default function HeatmapPanel({
     try {
       const res = await fetch(`/api/heatmap?range=${encodeURIComponent(r)}`);
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? 'Không tải được bản đồ');
+      if (!res.ok) throw new Error(j.error ?? t('hm.loadFailed'));
       setData(j);
     } catch (e: any) {
       setError(e.message);
@@ -170,12 +173,12 @@ export default function HeatmapPanel({
     <section className="panel">
       <div className="panel-head">
         {loading
-          ? 'Đang tải bản đồ…'
+          ? t('hm.loading')
           : error
           ? error
           : data
-          ? `Bản đồ S&P 500 · ${data.count} mã · ${data.source}`
-          : 'Bản đồ nhiệt'}
+          ? t('hm.head', { count: data.count, source: data.source })
+          : t('hm.title')}
       </div>
 
       <div className="panel-body">
@@ -186,7 +189,7 @@ export default function HeatmapPanel({
               className={range === r.id ? 'on' : undefined}
               onClick={() => setRange(r.id)}
             >
-              {r.label}
+              {t(r.label)}
             </button>
           ))}
         </div>
@@ -202,7 +205,7 @@ export default function HeatmapPanel({
           />
           <span>+{cap}%</span>
           <span className="spacer" />
-          <span>Diện tích ô = vốn hoá</span>
+          <span>{t('hm.areaIsCap')}</span>
         </div>
 
         {data && (
@@ -211,7 +214,7 @@ export default function HeatmapPanel({
               viewBox={`0 0 ${W} ${H}`}
               width="100%"
               role="img"
-              aria-label="Bản đồ nhiệt S&P 500"
+              aria-label={t('hm.aria')}
             >
               <rect width={W} height={H} fill={MAP_BG} />
 
@@ -335,21 +338,22 @@ export default function HeatmapPanel({
         <div className="hmhover">
           {hover ? (
             <>
-              <b>{hover.symbol}</b> · {hover.name} · {hover.sector} · $
-              {hover.price.toFixed(2)} · {pctStr(hover.change)} · vốn hoá{' '}
-              {(hover.marketCap / 1e9).toFixed(1)}B — bấm để phân tích
+              {t('hm.hover', {
+                symbol: hover.symbol,
+                name: hover.name,
+                sector: hover.sector,
+                price: hover.price.toFixed(2),
+                change: pctStr(hover.change),
+                cap: (hover.marketCap / 1e9).toFixed(1),
+              })}
             </>
           ) : (
-            'Rê chuột lên một ô để xem chi tiết; bấm để mở tab Phân tích mã.'
+            t('hm.hoverIdle')
           )}
         </div>
 
         <p className="cap">
-          Diện tích ô lấy từ vốn hoá tính bằng dữ liệu Schwab (giá × số cổ phiếu lưu hành),
-          nên kích thước luôn là real-time. Màu ô khung 1 ngày cũng từ Schwab; các khung dài
-          hơn lấy từ endpoint bản đồ của Finviz vì tính từ Schwab sẽ tốn 503 request lịch sử
-          giá. Thang màu dựng theo đúng các mốc của Finviz để nhìn quen mắt, nhưng toàn bộ số
-          liệu là tự tính — đây không phải ảnh chụp bản đồ của họ.
+          {t('hm.note')}
         </p>
       </div>
     </section>

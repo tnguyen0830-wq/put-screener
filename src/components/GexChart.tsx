@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang } from '@/lib/i18n';
+
 import { useEffect, useState } from 'react';
 import type { GexProfile } from '@/lib/gex';
 
@@ -19,6 +21,7 @@ export default function GexChart({
    *  hợp đồng nào nên bỏ trống — khi đó biểu đồ chỉ vẽ wall, không vẽ vạch. */
   strike?: number;
 }) {
+  const { t } = useLang();
   const [data, setData] = useState<GexProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,23 +33,23 @@ export default function GexChart({
       .then(async (r) => {
         const j = await r.json();
         if (!alive) return;
-        if (!r.ok) setError(j.error ?? 'Không tải được GEX');
+        if (!r.ok) setError(j.error ?? t('gex.loadFailed'));
         else setData(j);
       })
-      .catch(() => alive && setError('Không tải được GEX'));
+      .catch(() => alive && setError(t('gex.loadFailed')));
     return () => {
       alive = false;
     };
   }, [symbol]);
 
   if (error) return <p className="cap">{error}</p>;
-  if (!data) return <p className="cap">Đang tính gamma theo strike…</p>;
+  if (!data) return <p className="cap">{t('gex.computing')}</p>;
 
   // Only the strikes near spot carry meaningful hedging flow.
   const lo = data.spot * 0.75;
   const hi = data.spot * 1.25;
   const rows = data.strikes.filter((s) => s.strike >= lo && s.strike <= hi);
-  if (!rows.length) return <p className="cap">Không đủ open interest quanh giá.</p>;
+  if (!rows.length) return <p className="cap">{t('gex.thin')}</p>;
 
   const W = 470;
   const H = 190;
@@ -101,9 +104,9 @@ export default function GexChart({
         ))}
         <line x1={0} x2={W} y1={axis} y2={axis} stroke="var(--rule)" strokeWidth="1" />
 
-        {data.putWall !== null && mark(data.putWall, 'var(--credit)', 'Put wall', 12)}
-        {data.callWall !== null && mark(data.callWall, 'var(--muted)', 'Call wall', 24)}
-        {strike !== undefined && mark(strike, 'var(--stamp)', 'Strike của bạn', 36)}
+        {data.putWall !== null && mark(data.putWall, 'var(--credit)', t('gex.putWall'), 12)}
+        {data.callWall !== null && mark(data.callWall, 'var(--muted)', t('gex.callWall'), 24)}
+        {strike !== undefined && mark(strike, 'var(--stamp)', t('gex.yourStrike'), 36)}
 
         <circle cx={x(data.spot)} cy={axis} r="3.5" fill="var(--ink)" />
         <text x={x(data.spot)} y={axis + 14} fontSize="8.5" textAnchor="middle" fill="var(--ink)" fontFamily="var(--data)">
@@ -119,20 +122,20 @@ export default function GexChart({
 
       <dl className="stats gexstats">
         <div>
-          <dt>Put wall</dt>
+          <dt>{t('gex.putWall')}</dt>
           {/* Mức giá, không phải hướng — làm nổi bằng độ đậm chứ không tô xanh. */}
           <dd className="num-key">{data.putWall?.toFixed(2) ?? '—'}</dd>
         </div>
         <div>
-          <dt>Call wall</dt>
+          <dt>{t('gex.callWall')}</dt>
           <dd>{data.callWall?.toFixed(2) ?? '—'}</dd>
         </div>
         <div>
-          <dt>Zero gamma</dt>
+          <dt>{t('gex.zeroGamma')}</dt>
           <dd>{data.zeroGamma?.toFixed(2) ?? '—'}</dd>
         </div>
         <div>
-          <dt>Net GEX</dt>
+          <dt>{t('gex.netGex')}</dt>
           <dd className={data.totalGex >= 0 ? 'good' : 'bad'}>
             {money(data.totalGex)}
           </dd>
@@ -140,27 +143,15 @@ export default function GexChart({
       </dl>
 
       <p className="cap">
-        {strike === undefined ? (
-          <>
-            Put wall {data.putWall?.toFixed(2) ?? '—'} là mốc gamma put lớn nhất —
-            vùng dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ.
-          </>
-        ) : belowWall ? (
-          <>
-            Strike {strike.toFixed(2)} nằm <b>tại hoặc dưới put wall</b> — dòng
-            hedge của dealer đứng về phía bạn ở vùng này.
-          </>
-        ) : (
-          <>
-            Strike {strike.toFixed(2)} nằm <b>trên put wall</b>{' '}
-            {data.putWall?.toFixed(2)} — không có lớp hedge nào đỡ ở mức này. Cân
-            nhắc hạ xuống gần put wall hơn.
-          </>
-        )}{' '}
-        Net GEX {data.totalGex >= 0 ? 'dương' : 'âm'}:{' '}
-        {data.totalGex >= 0
-          ? 'dealer làm dịu biến động, biên độ thường hẹp.'
-          : 'dealer khuếch đại biến động, giảm size và nới stop.'}
+        {strike === undefined
+          ? t('gex.noStrike', data.putWall?.toFixed(2) ?? '—')
+          : belowWall
+            ? t('gex.below', strike.toFixed(2))
+            : t('gex.above', {
+                strike: strike.toFixed(2),
+                wall: data.putWall?.toFixed(2) ?? '—',
+              })}{' '}
+        {data.totalGex >= 0 ? t('gex.netPos') : t('gex.netNeg')}
       </p>
     </>
   );

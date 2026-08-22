@@ -1,0 +1,61 @@
+# Refreshes data/earnings.json every week.
+#
+# Why this matters: the screener's "exclude contracts spanning earnings" filter
+# reads that file. Left alone it keeps whatever estimated dates it was built
+# with, and estimates drift - so the filter silently starts letting through
+# contracts that do span earnings, which is the expensive direction to be wrong.
+#
+# Runs on GitHub rather than Render because Render bills a cron job as a second
+# service, and this needs no Schwab session: the script's primary sources are
+# Yahoo and Nasdaq, and it now skips the Schwab fallback when no token is
+# present rather than aborting.
+#
+# The commit lands on main, which triggers a Render deploy - roughly two minutes
+# of downtime, which is why this fires early on a Sunday with the market closed
+# rather than during the week.
+
+name: Weekly earnings sync
+
+on:
+  schedule:
+    # 09:00 UTC Sunday — around 4am US Eastern, market shut.
+    - cron: '0 9 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: earnings-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # No install step: the script uses only node builtins and global fetch,
+      # so pulling dependencies would add a failure mode without adding value.
+      - name: Rebuild the earnings calendar
+        run: node scripts/earnings-sync.js
+
+      - name: Commit if the calendar moved
+        run: |
+          if git diff --quiet -- data/earnings.json; then
+            echo "No change — the calendar already matched the sources."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/earnings.json
+          git commit -m "Refresh the earnings calendar
+
+          Automated weekly run of scripts/earnings-sync.js. Announced dates
+          replace the estimates they supersede; see the file's own _comment
+          field for which symbols are announced, estimated, or projected."
+          git push
