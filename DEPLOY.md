@@ -65,7 +65,8 @@ nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
    | `MD_API_TOKEN` | bấm nút **Generate** của Render |
    | `SCHWAB_CALLBACK_URL` | điền sau khi biết URL — xem bước 3 |
 
-4. Deploy. Ghi lại URL Render cấp, dạng `https://put-screener-xxxx.onrender.com`.
+4. Deploy. Render cấp URL — service hiện tại là `https://put-screener-y2hw.onrender.com`
+   (đuôi `y2hw` là ngẫu nhiên; deploy lại từ đầu sẽ ra đuôi khác).
 
 > Gói `starter` là bắt buộc vì cần ổ đĩa lưu token. Gói free không có ổ đĩa,
 > token sẽ mất mỗi lần server ngủ dậy và bạn phải đăng nhập Schwab liên tục.
@@ -80,7 +81,7 @@ bên cạnh.
 
 ```
 https://127.0.0.1:3000/api/auth/callback                   ← laptop, GIỮ NGUYÊN
-https://put-screener-xxxx.onrender.com/api/auth/callback   ← thêm dòng này
+https://put-screener-y2hw.onrender.com/api/auth/callback   ← thêm dòng này
 ```
 
 Nhờ vậy laptop và bản deploy **dùng chung một app Schwab** — không cần đăng ký app
@@ -113,14 +114,14 @@ sửa code** — gần như chắc chắn là chưa tới lượt sync. Sáng h�
 
 Mở trên điện thoại hoặc máy tính:
 ```
-https://put-screener-xxxx.onrender.com
+https://put-screener-y2hw.onrender.com
 ```
 Bấm nút kết nối Schwab, đăng nhập. Token được ghi vào `/var/data/.tokens.json` trên ổ đĩa
 và sống qua các lần deploy.
 
 Kiểm tra:
 ```bash
-curl -H "x-md-token: <MD_API_TOKEN>" https://put-screener-xxxx.onrender.com/api/md/volatility
+curl -H "x-md-token: <MD_API_TOKEN>" https://put-screener-y2hw.onrender.com/api/md/volatility
 ```
 Phải trả về VIX và chỉ số S&P. Nếu trả `MD_TOKEN_INVALID` là token sai; nếu trả
 `REAUTH_REQUIRED` là chưa đăng nhập Schwab xong.
@@ -133,7 +134,7 @@ Trong `ProSellPutScanner`, sửa `.env`:
 
 ```
 EXPO_PUBLIC_MARKET_DATA_PROVIDER=schwab
-EXPO_PUBLIC_BACKEND_URL=https://put-screener-xxxx.onrender.com
+EXPO_PUBLIC_BACKEND_URL=https://put-screener-y2hw.onrender.com
 EXPO_PUBLIC_BACKEND_TOKEN=<đúng giá trị MD_API_TOKEN ở bước 2>
 ```
 
@@ -146,7 +147,7 @@ npx expo export --platform web
 **Luôn kiểm tra biến đã được nhúng vào bundle trước khi deploy:**
 
 ```bash
-grep -c "put-screener-xxxx.onrender.com" dist/_expo/static/js/web/*.js
+grep -c "put-screener-y2hw.onrender.com" dist/_expo/static/js/web/*.js
 ```
 
 Phải ra `1`. Nếu ra `0` thì biến chưa vào bundle và app sẽ chạy DEMO DATA mà **không
