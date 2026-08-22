@@ -53,6 +53,7 @@ export default function DetailDrawer({
           <div className="headacts">
             <button
               className={inWatchlist ? 'wl on' : 'wl'}
+              title={t(inWatchlist ? 'wl.removeTitle' : 'wl.addTitle')}
               onClick={() => onToggleWatchlist(row.symbol)}
             >
               {inWatchlist ? t('dd.inWatchlist') : t('dd.saveWatchlist')}

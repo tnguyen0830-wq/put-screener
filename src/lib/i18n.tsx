@@ -288,8 +288,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   // ---- detail drawer ----
   'dd.aria': { vi: (s: string) => `Chi tiết ${s}`, en: (s: string) => `${s} detail` },
-  'dd.inWatchlist': { vi: '★ Trong watchlist', en: '★ In watchlist' },
-  'dd.saveWatchlist': { vi: '☆ Lưu watchlist', en: '☆ Save to watchlist' },
+  'dd.inWatchlist': { vi: '✓ Watchlist', en: '✓ Watchlist' },
+  'dd.saveWatchlist': { vi: '+ Watchlist', en: '+ Watchlist' },
   'dd.close': { vi: 'Đóng', en: 'Close' },
   'dd.strike': { vi: 'Strike', en: 'Strike' },
   'dd.expiry': { vi: 'Đáo hạn', en: 'Expiry' },
@@ -370,8 +370,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Nhập mã ở trên, hoặc bấm một mã trong watchlist.',
     en: 'Type a ticker above, or pick one from the watchlist.',
   },
-  'an.inWatchlist': { vi: '★ Trong watchlist', en: '★ In watchlist' },
-  'an.saveWatchlist': { vi: '☆ Lưu watchlist', en: '☆ Save to watchlist' },
+  'an.inWatchlist': { vi: '✓ Watchlist', en: '✓ Watchlist' },
+  'an.saveWatchlist': { vi: '+ Watchlist', en: '+ Watchlist' },
   'an.low52': { vi: (v: string) => `Đáy 52T ${v}`, en: (v: string) => `52w low ${v}` },
   'an.high52': { vi: (v: string) => `Đỉnh 52T ${v}`, en: (v: string) => `52w high ${v}` },
   'an.ofRange': { vi: (v: string) => `${v} biên độ`, en: (v: string) => `${v} of range` },
@@ -497,6 +497,18 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'fg.note': {
     vi: 'Thang 0–100: dưới 45 là thị trường đang sợ, trên 55 là đang tham. Với người bán put thì hướng đọc ngược với trực giác — lúc sợ hãi là lúc IV cao và quyền chọn được trả hậu, còn lúc tham lam thì phí mỏng. Màu ở đây nói về tâm lý thị trường, không phải lên/xuống như màu trong bảng kết quả. Nguồn: CNN, endpoint không chính thức, cache 30 phút.',
     en: 'A 0–100 scale: below 45 the market is fearful, above 55 it is greedy. For a put seller the reading inverts against intuition — fear is when implied vol is high and options pay well, greed is when premium goes thin. Colour here means sentiment, not the up/down it means in the results table. Source: CNN, an unofficial endpoint, cached for 30 minutes.',
+  },
+
+  // A plus reads as "add" at a glance where a star did not; the tick that
+  // replaces it says the symbol is already saved, and the tooltip says that
+  // clicking again takes it back out.
+  'wl.addTitle': {
+    vi: 'Thêm mã này vào watchlist',
+    en: 'Add this ticker to the watchlist',
+  },
+  'wl.removeTitle': {
+    vi: 'Đã có trong watchlist — bấm để bỏ ra',
+    en: 'Already in the watchlist — click to remove',
   },
 
   // ---- AI read ----

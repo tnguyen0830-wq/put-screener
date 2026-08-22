@@ -15,21 +15,22 @@ export const dynamic = 'force-dynamic';
 /**
  * What the bar shows, and what to ask Schwab for.
  *
- * Each row lists candidates in order of preference and the first one Schwab
- * actually quotes wins. Futures and index symbols could not be tried against a
- * live Schwab session from the build environment, so rather than betting the
- * row on an unverified symbol, each falls back to the ETF that stood there
- * before. The label reports whichever symbol answered - if gold ends up on GLD
- * the bar says GLD, never GC.
+ * One symbol per row, no ETF stand-ins: the bar names the instrument it is
+ * actually quoting, so nothing on it can be mistaken for something it is not.
+ * A row Schwab will not quote drops out rather than being filled with a proxy,
+ * and the symbols it tried are named in the response's `missing`.
+ *
+ * Futures take a leading slash and indices a dollar sign - Schwab needs both,
+ * and neither belongs on screen.
  */
 const TAPE: { key: string; candidates: string[] }[] = [
   { key: 'spx', candidates: ['$SPX'] },
-  { key: 'ndx', candidates: ['$NDX', 'QQQ'] },
+  { key: 'ndx', candidates: ['$NDX'] },
   { key: 'rut', candidates: ['IWM'] },
   { key: 'vix', candidates: ['$VIX'] },
-  { key: 'gold', candidates: ['/GC', 'GLD'] },
-  { key: 'oil', candidates: ['/CL', 'USO'] },
-  { key: 'btc', candidates: ['/BTC', 'IBIT'] },
+  { key: 'gold', candidates: ['/GC'] },
+  { key: 'oil', candidates: ['/CL'] },
+  { key: 'btc', candidates: ['/BTC'] },
 ];
 
 /** Futures and index symbols carry a prefix Schwab needs but nobody reads. */
