@@ -61,19 +61,40 @@ Sau đó tạo một repo **Private** trên GitHub và push lên.
 
 ---
 
-## Bước 3 — Cập nhật callback URL bên Schwab
+## Bước 3 — Thêm callback URL bên Schwab
 
-Hiện `.env` đang là `https://127.0.0.1:3000/api/auth/callback`. Trên mạng thì không dùng được.
+Ô **Callback URL(s)** trong Schwab Developer Portal nhận **nhiều URL**. Nên đây là
+*thêm một dòng*, không phải *thay thế*: giữ nguyên URL local và thêm URL Render vào
+bên cạnh.
 
-1. Vào Schwab Developer Portal → app của bạn → sửa **Callback URL** thành:
-   ```
-   https://put-screener-xxxx.onrender.com/api/auth/callback
-   ```
-2. Schwab duyệt thay đổi này mất một lúc (thường vài phút đến vài giờ).
-3. Quay lại Render, điền đúng URL đó vào biến `SCHWAB_CALLBACK_URL`.
+```
+https://127.0.0.1:3000/api/auth/callback                   ← laptop, GIỮ NGUYÊN
+https://put-screener-xxxx.onrender.com/api/auth/callback   ← thêm dòng này
+```
 
-⚠️ Sau khi đổi, backend chạy ở **laptop sẽ không đăng nhập Schwab được nữa** (vì callback
-đã trỏ lên mạng). Nếu muốn giữ cả hai, đăng ký thêm một app thứ hai bên Schwab cho local.
+Nhờ vậy laptop và bản deploy **dùng chung một app Schwab** — không cần đăng ký app
+thứ hai. `.env` ở laptop vẫn để URL `127.0.0.1`, còn trên Render thì biến
+`SCHWAB_CALLBACK_URL` để URL `onrender.com`; cùng một `SCHWAB_APP_KEY` chạy được cả hai.
+
+1. Portal → app của bạn → thêm dòng vào **Callback URL(s)** → **Save**.
+2. **Thay đổi chỉ có hiệu lực sau khi Schwab đồng bộ qua đêm.** Xác nhận từ Schwab
+   Trader API Support (22/08/2026): *"This is expected behavior while the back end
+   syncs, which happens overnight. In the meantime, you are able to use the previous
+   callback URL."* Sau khi lưu, app ở trạng thái **Approved - Pending**; sáng hôm sau
+   phải chuyển thành **Ready For Use**.
+3. **Trong lúc chờ, URL cũ vẫn chạy bình thường** — laptop vẫn đăng nhập Schwab được
+   như thường, không mất gì trong đêm đó.
+4. Quay lại Render, điền vào `SCHWAB_CALLBACK_URL` đúng URL Render, **khớp từng ký
+   tự**: không thừa dấu `/` ở cuối, không dùng `http`. Copy-paste thẳng từ portal cho
+   chắc — Schwab so khớp chuỗi tuyệt đối và chỉ báo `invalid redirect_uri` chứ không
+   nói sai ở đâu.
+
+⚠️ Ngay tối vừa đổi mà đăng nhập trên Render báo `invalid redirect_uri` thì **đừng đi
+sửa code** — gần như chắc chắn là chưa tới lượt sync. Sáng hôm sau thử lại.
+
+> Mỗi lần đổi callback tốn một đêm. Nên **deploy Render trước để biết URL thật** rồi mới
+> đổi đúng một lần (URL Render có đuôi ngẫu nhiên, đoán trước gần như chắc sai). Đó là
+> lý do bước này nằm sau Bước 2.
 
 ---
 
