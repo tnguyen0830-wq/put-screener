@@ -156,6 +156,7 @@ export default function Page() {
 
   return (
     <>
+      <div className="topstack">
       <header className="rail">
         <a className="brand" href="/" aria-label="Tyler Investment Tool — về trang chính">
           <Logo height={32} />
@@ -211,6 +212,7 @@ export default function Page() {
       </header>
 
       <TickerTape />
+      </div>
 
       {running && (
         <div className="bar">

@@ -140,10 +140,16 @@ select {
 
 /* ---------- header ---------- */
 
-.rail {
+/* Header and ticker tape stick as one block. Sticking them separately would
+   need the tape's offset to equal the header's height, which is not a fixed
+   number - the header wraps to two rows on a narrow screen. */
+.topstack {
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.rail {
   background: var(--card);
   border-bottom: 1px solid var(--rule);
   padding: 14px 24px;
@@ -234,8 +240,11 @@ select {
 }
 
 .sticky-col {
+  /* Clears the sticky header block: 76px was the header alone, plus the 47px
+     ticker tape now stacked under it. Only desktop needs the number - below
+     the breakpoint this goes static anyway. */
   position: sticky;
-  top: 76px;
+  top: 123px;
 }
 
 /* Must sit after the rule above, not inside the .shell media query further up:
