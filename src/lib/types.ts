@@ -1,5 +1,18 @@
 export type Universe = 'sp500' | 'watchlist';
 
+/**
+ * A criterion the user can switch off from the filter panel. Off means the
+ * criterion is not applied at all - the numbers beside it stay untouched so
+ * ticking it back on restores what was typed.
+ */
+export type FilterKey =
+  | 'capital'
+  | 'delta'
+  | 'dte'
+  | 'roc'
+  | 'liquidity'
+  | 'ivhv';
+
 export type Filters = {
   /** Which set of tickers to scan. */
   universe: Universe;
@@ -17,7 +30,15 @@ export type Filters = {
   excludeEarnings: boolean;
   sectors: string[]; // empty = all
   limit: number; // max tickers to scan (0 = all)
+  /**
+   * Criteria switched off. Absent or empty means every criterion applies, so
+   * a request that predates this field behaves exactly as it did before.
+   */
+  off: FilterKey[];
 };
+
+/** True when criterion `k` should be applied to this scan. */
+export const isOn = (f: Filters, k: FilterKey) => !(f.off ?? []).includes(k);
 
 export type Candidate = {
   symbol: string;

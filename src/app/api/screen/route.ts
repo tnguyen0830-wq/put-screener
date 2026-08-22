@@ -16,7 +16,7 @@ import {
   type UnderlyingContext,
 } from '@/lib/screener';
 import { readWatchlist } from '@/lib/watchlist';
-import type { Filters, StreamEvent } from '@/lib/types';
+import { isOn, type Filters, type StreamEvent } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 900;
@@ -110,7 +110,10 @@ export async function POST(req: NextRequest) {
         const q = await quotes(list.map((c) => c.symbol));
 
         // Cheap pass first: anything whose 100 shares cost more than the
-        // capital budget can never produce a tradeable put.
+        // capital budget can never produce a tradeable put. With the capital
+        // criterion switched off there is no budget to compare against, so
+        // every ticker goes on to the chain fetch - that is the slow path.
+        const capOn = isOn(filters, 'capital');
         const survivors: (Constituent & { quote: any })[] = [];
         for (const c of list) {
           const row = q[c.symbol];
@@ -119,7 +122,7 @@ export async function POST(req: NextRequest) {
             send({ type: 'skip', symbol: c.symbol, reason: 'no quote' });
             continue;
           }
-          if (spot * 100 > filters.maxCapital) {
+          if (capOn && spot * 100 > filters.maxCapital) {
             send({ type: 'skip', symbol: c.symbol, reason: 'quá vốn' });
             continue;
           }
