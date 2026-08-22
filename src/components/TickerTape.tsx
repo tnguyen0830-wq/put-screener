@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 
 type Item = {
   key: string;
-  /** The symbol Schwab actually answered on, prefix stripped. */
+  /** The row's name: SPX, GC, BTC. */
   symbol: string;
+  /** The contract that price came from - GCZ26 where the row says GC. */
+  contract?: string;
   last: number;
   change: number;
   changePercent: number;
@@ -60,8 +62,12 @@ export default function TickerTape() {
     return (
       <span className="tapeitem" key={it.key}>
         {/* The symbol itself, not a translated name: SPX and CL read the same
-            in either language, and the bar has no room for both. */}
-        <b>{it.symbol}</b>
+            in either language, and the bar has no room for both. The delivery
+            month rides in the tooltip, since GC is the name but GCZ26 is the
+            thing actually quoted. */}
+        <b title={it.contract && it.contract !== it.symbol ? it.contract : undefined}>
+          {it.symbol}
+        </b>
         <span className="tapelast">
           {it.last.toLocaleString('en-US', {
             minimumFractionDigits: 2,
