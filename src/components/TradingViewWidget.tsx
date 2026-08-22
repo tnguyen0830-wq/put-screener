@@ -7,9 +7,14 @@ type Props = {
   type: string;
   config: Record<string, unknown>;
   height: number;
-  /** Required attribution link for the free tier. */
-  attributionHref: string;
-  attributionLabel: string;
+  /**
+   * Attribution link required by the free tier. Optional only for widgets that
+   * already render TradingView's own branded link inside themselves, such as
+   * the ticker tape - a second credit line under those is duplicate, and on a
+   * compact bar it costs more height than the widget itself.
+   */
+  attributionHref?: string;
+  attributionLabel?: string;
 };
 
 export default function TradingViewWidget({
@@ -46,14 +51,16 @@ export default function TradingViewWidget({
   return (
     <div className="tv-wrap">
       <div ref={host} className="tradingview-widget-container" />
-      <a
-        className="tv-credit"
-        href={attributionHref}
-        target="_blank"
-        rel="noopener nofollow"
-      >
-        {attributionLabel} · TradingView
-      </a>
+      {attributionHref && (
+        <a
+          className="tv-credit"
+          href={attributionHref}
+          target="_blank"
+          rel="noopener nofollow"
+        >
+          {attributionLabel} · TradingView
+        </a>
+      )}
     </div>
   );
 }
