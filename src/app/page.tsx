@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import FilterPanel from '@/components/FilterPanel';
+import TickerTape from '@/components/TickerTape';
 import ResultsTable from '@/components/ResultsTable';
 import DetailDrawer from '@/components/DetailDrawer';
 import WatchlistPanel from '@/components/WatchlistPanel';
@@ -208,6 +209,8 @@ export default function Page() {
           </>
         )}
       </header>
+
+      <TickerTape />
 
       {running && (
         <div className="bar">
