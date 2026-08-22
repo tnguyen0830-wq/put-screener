@@ -183,8 +183,6 @@ export default function HeatmapPanel({
       </div>
 
       <div className="panel-body">
-        <FearGreed />
-
         <div className="segmented hmranges">
           {RANGES.map((r) => (
             <button
@@ -358,6 +356,10 @@ export default function HeatmapPanel({
         <p className="cap">
           {t('hm.note')}
         </p>
+
+        {/* The map itself always comes first in this tab; anything added later
+            belongs below this line, not above it. */}
+        <FearGreed />
       </div>
     </section>
   );
