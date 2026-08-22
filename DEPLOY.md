@@ -23,20 +23,31 @@ tự bấm nút deploy. Các bước dưới đây ghi rõ chỗ nào bạn làm
 
 ---
 
-## Bước 1 — Đưa code lên GitHub
+## Bước 1 — Code trên GitHub ✅ đã xong
 
-Render deploy từ GitHub. Thư mục này chưa phải git repo.
+Render deploy từ GitHub. Repo đã có sẵn:
 
-`.gitignore` đã chặn sẵn `.env`, `.tokens.json`, `.cache`, `certificates` — nên
-**secret sẽ không bị đẩy lên**. Kiểm tra lại bằng `git status` trước khi commit.
-
-```bash
-git init && git add -A && git status
+```
+https://github.com/tnguyen0830-wq/put-screener
 ```
 
-Nhìn kỹ danh sách: nếu thấy `.env` hoặc `.tokens.json` thì **dừng lại**, đừng commit.
+**Giữ repo ở chế độ Private.** Repo này không chứa secret (xem bên dưới), nhưng URL
+backend và cấu trúc API nằm hết trong đây.
 
-Sau đó tạo một repo **Private** trên GitHub và push lên.
+Từ giờ vòng lặp cập nhật là: sửa code → commit → `git push` → **Render tự build và
+deploy lại**. Không phải bấm gì thêm trên dashboard.
+
+### Kiểm tra secret trước mỗi lần commit
+
+`.gitignore` đã chặn sẵn `.env`, `.tokens.json`, `.cache`, `certificates`. Vẫn nên
+liếc `git status` trước khi commit:
+
+```bash
+git add -A && git status
+```
+
+Nếu thấy `.env` hoặc `.tokens.json` trong danh sách thì **dừng lại**, đừng commit —
+nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
 
 ---
 
@@ -54,26 +65,48 @@ Sau đó tạo một repo **Private** trên GitHub và push lên.
    | `MD_API_TOKEN` | bấm nút **Generate** của Render |
    | `SCHWAB_CALLBACK_URL` | điền sau khi biết URL — xem bước 3 |
 
-4. Deploy. Ghi lại URL Render cấp, dạng `https://put-screener-xxxx.onrender.com`.
+4. Deploy. Render cấp URL — service hiện tại là `https://put-screener-y2hw.onrender.com`
+   (đuôi `y2hw` là ngẫu nhiên; deploy lại từ đầu sẽ ra đuôi khác).
 
 > Gói `starter` là bắt buộc vì cần ổ đĩa lưu token. Gói free không có ổ đĩa,
 > token sẽ mất mỗi lần server ngủ dậy và bạn phải đăng nhập Schwab liên tục.
 
 ---
 
-## Bước 3 — Cập nhật callback URL bên Schwab
+## Bước 3 — Thêm callback URL bên Schwab
 
-Hiện `.env` đang là `https://127.0.0.1:3000/api/auth/callback`. Trên mạng thì không dùng được.
+Ô **Callback URL(s)** trong Schwab Developer Portal nhận **nhiều URL**. Nên đây là
+*thêm một dòng*, không phải *thay thế*: giữ nguyên URL local và thêm URL Render vào
+bên cạnh.
 
-1. Vào Schwab Developer Portal → app của bạn → sửa **Callback URL** thành:
-   ```
-   https://put-screener-xxxx.onrender.com/api/auth/callback
-   ```
-2. Schwab duyệt thay đổi này mất một lúc (thường vài phút đến vài giờ).
-3. Quay lại Render, điền đúng URL đó vào biến `SCHWAB_CALLBACK_URL`.
+```
+https://127.0.0.1:3000/api/auth/callback                   ← laptop, GIỮ NGUYÊN
+https://put-screener-y2hw.onrender.com/api/auth/callback   ← thêm dòng này
+```
 
-⚠️ Sau khi đổi, backend chạy ở **laptop sẽ không đăng nhập Schwab được nữa** (vì callback
-đã trỏ lên mạng). Nếu muốn giữ cả hai, đăng ký thêm một app thứ hai bên Schwab cho local.
+Nhờ vậy laptop và bản deploy **dùng chung một app Schwab** — không cần đăng ký app
+thứ hai. `.env` ở laptop vẫn để URL `127.0.0.1`, còn trên Render thì biến
+`SCHWAB_CALLBACK_URL` để URL `onrender.com`; cùng một `SCHWAB_APP_KEY` chạy được cả hai.
+
+1. Portal → app của bạn → thêm dòng vào **Callback URL(s)** → **Save**.
+2. **Thay đổi chỉ có hiệu lực sau khi Schwab đồng bộ qua đêm.** Xác nhận từ Schwab
+   Trader API Support (22/08/2026): *"This is expected behavior while the back end
+   syncs, which happens overnight. In the meantime, you are able to use the previous
+   callback URL."* Sau khi lưu, app ở trạng thái **Approved - Pending**; sáng hôm sau
+   phải chuyển thành **Ready For Use**.
+3. **Trong lúc chờ, URL cũ vẫn chạy bình thường** — laptop vẫn đăng nhập Schwab được
+   như thường, không mất gì trong đêm đó.
+4. Quay lại Render, điền vào `SCHWAB_CALLBACK_URL` đúng URL Render, **khớp từng ký
+   tự**: không thừa dấu `/` ở cuối, không dùng `http`. Copy-paste thẳng từ portal cho
+   chắc — Schwab so khớp chuỗi tuyệt đối và chỉ báo `invalid redirect_uri` chứ không
+   nói sai ở đâu.
+
+⚠️ Ngay tối vừa đổi mà đăng nhập trên Render báo `invalid redirect_uri` thì **đừng đi
+sửa code** — gần như chắc chắn là chưa tới lượt sync. Sáng hôm sau thử lại.
+
+> Mỗi lần đổi callback tốn một đêm. Nên **deploy Render trước để biết URL thật** rồi mới
+> đổi đúng một lần (URL Render có đuôi ngẫu nhiên, đoán trước gần như chắc sai). Đó là
+> lý do bước này nằm sau Bước 2.
 
 ---
 
@@ -81,14 +114,14 @@ Hiện `.env` đang là `https://127.0.0.1:3000/api/auth/callback`. Trên mạng
 
 Mở trên điện thoại hoặc máy tính:
 ```
-https://put-screener-xxxx.onrender.com
+https://put-screener-y2hw.onrender.com
 ```
 Bấm nút kết nối Schwab, đăng nhập. Token được ghi vào `/var/data/.tokens.json` trên ổ đĩa
 và sống qua các lần deploy.
 
 Kiểm tra:
 ```bash
-curl -H "x-md-token: <MD_API_TOKEN>" https://put-screener-xxxx.onrender.com/api/md/volatility
+curl -H "x-md-token: <MD_API_TOKEN>" https://put-screener-y2hw.onrender.com/api/md/volatility
 ```
 Phải trả về VIX và chỉ số S&P. Nếu trả `MD_TOKEN_INVALID` là token sai; nếu trả
 `REAUTH_REQUIRED` là chưa đăng nhập Schwab xong.
@@ -101,7 +134,7 @@ Trong `ProSellPutScanner`, sửa `.env`:
 
 ```
 EXPO_PUBLIC_MARKET_DATA_PROVIDER=schwab
-EXPO_PUBLIC_BACKEND_URL=https://put-screener-xxxx.onrender.com
+EXPO_PUBLIC_BACKEND_URL=https://put-screener-y2hw.onrender.com
 EXPO_PUBLIC_BACKEND_TOKEN=<đúng giá trị MD_API_TOKEN ở bước 2>
 ```
 
@@ -114,7 +147,7 @@ npx expo export --platform web
 **Luôn kiểm tra biến đã được nhúng vào bundle trước khi deploy:**
 
 ```bash
-grep -c "put-screener-xxxx.onrender.com" dist/_expo/static/js/web/*.js
+grep -c "put-screener-y2hw.onrender.com" dist/_expo/static/js/web/*.js
 ```
 
 Phải ra `1`. Nếu ra `0` thì biến chưa vào bundle và app sẽ chạy DEMO DATA mà **không

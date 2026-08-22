@@ -1,6 +1,6 @@
 'use client';
 
-import type { Filters } from '@/lib/types';
+import { isOn, type FilterKey, type Filters } from '@/lib/types';
 
 const SECTORS = [
   'Communication Services',
@@ -34,12 +34,42 @@ export default function FilterPanel({
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) =>
     onChange({ ...value, [k]: v });
 
-  const num = (k: keyof Filters) => ({
+  const on = (k: FilterKey) => isOn(value, k);
+
+  const toggle = (k: FilterKey, checked: boolean) => {
+    const off = new Set(value.off ?? []);
+    if (checked) off.delete(k);
+    else off.add(k);
+    set('off', [...off]);
+  };
+
+  /**
+   * Inputs of a switched-off criterion stay filled but go disabled: the typed
+   * numbers survive the round trip, and nothing looks like it is still being
+   * applied when it is not.
+   */
+  const num = (k: keyof Filters, group: FilterKey) => ({
     type: 'number' as const,
     value: value[k] as number,
+    disabled: !on(group),
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       set(k, Number(e.target.value) as any),
   });
+
+  const field = (group: FilterKey) => `field${on(group) ? '' : ' field-off'}`;
+
+  const head = (group: FilterKey, text: string) => (
+    <label className="field-toggle">
+      <input
+        type="checkbox"
+        checked={on(group)}
+        onChange={(e) => toggle(group, e.target.checked)}
+      />
+      <span>{text}</span>
+    </label>
+  );
+
+  const offCount = (value.off ?? []).length;
 
   return (
     <section className="panel">
@@ -60,51 +90,76 @@ export default function FilterPanel({
           </button>
         </div>
 
-        <div className="field">
-          <label htmlFor="cap">Vốn tối đa mỗi vị thế (USD)</label>
-          <input id="cap" step={1000} {...num('maxCapital')} />
+        <p className="hint hint-lead">
+          Bỏ tick một tiêu chí để <strong>không áp dụng</strong> tiêu chí đó. Số đã
+          nhập vẫn được giữ, tick lại là dùng nguyên như cũ.
+        </p>
+
+        <div className={field('capital')}>
+          {head('capital', 'Vốn tối đa mỗi vị thế (USD)')}
+          <input step={1000} {...num('maxCapital', 'capital')} />
+          {!on('capital') && (
+            <p className="hint hint-warn">
+              Không loại mã đắt trước khi tải chuỗi quyền chọn, nên quét sẽ lâu hơn
+              đáng kể.
+            </p>
+          )}
         </div>
 
-        <div className="field">
-          <label>Delta (tuyệt đối)</label>
-          <div className="pair">
-            <input step={0.01} {...num('minDelta')} aria-label="Delta tối thiểu" />
-            <input step={0.01} {...num('maxDelta')} aria-label="Delta tối đa" />
-          </div>
-        </div>
-
-        <div className="field">
-          <label>Số ngày đến đáo hạn</label>
-          <div className="pair">
-            <input {...num('minDte')} aria-label="DTE tối thiểu" />
-            <input {...num('maxDte')} aria-label="DTE tối đa" />
-          </div>
-        </div>
-
-        <div className="field">
-          <label htmlFor="roc">Lợi suất quy năm tối thiểu (%)</label>
-          <input id="roc" {...num('minAnnualRoc')} />
-        </div>
-
-        <div className="field">
-          <label>Thanh khoản</label>
+        <div className={field('delta')}>
+          {head('delta', 'Delta (tuyệt đối)')}
           <div className="pair">
             <input
-              {...num('minOpenInterest')}
+              step={0.01}
+              {...num('minDelta', 'delta')}
+              aria-label="Delta tối thiểu"
+            />
+            <input
+              step={0.01}
+              {...num('maxDelta', 'delta')}
+              aria-label="Delta tối đa"
+            />
+          </div>
+        </div>
+
+        <div className={field('dte')}>
+          {head('dte', 'Số ngày đến đáo hạn')}
+          <div className="pair">
+            <input {...num('minDte', 'dte')} aria-label="DTE tối thiểu" />
+            <input {...num('maxDte', 'dte')} aria-label="DTE tối đa" />
+          </div>
+          {!on('dte') && (
+            <p className="hint hint-warn">
+              Vẫn giới hạn 180 ngày tới — quét mọi đáo hạn xa hơn thì chuỗi quyền
+              chọn phình quá to mà không dùng để bán put.
+            </p>
+          )}
+        </div>
+
+        <div className={field('roc')}>
+          {head('roc', 'Lợi suất quy năm tối thiểu (%)')}
+          <input {...num('minAnnualRoc', 'roc')} />
+        </div>
+
+        <div className={field('liquidity')}>
+          {head('liquidity', 'Thanh khoản')}
+          <div className="pair">
+            <input
+              {...num('minOpenInterest', 'liquidity')}
               aria-label="Open interest tối thiểu"
             />
             <input
               step={0.5}
-              {...num('maxSpreadPct')}
+              {...num('maxSpreadPct', 'liquidity')}
               aria-label="Spread tối đa phần trăm"
             />
           </div>
           <p className="hint">Trái: OI tối thiểu. Phải: spread tối đa (% của mid).</p>
         </div>
 
-        <div className="field">
-          <label htmlFor="ivhv">IV / HV20 tối thiểu</label>
-          <input id="ivhv" step={0.05} {...num('minIvHv')} />
+        <div className={field('ivhv')}>
+          {head('ivhv', 'IV / HV20 tối thiểu')}
+          <input step={0.05} {...num('minIvHv', 'ivhv')} />
         </div>
 
         <div
@@ -153,6 +208,12 @@ export default function FilterPanel({
               ? 'Quét watchlist'
               : 'Quét S&P 500'}
         </button>
+
+        {offCount > 0 && (
+          <p className="hint hint-warn">
+            Đang tắt {offCount} tiêu chí — kết quả sẽ nhiều và lỏng hơn bình thường.
+          </p>
+        )}
 
         <p className="hint">
           {value.universe === 'watchlist'

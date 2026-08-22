@@ -27,6 +27,7 @@ const DEFAULTS: Filters = {
   excludeEarnings: true,
   sectors: [],
   limit: 0,
+  off: [],
 };
 
 type Status = {

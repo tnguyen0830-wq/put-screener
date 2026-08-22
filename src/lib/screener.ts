@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Candidate, Filters } from './types';
+import { isOn, type Candidate, type Filters } from './types';
 
 /* ---------------- price-history math ---------------- */
 
@@ -162,8 +162,17 @@ function addDays(days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export const windowFrom = (f: Filters) => addDays(f.minDte);
-export const windowTo = (f: Filters) => addDays(f.maxDte);
+/**
+ * Ceiling used when the DTE criterion is switched off. Schwab returns every
+ * expiration inside the requested window, so an unbounded window pulls years
+ * of LEAPS chains per ticker - slow, and useless for selling cash-secured
+ * puts. Six months is well past anything this screener would surface.
+ */
+const OPEN_DTE_CEILING = 180;
+
+export const windowFrom = (f: Filters) => addDays(isOn(f, 'dte') ? f.minDte : 0);
+export const windowTo = (f: Filters) =>
+  addDays(isOn(f, 'dte') ? f.maxDte : OPEN_DTE_CEILING);
 
 /**
  * Score blends the three things that decide whether a cash-secured put was a
@@ -189,30 +198,40 @@ export async function evaluate(
   let best: Candidate | null = null;
 
   for (const c of contracts) {
+    // A contract with no delta is unusable regardless of the filter: the
+    // table shows delta and the score leans on it. That check is data
+    // quality, not a user criterion, so it always runs.
     const delta = Math.abs(c.delta ?? 0);
-    if (!delta || delta < f.minDelta || delta > f.maxDelta) continue;
-    if (c.daysToExpiration < f.minDte || c.daysToExpiration > f.maxDte) continue;
+    if (!delta) continue;
+    if (isOn(f, 'delta') && (delta < f.minDelta || delta > f.maxDelta)) continue;
+    if (
+      isOn(f, 'dte') &&
+      (c.daysToExpiration < f.minDte || c.daysToExpiration > f.maxDte)
+    )
+      continue;
     if (c.strikePrice >= u.spot) continue; // OTM puts only
-    if ((c.openInterest ?? 0) < f.minOpenInterest) continue;
+    if (isOn(f, 'liquidity') && (c.openInterest ?? 0) < f.minOpenInterest)
+      continue;
 
     const bid = c.bid ?? 0;
     const ask = c.ask ?? 0;
     if (bid <= 0 || ask <= 0) continue;
     const mid = (bid + ask) / 2;
     const spreadPct = ((ask - bid) / mid) * 100;
-    if (spreadPct > f.maxSpreadPct) continue;
+    if (isOn(f, 'liquidity') && spreadPct > f.maxSpreadPct) continue;
 
     const capital = c.strikePrice * 100;
-    if (capital > f.maxCapital) continue;
+    if (isOn(f, 'capital') && capital > f.maxCapital) continue;
 
     const credit = mid * 100;
     const rocPct = (credit / capital) * 100;
     const annualRocPct = rocPct * (365 / Math.max(c.daysToExpiration, 1));
-    if (annualRocPct < f.minAnnualRoc) continue;
+    if (isOn(f, 'roc') && annualRocPct < f.minAnnualRoc) continue;
 
     const iv = (c.volatility ?? 0) / 100;
     const ivHv = u.hv20 && u.hv20 > 0 ? iv / u.hv20 : null;
-    if (f.minIvHv > 0 && ivHv !== null && ivHv < f.minIvHv) continue;
+    if (isOn(f, 'ivhv') && f.minIvHv > 0 && ivHv !== null && ivHv < f.minIvHv)
+      continue;
 
     const warnings: string[] = [];
     const aboveSma200 = u.sma200 ? u.spot > u.sma200 : null;
