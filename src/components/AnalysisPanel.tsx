@@ -68,6 +68,19 @@ type Analysis = {
     tickerCount: number;
     relatedTickers: string[];
   }[];
+  profile: {
+    sector: string | null;
+    industry: string | null;
+    country: string | null;
+    website: string | null;
+    ceo: string | null;
+    employees: number | null;
+    ipoDate: string | null;
+    exchange: string | null;
+    description: string | null;
+    /** Nguồn nào trả lời, nguồn nào không — đọc được ở /api/analyze. */
+    sources: { fmp: string; finviz: string };
+  } | null;
   finviz: {
     metrics: Record<string, string>;
     ratings: { date: string; action: string; analyst: string; rating: string; target: string }[];
@@ -116,6 +129,81 @@ function Row({
         {note ? <span className="anote"> {note}</span> : null}
       </dd>
     </div>
+  );
+}
+
+/**
+ * Hồ sơ công ty, ngay dưới giá.
+ *
+ * Phần còn lại của tab này toàn số; khối này trả lời câu hỏi đứng trước mọi con
+ * số đó — công ty này làm gì, thuộc ngành nào, lớn cỡ nào. Bán put là nhận cổ
+ * phiếu về nếu bị assign, nên biết mình có thể phải ôm cái gì là chuyện đầu tiên.
+ *
+ * Mọi trường đều có thể trống: trường nào trống thì biến mất, không để lại một
+ * hàng dấu gạch.
+ */
+function CompanyProfileCard({ p }: { p: NonNullable<Analysis['profile']> }) {
+  const { t: tr } = useLang();
+  const [open, setOpen] = useState(false);
+
+  const tags = [p.sector, p.industry, p.country].filter(Boolean) as string[];
+  const host = p.website ? p.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : null;
+
+  // Mô tả của FMP dài cỡ một đoạn văn. Cắt còn vài dòng để khối này không đẩy
+  // toàn bộ phần phân tích xuống dưới màn hình, và chỉ hiện nút khi có gì để mở.
+  const longBio = (p.description?.length ?? 0) > 320;
+
+  const meta: { label: string; value: string }[] = [];
+  if (p.ceo) meta.push({ label: tr('an.ceo'), value: p.ceo });
+  if (p.employees)
+    meta.push({ label: tr('an.employees'), value: p.employees.toLocaleString('en-US') });
+  if (p.ipoDate) meta.push({ label: tr('an.ipo'), value: p.ipoDate });
+  if (p.exchange) meta.push({ label: tr('an.listedOn'), value: p.exchange });
+
+  return (
+    <>
+      <h3 className="dsec">{tr('an.company')}</h3>
+
+      {tags.length > 0 || host ? (
+        <div className="cptags">
+          {tags.map((x) => (
+            <span className="cptag" key={x}>
+              {x}
+            </span>
+          ))}
+          {host && (
+            <a className="cptag cplink" href={p.website!} target="_blank" rel="noopener">
+              {host}
+            </a>
+          )}
+        </div>
+      ) : null}
+
+      {p.description ? (
+        <>
+          <p className={open ? 'cpbio' : 'cpbio clamp'}>{p.description}</p>
+          {longBio && (
+            <button type="button" className="cpmore" onClick={() => setOpen(!open)}>
+              {tr(open ? 'an.less' : 'an.more')}
+            </button>
+          )}
+        </>
+      ) : (
+        <p className="cap">
+          {tr(p.sources.fmp === 'no-key' ? 'an.companyNoKey' : 'an.companyNoBio')}
+        </p>
+      )}
+
+      {meta.length > 0 && (
+        <dl className="stats cpmeta">
+          {meta.map((m) => (
+            <Row key={m.label} label={m.label} value={m.value} />
+          ))}
+        </dl>
+      )}
+
+      <p className="cap">{tr('an.companyNote')}</p>
+    </>
   );
 }
 
@@ -266,6 +354,8 @@ export default function AnalysisPanel({
                 <span>{tr('an.high52', usd(p.high52))}</span>
               </div>
             </div>
+
+            {data.profile && <CompanyProfileCard p={data.profile} />}
 
             <ColorLegend />
 

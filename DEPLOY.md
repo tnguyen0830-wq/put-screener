@@ -61,7 +61,7 @@ nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
    |---|---|
    | `SCHWAB_APP_KEY` | file `.env` hiện tại |
    | `SCHWAB_APP_SECRET` | file `.env` hiện tại |
-   | `FMP_API_KEY` | file `.env` hiện tại |
+   | `FMP_API_KEY` | file `.env` hiện tại — thiếu thì mô tả doanh nghiệp trong tab Analyze để trống, phần còn lại vẫn chạy |
    | `MD_API_TOKEN` | bấm nút **Generate** của Render |
    | `SCHWAB_CALLBACK_URL` | điền sau khi biết URL — xem bước 3 |
 

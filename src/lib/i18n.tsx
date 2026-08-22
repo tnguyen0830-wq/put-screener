@@ -375,6 +375,27 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'an.low52': { vi: (v: string) => `Đáy 52T ${v}`, en: (v: string) => `52w low ${v}` },
   'an.high52': { vi: (v: string) => `Đỉnh 52T ${v}`, en: (v: string) => `52w high ${v}` },
   'an.ofRange': { vi: (v: string) => `${v} biên độ`, en: (v: string) => `${v} of range` },
+  // ---- company profile ----
+  'an.company': { vi: 'Thông tin công ty', en: 'Company profile' },
+  'an.ceo': { vi: 'CEO', en: 'CEO' },
+  'an.employees': { vi: 'Nhân viên', en: 'Employees' },
+  'an.ipo': { vi: 'Ngày IPO', en: 'IPO date' },
+  'an.listedOn': { vi: 'Sàn niêm yết', en: 'Listed on' },
+  'an.more': { vi: 'Xem thêm', en: 'Show more' },
+  'an.less': { vi: 'Thu gọn', en: 'Show less' },
+  'an.companyNote': {
+    vi: 'Mô tả doanh nghiệp lấy từ FMP; lĩnh vực, ngành và quốc gia lấy từ trang quote Finviz. Đây là phần phụ — nguồn nào hỏng thì trường đó trống, phần phân tích vẫn chạy đủ.',
+    en: 'The business description comes from FMP; sector, industry and country come from the Finviz quote page. This section is supplementary — if a source fails those fields go blank and the rest of the analysis still runs.',
+  },
+  'an.companyNoKey': {
+    vi: 'Chưa có mô tả doanh nghiệp: server chưa đặt FMP_API_KEY.',
+    en: 'No business description: the server has no FMP_API_KEY set.',
+  },
+  'an.companyNoBio': {
+    vi: 'Chưa lấy được mô tả doanh nghiệp cho mã này.',
+    en: 'No business description came back for this ticker.',
+  },
+
   'an.technical': { vi: 'Kỹ thuật', en: 'Technicals' },
   'an.aboveSignal': { vi: 'trên tín hiệu', en: 'above signal' },
   'an.belowSignal': { vi: 'dưới tín hiệu', en: 'below signal' },
