@@ -23,20 +23,31 @@ tự bấm nút deploy. Các bước dưới đây ghi rõ chỗ nào bạn làm
 
 ---
 
-## Bước 1 — Đưa code lên GitHub
+## Bước 1 — Code trên GitHub ✅ đã xong
 
-Render deploy từ GitHub. Thư mục này chưa phải git repo.
+Render deploy từ GitHub. Repo đã có sẵn:
 
-`.gitignore` đã chặn sẵn `.env`, `.tokens.json`, `.cache`, `certificates` — nên
-**secret sẽ không bị đẩy lên**. Kiểm tra lại bằng `git status` trước khi commit.
-
-```bash
-git init && git add -A && git status
+```
+https://github.com/tnguyen0830-wq/put-screener
 ```
 
-Nhìn kỹ danh sách: nếu thấy `.env` hoặc `.tokens.json` thì **dừng lại**, đừng commit.
+**Giữ repo ở chế độ Private.** Repo này không chứa secret (xem bên dưới), nhưng URL
+backend và cấu trúc API nằm hết trong đây.
 
-Sau đó tạo một repo **Private** trên GitHub và push lên.
+Từ giờ vòng lặp cập nhật là: sửa code → commit → `git push` → **Render tự build và
+deploy lại**. Không phải bấm gì thêm trên dashboard.
+
+### Kiểm tra secret trước mỗi lần commit
+
+`.gitignore` đã chặn sẵn `.env`, `.tokens.json`, `.cache`, `certificates`. Vẫn nên
+liếc `git status` trước khi commit:
+
+```bash
+git add -A && git status
+```
+
+Nếu thấy `.env` hoặc `.tokens.json` trong danh sách thì **dừng lại**, đừng commit —
+nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
 
 ---
 
