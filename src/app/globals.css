@@ -238,6 +238,18 @@ select {
   top: 76px;
 }
 
+/* Must sit after the rule above, not inside the .shell media query further up:
+   same specificity, so the later rule is the one that wins.
+
+   Below the breakpoint the columns stack, and a sticky filter panel then has
+   nothing to stay level with - it just pins itself over the results table as
+   the rows scroll underneath it. */
+@media (max-width: 940px) {
+  .sticky-col {
+    position: static;
+  }
+}
+
 /* ---------- form ---------- */
 
 .field {
