@@ -13,44 +13,59 @@ import { quotes } from '@/lib/schwab';
 export const dynamic = 'force-dynamic';
 
 /**
- * Index symbols where Schwab has them, ETFs where it does not. An ETF's level
- * is its own, not the underlying's, so the label names the ETF rather than
- * quietly passing GLD off as the price of gold.
+ * What the bar shows, and what to ask Schwab for.
+ *
+ * Each row lists candidates in order of preference and the first one Schwab
+ * actually quotes wins. Futures and index symbols could not be tried against a
+ * live Schwab session from the build environment, so rather than betting the
+ * row on an unverified symbol, each falls back to the ETF that stood there
+ * before. The label reports whichever symbol answered - if gold ends up on GLD
+ * the bar says GLD, never GC.
  */
-const TAPE = [
-  { symbol: '$VIX', key: 'vix' },
-  { symbol: '$SPX', key: 'spx' },
-  { symbol: 'QQQ', key: 'ndx' },
-  { symbol: 'IWM', key: 'rut' },
-  { symbol: 'GLD', key: 'gold' },
-  { symbol: 'USO', key: 'oil' },
-  { symbol: 'IBIT', key: 'btc' },
+const TAPE: { key: string; candidates: string[] }[] = [
+  { key: 'spx', candidates: ['$SPX'] },
+  { key: 'ndx', candidates: ['$NDX', 'QQQ'] },
+  { key: 'rut', candidates: ['IWM'] },
+  { key: 'vix', candidates: ['$VIX'] },
+  { key: 'gold', candidates: ['/GC', 'GLD'] },
+  { key: 'oil', candidates: ['/CL', 'USO'] },
+  { key: 'btc', candidates: ['/BTC', 'IBIT'] },
 ];
+
+/** Futures and index symbols carry a prefix Schwab needs but nobody reads. */
+const display = (symbol: string) => symbol.replace(/^[$/]/, '');
 
 export async function GET() {
   try {
-    const q = await quotes(TAPE.map((t) => t.symbol));
+    const q = await quotes(TAPE.flatMap((t) => t.candidates));
 
-    // A symbol Schwab will not quote is dropped rather than rendered blank.
-    // The tape is glanceable context; a gap in it beats an error badge, which
-    // is exactly what the widget this replaces used to show.
+    // A row Schwab will not quote at all is dropped rather than rendered
+    // blank: the tape is glanceable context, and a gap in it beats a slot
+    // showing an error.
+    const missing: string[] = [];
     const items = TAPE.map((t) => {
-      const quote = q[t.symbol]?.quote;
-      if (!quote?.lastPrice) return null;
-      return {
-        // A key, not a label: the bar is bilingual and the server does not
-        // know which language the browser is showing.
-        key: t.key,
-        last: quote.lastPrice,
-        change: quote.netChange ?? 0,
-        changePercent: quote.netPercentChange ?? 0,
-      };
+      for (const symbol of t.candidates) {
+        const quote = q[symbol]?.quote;
+        if (quote?.lastPrice) {
+          return {
+            key: t.key,
+            symbol: display(symbol),
+            last: quote.lastPrice,
+            change: quote.netChange ?? 0,
+            changePercent: quote.netPercentChange ?? 0,
+          };
+        }
+      }
+      missing.push(t.candidates.join(' / '));
+      return null;
     }).filter(Boolean);
 
     if (!items.length) {
-      return Response.json({ error: 'No quotes available' }, { status: 502 });
+      return Response.json({ error: 'No quotes available', missing }, { status: 502 });
     }
-    return Response.json({ items });
+    // `missing` rides along so one look at this endpoint names any symbol
+    // Schwab refused, instead of leaving a silent gap to be guessed at.
+    return Response.json({ items, missing });
   } catch (e: any) {
     const msg = String(e.message ?? e);
     return Response.json(

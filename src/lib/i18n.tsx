@@ -76,14 +76,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (t: string) => `Appearance: ${t}. Click to change.`,
   },
 
-  // ---- ticker tape ----
-  'tape.vix': { vi: 'VIX', en: 'VIX' },
-  'tape.spx': { vi: 'S&P 500', en: 'S&P 500' },
-  'tape.ndx': { vi: 'Nasdaq 100', en: 'Nasdaq 100' },
-  'tape.rut': { vi: 'Russell 2000', en: 'Russell 2000' },
-  'tape.gold': { vi: 'Vàng · GLD', en: 'Gold · GLD' },
-  'tape.oil': { vi: 'Dầu · USO', en: 'Oil · USO' },
-  'tape.btc': { vi: 'Bitcoin · IBIT', en: 'Bitcoin · IBIT' },
+  // Ticker tape labels are gone: the bar prints the symbol Schwab answered on,
+  // which is language-neutral and tells the truth when a fallback was used.
 
   // ---- filter panel ----
   'filters.head': { vi: 'Tiêu chí lọc', en: 'Filters' },
