@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
         // criterion switched off there is no budget to compare against, so
         // every ticker goes on to the chain fetch - that is the slow path.
         const capOn = isOn(filters, 'capital');
+        const drawdownOn = isOn(filters, 'drawdown');
         const survivors: (Constituent & { quote: any })[] = [];
         for (const c of list) {
           const row = q[c.symbol];
@@ -125,6 +126,16 @@ export async function POST(req: NextRequest) {
           if (capOn && spot * 100 > filters.maxCapital) {
             send({ type: 'skip', symbol: c.symbol, reason: 'quá vốn' });
             continue;
+          }
+          // Same trick as the capital budget: a stock still near its high can
+          // never satisfy a drawdown floor, so drop it before paying for its
+          // option chain. evaluate() re-checks; this only saves the fetch.
+          if (drawdownOn) {
+            const hi = row?.quote?.['52WeekHigh'] ?? 0;
+            if (hi > 0 && ((hi - spot) / hi) * 100 < filters.minDrawdownPct) {
+              send({ type: 'skip', symbol: c.symbol, reason: 'chưa rớt đủ' });
+              continue;
+            }
           }
           if (spot < 5) {
             send({ type: 'skip', symbol: c.symbol, reason: 'giá quá thấp' });
