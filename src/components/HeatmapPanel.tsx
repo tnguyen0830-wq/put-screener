@@ -1,6 +1,7 @@
 'use client';
 
 import { useLang } from '@/lib/i18n';
+import FearGreed from './FearGreed';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { squarify } from '@/lib/treemap';
@@ -182,6 +183,8 @@ export default function HeatmapPanel({
       </div>
 
       <div className="panel-body">
+        <FearGreed />
+
         <div className="segmented hmranges">
           {RANGES.map((r) => (
             <button

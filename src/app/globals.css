@@ -23,6 +23,9 @@
   --warn: #9a6400;
   --warn-tint: #fdf0d8;
   --stamp: #2b4fe0;
+  /* Chart series colour. Stepped to pass the lightness band and 3:1 contrast
+     against each theme's card surface, checked with the palette validator. */
+  --fg-line: #2b4fe0;
   /* Ô trung tính trên bản đồ nhiệt; đủ tối để chữ trắng còn đọc được. */
   --heat-flat: #767f8b;
 
@@ -66,6 +69,7 @@
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
   --stamp: #7d9bff;
+  --fg-line: #5b7fe8;
   --heat-flat: #59616c;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -98,6 +102,7 @@
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
     --stamp: #7d9bff;
+  --fg-line: #5b7fe8;
     --heat-flat: #59616c;
 
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -243,6 +248,81 @@ select {
   font-size: 13.5px;
   line-height: 1.6;
   color: var(--ink);
+}
+
+/* ---------- fear & greed ---------- */
+
+.fg {
+  margin: 18px 0 4px;
+}
+
+.fghead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Leads by weight, not colour - same rule the results table follows. */
+.fgscore {
+  font-family: var(--data);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.fgrating {
+  font-family: var(--data);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+.fgprev {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+}
+
+.fgprev dt {
+  font-family: var(--data);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fgprev dd {
+  margin: 2px 0 0;
+  font-family: var(--data);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.fgchart {
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  padding: 6px 4px 2px;
+}
+
+.fgchart svg {
+  display: block;
+  touch-action: pan-y;
+}
+
+.fgtip {
+  margin: 2px 0 4px;
+  padding: 0 6px;
+  font-family: var(--data);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-height: 15px;
 }
 
 /* ---------- settings menu ---------- */

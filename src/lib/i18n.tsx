@@ -466,6 +466,34 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `Built from ${v.bars} sessions (${v.first} → ${v.last}). Each analysis costs 3 Schwab requests.`,
   },
 
+  // ---- fear & greed ----
+  'fg.title': { vi: 'Fear & Greed Index', en: 'Fear & Greed Index' },
+  'fg.loading': { vi: 'Đang tải chỉ số…', en: 'Loading the index…' },
+  'fg.failed': {
+    vi: 'Không lấy được Fear & Greed Index từ CNN. Đây là endpoint không chính thức nên thỉnh thoảng hỏng; phần còn lại của tab vẫn chạy.',
+    en: 'Could not fetch the Fear & Greed Index from CNN. This is an unofficial endpoint and breaks now and then; the rest of the tab still works.',
+  },
+  'fg.prevClose': { vi: 'Phiên trước', en: 'Prev close' },
+  'fg.week': { vi: '1 tuần', en: '1 week' },
+  'fg.month': { vi: '1 tháng', en: '1 month' },
+  'fg.year': { vi: '1 năm', en: '1 year' },
+  'fg.aria': {
+    vi: (v: number) => `Fear & Greed Index một năm qua, hiện tại ${v} trên thang 0–100`,
+    en: (v: number) => `Fear & Greed Index over the past year, currently ${v} out of 100`,
+  },
+  'fg.tip': {
+    vi: (v: any) => `${v.date} · ${v.score}`,
+    en: (v: any) => `${v.date} · ${v.score}`,
+  },
+  'fg.tipIdle': {
+    vi: 'Rê chuột hoặc chạm lên đường để xem giá trị từng ngày.',
+    en: 'Hover or drag along the line to read a day.',
+  },
+  'fg.note': {
+    vi: 'Thang 0–100: dưới 50 là thị trường đang sợ, trên 50 là đang tham. Với người bán put thì hướng đọc ngược với trực giác — lúc sợ hãi là lúc IV cao và quyền chọn được trả hậu, còn lúc tham lam thì phí mỏng. Vì vậy đường này để một màu duy nhất, không tô xanh–đỏ: trong app này xanh và đỏ đã mang nghĩa lên và xuống, thêm nghĩa thứ hai vào cùng hai màu là làm hỏng cả bảng kết quả. Nguồn: CNN, endpoint không chính thức, cache 30 phút.',
+    en: 'A 0–100 scale: below 50 the market is fearful, above 50 it is greedy. For a put seller the reading inverts against intuition — fear is when implied vol is high and options pay well, greed is when premium goes thin. That is why this line is a single colour rather than a red-to-green dial: green and red already mean up and down everywhere else in this app, and giving them a second meaning would spoil the results table too. Source: CNN, an unofficial endpoint, cached for 30 minutes.',
+  },
+
   // ---- AI read ----
   'ai.title': { vi: 'Claude đọc chỉ số', en: 'Claude reads the indicators' },
   'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },
