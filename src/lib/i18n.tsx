@@ -26,8 +26,10 @@ type Entry = string | ((v: any) => string);
 const DICT: Record<string, Record<Lang, Entry>> = {
   // ---- chrome ----
   'tab.screener': { vi: 'Sell Put Screener', en: 'Sell Put Screener' },
-  'tab.analyze': { vi: 'Phân tích mã', en: 'Analyze' },
-  'tab.heatmap': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  // Tab titles stay English in both languages: they name the screen, and a
+  // trader reads these terms in English everywhere else too.
+  'tab.analyze': { vi: 'Analyze', en: 'Analyze' },
+  'tab.heatmap': { vi: 'Heatmap', en: 'Heatmap' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
@@ -92,18 +94,34 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Bỏ tick một tiêu chí để không áp dụng tiêu chí đó. Số đã nhập vẫn được giữ, tick lại là dùng nguyên như cũ.',
     en: 'Untick a criterion to stop applying it. The number you typed is kept, so ticking it back restores it.',
   },
+  // Criterion labels stay English in both languages - delta, DTE and IV/HV are
+  // read in English on every broker screen, and translating them makes the
+  // panel harder to match against Schwab, not easier. The explanation under
+  // each one carries the language instead.
   'filters.capital': {
-    vi: 'Vốn tối đa mỗi vị thế (USD)',
+    vi: 'Max capital per position (USD)',
     en: 'Max capital per position (USD)',
+  },
+  'filters.capitalNote': {
+    vi: 'Bán 1 put là cam kết mua 100 cổ phiếu tại giá strike, nên vốn khoá = strike × 100. Đặt thấp hơn thì loại bớt mã đắt và quét nhanh hơn.',
+    en: 'Selling one put commits you to buying 100 shares at the strike, so the capital tied up is strike × 100. A lower budget drops expensive tickers and scans faster.',
   },
   'filters.capitalOff': {
     vi: 'Không loại mã đắt trước khi tải chuỗi quyền chọn, nên quét sẽ lâu hơn đáng kể.',
     en: 'Expensive tickers are no longer dropped before their option chain is fetched, so scans get considerably slower.',
   },
-  'filters.delta': { vi: 'Delta (tuyệt đối)', en: 'Delta (absolute)' },
+  'filters.delta': { vi: 'Delta (absolute)', en: 'Delta (absolute)' },
+  'filters.deltaNote': {
+    vi: 'Delta xấp xỉ xác suất hợp đồng bị assign. 0.15–0.30 là vùng bán put phổ biến: đủ phí để đáng làm, mà xác suất phải mua cổ phiếu còn thấp.',
+    en: 'Delta approximates the chance of being assigned. 0.15–0.30 is the usual put-selling zone: enough premium to be worth it, with the odds of having to buy still low.',
+  },
   'filters.deltaMin': { vi: 'Delta tối thiểu', en: 'Minimum delta' },
   'filters.deltaMax': { vi: 'Delta tối đa', en: 'Maximum delta' },
-  'filters.dte': { vi: 'Số ngày đến đáo hạn', en: 'Days to expiration' },
+  'filters.dte': { vi: 'Days to expiration', en: 'Days to expiration' },
+  'filters.dteNote': {
+    vi: 'Số ngày còn lại tới ngày đáo hạn. 25–50 ngày là vùng theta bào mạnh nhất mà chưa phải canh hằng ngày.',
+    en: 'Days left until expiry. 25–50 is where theta decays fastest without needing daily attention.',
+  },
   'filters.dteMin': { vi: 'DTE tối thiểu', en: 'Minimum DTE' },
   'filters.dteMax': { vi: 'DTE tối đa', en: 'Maximum DTE' },
   'filters.dteOff': {
@@ -111,10 +129,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Still capped at the next 180 days — scanning further out inflates the option chain for expirations nobody sells puts against.',
   },
   'filters.roc': {
-    vi: 'Lợi suất quy năm tối thiểu (%)',
+    vi: 'Minimum annualized return (%)',
     en: 'Minimum annualized return (%)',
   },
-  'filters.liquidity': { vi: 'Thanh khoản', en: 'Liquidity' },
+  'filters.rocNote': {
+    vi: 'Credit chia cho vốn khoá, quy về một năm. Cho phép so sánh hợp đồng 30 ngày với hợp đồng 45 ngày trên cùng một thước.',
+    en: 'Credit over capital tied up, scaled to a year. Lets a 30-day contract be compared with a 45-day one on the same measure.',
+  },
+  'filters.liquidity': { vi: 'Liquidity', en: 'Liquidity' },
   'filters.oiMin': { vi: 'Open interest tối thiểu', en: 'Minimum open interest' },
   'filters.spreadMax': {
     vi: 'Spread tối đa phần trăm',
@@ -125,19 +147,19 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Left: minimum open interest. Right: maximum spread (% of mid).',
   },
   'filters.drawdown': {
-    vi: 'Rớt từ đỉnh 52 tuần tối thiểu (%)',
+    vi: 'Minimum drop from 52-week high (%)',
     en: 'Minimum drop from 52-week high (%)',
   },
   'filters.drawdownHint': {
     vi: 'Chỉ lấy mã đã rớt ít nhất bấy nhiêu % so với đỉnh 52 tuần. Gõ 10 hoặc 20 tuỳ mức chiết khấu bạn muốn.',
     en: 'Only tickers that have fallen at least this far from their 52-week high. Type 10 or 20 depending on the discount you want.',
   },
-  'filters.ivhv': { vi: 'IV / HV20 tối thiểu', en: 'Minimum IV / HV20' },
+  'filters.ivhv': { vi: 'Minimum IV / HV20', en: 'Minimum IV / HV20' },
   'filters.ivhvHint': {
     vi: 'IV cao so với biến động thực tế 20 phiên. 1.0 = quyền chọn đang được trả đúng bằng mức dao động thật.',
     en: 'Implied vol against realized vol over 20 sessions. 1.0 means the option pays exactly what the stock actually moves.',
   },
-  'filters.iv': { vi: 'IV tối thiểu (%)', en: 'Minimum IV (%)' },
+  'filters.iv': { vi: 'Minimum IV (%)', en: 'Minimum IV (%)' },
   'filters.ivHint': {
     vi: 'IV tuyệt đối của chính hợp đồng. Khác ô trên: ô trên so IV với biến động thật, ô này chỉ hỏi IV có cao hay không.',
     en: "The contract's own implied vol. Unlike the field above, which compares IV to realized vol, this one just asks whether IV is high.",
