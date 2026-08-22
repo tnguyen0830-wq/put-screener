@@ -81,7 +81,11 @@ export default function TickerTape() {
         config={{
           symbols: SYMBOLS,
           showSymbolLogo: true,
-          isTransparent: true,
+          // Deliberately opaque. Transparent stops TradingView painting a
+          // background while colorTheme still drives the text, so under the
+          // dark theme the bar kept a light backdrop and the text turned
+          // white on it - invisible. Opaque means one theme decides both.
+          isTransparent: false,
           displayMode: 'adaptive',
           colorTheme: theme,
           locale: 'en',
