@@ -117,9 +117,20 @@ async function nasdaqCalendar(symbols, from, to) {
 
 /* ---------------- nguồn 3: Schwab ---------------- */
 
+/**
+ * Nguồn thứ ba, và là nguồn kém tin nhất — chỉ dùng khi Yahoo và Nasdaq đều
+ * trống. Nên khi không có phiên Schwab thì bỏ qua chứ không dừng cả lần chạy:
+ * script này còn chạy trên CI, nơi không có và không nên có token nào.
+ */
 async function schwabFundamentals(symbols) {
   const tokenFile = process.env.TOKEN_PATH || path.join(root, '.tokens.json');
-  const tok = JSON.parse(fs.readFileSync(tokenFile, 'utf8')).access_token;
+  let tok;
+  try {
+    tok = JSON.parse(fs.readFileSync(tokenFile, 'utf8')).access_token;
+  } catch {
+    console.log('Không có token Schwab — bỏ qua nguồn thứ ba, chạy tiếp.');
+    return {};
+  }
   const out = {};
   for (let i = 0; i < symbols.length; i += 100) {
     const batch = symbols.slice(i, i + 100).join(',');
@@ -129,10 +140,12 @@ async function schwabFundamentals(symbols) {
       )}&fields=fundamental,reference`,
       { headers: { Authorization: `Bearer ${tok}` } }
     );
-    if (!r.ok)
-      throw new Error(
-        `Schwab trả ${r.status} — token hết hạn? Bấm Kết nối lại trong app.`
+    if (!r.ok) {
+      console.log(
+        `Schwab trả ${r.status} (token hết hạn?) — bỏ qua nguồn thứ ba, chạy tiếp.`
       );
+      return {};
+    }
     Object.assign(out, await r.json());
   }
   return out;

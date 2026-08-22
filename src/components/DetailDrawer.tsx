@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import TradingViewWidget from './TradingViewWidget';
+import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
 import {
   tvSymbol,
@@ -29,6 +30,8 @@ export default function DetailDrawer({
   inWatchlist: boolean;
   onToggleWatchlist: (symbol: string) => void;
 }) {
+  const { t } = useLang();
+
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', esc);
@@ -41,7 +44,7 @@ export default function DetailDrawer({
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label={`Chi tiết ${row.symbol}`}>
+      <aside className="drawer" role="dialog" aria-label={t('dd.aria', row.symbol)}>
         <div className="drawer-head">
           <div>
             <span className="sym">{row.symbol}</span>
@@ -52,9 +55,9 @@ export default function DetailDrawer({
               className={inWatchlist ? 'wl on' : 'wl'}
               onClick={() => onToggleWatchlist(row.symbol)}
             >
-              {inWatchlist ? '★ Trong watchlist' : '☆ Lưu watchlist'}
+              {inWatchlist ? t('dd.inWatchlist') : t('dd.saveWatchlist')}
             </button>
-            <button className="x" onClick={onClose} aria-label="Đóng">
+            <button className="x" onClick={onClose} aria-label={t('dd.close')}>
               ✕
             </button>
           </div>
@@ -63,39 +66,41 @@ export default function DetailDrawer({
         <div className="drawer-body">
           <dl className="stats">
             <div>
-              <dt>Strike</dt>
+              <dt>{t('dd.strike')}</dt>
               <dd>{usd(row.strike)}</dd>
             </div>
             <div>
-              <dt>Đáo hạn</dt>
+              <dt>{t('dd.expiry')}</dt>
               <dd>
                 {row.expiration} · {row.dte}d
               </dd>
             </div>
             <div>
-              <dt>Credit nhận</dt>
+              <dt>{t('dd.credit')}</dt>
               <dd className="num-key">{usd(row.credit)}</dd>
             </div>
             <div>
-              <dt>Vốn khoá</dt>
+              <dt>{t('dd.capital')}</dt>
               <dd>{usd(row.capital)}</dd>
             </div>
             <div>
-              <dt>Break-even</dt>
+              <dt>{t('dd.breakeven')}</dt>
               <dd className={row.breakeven < row.low52 ? 'warn' : undefined}>
                 {usd(row.breakeven)}
               </dd>
             </div>
             <div>
-              <dt>Lợi suất/năm</dt>
+              <dt>{t('dd.annual')}</dt>
               <dd className="num-key">{row.annualRocPct.toFixed(1)}%</dd>
             </div>
           </dl>
 
           <p className="assigned">
-            Nếu bị assign: bạn mua 100 {row.symbol} với giá vốn thực{' '}
-            <b>{usd(row.breakeven)}</b>, tức thấp hơn giá hiện tại{' '}
-            {(((row.spot - row.breakeven) / row.spot) * 100).toFixed(1)}%.
+            {t('dd.assigned', {
+              symbol: row.symbol,
+              be: usd(row.breakeven),
+              pct: (((row.spot - row.breakeven) / row.spot) * 100).toFixed(1),
+            })}
           </p>
 
           {row.warnings.length > 0 && (
@@ -106,7 +111,7 @@ export default function DetailDrawer({
             </ul>
           )}
 
-          <h3 className="dsec">Biểu đồ</h3>
+          <h3 className="dsec">{t('dd.chart')}</h3>
           <TradingViewWidget
             type="advanced-chart"
             height={320}
@@ -133,11 +138,13 @@ export default function DetailDrawer({
             }}
           />
           <p className="cap">
-            Kẻ tay mức {usd(row.strike)} (strike) và {usd(row.breakeven)}{' '}
-            (break-even) lên chart để xem giá đã từng thủng vùng đó chưa.
+            {t('dd.chartNote', {
+              strike: usd(row.strike),
+              be: usd(row.breakeven),
+            })}
           </p>
 
-          <h3 className="dsec">Đánh giá kỹ thuật</h3>
+          <h3 className="dsec">{t('dd.technicals')}</h3>
           <TradingViewWidget
             type="technical-analysis"
             height={400}
@@ -162,33 +169,27 @@ export default function DetailDrawer({
           <h3 className="dsec">Gamma theo strike</h3>
           <GexChart symbol={row.symbol} strike={row.strike} />
           <p className="cap">
-            Tính tại chỗ từ chuỗi quyền chọn Schwab: gamma × open interest cộng
-            dồn theo từng strike, cửa sổ 60 ngày. Put wall là strike có gamma put
-            lớn nhất — nơi dealer phải mua vào để hedge, nên thường hành xử như
-            hỗ trợ. Đây là mô hình dựa trên giả định dealer long call / short
-            put, không phải vị thế thật của họ.
+            {t('dd.gexNote')}
           </p>
 
-          <h3 className="dsec">Đối chiếu ngoài</h3>
+          <h3 className="dsec">{t('dd.external')}</h3>
           <div className="linkrow">
             <a href={tcpwGexUrl(row.symbol)} target="_blank" rel="noopener">
-              GEX trên Tạp Chí Phố Wall ↗
+              {t('dd.gexTcpw')}
             </a>
             <a href={tcpwGexUrlEn(row.symbol)} target="_blank" rel="noopener">
-              TCPW (English) ↗
+              {t('dd.gexTcpwEn')}
             </a>
             <a
               href={tradingViewChartUrl(row.symbol, row.exchange)}
               target="_blank"
               rel="noopener"
             >
-              Mở chart đầy đủ ↗
+              {t('dd.fullChart')}
             </a>
           </div>
           <p className="cap">
-            Mỗi nhà cung cấp GEX dùng giả định khác nhau (số kỳ đáo hạn, cách xử
-            lý 0DTE), nên con số sẽ lệch nhau. Dùng để đối chiếu vùng giá, đừng
-            kỳ vọng khớp từng số.
+            {t('dd.externalNote')}
           </p>
         </div>
       </aside>

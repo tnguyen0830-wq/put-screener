@@ -218,6 +218,232 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (s: string) => `Remove ${s}`,
   },
 
+  // ---- cushion bar ----
+  'cb.aria': {
+    vi: (v: any) =>
+      `Break-even ${v.be}, strike ${v.strike}, giá hiện tại ${v.spot}, biên độ 52 tuần ${v.low}–${v.high}`,
+    en: (v: any) =>
+      `Break-even ${v.be}, strike ${v.strike}, current price ${v.spot}, 52-week range ${v.low}–${v.high}`,
+  },
+  'cb.beBelow': { vi: 'BE < ĐÁY', en: 'BE < LOW' },
+  'cb.be': { vi: 'BE', en: 'BE' },
+
+  // ---- gamma chart ----
+  'gex.loadFailed': { vi: 'Không tải được GEX', en: 'Could not load GEX' },
+  'gex.computing': {
+    vi: 'Đang tính gamma theo strike…',
+    en: 'Computing gamma by strike…',
+  },
+  'gex.thin': {
+    vi: 'Không đủ open interest quanh giá.',
+    en: 'Not enough open interest around the price.',
+  },
+  'gex.putWall': { vi: 'Put wall', en: 'Put wall' },
+  'gex.callWall': { vi: 'Call wall', en: 'Call wall' },
+  'gex.yourStrike': { vi: 'Strike của bạn', en: 'Your strike' },
+  'gex.zeroGamma': { vi: 'Zero gamma', en: 'Zero gamma' },
+  'gex.netGex': { vi: 'Net GEX', en: 'Net GEX' },
+  'gex.noStrike': {
+    vi: (w: string) =>
+      `Put wall ${w} là mốc gamma put lớn nhất — vùng dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ.`,
+    en: (w: string) =>
+      `Put wall ${w} is the largest put-gamma strike — where dealers must buy to hedge, so it often behaves like support.`,
+  },
+  'gex.below': {
+    vi: (k: string) =>
+      `Strike ${k} nằm tại hoặc dưới put wall — dòng hedge của dealer đứng về phía bạn ở vùng này.`,
+    en: (k: string) =>
+      `Strike ${k} sits at or below the put wall — dealer hedging flow is on your side down here.`,
+  },
+  'gex.above': {
+    vi: (v: any) =>
+      `Strike ${v.strike} nằm trên put wall ${v.wall} — không có lớp hedge nào đỡ ở mức này. Cân nhắc hạ xuống gần put wall hơn.`,
+    en: (v: any) =>
+      `Strike ${v.strike} sits above the put wall ${v.wall} — no hedging layer holds it up here. Consider moving down closer to the wall.`,
+  },
+  'gex.netPos': {
+    vi: 'Net GEX dương: dealer làm dịu biến động, biên độ thường hẹp.',
+    en: 'Net GEX positive: dealers damp volatility, ranges tend to stay tight.',
+  },
+  'gex.netNeg': {
+    vi: 'Net GEX âm: dealer khuếch đại biến động, giảm size và nới stop.',
+    en: 'Net GEX negative: dealers amplify volatility — size down and widen stops.',
+  },
+
+  // ---- detail drawer ----
+  'dd.aria': { vi: (s: string) => `Chi tiết ${s}`, en: (s: string) => `${s} detail` },
+  'dd.inWatchlist': { vi: '★ Trong watchlist', en: '★ In watchlist' },
+  'dd.saveWatchlist': { vi: '☆ Lưu watchlist', en: '☆ Save to watchlist' },
+  'dd.close': { vi: 'Đóng', en: 'Close' },
+  'dd.strike': { vi: 'Strike', en: 'Strike' },
+  'dd.expiry': { vi: 'Đáo hạn', en: 'Expiry' },
+  'dd.credit': { vi: 'Credit nhận', en: 'Credit received' },
+  'dd.capital': { vi: 'Vốn khoá', en: 'Capital tied up' },
+  'dd.breakeven': { vi: 'Break-even', en: 'Break-even' },
+  'dd.annual': { vi: 'Lợi suất/năm', en: 'Annualized' },
+  'dd.assigned': {
+    vi: (v: any) =>
+      `Nếu bị assign: bạn mua 100 ${v.symbol} với giá vốn thực ${v.be}, tức thấp hơn giá hiện tại ${v.pct}%.`,
+    en: (v: any) =>
+      `If assigned, you buy 100 ${v.symbol} at an effective cost of ${v.be} — ${v.pct}% below the current price.`,
+  },
+  'dd.chart': { vi: 'Biểu đồ', en: 'Chart' },
+  'dd.chartNote': {
+    vi: (v: any) =>
+      `Kẻ tay mức ${v.strike} (strike) và ${v.be} (break-even) lên chart để xem giá đã từng thủng vùng đó chưa.`,
+    en: (v: any) =>
+      `Draw ${v.strike} (strike) and ${v.be} (break-even) on the chart by hand to see whether price has cut through that zone before.`,
+  },
+  'dd.technicals': { vi: 'Đánh giá kỹ thuật', en: 'Technical rating' },
+  'dd.gexNote': {
+    vi: 'Tính tại chỗ từ chuỗi quyền chọn Schwab: gamma × open interest cộng dồn theo từng strike, cửa sổ 60 ngày. Put wall là strike có gamma put lớn nhất — nơi dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ. Đây là mô hình dựa trên giả định dealer long call / short put, không phải vị thế thật của họ.',
+    en: 'Computed here from the Schwab option chain: gamma × open interest summed per strike over a 60-day window. The put wall is the strike with the largest put gamma — where dealers must buy to hedge, so it often behaves like support. This is a model built on the assumption that dealers are long calls and short puts, not their actual positioning.',
+  },
+  'dd.external': { vi: 'Đối chiếu ngoài', en: 'Cross-check elsewhere' },
+  'dd.gexTcpw': { vi: 'GEX trên Tạp Chí Phố Wall ↗', en: 'GEX on Tạp Chí Phố Wall ↗' },
+  'dd.gexTcpwEn': { vi: 'TCPW (English) ↗', en: 'TCPW (English) ↗' },
+  'dd.fullChart': { vi: 'Mở chart đầy đủ ↗', en: 'Open the full chart ↗' },
+  'dd.externalNote': {
+    vi: 'Mỗi nhà cung cấp GEX dùng giả định khác nhau (số kỳ đáo hạn, cách xử lý 0DTE), nên con số sẽ lệch nhau. Dùng để đối chiếu vùng giá, đừng kỳ vọng khớp từng số.',
+    en: 'Every GEX provider uses different assumptions (how many expirations, how 0DTE is handled), so the numbers will not agree. Use them to cross-check the zone, not to match figures.',
+  },
+
+  // ---- heatmap ----
+  'hm.range1d': { vi: '1 ngày', en: '1 day' },
+  'hm.range1w': { vi: '1 tuần', en: '1 week' },
+  'hm.range1m': { vi: '1 tháng', en: '1 month' },
+  'hm.loading': { vi: 'Đang tải bản đồ…', en: 'Loading the map…' },
+  'hm.loadFailed': { vi: 'Không tải được bản đồ', en: 'Could not load the map' },
+  'hm.title': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  'hm.head': {
+    vi: (v: any) => `Bản đồ S&P 500 · ${v.count} mã · ${v.source}`,
+    en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
+  },
+  'hm.areaIsCap': { vi: 'Diện tích ô = vốn hoá', en: 'Tile area = market cap' },
+  'hm.aria': { vi: 'Bản đồ nhiệt S&P 500', en: 'S&P 500 heatmap' },
+  'hm.hover': {
+    vi: (v: any) =>
+      `${v.symbol} · ${v.name} · ${v.sector} · $${v.price} · ${v.change} · vốn hoá ${v.cap}B — bấm để phân tích`,
+    en: (v: any) =>
+      `${v.symbol} · ${v.name} · ${v.sector} · $${v.price} · ${v.change} · market cap ${v.cap}B — click to analyze`,
+  },
+  'hm.hoverIdle': {
+    vi: 'Rê chuột lên một ô để xem chi tiết; bấm để mở tab Phân tích mã.',
+    en: 'Hover a tile for detail; click to open it in the analyze tab.',
+  },
+  'hm.note': {
+    vi: 'Diện tích ô lấy từ vốn hoá tính bằng dữ liệu Schwab (giá × số cổ phiếu lưu hành), nên kích thước luôn là real-time. Màu ô khung 1 ngày cũng từ Schwab; các khung dài hơn lấy từ endpoint bản đồ của Finviz vì tính từ Schwab sẽ tốn 503 request lịch sử giá. Thang màu dựng theo đúng các mốc của Finviz để nhìn quen mắt, nhưng toàn bộ số liệu là tự tính — đây không phải ảnh chụp bản đồ của họ.',
+    en: 'Tile area comes from market cap computed on Schwab data (price × shares outstanding), so the sizing is always live. The 1-day colouring is Schwab too; longer ranges come from Finviz\u2019s map endpoint, because computing them from Schwab would cost 503 price-history requests. The colour scale follows Finviz\u2019s own thresholds so it reads familiarly, but every figure here is computed locally — this is not a screenshot of their map.',
+  },
+
+  // ---- analyze tab ----
+  'an.rsiOver': { vi: 'quá mua', en: 'overbought' },
+  'an.rsiUnder': { vi: 'quá bán', en: 'oversold' },
+  'an.rsiNeutral': { vi: 'trung tính', en: 'neutral' },
+  'an.bbAbove': { vi: 'trên dải trên', en: 'above the upper band' },
+  'an.bbBelow': { vi: 'dưới dải dưới', en: 'below the lower band' },
+  'an.bbInside': { vi: 'trong dải', en: 'inside the bands' },
+  'an.loading': { vi: 'Đang lấy dữ liệu…', en: 'Fetching data…' },
+  'an.loadFailed': { vi: 'Không lấy được dữ liệu', en: 'Could not fetch the data' },
+  'an.title': { vi: 'Phân tích mã', en: 'Analyze' },
+  'an.placeholder': { vi: 'Nhập mã, ví dụ NVDA', en: 'Enter a ticker, e.g. NVDA' },
+  'an.inputAria': { vi: 'Mã cần phân tích', en: 'Ticker to analyze' },
+  'an.submit': { vi: 'Phân tích', en: 'Analyze' },
+  'an.emptyTitle': { vi: 'Chưa chọn mã', en: 'No ticker chosen' },
+  'an.emptyBody': {
+    vi: 'Nhập mã ở trên, hoặc bấm một mã trong watchlist.',
+    en: 'Type a ticker above, or pick one from the watchlist.',
+  },
+  'an.inWatchlist': { vi: '★ Trong watchlist', en: '★ In watchlist' },
+  'an.saveWatchlist': { vi: '☆ Lưu watchlist', en: '☆ Save to watchlist' },
+  'an.low52': { vi: (v: string) => `Đáy 52T ${v}`, en: (v: string) => `52w low ${v}` },
+  'an.high52': { vi: (v: string) => `Đỉnh 52T ${v}`, en: (v: string) => `52w high ${v}` },
+  'an.ofRange': { vi: (v: string) => `${v} biên độ`, en: (v: string) => `${v} of range` },
+  'an.technical': { vi: 'Kỹ thuật', en: 'Technicals' },
+  'an.aboveSignal': { vi: 'trên tín hiệu', en: 'above signal' },
+  'an.belowSignal': { vi: 'dưới tín hiệu', en: 'below signal' },
+  'an.smaStreak': {
+    vi: (v: any) => `${v.pct} · ${v.n} phiên ${v.side === 'above' ? 'trên' : 'dưới'}`,
+    en: (v: any) => `${v.pct} · ${v.n} sessions ${v.side}`,
+  },
+  'an.volRatio': { vi: (v: string) => `tỷ lệ ${v}`, en: (v: string) => `ratio ${v}` },
+  'an.options': { vi: 'Quyền chọn', en: 'Options' },
+  'an.refIv': { vi: 'IV tham chiếu', en: 'Reference IV' },
+  'an.optRich': { vi: 'quyền chọn đắt', en: 'option is rich' },
+  'an.optFair': { vi: 'gần biến động thực', en: 'close to realized vol' },
+  'an.refStrike': { vi: 'Strike tham chiếu', en: 'Reference strike' },
+  'an.ivNote': {
+    vi: 'IV lấy từ hợp đồng put có delta gần −0.30 nhất trong cửa sổ 20–60 ngày, cùng vùng delta mà screener nhắm tới, nên so sánh được với cột IV/HV ở bảng kết quả.',
+    en: 'IV comes from the put closest to −0.30 delta inside a 20–60 day window — the same delta zone the screener targets, so it lines up with the IV/HV column in the results table.',
+  },
+  'an.fundamental': { vi: 'Cơ bản', en: 'Fundamentals' },
+  'an.marketCap': { vi: 'Vốn hoá', en: 'Market cap' },
+  'an.dividend': { vi: 'Cổ tức', en: 'Dividend' },
+  'an.perYear': { vi: (v: string) => `${v}/năm`, en: (v: string) => `${v}/year` },
+  'an.exDate': { vi: 'Ngày GD không hưởng quyền', en: 'Ex-dividend date' },
+  'an.avgVol10': { vi: 'KLGD TB 10 phiên', en: 'Avg volume, 10 sessions' },
+  'an.avgVol1y': { vi: (v: string) => `1 năm ${v}`, en: (v: string) => `1 year ${v}` },
+  'an.lastEarnings': { vi: 'Earnings gần nhất', en: 'Last earnings' },
+  'an.nextEarnings': { vi: 'Earnings kế tiếp', en: 'Next earnings' },
+  'an.earningsNote': {
+    vi: 'Ngày earnings kế tiếp lấy từ data/earnings.json, được làm mới tự động hằng tuần qua GitHub Actions. File phân biệt rõ ngày công ty đã công bố với ngày ước tính.',
+    en: 'The next-earnings date comes from data/earnings.json, refreshed automatically each week by a GitHub Action. The file distinguishes dates a company has announced from estimated ones.',
+  },
+  'an.finviz': { vi: 'Giới phân tích & vị thế (Finviz)', en: 'Analysts & positioning (Finviz)' },
+  'an.targetPrice': { vi: 'Giá mục tiêu', en: 'Target price' },
+  'an.vsCurrent': {
+    vi: (v: string) => `${v} so với giá hiện tại`,
+    en: (v: string) => `${v} vs the current price`,
+  },
+  'an.avgRating': { vi: 'Khuyến nghị TB', en: 'Average rating' },
+  'an.ratingScale': { vi: '1 = mua mạnh, 5 = bán', en: '1 = strong buy, 5 = sell' },
+  'an.fwdPe': { vi: 'P/E dự phóng', en: 'Forward P/E' },
+  'an.currently': { vi: (v: string) => `hiện tại ${v}`, en: (v: string) => `currently ${v}` },
+  'an.epsNextY': { vi: 'EPS năm tới', en: 'EPS next year' },
+  'an.shortFloat': { vi: 'Short float', en: 'Short float' },
+  'an.ratio': { vi: (v: string) => `tỷ lệ ${v}`, en: (v: string) => `ratio ${v}` },
+  'an.relVolume': { vi: 'Rel Volume', en: 'Rel Volume' },
+  'an.vsUsualVol': { vi: 'so với KLGD thường ngày', en: 'against its usual volume' },
+  'an.debtEq': { vi: 'Nợ / Vốn CSH', en: 'Debt / Equity' },
+  'an.perfYear': { vi: 'Hiệu suất năm', en: 'Performance, 1 year' },
+  'an.date': { vi: 'Ngày', en: 'Date' },
+  'an.action': { vi: 'Hành động', en: 'Action' },
+  'an.analyst': { vi: 'Nhà phân tích', en: 'Analyst' },
+  'an.rating': { vi: 'Khuyến nghị', en: 'Rating' },
+  'an.finvizNote': {
+    vi: 'Đọc từ trang quote của Finviz, chỉ khi bạn bấm phân tích một mã. Đây là bóc HTML chứ không phải API có hợp đồng ổn định — Finviz đổi giao diện thì phần này trống, các phần khác vẫn chạy.',
+    en: 'Scraped from the Finviz quote page, only when you analyze a ticker. This reads HTML rather than a stable API, so if Finviz changes its layout this section goes blank while everything else keeps working.',
+  },
+  'an.news': { vi: 'Tin tức', en: 'News' },
+  'an.mentionsN': {
+    vi: (n: number) => `nhắc ${n} mã`,
+    en: (n: number) => `mentions ${n} tickers`,
+  },
+  'an.thisTickerOnly': { vi: 'riêng mã này', en: 'this ticker only' },
+  'an.noNews': {
+    vi: 'Không có tin nào gắn với mã này.',
+    en: 'No stories are tagged to this ticker.',
+  },
+  'an.newsNote': {
+    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance. Bài gắn ít mã được xếp lên trước vì nhiều khả năng viết riêng về mã này; bài gắn nhiều mã thường là bản tin thị trường chung. Không có nguồn mạng xã hội — X, StockTwits, Reddit đều đóng API công khai hoặc bắt trả phí.',
+    en: 'Source: Yahoo Finance news search. Stories tagged to fewer tickers sort first, since they are more likely written about this company; stories tagged to many are usually general market wraps. No social sources — X, StockTwits and Reddit have all closed their public APIs or put them behind a paywall.',
+  },
+  'an.tvGaugeNote': {
+    vi: 'Đồng hồ của TradingView tổng hợp nhiều chỉ báo theo công thức riêng của họ. Dùng để đối chiếu chéo với các số tự tính ở trên, không phải tín hiệu vào lệnh.',
+    en: "TradingView's gauge blends many indicators by their own formula. Use it to cross-check the numbers computed above, not as an entry signal.",
+  },
+  'an.gamma': { vi: 'Gamma theo strike', en: 'Gamma by strike' },
+  'an.gammaNote': {
+    vi: 'Put wall thường hành xử như hỗ trợ vì dealer phải mua vào để hedge quanh đó. Đây là mô hình suy từ open interest, không phải sổ vị thế thật của dealer.',
+    en: 'The put wall often behaves like support because dealers must buy to hedge around it. This is inferred from open interest, not a dealer\u2019s actual book.',
+  },
+  'an.metaNote': {
+    vi: (v: any) =>
+      `Dữ liệu lấy ${v.bars} phiên (${v.first} → ${v.last}). Mỗi lần phân tích tốn 3 request Schwab.`,
+    en: (v: any) =>
+      `Built from ${v.bars} sessions (${v.first} → ${v.last}). Each analysis costs 3 Schwab requests.`,
+  },
+
   // ---- AI read ----
   'ai.title': { vi: 'Claude đọc chỉ số', en: 'Claude reads the indicators' },
   'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },

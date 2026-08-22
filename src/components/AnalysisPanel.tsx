@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
+import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl, tcpwGexUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
@@ -92,9 +93,9 @@ const big = (n: number | null) => {
 /* Nhãn mô tả cho ngưỡng chỉ báo tiêu chuẩn. Mô tả trạng thái, không phải
    khuyến nghị — quyết định mua bán vẫn là của bạn. */
 const rsiLabel = (r: number | null) =>
-  r === null ? '' : r >= 70 ? 'quá mua' : r <= 30 ? 'quá bán' : 'trung tính';
+  r === null ? '' : r >= 70 ? 'an.rsiOver' : r <= 30 ? 'an.rsiUnder' : 'an.rsiNeutral';
 const bbLabel = (b: number | null) =>
-  b === null ? '' : b > 1 ? 'trên dải trên' : b < 0 ? 'dưới dải dưới' : 'trong dải';
+  b === null ? '' : b > 1 ? 'an.bbAbove' : b < 0 ? 'an.bbBelow' : 'an.bbInside';
 
 function Row({
   label,
@@ -141,7 +142,7 @@ export default function AnalysisPanel({
     try {
       const r = await fetch(`/api/analyze?symbol=${encodeURIComponent(s)}`);
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? 'Không lấy được dữ liệu');
+      if (!r.ok) throw new Error(j.error ?? tr('an.loadFailed'));
       setData(j);
     } catch (e: any) {
       setError(e.message);
@@ -169,6 +170,7 @@ export default function AnalysisPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchlist.length]);
 
+  const { t: tr } = useLang();
   const t = data?.technical;
   const f = data?.fundamental;
   const p = data?.price;
@@ -178,7 +180,7 @@ export default function AnalysisPanel({
     <section className="panel">
       <div className="panel-head">
         {loading ? (
-          'Đang lấy dữ liệu…'
+          tr('an.loading')
         ) : error ? (
           error
         ) : data ? (
@@ -187,7 +189,7 @@ export default function AnalysisPanel({
             <span className="sym">{data.symbol}</span> · {data.name}
           </>
         ) : (
-          'Phân tích mã'
+          tr('an.title')
         )}
       </div>
 
@@ -202,11 +204,11 @@ export default function AnalysisPanel({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Nhập mã, ví dụ NVDA"
-            aria-label="Mã cần phân tích"
+            placeholder={tr('an.placeholder')}
+            aria-label={tr('an.inputAria')}
           />
           <button type="submit" disabled={loading}>
-            Phân tích
+            {tr('an.submit')}
           </button>
         </form>
 
@@ -231,8 +233,8 @@ export default function AnalysisPanel({
 
         {!data && !loading && !error && (
           <div className="empty">
-            <strong>Chưa chọn mã</strong>
-            Nhập mã ở trên, hoặc bấm một mã trong watchlist.
+            <strong>{tr('an.emptyTitle')}</strong>
+            {tr('an.emptyBody')}
           </div>
         )}
 
@@ -249,7 +251,7 @@ export default function AnalysisPanel({
                 className={watchlist.includes(data.symbol) ? 'wl on' : 'wl'}
                 onClick={() => onToggleWatchlist(data.symbol)}
               >
-                {watchlist.includes(data.symbol) ? '★ Trong watchlist' : '☆ Lưu watchlist'}
+                {watchlist.includes(data.symbol) ? tr('an.inWatchlist') : tr('an.saveWatchlist')}
               </button>
             </div>
 
@@ -258,9 +260,9 @@ export default function AnalysisPanel({
                 <i style={{ left: `${Math.min(100, Math.max(0, (p.pos52 ?? 0) * 100))}%` }} />
               </div>
               <div className="r52ends">
-                <span>Đáy 52T {usd(p.low52)}</span>
-                <span>{pct(p.pos52, 0)} biên độ</span>
-                <span>Đỉnh 52T {usd(p.high52)}</span>
+                <span>{tr('an.low52', usd(p.low52))}</span>
+                <span>{tr('an.ofRange', pct(p.pos52, 0))}</span>
+                <span>{tr('an.high52', usd(p.high52))}</span>
               </div>
             </div>
 
@@ -268,18 +270,18 @@ export default function AnalysisPanel({
 
             <AiRead analysis={data} />
 
-            <h3 className="dsec">Kỹ thuật</h3>
+            <h3 className="dsec">{tr('an.technical')}</h3>
             <dl className="stats">
               <Row
                 label="RSI(14)"
                 value={num(t.rsi14, 1)}
-                note={rsiLabel(t.rsi14)}
+                note={rsiLabel(t.rsi14) ? tr(rsiLabel(t.rsi14)) : ''}
                 tone={t.rsi14 === null ? undefined : t.rsi14 >= 70 || t.rsi14 <= 30 ? 'warn' : undefined}
               />
               <Row
                 label="MACD(12,26,9)"
                 value={num(t.macd?.hist ?? null)}
-                note={t.macd ? (t.macd.hist >= 0 ? 'trên tín hiệu' : 'dưới tín hiệu') : ''}
+                note={t.macd ? tr(t.macd.hist >= 0 ? 'an.aboveSignal' : 'an.belowSignal') : ''}
                 tone={t.macd ? (t.macd.hist >= 0 ? 'good' : 'bad') : undefined}
               />
               <Row label="SMA20" value={usd(t.sma20)} note={pct(t.vsSma20)} tone={(t.vsSma20 ?? 0) >= 0 ? 'good' : 'bad'} />
@@ -287,87 +289,86 @@ export default function AnalysisPanel({
               <Row
                 label="SMA200"
                 value={usd(t.sma200)}
-                note={`${pct(t.vsSma200)} · ${Math.abs(t.sma200Streak ?? 0)} phiên ${
-                  (t.sma200Streak ?? 0) >= 0 ? 'trên' : 'dưới'
-                }`}
+                note={tr('an.smaStreak', {
+                  pct: pct(t.vsSma200),
+                  n: Math.abs(t.sma200Streak ?? 0),
+                  side: (t.sma200Streak ?? 0) >= 0 ? 'above' : 'below',
+                })}
                 tone={(t.vsSma200 ?? 0) >= 0 ? 'good' : 'bad'}
               />
               <Row label="Bollinger %B" value={num(t.bollinger?.pctB ?? null)} note={bbLabel(t.bollinger?.pctB ?? null)} />
               <Row label="ATR(14)" value={usd(t.atr14)} note={pct(t.atrPct)} />
-              <Row label="HV20 / HV60" value={`${pct(t.hv20, 0)} / ${pct(t.hv60, 0)}`} note={t.volRatio ? `tỷ lệ ${num(t.volRatio)}` : ''} />
+              <Row label="HV20 / HV60" value={`${pct(t.hv20, 0)} / ${pct(t.hv60, 0)}`} note={t.volRatio ? tr('an.volRatio', num(t.volRatio)) : ''} />
             </dl>
 
-            <h3 className="dsec">Quyền chọn</h3>
+            <h3 className="dsec">{tr('an.options')}</h3>
             <dl className="stats">
-              <Row label="IV tham chiếu" value={pct(data.options.iv, 1)} note={data.options.refExpiration ?? ''} />
+              <Row label={tr('an.refIv')} value={pct(data.options.iv, 1)} note={data.options.refExpiration ?? ''} />
               <Row
                 label="IV / HV20"
                 value={num(data.options.ivHv)}
-                note={data.options.ivHv ? (data.options.ivHv > 1.2 ? 'quyền chọn đắt' : 'gần biến động thực') : ''}
+                note={data.options.ivHv ? tr(data.options.ivHv > 1.2 ? 'an.optRich' : 'an.optFair') : ''}
                 tone={data.options.ivHv && data.options.ivHv > 1.2 ? 'warn' : undefined}
               />
-              <Row label="Strike tham chiếu" value={usd(data.options.refStrike)} note={`Δ ${num(data.options.refDelta)}`} />
+              <Row label={tr('an.refStrike')} value={usd(data.options.refStrike)} note={`Δ ${num(data.options.refDelta)}`} />
             </dl>
             <p className="cap">
-              IV lấy từ hợp đồng put có delta gần −0.30 nhất trong cửa sổ 20–60 ngày, cùng
-              vùng delta mà screener nhắm tới, nên so sánh được với cột IV/HV ở bảng kết quả.
+              {tr('an.ivNote')}
             </p>
 
-            <h3 className="dsec">Cơ bản</h3>
+            <h3 className="dsec">{tr('an.fundamental')}</h3>
             <dl className="stats">
-              <Row label="Vốn hoá" value={big(f.marketCap)} />
+              <Row label={tr('an.marketCap')} value={big(f.marketCap)} />
               <Row label="P/E" value={num(f.peRatio, 1)} />
               <Row label="EPS" value={usd(f.eps)} />
-              <Row label="Cổ tức" value={f.divYield ? `${num(f.divYield, 2)}%` : '—'} note={f.divAmount ? `${usd(f.divAmount)}/năm` : ''} />
-              <Row label="Ngày GD không hưởng quyền" value={f.divExDate ?? '—'} />
-              <Row label="KLGD TB 10 phiên" value={big(f.avgVolume10d)} note={f.avgVolume1y ? `1 năm ${big(f.avgVolume1y)}` : ''} />
-              <Row label="Earnings gần nhất" value={f.lastEarnings ?? '—'} />
-              <Row label="Earnings kế tiếp" value={f.nextEarnings ?? '—'} tone={f.nextEarnings ? 'warn' : undefined} />
+              <Row label={tr('an.dividend')} value={f.divYield ? `${num(f.divYield, 2)}%` : '—'} note={f.divAmount ? tr('an.perYear', usd(f.divAmount)) : ''} />
+              <Row label={tr('an.exDate')} value={f.divExDate ?? '—'} />
+              <Row label={tr('an.avgVol10')} value={big(f.avgVolume10d)} note={f.avgVolume1y ? tr('an.avgVol1y', big(f.avgVolume1y)) : ''} />
+              <Row label={tr('an.lastEarnings')} value={f.lastEarnings ?? '—'} />
+              <Row label={tr('an.nextEarnings')} value={f.nextEarnings ?? '—'} tone={f.nextEarnings ? 'warn' : undefined} />
             </dl>
             <p className="cap">
-              Ngày earnings kế tiếp lấy từ <code>data/earnings.json</code>. Chạy{' '}
-              <code>node scripts/earnings-sync.js</code> để cập nhật — file phân biệt rõ ngày
-              công ty đã công bố với ngày ước tính.
+              {tr('an.earningsNote')}
             </p>
 
             {data.finviz && (
               <>
-                <h3 className="dsec">Giới phân tích &amp; vị thế (Finviz)</h3>
+                <h3 className="dsec">{tr('an.finviz')}</h3>
                 <dl className="stats">
                   <Row
-                    label="Giá mục tiêu"
+                    label={tr('an.targetPrice')}
                     value={data.finviz.metrics['Target Price'] ?? '—'}
                     note={(() => {
                       const tp = parseFloat(data.finviz.metrics['Target Price'] ?? '');
                       if (!isFinite(tp)) return '';
                       const up = (tp - p.spot) / p.spot;
-                      return `${up >= 0 ? '+' : ''}${(up * 100).toFixed(1)}% so với giá hiện tại`;
+                      return tr('an.vsCurrent', `${up >= 0 ? '+' : ''}${(up * 100).toFixed(1)}%`);
                     })()}
                   />
                   <Row
-                    label="Khuyến nghị TB"
+                    label={tr('an.avgRating')}
                     value={data.finviz.metrics['Recom'] ?? '—'}
-                    note="1 = mua mạnh, 5 = bán"
+                    note={tr('an.ratingScale')}
                   />
-                  <Row label="P/E dự phóng" value={data.finviz.metrics['Forward P/E'] ?? '—'} note={`hiện tại ${data.finviz.metrics['P/E'] ?? '—'}`} />
-                  <Row label="EPS năm tới" value={data.finviz.metrics['EPS next Y'] ?? '—'} />
-                  <Row label="Short float" value={data.finviz.metrics['Short Float'] ?? '—'} note={data.finviz.metrics['Short Ratio'] ? `tỷ lệ ${data.finviz.metrics['Short Ratio']}` : ''} />
-                  <Row label="Rel Volume" value={data.finviz.metrics['Rel Volume'] ?? '—'} note="so với KLGD thường ngày" />
+                  <Row label={tr('an.fwdPe')} value={data.finviz.metrics['Forward P/E'] ?? '—'} note={tr('an.currently', data.finviz.metrics['P/E'] ?? '—')} />
+                  <Row label={tr('an.epsNextY')} value={data.finviz.metrics['EPS next Y'] ?? '—'} />
+                  <Row label="Short float" value={data.finviz.metrics['Short Float'] ?? '—'} note={data.finviz.metrics['Short Ratio'] ? tr('an.ratio', data.finviz.metrics['Short Ratio']) : ''} />
+                  <Row label="Rel Volume" value={data.finviz.metrics['Rel Volume'] ?? '—'} note={tr('an.vsUsualVol')} />
                   <Row label="Beta" value={data.finviz.metrics['Beta'] ?? '—'} />
                   <Row label="ROE / ROIC" value={`${data.finviz.metrics['ROE'] ?? '—'} / ${data.finviz.metrics['ROIC'] ?? '—'}`} />
-                  <Row label="Nợ / Vốn CSH" value={data.finviz.metrics['Debt/Eq'] ?? '—'} />
-                  <Row label="Hiệu suất năm" value={data.finviz.metrics['Perf Year'] ?? '—'} note={data.finviz.metrics['Perf YTD'] ? `YTD ${data.finviz.metrics['Perf YTD']}` : ''} />
+                  <Row label={tr('an.debtEq')} value={data.finviz.metrics['Debt/Eq'] ?? '—'} />
+                  <Row label={tr('an.perfYear')} value={data.finviz.metrics['Perf Year'] ?? '—'} note={data.finviz.metrics['Perf YTD'] ? `YTD ${data.finviz.metrics['Perf YTD']}` : ''} />
                 </dl>
 
                 {data.finviz.ratings.length > 0 && (
                   <table className="ratings">
                     <thead>
                       <tr>
-                        <th>Ngày</th>
-                        <th>Hành động</th>
-                        <th>Nhà phân tích</th>
-                        <th>Khuyến nghị</th>
-                        <th>Giá mục tiêu</th>
+                        <th>{tr('an.date')}</th>
+                        <th>{tr('an.action')}</th>
+                        <th>{tr('an.analyst')}</th>
+                        <th>{tr('an.rating')}</th>
+                        <th>{tr('an.targetPrice')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -386,14 +387,12 @@ export default function AnalysisPanel({
                   </table>
                 )}
                 <p className="cap">
-                  Đọc từ trang quote của Finviz, chỉ khi bạn bấm phân tích một mã. Đây là bóc
-                  HTML chứ không phải API có hợp đồng ổn định — Finviz đổi giao diện thì phần
-                  này trống, các phần khác vẫn chạy.
+                  {tr('an.finvizNote')}
                 </p>
               </>
             )}
 
-            <h3 className="dsec">Tin tức</h3>
+            <h3 className="dsec">{tr('an.news')}</h3>
             {data.news?.length ? (
               <ul className="newslist">
                 {data.news.map((n) => (
@@ -404,23 +403,20 @@ export default function AnalysisPanel({
                     <span className="nmeta">
                       {n.published.slice(0, 10)} · {n.publisher} ·{' '}
                       {n.tickerCount > 1
-                        ? `nhắc ${n.tickerCount} mã`
-                        : 'riêng mã này'}
+                        ? tr('an.mentionsN', n.tickerCount)
+                        : tr('an.thisTickerOnly')}
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="cap">Không có tin nào gắn với mã này.</p>
+              <p className="cap">{tr('an.noNews')}</p>
             )}
             <p className="cap">
-              Nguồn: tìm kiếm tin của Yahoo Finance. Bài gắn ít mã được xếp lên trước vì
-              nhiều khả năng viết riêng về mã này; bài gắn nhiều mã thường là bản tin thị
-              trường chung. Không có nguồn mạng xã hội — X, StockTwits, Reddit đều đóng API
-              công khai hoặc bắt trả phí.
+              {tr('an.newsNote')}
             </p>
 
-            <h3 className="dsec">Biểu đồ</h3>
+            <h3 className="dsec">{tr('dd.chart')}</h3>
             <TradingViewWidget
               type="advanced-chart"
               height={380}
@@ -444,7 +440,7 @@ export default function AnalysisPanel({
               }}
             />
 
-            <h3 className="dsec">Đánh giá kỹ thuật đa khung</h3>
+            <h3 className="dsec">{tr('dd.technicals')}</h3>
             <TradingViewWidget
               type="technical-analysis"
               height={400}
@@ -463,30 +459,31 @@ export default function AnalysisPanel({
               }}
             />
             <p className="cap">
-              Đồng hồ của TradingView tổng hợp nhiều chỉ báo theo công thức riêng của họ.
-              Dùng để đối chiếu chéo với các số tự tính ở trên, không phải tín hiệu vào lệnh.
+              {tr('an.tvGaugeNote')}
             </p>
 
-            <h3 className="dsec">Gamma theo strike</h3>
+            <h3 className="dsec">{tr('an.gamma')}</h3>
             <GexChart symbol={data.symbol} />
             <p className="cap">
-              Put wall thường hành xử như hỗ trợ vì dealer phải mua vào để hedge quanh đó.
-              Đây là mô hình suy từ open interest, không phải sổ vị thế thật của dealer.
+              {tr('an.gammaNote')}
             </p>
 
-            <h3 className="dsec">Đối chiếu ngoài</h3>
+            <h3 className="dsec">{tr('dd.external')}</h3>
             <div className="linkrow">
               <a href={tradingViewChartUrl(data.symbol, data.exchange)} target="_blank" rel="noopener">
-                Mở chart đầy đủ ↗
+                {tr('dd.fullChart')}
               </a>
               <a href={tcpwGexUrl(data.symbol)} target="_blank" rel="noopener">
-                GEX trên Tạp Chí Phố Wall ↗
+                {tr('dd.gexTcpw')}
               </a>
             </div>
 
             <p className="cap">
-              Dữ liệu lấy lúc {data.meta.bars} phiên ({data.meta.firstBar} → {data.meta.lastBar}).
-              Mỗi lần phân tích tốn 3 request Schwab.
+              {tr('an.metaNote', {
+                bars: data.meta.bars,
+                first: data.meta.firstBar,
+                last: data.meta.lastBar,
+              })}
             </p>
           </>
         )}

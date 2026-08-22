@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang } from '@/lib/i18n';
+
 type Props = {
   low52: number;
   high52: number;
@@ -20,6 +22,7 @@ export default function CushionBar({
   strike,
   breakeven,
 }: Props) {
+  const { t } = useLang();
   const W = 168;
   const H = 26;
   const pad = 5;
@@ -40,11 +43,13 @@ export default function CushionBar({
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       role="img"
-      aria-label={`Break-even ${breakeven.toFixed(2)}, strike ${strike.toFixed(
-        2
-      )}, giá hiện tại ${spot.toFixed(2)}, biên độ 52 tuần ${low52.toFixed(
-        2
-      )}–${high52.toFixed(2)}`}
+      aria-label={t('cb.aria', {
+        be: breakeven.toFixed(2),
+        strike: strike.toFixed(2),
+        spot: spot.toFixed(2),
+        low: low52.toFixed(2),
+        high: high52.toFixed(2),
+      })}
     >
       {/* 52-week range track */}
       <line
@@ -104,7 +109,7 @@ export default function CushionBar({
         textAnchor="end"
         letterSpacing="0.06em"
       >
-        {belowLow ? 'BE < ĐÁY' : 'BE'}
+        {belowLow ? t('cb.beBelow') : t('cb.be')}
       </text>
     </svg>
   );
