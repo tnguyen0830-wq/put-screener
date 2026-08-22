@@ -1,6 +1,6 @@
 'use client';
 
-import { isOn, type FilterKey, type Filters } from '@/lib/types';
+import { DEFAULT_OFF, isOn, type FilterKey, type Filters } from '@/lib/types';
 
 const SECTORS = [
   'Communication Services',
@@ -69,7 +69,11 @@ export default function FilterPanel({
     </label>
   );
 
-  const offCount = (value.off ?? []).length;
+  // Only criteria that normally apply count as "loosened"; the ones that ship
+  // switched off are the baseline, so having them off is not worth a warning.
+  const loosened = (value.off ?? []).filter(
+    (k) => !DEFAULT_OFF.includes(k)
+  ).length;
 
   return (
     <section className="panel">
@@ -157,9 +161,31 @@ export default function FilterPanel({
           <p className="hint">Trái: OI tối thiểu. Phải: spread tối đa (% của mid).</p>
         </div>
 
+        <div className={field('drawdown')}>
+          {head('drawdown', 'Rớt từ đỉnh 52 tuần tối thiểu (%)')}
+          <input {...num('minDrawdownPct', 'drawdown')} />
+          <p className="hint">
+            Chỉ lấy mã đã rớt ít nhất bấy nhiêu % so với đỉnh 52 tuần. Gõ 10 hoặc
+            20 tuỳ mức chiết khấu bạn muốn.
+          </p>
+        </div>
+
         <div className={field('ivhv')}>
           {head('ivhv', 'IV / HV20 tối thiểu')}
           <input step={0.05} {...num('minIvHv', 'ivhv')} />
+          <p className="hint">
+            IV cao so với biến động thực tế 20 phiên. 1.0 = quyền chọn đang được
+            trả đúng bằng mức dao động thật.
+          </p>
+        </div>
+
+        <div className={field('iv')}>
+          {head('iv', 'IV tối thiểu (%)')}
+          <input {...num('minIv', 'iv')} />
+          <p className="hint">
+            IV tuyệt đối của chính hợp đồng. Khác ô trên: ô trên so IV với biến
+            động thật, ô này chỉ hỏi IV có cao hay không.
+          </p>
         </div>
 
         <div
@@ -209,9 +235,9 @@ export default function FilterPanel({
               : 'Quét S&P 500'}
         </button>
 
-        {offCount > 0 && (
+        {loosened > 0 && (
           <p className="hint hint-warn">
-            Đang tắt {offCount} tiêu chí — kết quả sẽ nhiều và lỏng hơn bình thường.
+            Đang tắt {loosened} tiêu chí — kết quả sẽ nhiều và lỏng hơn bình thường.
           </p>
         )}
 

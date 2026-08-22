@@ -10,7 +10,7 @@ import HeatmapPanel from '@/components/HeatmapPanel';
 import ThemeToggle from '@/components/ThemeToggle';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
-import type { Candidate, Filters, StreamEvent } from '@/lib/types';
+import { DEFAULT_OFF, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
 
 const DEFAULTS: Filters = {
   universe: 'sp500',
@@ -23,11 +23,13 @@ const DEFAULTS: Filters = {
   minOpenInterest: 500,
   maxSpreadPct: 5,
   minIvHv: 1.0,
+  minDrawdownPct: 10,
+  minIv: 35,
   requireAboveSma200: true,
   excludeEarnings: true,
   sectors: [],
   limit: 0,
-  off: [],
+  off: [...DEFAULT_OFF],
 };
 
 type Status = {

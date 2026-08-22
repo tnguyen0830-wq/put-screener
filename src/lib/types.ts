@@ -11,7 +11,9 @@ export type FilterKey =
   | 'dte'
   | 'roc'
   | 'liquidity'
-  | 'ivhv';
+  | 'ivhv'
+  | 'drawdown'
+  | 'iv';
 
 export type Filters = {
   /** Which set of tickers to scan. */
@@ -26,6 +28,10 @@ export type Filters = {
   minOpenInterest: number;
   maxSpreadPct: number; // (ask-bid)/mid as percent, e.g. 5
   minIvHv: number; // IV / HV20 ratio floor, e.g. 1.0
+  /** How far below the 52-week high the stock must have fallen, percent. */
+  minDrawdownPct: number;
+  /** Absolute implied-vol floor on the contract, percent, e.g. 35. */
+  minIv: number;
   requireAboveSma200: boolean;
   excludeEarnings: boolean;
   sectors: string[]; // empty = all
@@ -36,6 +42,13 @@ export type Filters = {
    */
   off: FilterKey[];
 };
+
+/**
+ * Criteria that start switched off. They narrow an already-working scan onto a
+ * particular setup, so leaving them off is the baseline rather than a loosened
+ * filter - the panel uses this to tell the two apart.
+ */
+export const DEFAULT_OFF: FilterKey[] = ['drawdown', 'iv'];
 
 /** True when criterion `k` should be applied to this scan. */
 export const isOn = (f: Filters, k: FilterKey) => !(f.off ?? []).includes(k);
@@ -56,6 +69,8 @@ export type Candidate = {
   hv20: number | null; // annualized realized vol, decimal
   ivRank: number | null; // 0-100, only once snapshots exist
   ivHv: number | null; // IV / HV20
+  /** Percent below the 52-week high, e.g. 12.5 means 12.5% off the top. */
+  drawdownPct: number;
 
   // contract
   optionSymbol: string;

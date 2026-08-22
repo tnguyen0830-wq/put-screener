@@ -195,6 +195,12 @@ export async function evaluate(
   f: Filters,
   earnings: Record<string, string[]>
 ): Promise<Candidate | null> {
+  // Depends on the underlying alone, so it settles before the contract loop
+  // rather than being re-tested against every strike.
+  const drawdownPct =
+    u.high52 > 0 ? ((u.high52 - u.spot) / u.high52) * 100 : 0;
+  if (isOn(f, 'drawdown') && drawdownPct < f.minDrawdownPct) return null;
+
   let best: Candidate | null = null;
 
   for (const c of contracts) {
@@ -229,6 +235,8 @@ export async function evaluate(
     if (isOn(f, 'roc') && annualRocPct < f.minAnnualRoc) continue;
 
     const iv = (c.volatility ?? 0) / 100;
+    // minIv is a percentage the way the panel asks for it; iv is a decimal.
+    if (isOn(f, 'iv') && iv * 100 < f.minIv) continue;
     const ivHv = u.hv20 && u.hv20 > 0 ? iv / u.hv20 : null;
     if (isOn(f, 'ivhv') && f.minIvHv > 0 && ivHv !== null && ivHv < f.minIvHv)
       continue;
@@ -267,6 +275,7 @@ export async function evaluate(
       hv20: u.hv20,
       ivRank: rank,
       ivHv,
+      drawdownPct,
       optionSymbol: c.symbol,
       strike: c.strikePrice,
       expiration: c.expirationDate,

@@ -11,7 +11,9 @@ type SortKey =
   | 'delta'
   | 'capital'
   | 'dte'
-  | 'ivHv';
+  | 'ivHv'
+  | 'iv'
+  | 'drawdownPct';
 
 const COLS: { key: SortKey | null; label: string; left?: boolean }[] = [
   { key: null, label: 'Mã', left: true },
@@ -25,6 +27,8 @@ const COLS: { key: SortKey | null; label: string; left?: boolean }[] = [
   { key: 'cushionPct', label: 'Đệm' },
   { key: null, label: 'Break-even' },
   { key: 'ivHv', label: 'IV/HV' },
+  { key: 'iv', label: 'IV' },
+  { key: 'drawdownPct', label: 'Rớt đỉnh' },
   { key: null, label: 'Biên độ 52T', left: true },
 ];
 
@@ -102,6 +106,8 @@ export default function ResultsTable({
                 {r.breakeven.toFixed(2)}
               </td>
               <td>{r.ivHv ? r.ivHv.toFixed(2) : '—'}</td>
+              <td>{(r.iv * 100).toFixed(0)}%</td>
+              <td>−{r.drawdownPct.toFixed(1)}%</td>
               <td className="left">
                 <CushionBar
                   low52={r.low52}
