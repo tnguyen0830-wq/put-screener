@@ -249,6 +249,7 @@ export default function AnalysisPanel({
               <span className="spacer" />
               <button
                 className={watchlist.includes(data.symbol) ? 'wl on' : 'wl'}
+                title={tr(watchlist.includes(data.symbol) ? 'wl.removeTitle' : 'wl.addTitle')}
                 onClick={() => onToggleWatchlist(data.symbol)}
               >
                 {watchlist.includes(data.symbol) ? tr('an.inWatchlist') : tr('an.saveWatchlist')}
