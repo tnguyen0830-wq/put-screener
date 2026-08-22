@@ -473,10 +473,21 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không lấy được Fear & Greed Index từ CNN. Đây là endpoint không chính thức nên thỉnh thoảng hỏng; phần còn lại của tab vẫn chạy.',
     en: 'Could not fetch the Fear & Greed Index from CNN. This is an unofficial endpoint and breaks now and then; the rest of the tab still works.',
   },
-  'fg.prevClose': { vi: 'Phiên trước', en: 'Prev close' },
-  'fg.week': { vi: '1 tuần', en: '1 week' },
-  'fg.month': { vi: '1 tháng', en: '1 month' },
-  'fg.year': { vi: '1 năm', en: '1 year' },
+  // CNN's own band names, kept in English like every other market term in the
+  // app; the note below the dial carries the meaning.
+  'fg.extremeFear': { vi: 'Extreme Fear', en: 'Extreme Fear' },
+  'fg.fear': { vi: 'Fear', en: 'Fear' },
+  'fg.neutral': { vi: 'Neutral', en: 'Neutral' },
+  'fg.greed': { vi: 'Greed', en: 'Greed' },
+  'fg.extremeGreed': { vi: 'Extreme Greed', en: 'Extreme Greed' },
+  'fg.lineAria': {
+    vi: 'Fear & Greed Index một năm qua',
+    en: 'Fear & Greed Index over the past year',
+  },
+  'fg.prevClose': { vi: 'Phiên trước', en: 'Previous close' },
+  'fg.week': { vi: '1 tuần trước', en: '1 week ago' },
+  'fg.month': { vi: '1 tháng trước', en: '1 month ago' },
+  'fg.year': { vi: '1 năm trước', en: '1 year ago' },
   'fg.aria': {
     vi: (v: number) => `Fear & Greed Index một năm qua, hiện tại ${v} trên thang 0–100`,
     en: (v: number) => `Fear & Greed Index over the past year, currently ${v} out of 100`,
@@ -490,8 +501,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Hover or drag along the line to read a day.',
   },
   'fg.note': {
-    vi: 'Thang 0–100: dưới 50 là thị trường đang sợ, trên 50 là đang tham. Với người bán put thì hướng đọc ngược với trực giác — lúc sợ hãi là lúc IV cao và quyền chọn được trả hậu, còn lúc tham lam thì phí mỏng. Vì vậy đường này để một màu duy nhất, không tô xanh–đỏ: trong app này xanh và đỏ đã mang nghĩa lên và xuống, thêm nghĩa thứ hai vào cùng hai màu là làm hỏng cả bảng kết quả. Nguồn: CNN, endpoint không chính thức, cache 30 phút.',
-    en: 'A 0–100 scale: below 50 the market is fearful, above 50 it is greedy. For a put seller the reading inverts against intuition — fear is when implied vol is high and options pay well, greed is when premium goes thin. That is why this line is a single colour rather than a red-to-green dial: green and red already mean up and down everywhere else in this app, and giving them a second meaning would spoil the results table too. Source: CNN, an unofficial endpoint, cached for 30 minutes.',
+    vi: 'Thang 0–100: dưới 45 là thị trường đang sợ, trên 55 là đang tham. Với người bán put thì hướng đọc ngược với trực giác — lúc sợ hãi là lúc IV cao và quyền chọn được trả hậu, còn lúc tham lam thì phí mỏng. Màu ở đây nói về tâm lý thị trường, không phải lên/xuống như màu trong bảng kết quả. Nguồn: CNN, endpoint không chính thức, cache 30 phút.',
+    en: 'A 0–100 scale: below 45 the market is fearful, above 55 it is greedy. For a put seller the reading inverts against intuition — fear is when implied vol is high and options pay well, greed is when premium goes thin. Colour here means sentiment, not the up/down it means in the results table. Source: CNN, an unofficial endpoint, cached for 30 minutes.',
   },
 
   // ---- AI read ----

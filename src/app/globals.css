@@ -256,18 +256,26 @@ select {
   margin: 18px 0 4px;
 }
 
-.fghead {
+.fgtop {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
+
+.fgdial {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 340px;
+}
+
+
 
 /* Leads by weight, not colour - same rule the results table follows. */
 .fgscore {
   font-family: var(--data);
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -283,25 +291,67 @@ select {
 }
 
 .fgprev {
-  display: flex;
-  gap: 14px;
+  flex: 1 1 200px;
   margin: 0;
+}
+
+.fgprev > div {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.fgprev > div:last-child {
+  border-bottom: 0;
 }
 
 .fgprev dt {
   font-family: var(--data);
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .fgprev dd {
-  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0 0;
+}
+
+.fgword {
   font-family: var(--data);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--ink);
+}
+
+/* Colour states the sentiment; the word beside it says the same thing, so the
+   pill never carries meaning on its own. */
+.fgpill {
+  margin-left: auto;
+  min-width: 34px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-family: var(--data);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fgpill.fear {
+  background: var(--risk-tint);
+  color: var(--risk);
+}
+
+.fgpill.greed {
+  background: var(--credit-tint);
+  color: var(--credit);
+}
+
+.fgpill.neutral {
+  background: var(--rule-soft);
+  color: var(--muted);
 }
 
 .fgchart {
