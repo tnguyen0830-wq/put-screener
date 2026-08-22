@@ -190,6 +190,99 @@ select {
   text-transform: uppercase;
 }
 
+/* ---------- settings menu ---------- */
+
+.settings {
+  position: relative;
+}
+
+.settingsbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--label);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.settingsbtn:hover {
+  background: var(--hover);
+}
+
+/* Carries the connection state the header no longer spells out. */
+.sdot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+}
+
+.sdot-bad {
+  background: var(--risk);
+}
+
+.sdot-warn {
+  background: var(--warn);
+}
+
+.settingspop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 250px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-2);
+}
+
+.popsec {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.popsec:not(:first-child) {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.pophint {
+  margin: 0 0 9px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.popaction {
+  display: block;
+  padding: 7px 10px;
+  text-align: center;
+  font-family: var(--data);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--on-navy);
+  background: var(--navy);
+  border-radius: var(--r-sm);
+  text-decoration: none;
+}
+
 /* VIX sits with the header pills but reads as data, not status. */
 .pill.vix {
   display: inline-flex;
@@ -1259,6 +1352,18 @@ html.theme-switching *::after {
   .wm-tag,
   .brandsub {
     display: none;
+  }
+}
+
+/* Two rows, not three. The tab strip is too wide to share a row with the brand
+   at this width, so it wraps whatever else is in the header - which left VIX
+   and the settings button stranded on a third row. Sending the tabs last and
+   giving them a row of their own puts everything else back beside the brand. */
+@media (max-width: 940px) {
+  .rail .tabs {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
   }
 }
 
