@@ -190,6 +190,15 @@ select {
   text-transform: uppercase;
 }
 
+/* VIX sits with the header pills but reads as data, not status. */
+.pill.vix {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+}
+
 .pill.live {
   color: var(--credit);
   border-color: var(--credit);

@@ -17,16 +17,20 @@ const SYMBOLS = [
   { proName: 'AMEX:SPY', title: 'S&P 500' },
   { proName: 'NASDAQ:QQQ', title: 'Nasdaq 100' },
   { proName: 'AMEX:IWM', title: 'Russell 2000' },
-  { proName: 'TVC:VIX', title: 'VIX' },
   { proName: 'TVC:GOLD', title: 'Vàng' },
   { proName: 'TVC:USOIL', title: 'Dầu WTI' },
   { proName: 'BITSTAMP:BTCUSD', title: 'Bitcoin' },
 ];
 
-// Dropped: TVC:US10Y and TVC:DXY. Both came back with the widget's red error
-// badge and no price at all - the free tape does not serve them. Guessing at
-// replacements costs a deploy per attempt and cannot be checked from here,
-// so they are simply out until a working symbol is confirmed on a device.
+// Dropped: TVC:US10Y, TVC:DXY and TVC:VIX. All three came back with the
+// widget's red error badge and no price - the free tape does not serve them.
+// Guessing at replacements costs a deploy per attempt and cannot be checked
+// from here, since every tradingview.com host is unreachable from the build
+// environment.
+//
+// VIX did not just leave: it moved to VixPill, quoted from Schwab. It is the
+// one number this screener actually trades on, so it deserved a source that
+// works rather than a proxy symbol that renders.
 
 /**
  * The app's own theme, kept current. ThemeToggle writes data-theme on <html>
