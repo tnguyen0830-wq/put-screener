@@ -30,6 +30,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // trader reads these terms in English everywhere else too.
   'tab.analyze': { vi: 'Analyze', en: 'Analyze' },
   'tab.heatmap': { vi: 'Heatmap', en: 'Heatmap' },
+  'tab.portfolio': { vi: 'My Portfolio', en: 'My Portfolio' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
@@ -350,6 +351,83 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.note': {
     vi: 'Diện tích ô lấy từ vốn hoá tính bằng dữ liệu Schwab (giá × số cổ phiếu lưu hành), nên kích thước luôn là real-time. Màu ô khung 1 ngày cũng từ Schwab; các khung dài hơn lấy từ endpoint bản đồ của Finviz vì tính từ Schwab sẽ tốn 503 request lịch sử giá. Thang màu dựng theo đúng các mốc của Finviz để nhìn quen mắt, nhưng toàn bộ số liệu là tự tính — đây không phải ảnh chụp bản đồ của họ.',
     en: 'Tile area comes from market cap computed on Schwab data (price × shares outstanding), so the sizing is always live. The 1-day colouring is Schwab too; longer ranges come from Finviz\u2019s map endpoint, because computing them from Schwab would cost 503 price-history requests. The colour scale follows Finviz\u2019s own thresholds so it reads familiarly, but every figure here is computed locally — this is not a screenshot of their map.',
+  },
+
+  // ---- my portfolio ----
+  'pf.title': { vi: 'My Portfolio', en: 'My Portfolio' },
+  'pf.loading': { vi: 'Đang tải danh mục…', en: 'Loading the portfolio…' },
+  'pf.loadFailed': { vi: 'Không tải được danh mục.', en: 'Could not load the portfolio.' },
+  'pf.saveFailed': { vi: 'Không lưu được.', en: 'Could not save.' },
+  'pf.invalid': {
+    vi: 'Có dòng bị bỏ qua vì thiếu hoặc sai số liệu. Kiểm tra lại mã, strike, ngày đáo hạn và credit.',
+    en: 'A row was dropped for missing or invalid numbers. Check the symbol, strike, expiry and credit.',
+  },
+  'pf.quoteError': {
+    vi: 'Chưa lấy được báo giá — vị thế vẫn còn nguyên, chỉ thiếu phần định giá lại. Kiểm tra kết nối Schwab trong Cài đặt.',
+    en: 'No quotes came back — your positions are intact, only the live pricing is missing. Check the Schwab connection in Settings.',
+  },
+  'pf.emptyTitle': { vi: 'Chưa có vị thế nào', en: 'No positions yet' },
+  'pf.emptyBody': {
+    vi: 'Nhập một put đã bán hoặc số cổ phiếu đang giữ ở dưới. Nhập một lần lúc mở vị thế; giá, lời lỗ, số ngày còn lại và khoảng cách tới strike thì app tự tính lại từ báo giá Schwab.',
+    en: 'Add a put you have sold, or shares you hold, below. You enter it once when you open it; the price, the profit, the days left and the distance to the strike are recomputed from Schwab quotes.',
+  },
+
+  'pf.openPl': { vi: 'Lời/lỗ đang mở', en: 'Open P/L' },
+  'pf.collateral': { vi: 'Tiền thế chấp', en: 'Cash secured' },
+  'pf.creditTotal': { vi: 'Credit đã nhận', en: 'Credit received' },
+  'pf.stockValue': { vi: 'Giá trị cổ phiếu', en: 'Share value' },
+  'pf.nearestDte': { vi: 'Đáo hạn gần nhất', en: 'Nearest expiry' },
+  'pf.attention': { vi: 'Cần để ý', en: 'Needs attention' },
+  'pf.attentionValue': {
+    vi: (v: any) => `${v.itm} trong tiền · ${v.earnings} sắp earnings`,
+    en: (v: any) => `${v.itm} in the money · ${v.earnings} with earnings due`,
+  },
+  'pf.days': {
+    vi: (n: number) => `${n} ngày`,
+    en: (n: number) => `${n} days`,
+  },
+
+  'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
+  'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
+  'pf.add': { vi: 'Thêm vị thế', en: 'Add a position' },
+
+  'pf.colSymbol': { vi: 'Mã', en: 'Symbol' },
+  'pf.colStrike': { vi: 'Strike', en: 'Strike' },
+  'pf.colExp': { vi: 'Đáo hạn', en: 'Expiry' },
+  'pf.colCredit': { vi: 'Credit', en: 'Credit' },
+  'pf.colNow': { vi: 'Bây giờ', en: 'Now' },
+  'pf.colPl': { vi: 'Lời/lỗ', en: 'P/L' },
+  'pf.colCaptured': { vi: 'Đã ăn', en: 'Captured' },
+  'pf.colCushion': { vi: 'Cách strike', en: 'Cushion' },
+  'pf.colRoc': { vi: 'ROC/năm', en: 'ROC p.a.' },
+  'pf.colShares': { vi: 'Số cp', en: 'Shares' },
+  'pf.colCost': { vi: 'Giá vốn', en: 'Cost' },
+  'pf.colValue': { vi: 'Giá trị', en: 'Value' },
+  'pf.ifHeld': {
+    vi: (v: string) => `giữ tới hết: ${v}`,
+    en: (v: string) => `if held: ${v}`,
+  },
+  'pf.earnings': {
+    vi: (d: string) => `earnings ${d}`,
+    en: (d: string) => `earnings ${d}`,
+  },
+  'pf.remove': { vi: 'Xoá vị thế', en: 'Remove position' },
+
+  'pf.kindPut': { vi: 'Put đã bán', en: 'Put sold' },
+  'pf.kindStock': { vi: 'Cổ phiếu', en: 'Shares' },
+  'pf.fSymbol': { vi: 'Mã', en: 'Symbol' },
+  'pf.fStrike': { vi: 'Strike', en: 'Strike' },
+  'pf.fExp': { vi: 'Ngày đáo hạn', en: 'Expiry' },
+  'pf.fContracts': { vi: 'Số hợp đồng', en: 'Contracts' },
+  'pf.fCredit': { vi: 'Credit / cp', en: 'Credit / share' },
+  'pf.fShares': { vi: 'Số cổ phiếu', en: 'Shares' },
+  'pf.fCost': { vi: 'Giá vốn / cp', en: 'Cost / share' },
+  'pf.fOpened': { vi: 'Ngày mở', en: 'Opened' },
+  'pf.save': { vi: 'Lưu vị thế', en: 'Save position' },
+  'pf.saving': { vi: 'Đang lưu…', en: 'Saving…' },
+  'pf.note': {
+    vi: 'Vị thế do bạn nhập, lưu trên server của chính bạn. Mọi con số còn lại — giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike, ROC quy năm — tính lại mỗi phút từ báo giá Schwab. Credit và giá vốn nhập theo mỗi cổ phiếu, đúng như bảng lệnh: 1.85 nghĩa là 185 đô một hợp đồng. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Đây là bản nhập tay vì app chưa được Schwab duyệt quyền đọc tài khoản; duyệt xong thì phần nhập tay sẽ được thay bằng đồng bộ tự động, phần tính toán giữ nguyên.',
+    en: 'Positions are yours, entered by hand and stored on your own server. Everything else — the buy-back price, the profit, how much of the credit is captured, the distance to the strike, the annualised return — is recomputed every minute from Schwab quotes. Credit and cost go in per share, the way the ticket shows them: 1.85 means $185 for one contract. Collateral is the cash-secured figure, strike × 100 × contracts. This is the manual version because Schwab has not approved account access for this app; once it does, the typing is replaced by a sync and the arithmetic stays as it is.',
   },
 
   // ---- sector rotation (RRG) ----

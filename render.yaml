@@ -28,6 +28,12 @@ services:
         value: "22"
       - key: TOKEN_PATH
         value: /var/data/.tokens.json
+      # Vị thế và watchlist là dữ liệu người dùng nhập: mất là mất thật, nên
+      # cùng nằm trên ổ đĩa gắn thêm với token thay vì trong thư mục build.
+      - key: POSITIONS_PATH
+        value: /var/data/positions.json
+      - key: WATCHLIST_PATH
+        value: /var/data/watchlist.json
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL

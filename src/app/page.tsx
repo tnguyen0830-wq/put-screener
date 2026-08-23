@@ -8,6 +8,7 @@ import DetailDrawer from '@/components/DetailDrawer';
 import WatchlistPanel from '@/components/WatchlistPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
+import PortfolioPanel from '@/components/PortfolioPanel';
 import SettingsMenu from '@/components/SettingsMenu';
 import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
@@ -40,7 +41,7 @@ type Status = {
   daysLeft?: number;
 };
 
-type Tab = 'screener' | 'analyze' | 'heatmap';
+type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio';
 
 export default function Page() {
   const { t } = useLang();
@@ -190,6 +191,12 @@ export default function Page() {
           >
             {t('tab.heatmap')}
           </button>
+          <button
+            className={tab === 'portfolio' ? 'on' : undefined}
+            onClick={() => setTab('portfolio')}
+          >
+            {t('tab.portfolio')}
+          </button>
         </nav>
         <span className="spacer" />
         <SettingsMenu status={status} />
@@ -240,6 +247,10 @@ export default function Page() {
             onToggleWatchlist={toggleWatchlist}
             focusSymbol={focusSymbol}
           />
+        </div>
+      ) : tab === 'portfolio' ? (
+        <div className="shell solo">
+          <PortfolioPanel />
         </div>
       ) : (
         <div className="shell solo">
