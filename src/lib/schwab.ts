@@ -3,6 +3,15 @@ import path from 'node:path';
 
 const OAUTH_BASE = 'https://api.schwabapi.com/v1/oauth';
 const MARKET_BASE = 'https://api.schwabapi.com/marketdata/v1';
+/**
+ * Trader API: số dư và vị thế của chính tài khoản.
+ *
+ * Cùng một OAuth với market data - không phải đăng nhập lần nữa - nhưng là một
+ * sản phẩm riêng trên dashboard Schwab. App phải được duyệt "Accounts and
+ * Trading Production" thì token mới gọi được; chưa duyệt thì Schwab trả 401
+ * hoặc 403 dù phiên vẫn còn sống.
+ */
+const TRADER_BASE = 'https://api.schwabapi.com/trader/v1';
 
 export type Tokens = {
   access_token: string;
@@ -186,33 +195,47 @@ class RateLimiter {
 // Deliberately under the documented 120/min ceiling.
 const limiter = new RateLimiter(100, 60_000);
 
-async function get(
+async function request(
+  base: string,
   pathname: string,
   params: Record<string, string>,
   retriedAfter401 = false
 ): Promise<any> {
   await limiter.take();
   const token = retriedAfter401 ? await forceRefresh() : await accessToken();
-  const url = `${MARKET_BASE}${pathname}?${new URLSearchParams(params)}`;
+  const url = `${base}${pathname}?${new URLSearchParams(params)}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   });
   if (res.status === 429) {
     await new Promise((r) => setTimeout(r, 5000));
-    return get(pathname, params, retriedAfter401);
+    return request(base, pathname, params, retriedAfter401);
   }
   /* Schwab trả 401 khi access token bị vô hiệu sớm hơn hạn ghi trên đĩa — dấu
      hiệu là hạn còn gần 30 phút mà mọi request đều hỏng. Làm mới một lần rồi
      thử lại; chỉ một lần, để refresh token hết hạn thật thì báo lỗi luôn chứ
      không quay vòng. */
   if (res.status === 401 && !retriedAfter401) {
-    return get(pathname, params, true);
+    return request(base, pathname, params, true);
   }
   if (!res.ok) {
     throw new Error(`Schwab ${pathname} ${res.status}: ${await res.text()}`);
   }
   return res.json();
 }
+
+const get = (pathname: string, params: Record<string, string>) =>
+  request(MARKET_BASE, pathname, params);
+
+/**
+ * Gọi Trader API.
+ *
+ * Tách riêng khỏi get() vì đây là sản phẩm khác trên cùng một token: quyền có
+ * thể thiếu ngay cả khi market data chạy tốt, nên lỗi ở đây không có nghĩa là
+ * phiên Schwab hỏng.
+ */
+export const traderGet = (pathname: string, params: Record<string, string> = {}) =>
+  request(TRADER_BASE, pathname, params);
 
 /** Batch quotes. Schwab accepts a comma separated symbol list. */
 export async function quotes(symbols: string[]) {
