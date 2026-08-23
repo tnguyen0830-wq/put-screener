@@ -1286,6 +1286,114 @@ table.results tbody tr.clickable {
   color: var(--muted);
 }
 
+/* ---------- danh mục nhập tay ---------- */
+
+/* Bảng vị thế rộng hơn màn điện thoại. Cho nó tự cuộn ngang trong khung của
+   mình, đừng để cả trang trôi ngang theo. */
+.tablewrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.pftable {
+  min-width: 640px;
+}
+
+/* Cuộn ngang mà mất luôn cột mã thì các con số còn lại chẳng biết của ai. Ghim
+   cột đầu lại; nền phải đục, nếu không chữ bên dưới trôi xuyên qua. */
+.pftable th:first-child,
+.pftable td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  border-right: 1px solid var(--rule-soft);
+  padding-right: 10px;
+}
+.pftable td {
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+/* Dòng phụ dưới mỗi ô: giá hiện tại, số hợp đồng, số ngày còn lại. Nhỏ và xám
+   để con số chính vẫn là thứ đọc trước. */
+.pfsub {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.pfx {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.pfx:hover {
+  color: var(--risk);
+}
+.pfx:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pfform {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+.pfform label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pfform label span {
+  font-family: var(--data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.pfform input {
+  width: 118px;
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+  font: 400 13px/1.2 var(--data);
+}
+.pfform > button[type='submit'] {
+  padding: 8px 16px;
+  border: 1px solid var(--navy);
+  border-radius: var(--r-sm);
+  background: var(--navy);
+  color: var(--on-navy);
+  font: 600 12.5px/1 var(--data);
+  cursor: pointer;
+}
+.pfform > button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Cả hàng nút chọn loại vị thế xuống dòng riêng, vì nó chi phối những ô nhập
+   phía sau nó. */
+.pfkind {
+  flex-basis: 100%;
+}
+
+.warnline {
+  color: var(--warn);
+}
+
 /* ---------- luân chuyển dòng tiền (RRG) ---------- */
 
 .rrgwrap {
@@ -1722,6 +1830,17 @@ html.theme-switching *::after {
     order: 3;
     flex-basis: 100%;
     margin-left: 0;
+    /* Bốn tab vừa khít màn 412px sau khi bóp đệm; cuộn ngang là lối thoát cho
+       cái tab thứ năm nếu sau này có thêm, thay vì cắt cụt mất một tab. */
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .rail .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .rail .tabs button {
+    padding: 7px 9px;
+    font-size: 10.5px;
   }
 }
 
