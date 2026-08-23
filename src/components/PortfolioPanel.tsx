@@ -7,7 +7,7 @@ type Row = {
   id: string;
   kind: 'put' | 'stock';
   symbol: string;
-  openedAt: string;
+  openedAt?: string;
   strike?: number;
   expiration?: string;
   contracts?: number;
@@ -25,9 +25,9 @@ type Row = {
   captured?: number | null;
   collateral?: number;
   dte?: number;
-  daysHeld?: number;
+  daysHeld?: number | null;
   rocAnnual?: number | null;
-  rocIfExpired?: number;
+  rocRemaining?: number | null;
   cushion?: number | null;
   itm?: boolean | null;
   nextEarnings?: string | null;
@@ -59,8 +59,6 @@ const pct = (n: number | null | undefined, d = 1) =>
 const signed = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `${n >= 0 ? '+' : ''}${usd(n, 0)}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 /** Chỉ giữ lại phần người dùng đã nhập; số liệu thị trường không được ghi xuống. */
 const raw = (r: Row) => ({
   id: r.id,
@@ -84,7 +82,7 @@ const BLANK = {
   credit: '',
   shares: '',
   cost: '',
-  openedAt: today(),
+  openedAt: '',
 };
 
 export default function PortfolioPanel() {
@@ -144,7 +142,7 @@ export default function PortfolioPanel() {
     const entry: any = {
       kind: form.kind,
       symbol: form.symbol,
-      openedAt: form.openedAt || today(),
+      openedAt: form.openedAt || undefined,
     };
     if (form.kind === 'put') {
       entry.strike = parseFloat(form.strike);
@@ -261,9 +259,16 @@ export default function PortfolioPanel() {
                       <td className={r.itm ? 'bad' : (r.cushion ?? 1) < 0.03 ? 'warn' : undefined}>
                         {pct(r.cushion, 1)}
                       </td>
+                      {/* Con số chính là phần credit còn lại quy năm - thứ
+                          quyết định giữ tiếp hay đóng sớm. Phần đã giữ được
+                          quy năm chỉ hiện khi biết ngày mở và đã đủ lâu. */}
                       <td>
-                        {pct(r.rocAnnual, 0)}
-                        <span className="pfsub">{t('pf.ifHeld', pct(r.rocIfExpired, 0))}</span>
+                        {pct(r.rocRemaining, 0)}
+                        {r.rocAnnual !== null && r.rocAnnual !== undefined && (
+                          <span className="pfsub">
+                            {t('pf.heldSoFar', { days: r.daysHeld ?? 0, roc: pct(r.rocAnnual, 0) })}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <button
@@ -396,10 +401,13 @@ export default function PortfolioPanel() {
             </>
           )}
 
+          {/* Để trống được: không nhớ ngày thì đừng đoán, những con số cần nó
+              sẽ tự vắng mặt thay vì hiện ra sai. */}
           <label>
             <span>{t('pf.fOpened')}</span>
             <input type="date" value={form.openedAt}
               onChange={(e) => setForm({ ...form, openedAt: e.target.value })} />
+            <em className="pfhint">{t('pf.openedHint')}</em>
           </label>
 
           <button type="submit" disabled={saving}>

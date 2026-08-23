@@ -23,8 +23,15 @@ export type Position = {
   id: string;
   kind: PositionKind;
   symbol: string;
-  /** Ngày mở vị thế, để tính ROC quy năm theo số ngày đã giữ thật. */
-  openedAt: string;
+  /**
+   * Ngày mở vị thế - không bắt buộc.
+   *
+   * Người ta hay không nhớ đã bán hợp đồng đó ngày nào, và điền đại một ngày
+   * thì mọi phép quy năm dựa trên nó thành số ảo. Để trống là thành thật hơn:
+   * những con số cần ngày mở sẽ tự biến mất, còn phần quan trọng nhất - phần
+   * credit chưa ăn quy theo số ngày còn lại - không cần tới nó.
+   */
+  openedAt?: string;
   /* --- put đã bán --- */
   strike?: number;
   expiration?: string;
@@ -51,8 +58,6 @@ const num = (v: unknown, { min = 0, max = 1e9 } = {}): number | null => {
   return Number.isFinite(n) && n > min && n <= max ? n : null;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 /**
  * Làm sạch một vị thế do người dùng nhập.
  *
@@ -65,7 +70,7 @@ export function sanitize(raw: any): Position | null {
   if (!/^[A-Z/]{1,10}$/.test(symbol)) return null;
 
   const kind: PositionKind = raw?.kind === 'stock' ? 'stock' : 'put';
-  const openedAt = isDate(raw?.openedAt) ? raw.openedAt : today();
+  const openedAt = isDate(raw?.openedAt) ? raw.openedAt : undefined;
   const note = typeof raw?.note === 'string' ? raw.note.slice(0, 120) : undefined;
   // Id do client đặt cũng phải qua cửa: nó đi thẳng vào key của React và vào
   // file trên đĩa.
