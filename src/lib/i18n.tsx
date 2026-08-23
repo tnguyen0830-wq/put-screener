@@ -399,13 +399,17 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colPl': { vi: 'Lời/lỗ', en: 'P/L' },
   'pf.colCaptured': { vi: 'Đã ăn', en: 'Captured' },
   'pf.colCushion': { vi: 'Cách strike', en: 'Cushion' },
-  'pf.colRoc': { vi: 'ROC/năm', en: 'ROC p.a.' },
+  'pf.colRoc': { vi: 'ROC/năm còn lại', en: 'ROC p.a. left' },
   'pf.colShares': { vi: 'Số cp', en: 'Shares' },
   'pf.colCost': { vi: 'Giá vốn', en: 'Cost' },
   'pf.colValue': { vi: 'Giá trị', en: 'Value' },
-  'pf.ifHeld': {
-    vi: (v: string) => `giữ tới hết: ${v}`,
-    en: (v: string) => `if held: ${v}`,
+  'pf.heldSoFar': {
+    vi: (v: any) => `đã giữ ${v.days} ngày: ${v.roc}`,
+    en: (v: any) => `${v.days} days in: ${v.roc}`,
+  },
+  'pf.openedHint': {
+    vi: 'không nhớ thì để trống',
+    en: 'leave blank if unsure',
   },
   'pf.earnings': {
     vi: (d: string) => `earnings ${d}`,
@@ -426,8 +430,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.save': { vi: 'Lưu vị thế', en: 'Save position' },
   'pf.saving': { vi: 'Đang lưu…', en: 'Saving…' },
   'pf.note': {
-    vi: 'Vị thế do bạn nhập, lưu trên server của chính bạn. Mọi con số còn lại — giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike, ROC quy năm — tính lại mỗi phút từ báo giá Schwab. Credit và giá vốn nhập theo mỗi cổ phiếu, đúng như bảng lệnh: 1.85 nghĩa là 185 đô một hợp đồng. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Đây là bản nhập tay vì app chưa được Schwab duyệt quyền đọc tài khoản; duyệt xong thì phần nhập tay sẽ được thay bằng đồng bộ tự động, phần tính toán giữ nguyên.',
-    en: 'Positions are yours, entered by hand and stored on your own server. Everything else — the buy-back price, the profit, how much of the credit is captured, the distance to the strike, the annualised return — is recomputed every minute from Schwab quotes. Credit and cost go in per share, the way the ticket shows them: 1.85 means $185 for one contract. Collateral is the cash-secured figure, strike × 100 × contracts. This is the manual version because Schwab has not approved account access for this app; once it does, the typing is replaced by a sync and the arithmetic stays as it is.',
+    vi: 'Vị thế do bạn nhập, lưu trên server của chính bạn. Mọi con số còn lại — giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Credit và giá vốn nhập theo mỗi cổ phiếu, đúng như bảng lệnh: 1.85 nghĩa là 185 đô một hợp đồng. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Ngày mở để trống cũng được — chỉ mất dòng "đã giữ N ngày", còn lại không đổi. Đây là bản nhập tay vì app chưa được Schwab duyệt quyền đọc tài khoản; duyệt xong thì phần nhập tay sẽ được thay bằng đồng bộ tự động, phần tính toán giữ nguyên.',
+    en: 'Positions are yours, entered by hand and stored on your own server. Everything else — the buy-back price, the profit, how much of the credit is captured, the distance to the strike — is recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Credit and cost go in per share, the way the ticket shows them: 1.85 means $185 for one contract. Collateral is the cash-secured figure, strike × 100 × contracts. The opened date can be left blank — you only lose the "days in" line. This is the manual version because Schwab has not approved account access for this app; once it does, the typing is replaced by a sync and the arithmetic stays as it is.',
   },
 
   // ---- sector rotation (RRG) ----

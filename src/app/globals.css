@@ -1361,6 +1361,13 @@ table.results tbody tr.clickable {
   text-transform: uppercase;
   font-size: 10px;
 }
+.pfhint {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
 .pfform input {
   width: 118px;
   padding: 7px 9px;

@@ -18,6 +18,9 @@ import {
  */
 export const dynamic = 'force-dynamic';
 
+/** Dưới ngần này ngày thì quy ra năm chỉ khuếch đại nhiễu, không nói lên gì. */
+const MIN_DAYS_FOR_ANNUAL = 5;
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -81,7 +84,7 @@ export async function GET() {
         costTotal: cost,
         pl: value === null ? null : value - cost,
         plPct: value === null ? null : (value - cost) / cost,
-        daysHeld: daysBetween(p.openedAt, now),
+        daysHeld: p.openedAt ? daysBetween(p.openedAt, now) : null,
       };
     }
 
@@ -94,9 +97,12 @@ export async function GET() {
     // Put bán khống được bảo chứng bằng tiền: thế chấp là toàn bộ số tiền phải
     // sẵn sàng mua cổ phiếu nếu bị assign.
     const collateral = p.strike! * shares;
-    const daysHeld = Math.max(1, daysBetween(p.openedAt, now));
     const dte = daysBetween(now, p.expiration!);
-    const totalDays = Math.max(1, daysBetween(p.openedAt, p.expiration!));
+    // Ngày mở có thể không có, và kể cả khi có thì vài ngày đầu quy ra năm chỉ
+    // là nhiễu: 17 đô lời trong một ngày quy ra năm thành 20%, con số đó không
+    // nói lên điều gì về vị thế.
+    const daysHeld = p.openedAt ? daysBetween(p.openedAt, now) : null;
+    const heldLongEnough = daysHeld !== null && daysHeld >= MIN_DAYS_FOR_ANNUAL;
 
     // Ngày earnings rơi vào trước khi đáo hạn là rủi ro riêng của người bán
     // put: một cú gap sau earnings có thể đẩy hợp đồng vào trong tiền chỉ sau
@@ -118,10 +124,31 @@ export async function GET() {
       collateral,
       dte,
       daysHeld,
-      // ROC quy năm tính trên phần lời đang có và số ngày đã giữ thật.
-      rocAnnual: pl === null ? null : (pl / collateral) * (365 / daysHeld),
-      // ROC quy năm nếu giữ tới đáo hạn và hợp đồng hết hạn vô giá trị.
-      rocIfExpired: (creditTotal / collateral) * (365 / totalDays),
+      /**
+       * Giá trị thời gian còn lại, quy năm theo số ngày còn lại.
+       *
+       * Đây là con số trả lời câu hỏi thật của người bán put: giữ tiếp hay đóng
+       * sớm. Nếu giữ tới đáo hạn chỉ còn kiếm thêm được từng này phần trăm trên
+       * số tiền đang bị khoá, mà screener đang tìm ra cơ hội cao hơn, thì đóng
+       * bây giờ để giải phóng tiền là đúng. Nó không cần biết vị thế mở ngày
+       * nào - thứ mà người ta hay không nhớ.
+       *
+       * Lấy giá trị thời gian chứ không lấy nguyên giá mua lại: với hợp đồng đã
+       * vào trong tiền, phần nội tại nằm trong giá mua lại là khoản lỗ đang
+       * mang, không phải lợi nhuận còn kiếm được. Tính cả phần đó vào thì một
+       * vị thế đang lỗ nặng lại hiện ra lợi suất cao nhất bảng.
+       */
+      rocRemaining:
+        mark === null || spot === null
+          ? null
+          : (Math.max(0, mark - Math.max(0, p.strike! - spot)) / p.strike!) *
+            (365 / Math.max(1, dte)),
+      // ROC quy năm trên phần đã lời và số ngày đã giữ thật. Chỉ có khi biết
+      // ngày mở và đã giữ đủ lâu để con số có nghĩa.
+      rocAnnual:
+        pl === null || !heldLongEnough
+          ? null
+          : (pl / collateral) * (365 / (daysHeld as number)),
       // Dương là giá còn ở trên strike; âm là đã vào trong tiền.
       cushion: spot === null ? null : (spot - p.strike!) / p.strike!,
       itm: spot === null ? null : spot < p.strike!,
