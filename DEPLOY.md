@@ -71,9 +71,9 @@ nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
 4. Deploy. Render cấp URL — service hiện tại là `https://put-screener-y2hw.onrender.com`
    (đuôi `y2hw` là ngẫu nhiên; deploy lại từ đầu sẽ ra đuôi khác).
 
-> **URL này không còn là địa chỉ chính.** Xem Bước 2b: app chạy trên
-> `https://app.tylerinvestment.com`. URL `onrender.com` vẫn còn bật để làm đường lui,
-> nhưng Chrome đã gắn cờ nó — đó chính là lý do có tên miền riêng.
+> **URL này đã tắt hẳn (24/08/2026).** App chạy trên
+> `https://app.tylerinvestment.com`; địa chỉ `onrender.com` giờ trả về `Not Found`.
+> Xem Bước 2b để biết vì sao và cách bật lại nếu cần.
 
 ### Một biến nữa phải có, nếu không watchlist sẽ biến mất
 
@@ -155,15 +155,42 @@ Render đổi hạ tầng.
 
 ### Chỉ tắt URL cũ sau khi tất cả đã chuyển xong
 
-Render → Settings → **Render Subdomain** → tắt. Trước khi tắt, kiểm tra đủ ba thứ đã
-trỏ về tên miền mới:
+**Đã làm xong ngày 24/08/2026** — phần dưới đây giữ lại để biết cần kiểm tra gì nếu
+phải dựng lại từ đầu.
+
+Render → Settings → **Render Subdomain** → tắt. Render bắt gõ đúng chuỗi
+`sudo subdomain web service put-screener` để xác nhận, nên không có chuyện bấm nhầm.
+Trước khi tắt, kiểm tra đủ ba thứ đã trỏ về tên miền mới:
 
 - `SCHWAB_CALLBACK_URL` trên Render
 - Đăng nhập Schwab đã thành công **trên tên miền mới**
-- `EXPO_PUBLIC_BACKEND_URL` trong `ProSellPutScanner` (Bước 5) — app điện thoại vẫn
-  đang gọi thẳng vào `onrender.com`, tắt subdomain trước khi build lại là app đó chết
+- `EXPO_PUBLIC_BACKEND_URL` trong `ProSellPutScanner` (Bước 5) — biến này nằm trong
+  cấu hình build của app điện thoại, KHÔNG phải trên Render, nên đừng tìm nó ở tab
+  Environment. Nếu app đó còn gọi thẳng vào `onrender.com` thì tắt subdomain là app
+  chết
 
 Tắt sớm hơn là tự khoá đường đăng nhập lại của chính mình.
+
+Tắt rồi vẫn bật lại được ngay bằng chính công tắc đó — đây là thao tác đảo ngược
+được, không phải xoá. Nên nếu nghi ngờ, cứ tắt rồi thử; hỏng thì gạt về.
+
+Trạng thái sau khi tắt, để đối chiếu: khối **Custom Domains** liệt kê đúng một tên
+miền `app.tylerinvestment.com` với `Certificate Issued` và `Verified`; phần **Render
+Subdomain** ghi `Disabled` và dòng "Your service is **not** reachable at
+https://put-screener-y2hw.onrender.com."; mở địa chỉ đó trên trình duyệt ra trang đen
+chữ trắng `Not Found`.
+
+### Google đã gỡ cờ chưa
+
+Cảnh báo "Deceptive site" từng chặn cả `onrender.com` lẫn tên miền riêng lúc mới dựng.
+Sau khi thêm đoạn tự khai báo không liên kết với Charles Schwab vào trang đăng nhập và
+gửi yêu cầu xem xét lại, Google đã gỡ — xác nhận ngày 24/08/2026 ở cả hai nguồn:
+
+- Search Console → Security & Manual Actions → Security Issues: `No issues detected`
+- https://transparencyreport.google.com/safe-browsing/search?url=app.tylerinvestment.com:
+  `No unsafe content found`
+
+Kiểm tra lại ở đúng hai chỗ đó nếu sau này lại bị chặn.
 
 ---
 
