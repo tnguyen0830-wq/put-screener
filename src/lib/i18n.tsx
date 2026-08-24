@@ -84,6 +84,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'The server has no password set, so there is nothing to sign in to. Set APP_PASSWORD and redeploy.',
   },
   'login.failed': { vi: 'Không kết nối được server.', en: 'Could not reach the server.' },
+  'login.what': {
+    vi: 'Công cụ cá nhân, một người dùng. Đọc dữ liệu thị trường qua API chính thức dành cho nhà phát triển của Charles Schwab, bằng chính tài khoản của chủ trang. Ô mật khẩu phía trên là để bảo vệ dữ liệu của chủ trang, không thu thập thông tin của ai khác.',
+    en: 'A private, single-user tool. It reads market data through Charles Schwab\u2019s official developer API using the owner\u2019s own credentials. The password above protects the owner\u2019s own data and is not collected from anyone else.',
+  },
+  'login.notAffiliated': {
+    vi: 'Không liên kết, không được bảo trợ và không do Charles Schwab & Co., Inc. vận hành. Trang này không bao giờ hỏi mật khẩu Schwab của bạn — việc đăng nhập Schwab diễn ra trên schwab.com.',
+    en: 'Not affiliated with, endorsed by, or operated by Charles Schwab & Co., Inc. This page never asks for your Schwab credentials — Schwab sign-in happens on schwab.com.',
+  },
   'login.note': {
     vi: 'Trang riêng. Phiên đăng nhập giữ 30 ngày trên máy này; đổi mật khẩu trên server là mọi phiên cũ hết hiệu lực ngay.',
     en: 'Private. A session lasts 30 days on this device; changing the password on the server ends every existing session at once.',

@@ -1357,6 +1357,31 @@ table.results tbody tr.clickable {
   color: var(--risk);
 }
 
+/* Phần tự khai trên trang đăng nhập: trang này là gì, và không phải là ai. */
+.logindisc {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule-soft);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.logindisc p {
+  margin: 0 0 8px;
+}
+.logindisc p:last-child {
+  margin-bottom: 0;
+}
+.logindisc strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Bản tiếng Anh luôn hiện, kể cả khi giao diện đang tiếng Việt. */
+.logindisc-en {
+  opacity: 0.75;
+}
+
 /* Cảnh báo trang chưa khoá, trong menu cài đặt. */
 .popwarn {
   color: var(--risk);
