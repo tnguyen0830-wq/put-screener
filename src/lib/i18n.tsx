@@ -435,6 +435,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (y: number) => `Lời/lỗ đã chốt ${y} theo từng mã`,
     en: (y: number) => `Realized ${y} P/L by symbol`,
   },
+  'pf.realizedTotal': { vi: 'Tổng đã chốt', en: 'Realized total' },
   'pf.realizedGap': {
     vi: 'Mấy mã này có lệnh bán mà không tìm được lô mua tương ứng trong lịch sử tải về (mua từ lâu hơn), nên đã bỏ khỏi tổng thay vì tính giá vốn bằng 0:',
     en: 'These symbols had a sale with no matching purchase lot in the history fetched (bought longer ago), so they are excluded from the total rather than counted at zero cost:',
