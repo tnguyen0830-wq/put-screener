@@ -48,6 +48,10 @@ services:
       # EXPO_PUBLIC_BACKEND_TOKEN. Use Render's "Generate" button.
       - key: MD_API_TOKEN
         sync: false
+      # Mật khẩu vào trang. Không đặt thì trang mở cho bất cứ ai có đường link -
+      # và từ lúc có tab danh mục thì trên đó là vị thế thật.
+      - key: APP_PASSWORD
+        sync: false
       # Powers the "Claude reads the indicators" button in the analyze tab.
       # Billed API usage, separate from a Claude.ai subscription. Leave it
       # unset and the button reports the feature is off instead of failing.

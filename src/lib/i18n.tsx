@@ -56,12 +56,37 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Not connected. Scans cannot run.',
   },
   'settings.connect': { vi: 'Kết nối Schwab', en: 'Connect Schwab' },
+  'settings.session': { vi: 'Phiên đăng nhập', en: 'Your session' },
+  'settings.signOut': { vi: 'Đăng xuất', en: 'Sign out' },
+  'settings.unlocked': {
+    vi: 'Trang này CHƯA KHOÁ — ai có đường link đều xem được danh mục của bạn. Đặt biến APP_PASSWORD trên server rồi deploy lại.',
+    en: 'This site is NOT LOCKED — anyone with the link can see your portfolio. Set APP_PASSWORD on the server and redeploy.',
+  },
   'settings.reconnect': { vi: 'Kết nối lại', en: 'Reconnect' },
   'settings.daysLeft': {
     vi: (d: string) =>
       `Còn ${d} ngày. Schwab giới hạn cứng 7 ngày, hết hạn là phải đăng nhập lại.`,
     en: (d: string) =>
       `${d} days left. Schwab caps refresh tokens at 7 days; after that you sign in again.`,
+  },
+
+  // ---- login ----
+  'login.password': { vi: 'Mật khẩu', en: 'Password' },
+  'login.enter': { vi: 'Vào', en: 'Enter' },
+  'login.checking': { vi: 'Đang kiểm tra…', en: 'Checking…' },
+  'login.wrong': { vi: 'Sai mật khẩu.', en: 'Wrong password.' },
+  'login.tooMany': {
+    vi: (s: number) => `Thử sai quá nhiều lần. Chờ ${Math.ceil(s / 60)} phút rồi thử lại.`,
+    en: (s: number) => `Too many attempts. Wait ${Math.ceil(s / 60)} minutes and try again.`,
+  },
+  'login.noPassword': {
+    vi: 'Server chưa đặt mật khẩu, nên không có gì để đăng nhập. Đặt APP_PASSWORD rồi deploy lại.',
+    en: 'The server has no password set, so there is nothing to sign in to. Set APP_PASSWORD and redeploy.',
+  },
+  'login.failed': { vi: 'Không kết nối được server.', en: 'Could not reach the server.' },
+  'login.note': {
+    vi: 'Trang riêng. Phiên đăng nhập giữ 30 ngày trên máy này; đổi mật khẩu trên server là mọi phiên cũ hết hiệu lực ngay.',
+    en: 'Private. A session lasts 30 days on this device; changing the password on the server ends every existing session at once.',
   },
 
   // ---- theme ----

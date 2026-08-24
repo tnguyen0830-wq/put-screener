@@ -15,8 +15,11 @@ thay vì phải mở laptop.
 
 **2. Token bảo vệ nằm trong bundle của app.** `EXPO_PUBLIC_BACKEND_TOKEN` bị đóng gói
 vào file JS, ai mở devtools trên bản web đều đọc được. Nó chặn được bot và người dò
-URL ngẫu nhiên, **không** thay thế được hệ thống đăng nhập thật. Chỉ dùng cho deploy
-cá nhân — đừng chia sẻ URL rộng rãi.
+URL ngẫu nhiên, **không** thay thế được hệ thống đăng nhập thật.
+
+Đó là chuyện của app điện thoại gọi `/api/md/*`. Còn **giao diện web thì đã có đăng
+nhập thật** bằng `APP_PASSWORD` — xem Bước 2c. Bắt buộc phải đặt, vì tab My Portfolio
+hiện vị thế thật.
 
 **3. Tôi không thể tự tạo tài khoản Render/GitHub giúp bạn.** Bạn phải tự đăng ký và
 tự bấm nút deploy. Các bước dưới đây ghi rõ chỗ nào bạn làm.
@@ -158,6 +161,48 @@ trỏ về tên miền mới:
   đang gọi thẳng vào `onrender.com`, tắt subdomain trước khi build lại là app đó chết
 
 Tắt sớm hơn là tự khoá đường đăng nhập lại của chính mình.
+
+---
+
+## Bước 2c — Khoá trang bằng mật khẩu
+
+Trang chạy trên một URL công khai. Chừng nào trên đó chỉ có giá thị trường thì mở cũng
+được, nhưng từ lúc tab My Portfolio hiện vị thế thật thì không.
+
+Đặt trên Render → Environment:
+
+| Biến | Giá trị |
+|---|---|
+| `APP_PASSWORD` | mật khẩu bạn tự đặt, dài, không trùng mật khẩu Schwab |
+
+Đặt xong deploy lại. Vào trang sẽ thấy ô nhập mật khẩu; đăng nhập một lần, phiên giữ
+**30 ngày** trên máy đó. Đăng xuất nằm trong menu ⚙️.
+
+**Không đặt thì trang mở cho tất cả.** Để không ai vô tình chạy như vậy mà không biết,
+`/api/auth/status` trả về `locked: false` và menu ⚙️ hiện chấm đỏ kèm dòng cảnh báo.
+Ở máy nhà thì không cần đặt — không đặt là không có cổng, tiện cho lúc phát triển.
+
+### Những gì cổng này gác, và không gác
+
+- **Gác:** mọi trang và mọi `/api/*`, kể cả `/api/auth/callback` của Schwab. Để ngỏ
+  callback thì người lạ có thể đăng nhập tài khoản Schwab **của họ** vào server này và
+  ghi đè token của bạn.
+- **Không gác:** `/api/md/*` — cửa riêng của app điện thoại, vẫn dùng `MD_API_TOKEN`
+  trong header như cũ. App đó không có cookie nào để gửi.
+- **Mở sẵn:** trang `/login`, chỗ nhận mật khẩu `/api/session`, và `/api/auth/status`.
+  Cái cuối vì Render dùng nó làm health check — nó chỉ nói phiên Schwab còn hay hết và
+  trang đã khoá hay chưa, không một con số tài khoản nào.
+- File tĩnh (ảnh, icon) cũng mở, nếu không thì chính trang đăng nhập không tải nổi logo.
+
+### Vài điều đáng biết
+
+- Cookie phiên được **ký bằng HMAC**, không phải một cờ bật/tắt, nên không tự chế ra
+  được. Khoá ký mặc định chính là mật khẩu, nên **đổi mật khẩu là mọi phiên cũ chết
+  ngay** — kể cả phiên trên cái điện thoại vừa mất.
+- Sai mật khẩu 8 lần trong 15 phút thì IP đó bị khoá tạm. Bộ đếm nằm trong RAM, server
+  khởi động lại là hết — nhưng người dò cũng phải bắt đầu lại từ đầu.
+- Muốn tách khoá ký khỏi mật khẩu thì đặt thêm `SESSION_SECRET`; khi đó đổi mật khẩu
+  không làm rơi phiên đang có.
 
 ---
 
