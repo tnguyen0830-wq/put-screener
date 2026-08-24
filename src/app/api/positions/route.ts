@@ -117,6 +117,7 @@ export async function GET() {
       const cost = p.shares! > 0 ? costTotal / p.shares! : p.cost!;
       // schwabValue/schwabPl là nguyên liệu nội bộ để tính cost/pl ở trên,
       // không cần lộ ra response - value và pl đã mang đủ thông tin đó rồi.
+      // `raw` thì giữ lại, đi thẳng ra response - xem ghi chú ở lib/positions.ts.
       const { schwabValue: _sv, schwabPl: _spl, ...pClean } = p;
       return {
         ...pClean,
