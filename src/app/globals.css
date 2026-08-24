@@ -2023,11 +2023,15 @@ html.theme-switching *::after {
   color: var(--warn);
 }
 
-/* Con số chủ đạo của một hàng — nổi bằng cỡ chữ và độ đậm thay vì tô màu, để
-   màu còn dành riêng cho việc mang nghĩa. */
+/* Con số chủ đạo của một hàng — nổi bằng cỡ chữ và độ đậm.
+
+   Cố ý KHÔNG đặt color ở đây: .num-key nằm sau .good/.bad trong file này, cùng
+   độ ưu tiên, nên một `color` ở đây sẽ đè mất màu của ô có mang .good/.bad —
+   ô lợi suất trong bảng kết quả dùng cả hai class cùng lúc. Không có color thì
+   ô thừa hưởng màu chữ của bảng, đúng như trước, mà vẫn nhường màu khi có nghĩa. */
 .num-key {
-  font-weight: 600;
-  color: var(--ink);
+  font-weight: 700;
+  font-size: 1.08em;
 }
 
 /* Chú giải màu, đặt đầu bảng kết quả và tab phân tích. */
