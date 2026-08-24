@@ -435,6 +435,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (y: number) => `Lời/lỗ đã chốt ${y} theo từng mã`,
     en: (y: number) => `Realized ${y} P/L by symbol`,
   },
+  'pf.realizedFailed': {
+    vi: 'Chưa đọc được lịch sử giao dịch nên không tính được lời/lỗ đã chốt. Nguyên văn lỗi Schwab trả về:',
+    en: 'Could not read the trade history, so realized P/L is unavailable. The raw error Schwab returned:',
+  },
   'pf.realizedTotal': { vi: 'Tổng đã chốt', en: 'Realized total' },
   'pf.realizedGap': {
     vi: 'Mấy mã này có lệnh bán mà không tìm được lô mua tương ứng trong lịch sử tải về (mua từ lâu hơn), nên đã bỏ khỏi tổng thay vì tính giá vốn bằng 0:',
