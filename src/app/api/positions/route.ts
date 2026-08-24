@@ -100,16 +100,33 @@ export async function GET() {
     const spot: number | null = under?.lastPrice ?? null;
 
     if (p.kind === 'stock') {
-      const value = spot === null ? null : spot * p.shares!;
-      const cost = p.cost! * p.shares!;
+      /**
+       * Ưu tiên con số Schwab đã tự tính (marketValue, longOpenProfitLoss)
+       * hơn tự suy ra từ averagePrice.
+       *
+       * Đối chiếu với app Schwab thật cho thấy `averagePrice` không phải giá
+       * vốn thật - giá thị trường đọc đúng, nhưng lời/lỗ suy từ giá vốn đó
+       * sai lệch không theo quy luật cố định. Khi Schwab đã tự tính sẵn lời/lỗ
+       * cho vị thế, dùng thẳng con số đó thì chắc chắn khớp với app của họ;
+       * giá vốn hiển thị suy ngược lại từ đó, không dựa vào averagePrice nữa.
+       */
+      const haveSchwabPl = p.schwabValue !== undefined && p.schwabPl !== undefined;
+      const value = haveSchwabPl ? p.schwabValue! : spot === null ? null : spot * p.shares!;
+      const pl = haveSchwabPl ? p.schwabPl! : value === null ? null : value - p.cost! * p.shares!;
+      const costTotal = haveSchwabPl ? p.schwabValue! - p.schwabPl! : p.cost! * p.shares!;
+      const cost = p.shares! > 0 ? costTotal / p.shares! : p.cost!;
+      // schwabValue/schwabPl là nguyên liệu nội bộ để tính cost/pl ở trên,
+      // không cần lộ ra response - value và pl đã mang đủ thông tin đó rồi.
+      const { schwabValue: _sv, schwabPl: _spl, ...pClean } = p;
       return {
-        ...p,
+        ...pClean,
+        cost,
         spot,
         changePct: under?.netPercentChange ?? null,
         value,
-        costTotal: cost,
-        pl: value === null ? null : value - cost,
-        plPct: value === null ? null : (value - cost) / cost,
+        costTotal,
+        pl,
+        plPct: pl === null || !costTotal ? null : pl / costTotal,
         daysHeld: p.openedAt ? daysBetween(p.openedAt, now) : null,
       };
     }

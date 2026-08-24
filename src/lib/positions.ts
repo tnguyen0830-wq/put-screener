@@ -27,8 +27,20 @@ export type Position = {
   credit?: number;
   /* --- cổ phiếu đang giữ --- */
   shares?: number;
-  /** Giá vốn trên mỗi cổ phiếu. */
+  /**
+   * Giá vốn trên mỗi cổ phiếu, đọc từ `averagePrice`.
+   *
+   * Chỉ dùng làm phương án dự phòng. Đối chiếu với app Schwab thật (24/08)
+   * cho thấy trường này không khớp giá vốn thật - lệch không theo quy luật
+   * cố định (không phải làm tròn hay lệch giờ, vì giá thị trường vẫn khớp).
+   * Khi `schwabValue`/`schwabPl` có mặt, chúng mới là nguồn đáng tin: đó là
+   * chính con số Schwab đã tính, nên chắc chắn khớp với app của họ.
+   */
   cost?: number;
+  /** Giá trị thị trường hiện tại của vị thế, theo Schwab tự tính (marketValue). */
+  schwabValue?: number;
+  /** Lời/lỗ đang mở, theo Schwab tự tính (longOpenProfitLoss). */
+  schwabPl?: number;
 };
 
 export type SkippedPosition = { symbol: string; reason: string };
@@ -218,12 +230,18 @@ export function mapSchwabPositions(accounts: any[]): {
       if (assetType === 'EQUITY' || assetType === 'COLLECTIVE_INVESTMENT') {
         const shares = p.longQuantity;
         const cost = typeof p.averagePrice === 'number' ? p.averagePrice : null;
+        const schwabValue = typeof p.marketValue === 'number' ? p.marketValue : undefined;
+        const schwabPl =
+          typeof p.longOpenProfitLoss === 'number' ? p.longOpenProfitLoss : undefined;
         if (!shares || shares <= 0) {
           if ((p.shortQuantity ?? 0) > 0)
             skipped.push({ symbol: rawSymbol || '?', reason: 'short-stock' });
           continue;
         }
-        if (!cost) {
+        // Cần ít nhất một trong hai nguồn giá vốn - averagePrice hoặc cặp
+        // marketValue/longOpenProfitLoss - nếu không có gì thì không vẽ được
+        // lời/lỗ đáng tin, bỏ qua thay vì đoán bằng 0.
+        if (!cost && (schwabValue === undefined || schwabPl === undefined)) {
           skipped.push({ symbol: rawSymbol || '?', reason: 'missing-price' });
           continue;
         }
@@ -232,7 +250,9 @@ export function mapSchwabPositions(accounts: any[]): {
           kind: 'stock',
           symbol: normalizeSymbol(rawSymbol),
           shares,
-          cost,
+          cost: cost ?? 0,
+          schwabValue,
+          schwabPl,
         });
         continue;
       }
