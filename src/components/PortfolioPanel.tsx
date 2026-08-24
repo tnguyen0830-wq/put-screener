@@ -394,6 +394,14 @@ export default function PortfolioPanel() {
                     <b>{sym}</b> — <span className={pl >= 0 ? 'good' : 'bad'}>{signed(pl)}</span>
                   </li>
                 ))}
+              {/* Cộng lại ngay dưới danh sách, để không phải tự nhẩm hay cuộn
+                  ngược lên ô tổng ở đầu trang. */}
+              <li className="pftotal">
+                <b>{t('pf.realizedTotal')}</b> —{' '}
+                <span className={realized.total >= 0 ? 'good' : 'bad'}>
+                  {signed(realized.total)}
+                </span>
+              </li>
             </ul>
           </details>
         )}
