@@ -50,6 +50,8 @@ type Summary = {
   quoteError: string | null;
 };
 
+type Skipped = { symbol: string; reason: string };
+
 const usd = (n: number | null | undefined, d = 2) =>
   n === null || n === undefined
     ? '—'
@@ -59,47 +61,35 @@ const pct = (n: number | null | undefined, d = 1) =>
 const signed = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `${n >= 0 ? '+' : ''}${usd(n, 0)}`;
 
-/** Chỉ giữ lại phần người dùng đã nhập; số liệu thị trường không được ghi xuống. */
-const raw = (r: Row) => ({
-  id: r.id,
-  kind: r.kind,
-  symbol: r.symbol,
-  openedAt: r.openedAt,
-  strike: r.strike,
-  expiration: r.expiration,
-  contracts: r.contracts,
-  credit: r.credit,
-  shares: r.shares,
-  cost: r.cost,
-});
-
-const BLANK = {
-  kind: 'put' as 'put' | 'stock',
-  symbol: '',
-  strike: '',
-  expiration: '',
-  contracts: '1',
-  credit: '',
-  shares: '',
-  cost: '',
-  openedAt: '',
+/** Nhãn cho lý do một vị thế Schwab không hiện ở đây - xem mapSchwabPositions(). */
+const reasonKey = (reason: string) => {
+  if (reason.startsWith('asset-type:')) return 'pf.skipAssetType';
+  const known: Record<string, string> = {
+    'call-option': 'pf.skipCall',
+    'long-put': 'pf.skipLongPut',
+    'short-stock': 'pf.skipShortStock',
+    'missing-price': 'pf.skipMissingPrice',
+    'unrecognized-option-symbol': 'pf.skipUnrecognized',
+  };
+  return known[reason] ?? 'pf.skipOther';
 };
 
 export default function PortfolioPanel() {
   const { t } = useLang();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [skipped, setSkipped] = useState<Skipped[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(BLANK);
+  const [showSkipped, setShowSkipped] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const r = await fetch('/api/positions');
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? t('pf.loadFailed'));
+      if (!r.ok) throw new Error(j.reason ?? j.error ?? t('pf.loadFailed'));
       setRows(j.rows ?? []);
       setSummary(j.summary ?? null);
+      setSkipped(j.skipped ?? []);
       setError(null);
     } catch (e: any) {
       setError(e.message);
@@ -115,59 +105,32 @@ export default function PortfolioPanel() {
     return () => clearInterval(timer);
   }, [load]);
 
-  const save = async (list: ReturnType<typeof raw>[]) => {
-    setSaving(true);
-    try {
-      const r = await fetch('/api/positions', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ positions: list }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? t('pf.saveFailed'));
-      // Số lượng trả về ít hơn số gửi đi nghĩa là có dòng bị loại vì thiếu số;
-      // nói ra thay vì để người dùng tưởng đã lưu.
-      if ((j.positions?.length ?? 0) < list.length) setError(t('pf.invalid'));
-      else setError(null);
-      await load();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const add = (e: React.FormEvent) => {
-    e.preventDefault();
-    const entry: any = {
-      kind: form.kind,
-      symbol: form.symbol,
-      openedAt: form.openedAt || undefined,
-    };
-    if (form.kind === 'put') {
-      entry.strike = parseFloat(form.strike);
-      entry.expiration = form.expiration;
-      entry.contracts = parseInt(form.contracts, 10);
-      entry.credit = parseFloat(form.credit);
-    } else {
-      entry.shares = parseFloat(form.shares);
-      entry.cost = parseFloat(form.cost);
-    }
-    save([...(rows ?? []).map(raw), entry]);
-    setForm({ ...BLANK, kind: form.kind, openedAt: form.openedAt });
-  };
-
-  const remove = (id: string) =>
-    save((rows ?? []).filter((r) => r.id !== id).map(raw));
-
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
+
+  const errBody =
+    error === 'SCHWAB_SESSION_EXPIRED'
+      ? t('pf.errExpired')
+      : error === 'NO_TRADER_ACCESS'
+        ? t('pf.errNoAccess')
+        : error
+          ? t('pf.loadFailed')
+          : null;
 
   return (
     <section className="panel">
       <div className="panel-head">{t('pf.title')}</div>
       <div className="panel-body">
-        {error && <p className="cap warnline">{error}</p>}
+        {errBody && (
+          <>
+            <p className="cap warnline">{errBody}</p>
+            {error === 'SCHWAB_SESSION_EXPIRED' && (
+              <a className="popaction" href="/api/auth/login">
+                {t('settings.reconnect')}
+              </a>
+            )}
+          </>
+        )}
         {summary?.quoteError && <p className="cap warnline">{t('pf.quoteError')}</p>}
 
         {summary && (rows?.length ?? 0) > 0 && (
@@ -204,9 +167,9 @@ export default function PortfolioPanel() {
           </dl>
         )}
 
-        {rows === null ? (
+        {rows === null && !errBody ? (
           <p className="cap">{t('pf.loading')}</p>
-        ) : rows.length === 0 ? (
+        ) : rows !== null && rows.length === 0 && !errBody ? (
           <div className="empty">
             <strong>{t('pf.emptyTitle')}</strong>
             {t('pf.emptyBody')}
@@ -229,7 +192,6 @@ export default function PortfolioPanel() {
                     <th>{t('pf.colCaptured')}</th>
                     <th>{t('pf.colCushion')}</th>
                     <th>{t('pf.colRoc')}</th>
-                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -260,26 +222,8 @@ export default function PortfolioPanel() {
                         {pct(r.cushion, 1)}
                       </td>
                       {/* Con số chính là phần credit còn lại quy năm - thứ
-                          quyết định giữ tiếp hay đóng sớm. Phần đã giữ được
-                          quy năm chỉ hiện khi biết ngày mở và đã đủ lâu. */}
-                      <td>
-                        {pct(r.rocRemaining, 0)}
-                        {r.rocAnnual !== null && r.rocAnnual !== undefined && (
-                          <span className="pfsub">
-                            {t('pf.heldSoFar', { days: r.daysHeld ?? 0, roc: pct(r.rocAnnual, 0) })}
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          className="pfx"
-                          title={t('pf.remove')}
-                          disabled={saving}
-                          onClick={() => remove(r.id)}
-                        >
-                          ✕
-                        </button>
-                      </td>
+                          quyết định giữ tiếp hay đóng sớm. */}
+                      <td>{pct(r.rocRemaining, 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -301,7 +245,6 @@ export default function PortfolioPanel() {
                     <th>{t('pf.colNow')}</th>
                     <th>{t('pf.colValue')}</th>
                     <th>{t('pf.colPl')}</th>
-                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -316,16 +259,6 @@ export default function PortfolioPanel() {
                         {signed(r.pl)}
                         <span className="pfsub">{pct(r.plPct, 1)}</span>
                       </td>
-                      <td>
-                        <button
-                          className="pfx"
-                          title={t('pf.remove')}
-                          disabled={saving}
-                          onClick={() => remove(r.id)}
-                        >
-                          ✕
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -334,86 +267,18 @@ export default function PortfolioPanel() {
           </>
         )}
 
-        <h3 className="dsec">{t('pf.add')}</h3>
-        <form className="pfform" onSubmit={add}>
-          <div className="segmented pfkind">
-            <button
-              type="button"
-              className={form.kind === 'put' ? 'on' : undefined}
-              onClick={() => setForm({ ...form, kind: 'put' })}
-            >
-              {t('pf.kindPut')}
-            </button>
-            <button
-              type="button"
-              className={form.kind === 'stock' ? 'on' : undefined}
-              onClick={() => setForm({ ...form, kind: 'stock' })}
-            >
-              {t('pf.kindStock')}
-            </button>
-          </div>
-
-          <label>
-            <span>{t('pf.fSymbol')}</span>
-            <input
-              required
-              value={form.symbol}
-              onChange={(e) => setForm({ ...form, symbol: e.target.value })}
-              placeholder="AAPL"
-            />
-          </label>
-
-          {form.kind === 'put' ? (
-            <>
-              <label>
-                <span>{t('pf.fStrike')}</span>
-                <input required type="number" step="0.5" min="0" value={form.strike}
-                  onChange={(e) => setForm({ ...form, strike: e.target.value })} />
-              </label>
-              <label>
-                <span>{t('pf.fExp')}</span>
-                <input required type="date" value={form.expiration}
-                  onChange={(e) => setForm({ ...form, expiration: e.target.value })} />
-              </label>
-              <label>
-                <span>{t('pf.fContracts')}</span>
-                <input required type="number" step="1" min="1" value={form.contracts}
-                  onChange={(e) => setForm({ ...form, contracts: e.target.value })} />
-              </label>
-              <label>
-                <span>{t('pf.fCredit')}</span>
-                <input required type="number" step="0.01" min="0" value={form.credit}
-                  onChange={(e) => setForm({ ...form, credit: e.target.value })} placeholder="1.85" />
-              </label>
-            </>
-          ) : (
-            <>
-              <label>
-                <span>{t('pf.fShares')}</span>
-                <input required type="number" step="1" min="1" value={form.shares}
-                  onChange={(e) => setForm({ ...form, shares: e.target.value })} />
-              </label>
-              <label>
-                <span>{t('pf.fCost')}</span>
-                <input required type="number" step="0.01" min="0" value={form.cost}
-                  onChange={(e) => setForm({ ...form, cost: e.target.value })} />
-              </label>
-            </>
-          )}
-
-          {/* Để trống được: không nhớ ngày thì đừng đoán, những con số cần nó
-              sẽ tự vắng mặt thay vì hiện ra sai. */}
-          <label>
-            <span>{t('pf.fOpened')}</span>
-            <input type="date" value={form.openedAt}
-              onChange={(e) => setForm({ ...form, openedAt: e.target.value })} />
-            <em className="pfhint">{t('pf.openedHint')}</em>
-          </label>
-
-          <button type="submit" disabled={saving}>
-            {saving ? t('pf.saving') : t('pf.save')}
-          </button>
-        </form>
+        {skipped.length > 0 && (
+          <details className="rrgtable" open={showSkipped} onToggle={(e) => setShowSkipped(e.currentTarget.open)}>
+            <summary>{t('pf.skippedToggle', skipped.length)}</summary>
+            <ul className="pfskipped">
+              {skipped.map((s, i) => (
+                <li key={`${s.symbol}-${i}`}>
+                  <b>{s.symbol}</b> — {t(reasonKey(s.reason))}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         <p className="cap">{t('pf.note')}</p>
       </div>

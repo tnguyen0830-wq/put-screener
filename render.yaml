@@ -28,10 +28,10 @@ services:
         value: "22"
       - key: TOKEN_PATH
         value: /var/data/.tokens.json
-      # Vị thế và watchlist là dữ liệu người dùng nhập: mất là mất thật, nên
-      # cùng nằm trên ổ đĩa gắn thêm với token thay vì trong thư mục build.
-      - key: POSITIONS_PATH
-        value: /var/data/positions.json
+      # Watchlist là dữ liệu người dùng nhập: mất là mất thật, nên nằm trên ổ
+      # đĩa gắn thêm với token thay vì trong thư mục build. Vị thế danh mục
+      # không cần đường dẫn riêng nữa - đọc thẳng từ tài khoản Schwab, không
+      # còn lưu file.
       - key: WATCHLIST_PATH
         value: /var/data/watchlist.json
       # Must exactly match the callback registered in the Schwab developer

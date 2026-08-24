@@ -390,10 +390,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.title': { vi: 'My Portfolio', en: 'My Portfolio' },
   'pf.loading': { vi: 'Đang tải danh mục…', en: 'Loading the portfolio…' },
   'pf.loadFailed': { vi: 'Không tải được danh mục.', en: 'Could not load the portfolio.' },
-  'pf.saveFailed': { vi: 'Không lưu được.', en: 'Could not save.' },
-  'pf.invalid': {
-    vi: 'Có dòng bị bỏ qua vì thiếu hoặc sai số liệu. Kiểm tra lại mã, strike, ngày đáo hạn và credit.',
-    en: 'A row was dropped for missing or invalid numbers. Check the symbol, strike, expiry and credit.',
+  'pf.errExpired': {
+    vi: 'Phiên Schwab đã hết hạn. Kết nối lại để đọc vị thế.',
+    en: 'The Schwab session has expired. Reconnect to read your positions.',
+  },
+  'pf.errNoAccess': {
+    vi: 'App chưa có quyền đọc tài khoản Schwab (Accounts and Trading). Kiểm tra trên developer.schwab.com rồi kết nối lại.',
+    en: 'This app does not have Schwab account access (Accounts and Trading) yet. Check developer.schwab.com, then reconnect.',
   },
   'pf.quoteError': {
     vi: 'Chưa lấy được báo giá — vị thế vẫn còn nguyên, chỉ thiếu phần định giá lại. Kiểm tra kết nối Schwab trong Cài đặt.',
@@ -401,8 +404,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
   'pf.emptyTitle': { vi: 'Chưa có vị thế nào', en: 'No positions yet' },
   'pf.emptyBody': {
-    vi: 'Nhập một put đã bán hoặc số cổ phiếu đang giữ ở dưới. Nhập một lần lúc mở vị thế; giá, lời lỗ, số ngày còn lại và khoảng cách tới strike thì app tự tính lại từ báo giá Schwab.',
-    en: 'Add a put you have sold, or shares you hold, below. You enter it once when you open it; the price, the profit, the days left and the distance to the strike are recomputed from Schwab quotes.',
+    vi: 'Không thấy put đã bán hay cổ phiếu đang giữ nào trong tài khoản Schwab của bạn.',
+    en: 'No sold puts or held shares found in your Schwab account.',
   },
 
   'pf.openPl': { vi: 'Lời/lỗ đang mở', en: 'Open P/L' },
@@ -422,7 +425,6 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
   'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
-  'pf.add': { vi: 'Thêm vị thế', en: 'Add a position' },
 
   'pf.colSymbol': { vi: 'Mã', en: 'Symbol' },
   'pf.colStrike': { vi: 'Strike', en: 'Strike' },
@@ -436,35 +438,35 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colShares': { vi: 'Số cp', en: 'Shares' },
   'pf.colCost': { vi: 'Giá vốn', en: 'Cost' },
   'pf.colValue': { vi: 'Giá trị', en: 'Value' },
-  'pf.heldSoFar': {
-    vi: (v: any) => `đã giữ ${v.days} ngày: ${v.roc}`,
-    en: (v: any) => `${v.days} days in: ${v.roc}`,
-  },
-  'pf.openedHint': {
-    vi: 'không nhớ thì để trống',
-    en: 'leave blank if unsure',
-  },
   'pf.earnings': {
     vi: (d: string) => `earnings ${d}`,
     en: (d: string) => `earnings ${d}`,
   },
-  'pf.remove': { vi: 'Xoá vị thế', en: 'Remove position' },
 
-  'pf.kindPut': { vi: 'Put đã bán', en: 'Put sold' },
-  'pf.kindStock': { vi: 'Cổ phiếu', en: 'Shares' },
-  'pf.fSymbol': { vi: 'Mã', en: 'Symbol' },
-  'pf.fStrike': { vi: 'Strike', en: 'Strike' },
-  'pf.fExp': { vi: 'Ngày đáo hạn', en: 'Expiry' },
-  'pf.fContracts': { vi: 'Số hợp đồng', en: 'Contracts' },
-  'pf.fCredit': { vi: 'Credit / cp', en: 'Credit / share' },
-  'pf.fShares': { vi: 'Số cổ phiếu', en: 'Shares' },
-  'pf.fCost': { vi: 'Giá vốn / cp', en: 'Cost / share' },
-  'pf.fOpened': { vi: 'Ngày mở', en: 'Opened' },
-  'pf.save': { vi: 'Lưu vị thế', en: 'Save position' },
-  'pf.saving': { vi: 'Đang lưu…', en: 'Saving…' },
+  'pf.skippedToggle': {
+    vi: (n: number) => `${n} vị thế khác không hiện ở đây`,
+    en: (n: number) => `${n} other position${n === 1 ? '' : 's'} not shown`,
+  },
+  'pf.skipCall': { vi: 'quyền chọn mua, chưa theo dõi', en: 'call option, not tracked' },
+  'pf.skipLongPut': { vi: 'put đã mua, chưa theo dõi', en: 'bought put, not tracked' },
+  'pf.skipShortStock': { vi: 'cổ phiếu bán khống, chưa theo dõi', en: 'short stock, not tracked' },
+  'pf.skipMissingPrice': {
+    vi: 'thiếu giá vốn từ Schwab',
+    en: 'missing cost basis from Schwab',
+  },
+  'pf.skipUnrecognized': {
+    vi: 'không đọc được ký hiệu hợp đồng',
+    en: 'unrecognized contract symbol',
+  },
+  'pf.skipAssetType': {
+    vi: 'loại tài sản chưa theo dõi',
+    en: 'asset type not tracked',
+  },
+  'pf.skipOther': { vi: 'chưa theo dõi', en: 'not tracked' },
+
   'pf.note': {
-    vi: 'Vị thế do bạn nhập, lưu trên server của chính bạn. Mọi con số còn lại — giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Credit và giá vốn nhập theo mỗi cổ phiếu, đúng như bảng lệnh: 1.85 nghĩa là 185 đô một hợp đồng. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Ngày mở để trống cũng được — chỉ mất dòng "đã giữ N ngày", còn lại không đổi. Đây là bản nhập tay vì app chưa được Schwab duyệt quyền đọc tài khoản; duyệt xong thì phần nhập tay sẽ được thay bằng đồng bộ tự động, phần tính toán giữ nguyên.',
-    en: 'Positions are yours, entered by hand and stored on your own server. Everything else — the buy-back price, the profit, how much of the credit is captured, the distance to the strike — is recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Credit and cost go in per share, the way the ticket shows them: 1.85 means $185 for one contract. Collateral is the cash-secured figure, strike × 100 × contracts. The opened date can be left blank — you only lose the "days in" line. This is the manual version because Schwab has not approved account access for this app; once it does, the typing is replaced by a sync and the arithmetic stays as it is.',
+    vi: 'Đọc thẳng từ tài khoản Schwab của bạn (quyền Accounts and Trading), không nhập tay. Giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Chỉ theo dõi put đã bán và cổ phiếu đang giữ dài hạn; quyền chọn mua, put đã mua và cổ phiếu bán khống được gọi tên riêng bên dưới thay vì lặng lẽ biến mất.',
+    en: 'Read directly from your Schwab account (Accounts and Trading access), not typed in by hand. The buy-back price, the profit, how much of the credit is captured, the distance to the strike — all recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Collateral is the cash-secured figure, strike × 100 × contracts. Only sold puts and long-held shares are tracked here; call options, bought puts and short stock are named below rather than silently disappearing.',
   },
 
   // ---- sector rotation (RRG) ----
