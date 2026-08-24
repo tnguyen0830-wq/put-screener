@@ -12,7 +12,7 @@ import Logo from '@/components/Logo';
  * hình dạng của nó.
  */
 export default function LoginPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,6 +79,37 @@ export default function LoginPage() {
 
         {error && <p className="loginerr">{error}</p>}
         <p className="cap">{t('login.note')}</p>
+
+        {/*
+          Trang này từng bị Google Safe Browsing chấm là "Deceptive pages" mà
+          không chỉ ra được trang cụ thể nào - tức là chấm theo hình dạng: một
+          tên miền mới tinh, một ô nhập mật khẩu trơ trọi, và tên một hãng tài
+          chính trong nội dung. Đó đúng là hình dạng của trang lừa đảo.
+
+          Thứ phân biệt trang thật với trang giả, cho cả người xét duyệt lẫn
+          người dùng lạc vào đây, là trang tự khai nó là gì và nói rõ nó KHÔNG
+          phải là ai. Phần tiếng Anh luôn hiện bên cạnh phần dịch, vì người xét
+          duyệt của Google nhiều khả năng không đọc tiếng Việt.
+        */}
+        <div className="logindisc">
+          <p>{t('login.what')}</p>
+          <p>
+            <strong>{t('login.notAffiliated')}</strong>
+          </p>
+          {/* Chỉ thêm bản tiếng Anh khi giao diện đang ở ngôn ngữ khác, nếu
+              không thì cùng một lời nói hai lần. */}
+          {lang !== 'en' && (
+          <p lang="en" className="logindisc-en">
+            A private, single-user tool. It reads market data through Charles
+            Schwab&rsquo;s official developer API using the owner&rsquo;s own
+            credentials. <strong>Not affiliated with, endorsed by, or operated by
+            Charles Schwab &amp; Co., Inc.</strong> This page never asks for
+            Schwab credentials &mdash; Schwab sign-in happens on schwab.com. The
+            password above protects the owner&rsquo;s own data and is not
+            collected from anyone else.
+          </p>
+          )}
+        </div>
       </form>
     </div>
   );
