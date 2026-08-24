@@ -36,6 +36,9 @@ const COLS: { key: SortKey | null; label: string; left?: boolean }[] = [
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+/** Xanh nếu số ≥ 0, đỏ nếu âm - mọi ô tiền/% trong bảng đều tô theo dấu của
+ *  chính nó, không riêng gì bảng My Portfolio. */
+const sc = (n: number) => (n >= 0 ? 'good' : 'bad');
 
 export default function ResultsTable({
   rows,
@@ -98,19 +101,21 @@ export default function ResultsTable({
                 <span className="sub2">{r.name}</span>
               </td>
               <td className="scorecell">{r.score}</td>
-              <td className="num-key">{r.annualRocPct.toFixed(1)}%</td>
-              <td>{usd(r.credit)}</td>
-              <td>{usd(r.capital)}</td>
-              <td>{r.strike.toFixed(2)}</td>
+              <td className={`num-key ${sc(r.annualRocPct)}`}>{r.annualRocPct.toFixed(1)}%</td>
+              <td className={sc(r.credit)}>{usd(r.credit)}</td>
+              <td className={sc(r.capital)}>{usd(r.capital)}</td>
+              <td className={sc(r.strike)}>{r.strike.toFixed(2)}</td>
               <td>{r.delta.toFixed(2)}</td>
               <td>{r.dte}</td>
-              <td>{(r.cushionPct * 100).toFixed(1)}%</td>
-              <td className={r.breakeven < r.low52 ? 'warn' : undefined}>
+              <td className={sc(r.cushionPct)}>{(r.cushionPct * 100).toFixed(1)}%</td>
+              <td className={r.breakeven < r.low52 ? 'warn' : sc(r.breakeven)}>
                 {r.breakeven.toFixed(2)}
               </td>
               <td>{r.ivHv ? r.ivHv.toFixed(2) : '—'}</td>
-              <td>{(r.iv * 100).toFixed(0)}%</td>
-              <td>−{r.drawdownPct.toFixed(1)}%</td>
+              <td className={sc(r.iv)}>{(r.iv * 100).toFixed(0)}%</td>
+              {/* Rút từ đỉnh 52 tuần luôn là số âm (dấu − đã in cứng), nên
+                  luôn đỏ - không cần so dấu. */}
+              <td className="bad">−{r.drawdownPct.toFixed(1)}%</td>
               <td className="left">
                 <CushionBar
                   low52={r.low52}
