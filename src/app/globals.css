@@ -1439,6 +1439,13 @@ table.results tbody tr.clickable {
   padding: 3px 0;
 }
 
+/* Từng tài khoản, ngay trên dòng tổng: thụt vào và nhạt hơn để đọc ra ngay
+   đây là phần chia nhỏ của tổng, không phải thêm một mã nữa. */
+.pfacct {
+  padding-left: 10px;
+  opacity: 0.85;
+}
+
 /* Dòng tổng đóng lại danh sách lời/lỗ đã chốt: một vạch kẻ và chữ đậm hơn,
    đủ để mắt tách nó khỏi các dòng từng mã ở trên mà không cần thêm màu. */
 .pftotal {

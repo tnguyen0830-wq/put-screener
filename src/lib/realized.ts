@@ -1,189 +1,174 @@
 /**
- * Lời/lỗ đã chốt trong năm, dựng lại từ lịch sử giao dịch Schwab.
+ * Lời/lỗ đã chốt trong năm, đọc từ báo cáo "Realized Gain/Loss - Lot Details"
+ * do chính Schwab xuất ra.
  *
- * Endpoint vị thế chỉ biết những gì đang còn giữ, nên tự nó không bao giờ trả
- * lời được câu "cả năm lời lỗ bao nhiêu" - phần đã bán xong trong năm không
- * còn là vị thế nữa. Chỗ duy nhất còn dấu vết là lịch sử giao dịch, và ở đó
- * không có sẵn con số lời/lỗ: phải tự ghép từng lệnh bán với đúng lô đã mua
- * trước đó rồi trừ ra.
+ * Bản trước dựng lại con số này từ endpoint giao dịch: tự ghép lệnh bán với
+ * lô mua theo FIFO rồi trừ ra. Cách đó sai ngay từ giả định - giá vốn thật
+ * của Schwab đã điều chỉnh theo lô thuế và wash sale, thứ không suy ra được
+ * từ danh sách giao dịch thô. Báo cáo này thì có sẵn cột Gain/Loss ($) cho
+ * từng lô, do Schwab tự tính, nên không còn gì để đoán.
  *
- * Ghép theo FIFO - lô mua trước khớp với lệnh bán trước. Đây là quy ước mặc
- * định của Schwab khi không chỉ định lô cụ thể; nếu bạn từng bán theo lô chỉ
- * định thì con số ở đây sẽ lệch với báo cáo thuế, nhưng vẫn đúng về tổng thể
- * danh mục.
- *
- * Điều quan trọng: một lệnh bán mà không tìm được lô mua tương ứng (vì mua từ
- * trước khoảng thời gian tải về) KHÔNG bị tính bằng giá vốn 0 - làm vậy sẽ
- * biến một giao dịch hòa vốn thành khoản lãi khổng lồ giả. Mã đó bị gọi tên
- * trong `unknownBasis` và bỏ ra khỏi tổng, để con số hiện ra là con số thiếu
- * chứ không phải con số sai.
+ * Đổi lại, đây là ảnh chụp tại một thời điểm chứ không phải dữ liệu sống:
+ * ngày xuất báo cáo được đọc ra và hiện lên màn hình, để con số không bao giờ
+ * lặng lẽ cũ đi mà trông vẫn như mới.
  */
 
-export type Lot = { qty: number; price: number };
+export type RealizedAccount = { name: string; total: number; lots: number };
 
 export type RealizedResult = {
-  /** Lời/lỗ đã chốt trong năm, theo từng mã. */
+  year: number;
+  /** Ngày xuất báo cáo, dạng YYYY-MM-DD. Hiện lên màn hình. */
+  asOf: string;
+  /** Khoảng thời gian báo cáo bao phủ, nguyên văn dạng MM/DD/YYYY. */
+  from: string;
+  to: string;
+  accounts: RealizedAccount[];
   bySymbol: Record<string, number>;
-  /** Tổng của bySymbol. */
   total: number;
-  /** Mã có lệnh bán không tìm được lô mua - đã bỏ khỏi tổng, không đoán bằng 0. */
-  unknownBasis: string[];
-  /** Số giao dịch đã đọc, để biết có thật sự tải được lịch sử hay không. */
-  txCount: number;
-  /** Các loại giao dịch gặp phải (type), để một lần nhìn là biết Schwab gọi
-   *  hết hạn quyền chọn / bị assign bằng tên gì. */
-  types: string[];
-  /** Một giao dịch thô mỗi loại, để đối chiếu một lần với app thật thay vì
-   *  đoán cách Schwab ghi từng loại - đúng cách đã tìm ra averageLongPrice. */
-  samples: Record<string, any>;
-};
-
-type Leg = {
-  symbol: string;
-  qty: number;
-  price: number;
-  /** 100 cho quyền chọn, 1 cho cổ phiếu. */
-  mult: number;
-  buy: boolean;
+  lots: number;
 };
 
 /**
- * Bóc các chân giao dịch thật ra khỏi một transaction.
+ * Tách một dòng CSV có dấu ngoặc kép.
  *
- * `transferItems` trộn chung chứng khoán với phí và hoa hồng; phí luôn có
- * `feeType`, còn chân chứng khoán thì không - đó là cách tách đáng tin hơn
- * việc dò tên từng loại phí.
+ * Không dùng thư viện: mọi ô trong báo cáo Schwab đều được bọc ngoặc kép, và
+ * quy tắc duy nhất cần xử lý là hai dấu ngoặc liền nhau nghĩa là một dấu
+ * ngoặc thật bên trong ô.
  */
-function legsOf(tx: any): Leg[] {
-  const items: any[] = Array.isArray(tx?.transferItems) ? tx.transferItems : [];
-  const out: Leg[] = [];
-  for (const it of items) {
-    if (it?.feeType) continue;
-    const inst = it?.instrument;
-    const assetType = inst?.assetType;
-    if (assetType !== 'EQUITY' && assetType !== 'COLLECTIVE_INVESTMENT' && assetType !== 'OPTION')
-      continue;
-    const symbol = typeof inst.symbol === 'string' ? inst.symbol : '';
-    const amount = it.amount;
-    const price = it.price;
-    if (!symbol || typeof amount !== 'number' || amount === 0) continue;
-    // Quyền chọn hết hạn không có giá: đóng ở 0, tức là bên bán ăn trọn phần
-    // credit đã nhận. Đó là kết cục thường gặp nhất của người bán put, bỏ qua
-    // thì mất đúng phần lãi lớn nhất.
-    const p = typeof price === 'number' ? price : 0;
-    out.push({
-      symbol,
-      qty: Math.abs(amount),
-      price: p,
-      mult: assetType === 'OPTION' ? 100 : 1,
-      buy: amount > 0,
-    });
+export function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else inQuotes = false;
+      } else cur += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ',') {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
   }
+  out.push(cur);
   return out;
 }
 
-/** Khớp `want` đơn vị vào hàng đợi lô theo FIFO. Trả về phần khớp được. */
-function consume(lots: Lot[], want: number): { matched: number; cost: number } {
-  let matched = 0;
-  let cost = 0;
-  while (want > 0 && lots.length) {
-    const lot = lots[0];
-    const take = Math.min(lot.qty, want);
-    matched += take;
-    cost += take * lot.price;
-    lot.qty -= take;
-    want -= take;
-    if (lot.qty <= 0) lots.shift();
-  }
-  return { matched, cost };
+/**
+ * Đọc một ô tiền: "$1,629.06" -> 1629.06, "-$93.37" -> -93.37, "" -> 0.
+ */
+export function parseMoney(s: string): number {
+  const t = s.trim();
+  if (!t) return 0;
+  const neg = t.startsWith('-') || (t.startsWith('(') && t.endsWith(')'));
+  const digits = t.replace(/[^0-9.]/g, '');
+  if (!digits) return 0;
+  const v = Number(digits);
+  if (!Number.isFinite(v)) return 0;
+  return neg ? -v : v;
 }
 
 /**
- * Dựng lại lời/lỗ đã chốt trong năm `year` từ toàn bộ giao dịch đưa vào.
+ * Mã cơ sở của một dòng.
  *
- * Giao dịch của những năm trước vẫn phải đưa vào - chúng không được tính vào
- * kết quả, nhưng là nguồn giá vốn cho các lô bán ra trong năm nay. Đưa vào
- * càng nhiều năm thì `unknownBasis` càng ngắn.
+ *     "SLV"                       -> SLV
+ *     "MSTR 08/14/2026 118.00 C"  -> MSTR
+ *
+ * Gom quyền chọn về mã cơ sở để bảng tách theo mã trả lời đúng câu hỏi thật:
+ * cả năm kiếm/mất bao nhiêu trên từng cái tên, chứ không phải trên từng hợp
+ * đồng riêng lẻ.
  */
-export function realizedPl(transactions: any[], year: number): RealizedResult {
-  const sorted = [...transactions].sort((a, b) =>
-    String(a?.tradeDate ?? a?.time ?? '').localeCompare(String(b?.tradeDate ?? b?.time ?? ''))
-  );
+export function underlyingOf(symbol: string): string {
+  return (symbol.trim().split(/\s+/)[0] || '?').toUpperCase();
+}
 
-  const longLots = new Map<string, Lot[]>();
-  const shortLots = new Map<string, Lot[]>();
+const MONTHS: Record<string, string> = {
+  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+};
+
+/**
+ * Bóc thông tin từ dòng tiêu đề đầu báo cáo, ví dụ:
+ *
+ *   Realized Gain/Loss - Lot Details for Designated_Bene_Joint as of
+ *   Mon Aug 24  11:03:58 EDT 2026 from 01/01/2026 to 08/24/2026
+ */
+export function parseHeader(line: string): {
+  account: string;
+  asOf: string;
+  from: string;
+  to: string;
+} {
+  const account = /for\s+(\S+)\s+as of/.exec(line)?.[1] ?? 'Schwab';
+  const d = /as of\s+\w{3}\s+(\w{3})\s+(\d{1,2})\s+[\d:]+\s+\w+\s+(\d{4})/.exec(line);
+  const asOf = d ? `${d[3]}-${MONTHS[d[1]] ?? '01'}-${d[2].padStart(2, '0')}` : '';
+  const range = /from\s+(\d{2}\/\d{2}\/\d{4})\s+to\s+(\d{2}\/\d{2}\/\d{4})/.exec(line);
+  return { account, asOf, from: range?.[1] ?? '', to: range?.[2] ?? '' };
+}
+
+/**
+ * Gộp nhiều báo cáo (mỗi tài khoản một file) thành một kết quả duy nhất -
+ * theo lựa chọn gộp chung hai tài khoản, giống bảng vị thế.
+ *
+ * Ngày `asOf` lấy ngày cũ NHẤT trong các báo cáo: nếu hai file xuất lệch
+ * ngày, con số chung chỉ đáng tin tới ngày cũ hơn, nói ngày mới hơn là nói
+ * quá.
+ */
+export function realizedFromCsv(files: string[]): RealizedResult {
   const bySymbol: Record<string, number> = {};
-  const unknown = new Set<string>();
-  const types = new Set<string>();
-  const samples: Record<string, any> = {};
+  const accounts: RealizedAccount[] = [];
+  let total = 0;
+  let lots = 0;
+  let asOf = '';
+  let from = '';
+  let to = '';
 
-  const lotsOf = (m: Map<string, Lot[]>, s: string) => {
-    let l = m.get(s);
-    if (!l) m.set(s, (l = []));
-    return l;
-  };
+  for (const text of files) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length < 2) continue;
 
-  for (const tx of sorted) {
-    const type = String(tx?.type ?? 'UNKNOWN');
-    types.add(type);
-    if (!(type in samples)) samples[type] = tx;
+    const head = parseHeader(lines[0]);
+    if (!asOf || (head.asOf && head.asOf < asOf)) asOf = head.asOf;
+    if (!from) from = head.from;
+    if (!to) to = head.to;
 
-    const when = String(tx?.tradeDate ?? tx?.time ?? '');
-    const inYear = when.slice(0, 4) === String(year);
+    const cols = parseCsvLine(lines[1]);
+    const iSym = cols.indexOf('Symbol');
+    const iGl = cols.indexOf('Gain/Loss ($)');
+    // Thiếu cột thì bỏ cả file, chứ không đoán vị trí cột theo thứ tự - một
+    // báo cáo đọc sai cột còn tệ hơn một báo cáo không đọc được.
+    if (iSym < 0 || iGl < 0) continue;
 
-    for (const leg of legsOf(tx)) {
-      const longs = lotsOf(longLots, leg.symbol);
-      const shorts = lotsOf(shortLots, leg.symbol);
-      const opposite = leg.buy ? shorts : longs;
-
-      // Trước hết đóng phần đang mở ngược chiều - đó mới là chỗ sinh ra lời/lỗ.
-      const { matched, cost } = consume(opposite, leg.qty);
-      if (matched > 0 && inYear) {
-        // Mua để đóng vị thế bán khống: lời = giá đã bán - giá mua lại.
-        // Bán để đóng vị thế mua: lời = giá bán - giá vốn.
-        const pl = leg.buy
-          ? (cost - matched * leg.price) * leg.mult
-          : (matched * leg.price - cost) * leg.mult;
-        bySymbol[leg.symbol] = (bySymbol[leg.symbol] ?? 0) + pl;
-      }
-
-      const leftover = leg.qty - matched;
-      if (leftover > 0) {
-        // Không khớp được lô nào mà vẫn là lệnh đóng trong năm nay thì giá vốn
-        // nằm ngoài khoảng đã tải - gọi tên ra thay vì tính bằng 0.
-        if (inYear && opposite.length === 0 && matched === 0 && isClose(tx, leg)) {
-          unknown.add(leg.symbol);
-        }
-        (leg.buy ? longs : shorts).push({ qty: leftover, price: leg.price });
-      }
+    let acctTotal = 0;
+    let acctLots = 0;
+    for (const line of lines.slice(2)) {
+      const r = parseCsvLine(line);
+      if (r.length <= iGl) continue;
+      const sym = r[iSym].trim();
+      if (!sym) continue;
+      const gl = parseMoney(r[iGl]);
+      const under = underlyingOf(sym);
+      bySymbol[under] = (bySymbol[under] ?? 0) + gl;
+      acctTotal += gl;
+      acctLots += 1;
     }
+    accounts.push({ name: head.account, total: acctTotal, lots: acctLots });
+    total += acctTotal;
+    lots += acctLots;
   }
 
-  // Mã thiếu giá vốn bị loại hẳn khỏi tổng: một phần con số đúng còn hơn cả
-  // con số sai.
-  for (const s of unknown) delete bySymbol[s];
-
-  const total = Object.values(bySymbol).reduce((a, b) => a + b, 0);
   return {
+    year: Number(asOf.slice(0, 4)) || new Date().getUTCFullYear(),
+    asOf,
+    from,
+    to,
+    accounts,
     bySymbol,
     total,
-    unknownBasis: [...unknown].sort(),
-    txCount: transactions.length,
-    types: [...types].sort(),
-    samples,
+    lots,
   };
-}
-
-/**
- * Chân này có phải lệnh đóng vị thế không.
- *
- * Schwab ghi `positionEffect` khi biết; không có thì không kết luận là đóng -
- * thà bỏ sót một cảnh báo còn hơn gắn nhãn "thiếu giá vốn" cho một lệnh mua
- * mở vị thế bình thường.
- */
-function isClose(tx: any, leg: Leg): boolean {
-  const items: any[] = Array.isArray(tx?.transferItems) ? tx.transferItems : [];
-  return items.some(
-    (it) => it?.instrument?.symbol === leg.symbol && it?.positionEffect === 'CLOSING'
-  );
 }
