@@ -398,6 +398,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'App chưa có quyền đọc tài khoản Schwab (Accounts and Trading). Kiểm tra trên developer.schwab.com rồi kết nối lại.',
     en: 'This app does not have Schwab account access (Accounts and Trading) yet. Check developer.schwab.com, then reconnect.',
   },
+  'pf.stockFallback': {
+    vi: 'Chưa đọc được lời/lỗ Schwab tự tính cho cổ phiếu - đang dùng số dự phòng, có thể sai. Tên trường thật Schwab trả về:',
+    en: "Could not read Schwab's own P/L for shares - using a fallback figure, which may be wrong. The real field names Schwab returned:",
+  },
   'pf.quoteError': {
     vi: 'Chưa lấy được báo giá — vị thế vẫn còn nguyên, chỉ thiếu phần định giá lại. Kiểm tra kết nối Schwab trong Cài đặt.',
     en: 'No quotes came back — your positions are intact, only the live pricing is missing. Check the Schwab connection in Settings.',

@@ -41,6 +41,16 @@ export type Position = {
   schwabValue?: number;
   /** Lời/lỗ đang mở, theo Schwab tự tính (longOpenProfitLoss). */
   schwabPl?: number;
+  /**
+   * Tên các trường thật trên object vị thế Schwab trả về (cấp ngoài, cùng cấp
+   * với `averagePrice`/`marketValue`) - không phải bên trong `instrument`.
+   *
+   * Chỉ đính kèm khi `schwabValue`/`schwabPl` KHÔNG đọc được, tức là
+   * `marketValue`/`longOpenProfitLoss` đoán tên sai. Một lần nhìn vào đây là
+   * biết tên trường thật, không phải đoán lần nữa từ một phiên không gọi
+   * được tài khoản thật.
+   */
+  rawKeys?: string[];
 };
 
 export type SkippedPosition = { symbol: string; reason: string };
@@ -253,6 +263,8 @@ export function mapSchwabPositions(accounts: any[]): {
           cost: cost ?? 0,
           schwabValue,
           schwabPl,
+          rawKeys:
+            schwabValue === undefined || schwabPl === undefined ? Object.keys(p) : undefined,
         });
         continue;
       }

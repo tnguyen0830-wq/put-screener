@@ -35,6 +35,8 @@ type Row = {
   value?: number | null;
   costTotal?: number;
   plPct?: number | null;
+  /** Chỉ có khi Schwab không trả về marketValue/longOpenProfitLoss - xem lib/positions.ts. */
+  rawKeys?: string[];
 };
 
 type Summary = {
@@ -115,6 +117,10 @@ export default function PortfolioPanel() {
 
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
+  // marketValue/longOpenProfitLoss không đọc được thì lời/lỗ cổ phiếu đang
+  // dùng phương án dự phòng (averagePrice) - đúng cái đã sai một lần trước
+  // đó. Nói ra thay vì để một con số có thể sai lặng lẽ trông như đã sửa.
+  const stockFallback = stocks.find((r) => r.rawKeys);
 
   const errBody =
     error === 'SCHWAB_SESSION_EXPIRED'
@@ -140,6 +146,12 @@ export default function PortfolioPanel() {
           </>
         )}
         {summary?.quoteError && <p className="cap warnline">{t('pf.quoteError')}</p>}
+        {stockFallback && (
+          <p className="cap warnline">
+            {t('pf.stockFallback')}{' '}
+            <code>{stockFallback.rawKeys?.join(', ')}</code>
+          </p>
+        )}
 
         {/* Tiền mặt của tài khoản - hiện độc lập với việc có vị thế nào hay
             không, vì đó chính là câu hỏi của người còn 100% tiền mặt. Từng ô
