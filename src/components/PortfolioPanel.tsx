@@ -67,11 +67,13 @@ type Cash = {
 
 type Realized = {
   year: number;
+  /** Ngày xuất báo cáo Schwab (YYYY-MM-DD) - hiện lên để con số không lặng
+   *  lẽ cũ đi mà trông vẫn như mới. */
+  asOf: string;
   total: number;
   bySymbol: Record<string, number>;
-  /** Mã có lệnh bán không tìm được lô mua - đã bỏ khỏi tổng, xem lib/realized.ts. */
-  unknownBasis: string[];
-  txCount: number;
+  accounts: { name: string; total: number; lots: number }[];
+  lots: number;
 };
 
 const usd = (n: number | null | undefined, d = 2) =>
@@ -201,11 +203,7 @@ export default function PortfolioPanel() {
             {t('pf.realizedFailed')} <code>{realizedError}</code>
           </p>
         )}
-        {realized && realized.unknownBasis.length > 0 && (
-          <p className="cap warnline">
-            {t('pf.realizedGap')} <code>{realized.unknownBasis.join(', ')}</code>
-          </p>
-        )}
+
 
         {/* Tiền mặt của tài khoản - hiện độc lập với việc có vị thế nào hay
             không, vì đó chính là câu hỏi của người còn 100% tiền mặt. Từng ô
@@ -405,6 +403,7 @@ export default function PortfolioPanel() {
         {realized && Object.keys(realized.bySymbol).length > 0 && (
           <details className="rrgtable">
             <summary>{t('pf.realizedToggle', realized.year)}</summary>
+            <p className="cap">{t('pf.realizedAsOf', realized.asOf)}</p>
             <ul className="pfskipped">
               {Object.entries(realized.bySymbol)
                 .sort((a, b) => b[1] - a[1])
@@ -415,6 +414,12 @@ export default function PortfolioPanel() {
                 ))}
               {/* Cộng lại ngay dưới danh sách, để không phải tự nhẩm hay cuộn
                   ngược lên ô tổng ở đầu trang. */}
+              {realized.accounts.map((a) => (
+                <li key={`acct-${a.name}`} className="pfacct">
+                  {a.name} —{' '}
+                  <span className={a.total >= 0 ? 'good' : 'bad'}>{signed(a.total)}</span>
+                </li>
+              ))}
               <li className="pftotal">
                 <b>{t('pf.realizedTotal')}</b> —{' '}
                 <span className={realized.total >= 0 ? 'good' : 'bad'}>
