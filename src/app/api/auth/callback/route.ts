@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCode } from '@/lib/schwab';
+import { appOrigin, exchangeCode } from '@/lib/schwab';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     await exchangeCode(code);
-    return NextResponse.redirect(new URL('/?connected=1', req.nextUrl.origin));
+    return NextResponse.redirect(new URL('/?connected=1', appOrigin()));
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
