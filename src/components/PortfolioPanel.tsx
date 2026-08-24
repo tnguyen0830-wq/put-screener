@@ -103,6 +103,7 @@ export default function PortfolioPanel() {
   const [skipped, setSkipped] = useState<Skipped[]>([]);
   const [cash, setCash] = useState<Cash | null>(null);
   const [realized, setRealized] = useState<Realized | null>(null);
+  const [realizedError, setRealizedError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
 
@@ -134,12 +135,25 @@ export default function PortfolioPanel() {
   // hơn hẳn bảng vị thế, và con số đó không đổi trong lúc đang xem.
   useEffect(() => {
     let alive = true;
+    // Lỗi ở đây KHÔNG được nuốt: nếu không nói ra thì phần "đã chốt" chỉ đơn
+    // giản là không xuất hiện, không một dấu vết nào cho biết vì sao - đúng
+    // cái bẫy đã mất mấy vòng mới thoát ra ở phần giá vốn.
     fetch('/api/realized')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (alive && j && typeof j.total === 'number') setRealized(j);
+      .then(async (r) => {
+        const j = await r.json().catch(() => null);
+        if (!alive) return;
+        if (r.ok && j && typeof j.total === 'number') {
+          setRealized(j);
+          setRealizedError(null);
+          return;
+        }
+        setRealizedError(
+          j?.detail ?? j?.reason ?? j?.error ?? `HTTP ${r.status}`
+        );
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (alive) setRealizedError(String(e?.message ?? e));
+      });
     return () => {
       alive = false;
     };
@@ -180,6 +194,11 @@ export default function PortfolioPanel() {
           <p className="cap warnline">
             {t('pf.stockFallback')}{' '}
             <code>{stockFallback.rawKeys?.join(', ')}</code>
+          </p>
+        )}
+        {realizedError && (
+          <p className="cap warnline">
+            {t('pf.realizedFailed')} <code>{realizedError}</code>
           </p>
         )}
         {realized && realized.unknownBasis.length > 0 && (

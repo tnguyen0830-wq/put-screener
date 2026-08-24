@@ -68,8 +68,17 @@ export async function GET() {
         { status: 401 }
       );
     }
+    // Kèm nguyên văn lỗi Schwab trả về (cắt ngắn). Endpoint giao dịch chưa
+    // từng chạy thật lần nào từ phiên này, nên nếu tên đường dẫn hay định
+    // dạng ngày sai thì chính câu trả lời của Schwab mới nói ra được - đoán
+    // lần nữa từ đây thì không.
     return NextResponse.json(
-      { error: 'NO_TRADER_ACCESS', reason: 'NO_TRADER_ACCESS', status: statusFrom(msg) },
+      {
+        error: 'NO_TRADER_ACCESS',
+        reason: 'NO_TRADER_ACCESS',
+        status: statusFrom(msg),
+        detail: msg.slice(0, 400),
+      },
       { status: 502 }
     );
   }
