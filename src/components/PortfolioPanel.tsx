@@ -37,6 +37,8 @@ type Row = {
   plPct?: number | null;
   /** Chỉ có khi Schwab không trả về marketValue/longOpenProfitLoss - xem lib/positions.ts. */
   rawKeys?: string[];
+  /** Mọi trường số Schwab trả về cho vị thế này, luôn có mặt - xem lib/positions.ts. */
+  raw?: Record<string, number>;
 };
 
 type Summary = {
@@ -316,6 +318,26 @@ export default function PortfolioPanel() {
               </table>
             </div>
           </>
+        )}
+
+        {stocks.some((r) => r.raw) && (
+          <details className="rrgtable">
+            <summary>{t('pf.rawToggle')}</summary>
+            <ul className="pfskipped">
+              {stocks
+                .filter((r) => r.raw)
+                .map((r) => (
+                  <li key={`${r.id}-raw`}>
+                    <b>{r.symbol}</b>:{' '}
+                    <code>
+                      {Object.entries(r.raw!)
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join(', ')}
+                    </code>
+                  </li>
+                ))}
+            </ul>
+          </details>
         )}
 
         {skipped.length > 0 && (

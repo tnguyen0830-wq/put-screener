@@ -51,6 +51,17 @@ export type Position = {
    * được tài khoản thật.
    */
   rawKeys?: string[];
+  /**
+   * MỌI trường số (cấp ngoài) trên object vị thế Schwab trả về, luôn đính
+   * kèm - không đợi tới lúc đoán sai mới lộ ra.
+   *
+   * Lần đoán `averagePrice` sai, lần đoán `marketValue`/`longOpenProfitLoss`
+   * cũng cho ra cùng một con số sai (suy ngược lại thì gần như trùng khớp
+   * `averagePrice`) - tức là hai lần đoán khác tên nhưng cùng một công thức
+   * sai. Thay vì đoán tiếp tên thứ tư, in ra hết mọi con số Schwab thật sự
+   * gửi về, để so trực tiếp với app Schwab thật một lần cho xong.
+   */
+  raw?: Record<string, number>;
 };
 
 export type SkippedPosition = { symbol: string; reason: string };
@@ -255,6 +266,10 @@ export function mapSchwabPositions(accounts: any[]): {
           skipped.push({ symbol: rawSymbol || '?', reason: 'missing-price' });
           continue;
         }
+        const raw: Record<string, number> = {};
+        for (const [k, v] of Object.entries(p)) {
+          if (typeof v === 'number') raw[k] = v;
+        }
         positions.push({
           id: `p${n}`,
           kind: 'stock',
@@ -265,6 +280,7 @@ export function mapSchwabPositions(accounts: any[]): {
           schwabPl,
           rawKeys:
             schwabValue === undefined || schwabPl === undefined ? Object.keys(p) : undefined,
+          raw,
         });
         continue;
       }

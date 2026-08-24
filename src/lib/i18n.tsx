@@ -402,6 +402,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chưa đọc được lời/lỗ Schwab tự tính cho cổ phiếu - đang dùng số dự phòng, có thể sai. Tên trường thật Schwab trả về:',
     en: "Could not read Schwab's own P/L for shares - using a fallback figure, which may be wrong. The real field names Schwab returned:",
   },
+  'pf.rawToggle': {
+    vi: 'Xem mọi số Schwab trả về cho cổ phiếu (đối chiếu trực tiếp)',
+    en: "Show every number Schwab returned for shares (for direct comparison)",
+  },
   'pf.quoteError': {
     vi: 'Chưa lấy được báo giá — vị thế vẫn còn nguyên, chỉ thiếu phần định giá lại. Kiểm tra kết nối Schwab trong Cài đặt.',
     en: 'No quotes came back — your positions are intact, only the live pricing is missing. Check the Schwab connection in Settings.',
