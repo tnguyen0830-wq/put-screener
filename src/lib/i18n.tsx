@@ -399,8 +399,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'This app does not have Schwab account access (Accounts and Trading) yet. Check developer.schwab.com, then reconnect.',
   },
   'pf.stockFallback': {
-    vi: 'Chưa đọc được lời/lỗ Schwab tự tính cho cổ phiếu - đang dùng số dự phòng, có thể sai. Tên trường thật Schwab trả về:',
-    en: "Could not read Schwab's own P/L for shares - using a fallback figure, which may be wrong. The real field names Schwab returned:",
+    vi: 'Chưa đọc được giá trị thị trường (marketValue) Schwab tự tính cho cổ phiếu - đang dùng giá thị trường sống thay thế, lời/lỗ không bị ảnh hưởng. Tên trường thật Schwab trả về:',
+    en: "Could not read Schwab's own market value for shares - using a live price instead; P/L is unaffected. The real field names Schwab returned:",
   },
   'pf.rawToggle': {
     vi: 'Xem mọi số Schwab trả về cho cổ phiếu (đối chiếu trực tiếp)',
