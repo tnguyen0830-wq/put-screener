@@ -75,20 +75,23 @@ nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
 > `https://app.tylerinvestment.com`. URL `onrender.com` vẫn còn bật để làm đường lui,
 > nhưng Chrome đã gắn cờ nó — đó chính là lý do có tên miền riêng.
 
-### Hai biến nữa phải có, nếu không dữ liệu bạn nhập sẽ biến mất
+### Một biến nữa phải có, nếu không watchlist sẽ biến mất
 
 Render dựng lại thư mục mã nguồn mỗi lần deploy, nên bất cứ thứ gì ghi vào đó đều
-không sống qua lần deploy kế tiếp. Vị thế trong tab My Portfolio và watchlist là dữ
-liệu do bạn nhập, nên phải nằm trên ổ đĩa gắn thêm cùng chỗ với token:
+không sống qua lần deploy kế tiếp. Watchlist là dữ liệu do bạn nhập, nên phải nằm
+trên ổ đĩa gắn thêm cùng chỗ với token:
 
 | Biến | Giá trị |
 |---|---|
-| `POSITIONS_PATH` | `/var/data/positions.json` |
 | `WATCHLIST_PATH` | `/var/data/watchlist.json` |
 
-Hai biến này có trong `render.yaml`, nhưng **Render không tự thêm biến mới vào service
-đã tạo sẵn** — phải vào Environment thêm tay, rồi Save. Thiếu chúng thì app vẫn chạy
-bình thường và lỗi chỉ lộ ra sau lần deploy sau, lúc danh mục trống trơn.
+Biến này có trong `render.yaml`, nhưng **Render không tự thêm biến mới vào service
+đã tạo sẵn** — phải vào Environment thêm tay, rồi Save. Thiếu nó thì app vẫn chạy
+bình thường và lỗi chỉ lộ ra sau lần deploy sau, lúc watchlist trống trơn.
+
+> Tab **My Portfolio** không cần biến nào ở đây: vị thế đọc thẳng từ tài khoản
+> Schwab (quyền Accounts and Trading), không lưu file, không có gì để mất giữa
+> hai lần deploy.
 
 > Gói `starter` là bắt buộc vì cần ổ đĩa lưu token. Gói free không có ổ đĩa,
 > token sẽ mất mỗi lần server ngủ dậy và bạn phải đăng nhập Schwab liên tục.

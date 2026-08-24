@@ -1,18 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { quotes } from '@/lib/schwab';
+import { NextResponse } from 'next/server';
+import { quotes, traderGet } from '@/lib/schwab';
 import { loadEarnings } from '@/lib/screener';
-import {
-  daysBetween,
-  osiSymbol,
-  readPositions,
-  writePositions,
-  type Position,
-} from '@/lib/positions';
+import { daysBetween, mapSchwabPositions, osiSymbol, type Position } from '@/lib/positions';
 
 /**
- * Danh mục: vị thế nhập tay, định giá lại bằng báo giá Schwab.
+ * Danh mục: đọc thẳng từ tài khoản Schwab, định giá lại bằng báo giá Schwab.
  *
- * GET trả về vị thế kèm mọi con số phụ thuộc thị trường. PUT ghi lại danh sách.
+ * Chỉ đọc - không có PUT. Bản đầu tiên cho nhập tay vì app chưa được duyệt
+ * quyền tài khoản; giờ đã duyệt, vị thế lấy từ nguồn thật, không giữ song
+ * song một bản gõ tay có thể lệch với tài khoản.
  *
  * Không nằm dưới /api/md/*, vốn bị MD_API_TOKEN chặn cho app điện thoại.
  */
@@ -40,10 +36,39 @@ function markOf(q: any): number | null {
   return typeof last === 'number' && last >= 0 ? last : null;
 }
 
+/** Bóc mã HTTP ra khỏi thông báo lỗi mà lib schwab ném ra. */
+const statusFrom = (msg: string) => {
+  const m = msg.match(/\s(\d{3}):/);
+  return m ? Number(m[1]) : null;
+};
+
 export async function GET() {
-  const positions = await readPositions();
+  let accounts: any[];
+  try {
+    accounts = await traderGet('/accounts', { fields: 'positions' });
+    if (!Array.isArray(accounts)) accounts = [];
+  } catch (e: any) {
+    const msg = String(e?.message ?? e);
+    if (msg.includes('REAUTH_REQUIRED')) {
+      return NextResponse.json(
+        { error: 'SCHWAB_SESSION_EXPIRED', reason: 'SCHWAB_SESSION_EXPIRED' },
+        { status: 401 }
+      );
+    }
+    // 401/403 ở đây là thiếu quyền Accounts and Trading, khác với phiên hết
+    // hạn - hai chuyện đó cần hai cách sửa ngược nhau, nên tách riêng.
+    return NextResponse.json(
+      { error: 'NO_TRADER_ACCESS', reason: 'NO_TRADER_ACCESS', status: statusFrom(msg) },
+      { status: 502 }
+    );
+  }
+
+  // Gộp vị thế của mọi tài khoản nhìn thấy được thành một danh sách, không
+  // tách riêng theo tài khoản.
+  const { positions, skipped } = mapSchwabPositions(accounts);
+
   if (!positions.length) {
-    return NextResponse.json({ positions: [], rows: [], summary: null });
+    return NextResponse.json({ rows: [], summary: null, skipped });
   }
 
   const now = today();
@@ -62,8 +87,8 @@ export async function GET() {
       ...new Set([...positions.map((p) => p.symbol), ...optionSymbols.values()]),
     ]);
   } catch (e: any) {
-    // Phiên Schwab hỏng thì vẫn trả về danh sách vị thế: những gì bạn đã nhập
-    // vẫn còn đó, chỉ thiếu phần định giá lại.
+    // Mất báo giá không mất danh mục: vị thế đọc từ Schwab vẫn còn đó, chỉ
+    // thiếu phần định giá lại.
     quoteError = String(e?.message ?? e);
   }
 
@@ -98,9 +123,9 @@ export async function GET() {
     // sẵn sàng mua cổ phiếu nếu bị assign.
     const collateral = p.strike! * shares;
     const dte = daysBetween(now, p.expiration!);
-    // Ngày mở có thể không có, và kể cả khi có thì vài ngày đầu quy ra năm chỉ
-    // là nhiễu: 17 đô lời trong một ngày quy ra năm thành 20%, con số đó không
-    // nói lên điều gì về vị thế.
+    // Schwab không trả ngày mở qua endpoint vị thế, nên daysHeld và ROC theo
+    // ngày giữ luôn vắng mặt ở dữ liệu đồng bộ - chỉ ROC còn lại (không cần
+    // ngày mở) mới có giá trị.
     const daysHeld = p.openedAt ? daysBetween(p.openedAt, now) : null;
     const heldLongEnough = daysHeld !== null && daysHeld >= MIN_DAYS_FOR_ANNUAL;
 
@@ -127,24 +152,23 @@ export async function GET() {
       /**
        * Giá trị thời gian còn lại, quy năm theo số ngày còn lại.
        *
-       * Đây là con số trả lời câu hỏi thật của người bán put: giữ tiếp hay đóng
-       * sớm. Nếu giữ tới đáo hạn chỉ còn kiếm thêm được từng này phần trăm trên
-       * số tiền đang bị khoá, mà screener đang tìm ra cơ hội cao hơn, thì đóng
-       * bây giờ để giải phóng tiền là đúng. Nó không cần biết vị thế mở ngày
-       * nào - thứ mà người ta hay không nhớ.
+       * Trả lời câu hỏi thật của người bán put: giữ tiếp hay đóng sớm. Nếu
+       * giữ tới đáo hạn chỉ còn kiếm thêm được từng này phần trăm trên số
+       * tiền đang bị khoá, mà screener đang tìm ra cơ hội cao hơn, thì đóng
+       * bây giờ để giải phóng tiền là đúng.
        *
-       * Lấy giá trị thời gian chứ không lấy nguyên giá mua lại: với hợp đồng đã
-       * vào trong tiền, phần nội tại nằm trong giá mua lại là khoản lỗ đang
-       * mang, không phải lợi nhuận còn kiếm được. Tính cả phần đó vào thì một
-       * vị thế đang lỗ nặng lại hiện ra lợi suất cao nhất bảng.
+       * Lấy giá trị thời gian chứ không lấy nguyên giá mua lại: với hợp đồng
+       * đã vào trong tiền, phần nội tại nằm trong giá mua lại là khoản lỗ
+       * đang mang, không phải lợi nhuận còn kiếm được.
        */
       rocRemaining:
         mark === null || spot === null
           ? null
           : (Math.max(0, mark - Math.max(0, p.strike! - spot)) / p.strike!) *
             (365 / Math.max(1, dte)),
-      // ROC quy năm trên phần đã lời và số ngày đã giữ thật. Chỉ có khi biết
-      // ngày mở và đã giữ đủ lâu để con số có nghĩa.
+      // ROC quy năm trên phần đã lời và số ngày đã giữ thật. Dữ liệu đồng bộ
+      // không có ngày mở nên trường này luôn null - giữ lại cho ngày sau, nếu
+      // có nguồn nào cho biết ngày mở thật.
       rocAnnual:
         pl === null || !heldLongEnough
           ? null
@@ -174,16 +198,5 @@ export async function GET() {
     quoteError,
   };
 
-  return NextResponse.json({ rows, summary });
-}
-
-export async function PUT(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!Array.isArray(body?.positions)) {
-    return NextResponse.json({ error: 'Cần mảng positions' }, { status: 400 });
-  }
-  const saved = await writePositions(body.positions);
-  // Trả về đúng những gì đã ghi: vị thế nhập thiếu số bị loại ở đây, và client
-  // phải thấy điều đó thay vì tưởng đã lưu.
-  return NextResponse.json({ positions: saved });
+  return NextResponse.json({ rows, summary, skipped });
 }
