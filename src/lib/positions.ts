@@ -89,6 +89,72 @@ export function parseOsiSymbol(
 export const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
 
+export type CashSummary = {
+  cash: number | null;
+  buyingPower: number | null;
+  accountValue: number | null;
+  /** Tên các trường thật Schwab trả về, để một lần nhìn là biết trường nào
+   *  cần đọc nếu ba con số trên trống hết. */
+  keys: string[] | null;
+};
+
+/**
+ * Số dư tiền mặt, gộp trên mọi tài khoản nhìn thấy được.
+ *
+ * Ba con số, ba câu hỏi khác nhau: `cash` là tiền mặt đang nằm im,
+ * `buyingPower` là còn mua/bán được bao nhiêu (tài khoản margin trả về
+ * `buyingPower`, tài khoản cash trả về `cashAvailableForTrading` - cái nào có
+ * thì lấy cái đó), `accountValue` là tổng giá trị thanh lý cả tài khoản.
+ *
+ * Mỗi trường được cộng dồn CHỈ khi thật sự đọc được số ở ít nhất một tài
+ * khoản; nếu Schwab không trả trường đó ở đâu cả thì kết quả là null, không
+ * phải 0 - một tài khoản có tiền thật mà hiện $0 còn tệ hơn hiện dấu gạch.
+ * `keys` mang theo tên trường thật của tài khoản đầu tiên, để nếu ba con số
+ * đều trống thì một lần nhìn vào response là biết cần đọc tên nào, không
+ * phải đoán lại từ đầu.
+ */
+export function mapCashBalances(accounts: any[]): CashSummary {
+  let cash = 0,
+    buyingPower = 0,
+    accountValue = 0;
+  let cashSeen = false,
+    bpSeen = false,
+    valueSeen = false;
+  let keys: string[] | null = null;
+
+  for (const acc of accounts) {
+    const b = acc?.securitiesAccount?.currentBalances;
+    if (!b || typeof b !== 'object') continue;
+    if (!keys) keys = Object.keys(b);
+
+    if (typeof b.cashBalance === 'number') {
+      cash += b.cashBalance;
+      cashSeen = true;
+    }
+    const bp =
+      typeof b.buyingPower === 'number'
+        ? b.buyingPower
+        : typeof b.cashAvailableForTrading === 'number'
+          ? b.cashAvailableForTrading
+          : null;
+    if (bp !== null) {
+      buyingPower += bp;
+      bpSeen = true;
+    }
+    if (typeof b.liquidationValue === 'number') {
+      accountValue += b.liquidationValue;
+      valueSeen = true;
+    }
+  }
+
+  return {
+    cash: cashSeen ? cash : null,
+    buyingPower: bpSeen ? buyingPower : null,
+    accountValue: valueSeen ? accountValue : null,
+    keys,
+  };
+}
+
 /**
  * Ghép vị thế từ toàn bộ tài khoản Schwab nhìn thấy được thành danh sách
  * phẳng - theo lựa chọn gộp chung, không tách riêng từng tài khoản.

@@ -408,6 +408,11 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No sold puts or held shares found in your Schwab account.',
   },
 
+  'pf.cashHead': { vi: 'Tiền mặt', en: 'Cash' },
+  'pf.cash': { vi: 'Tiền mặt', en: 'Cash balance' },
+  'pf.buyingPower': { vi: 'Sức mua', en: 'Buying power' },
+  'pf.accountValue': { vi: 'Tổng giá trị TK', en: 'Account value' },
+
   'pf.openPl': { vi: 'Lời/lỗ đang mở', en: 'Open P/L' },
   'pf.collateral': { vi: 'Tiền thế chấp', en: 'Cash secured' },
   'pf.creditTotal': { vi: 'Credit đã nhận', en: 'Credit received' },
@@ -465,8 +470,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.skipOther': { vi: 'chưa theo dõi', en: 'not tracked' },
 
   'pf.note': {
-    vi: 'Đọc thẳng từ tài khoản Schwab của bạn (quyền Accounts and Trading), không nhập tay. Giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Chỉ theo dõi put đã bán và cổ phiếu đang giữ dài hạn; quyền chọn mua, put đã mua và cổ phiếu bán khống được gọi tên riêng bên dưới thay vì lặng lẽ biến mất.',
-    en: 'Read directly from your Schwab account (Accounts and Trading access), not typed in by hand. The buy-back price, the profit, how much of the credit is captured, the distance to the strike — all recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Collateral is the cash-secured figure, strike × 100 × contracts. Only sold puts and long-held shares are tracked here; call options, bought puts and short stock are named below rather than silently disappearing.',
+    vi: 'Đọc thẳng từ tài khoản Schwab của bạn (quyền Accounts and Trading), không nhập tay. Tiền mặt và sức mua cũng lấy trực tiếp từ Schwab — ô nào không hiện nghĩa là Schwab không trả về đúng trường đó cho loại tài khoản này, không phải tài khoản trống. Giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Chỉ theo dõi put đã bán và cổ phiếu đang giữ dài hạn; quyền chọn mua, put đã mua và cổ phiếu bán khống được gọi tên riêng bên dưới thay vì lặng lẽ biến mất.',
+    en: 'Read directly from your Schwab account (Accounts and Trading access), not typed in by hand. Cash and buying power come straight from Schwab too — a missing tile means Schwab did not return that field for this account type, not that the account is empty. The buy-back price, the profit, how much of the credit is captured, the distance to the strike — all recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Collateral is the cash-secured figure, strike × 100 × contracts. Only sold puts and long-held shares are tracked here; call options, bought puts and short stock are named below rather than silently disappearing.',
   },
 
   // ---- sector rotation (RRG) ----
