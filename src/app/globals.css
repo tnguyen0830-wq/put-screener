@@ -16,15 +16,12 @@
   --rule: #d8dee7;
   --rule-soft: #eaeef3;
   --hover: #f1f4f8;
-  --credit: #0e7a58;
+  /* Rực hơn bản trước - khớp màu lời/lỗ trên app Schwab thật, áp dụng cho
+     mọi nơi dùng class good/bad trên site, không riêng My Portfolio nữa. */
+  --credit: #1a9c4a;
   --credit-tint: #dcf1e7;
-  --risk: #b93a24;
+  --risk: #d43a2f;
   --risk-tint: #fbe4de;
-  /* Xanh/đỏ đậm và sáng hơn --credit/--risk thường - riêng cho bảng cổ
-     phiếu/put trong My Portfolio, để giống app Schwab thật (chữ số to, màu
-     rực) mà không đổi màu good/bad ở mọi nơi khác trong site. */
-  --pf-good: #1a9c4a;
-  --pf-bad: #d43a2f;
   --warn: #9a6400;
   --warn-tint: #fdf0d8;
   --stamp: #2b4fe0;
@@ -69,12 +66,10 @@
   --rule-soft: #1d242d;
   --hover: #1c232c;
   /* Xanh và đỏ phải sáng hơn bản sáng, nếu không sẽ chìm vào nền tối. */
-  --credit: #3fbc8c;
+  --credit: #2ed86b;
   --credit-tint: #102c20;
-  --risk: #f27054;
+  --risk: #ff5449;
   --risk-tint: #351711;
-  --pf-good: #2ed86b;
-  --pf-bad: #ff5449;
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
   --stamp: #7d9bff;
@@ -105,12 +100,10 @@
   --title: #7d9bff;
     --rule-soft: #1d242d;
     --hover: #1c232c;
-    --credit: #3fbc8c;
+    --credit: #2ed86b;
     --credit-tint: #102c20;
-    --risk: #f27054;
+    --risk: #ff5449;
     --risk-tint: #351711;
-    --pf-good: #2ed86b;
-    --pf-bad: #ff5449;
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
     --stamp: #7d9bff;
@@ -713,7 +706,7 @@ table.results {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--data);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -755,7 +748,7 @@ table.results tbody tr:hover {
 .sym {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.04em;
 }
 
@@ -770,12 +763,17 @@ table.results tbody tr:hover {
   text-overflow: ellipsis;
 }
 
+/* Đậm nét, không chỉ đổi màu - khớp cách app Schwab in số lời/lỗ. Vì đây là
+   class dùng chung (table.results, .ratings, .stats, TickerTape...), một
+   chỗ sửa là đổi cả site, không phải lặp lại từng bảng. */
 .good {
   color: var(--credit);
+  font-weight: 600;
 }
 
 .bad {
   color: var(--risk);
+  font-weight: 600;
 }
 
 .flag {
@@ -930,7 +928,8 @@ table.results tbody tr.clickable {
 .stats dd {
   margin: 2px 0 0;
   font-family: var(--data);
-  font-size: 14px;
+  font-size: 15.5px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1408,8 +1407,9 @@ table.results tbody tr.clickable {
 
 .pftable {
   min-width: 640px;
-  /* To và đậm hơn bảng screener mặc định (11.5px) - giống cỡ chữ trên app
-     Schwab thật, đọc được ngay không phải nheo mắt. */
+  /* To hơn bảng screener mặc định - giống cỡ chữ trên app Schwab thật, đọc
+     được ngay không phải nheo mắt. Màu good/bad rực và đậm đã là mặc định
+     chung của site, không cần định nghĩa riêng ở đây nữa. */
   font-size: 14px;
 }
 .pftable th {
@@ -1418,19 +1418,6 @@ table.results tbody tr.clickable {
 .pftable td {
   padding-top: 8px;
   padding-bottom: 8px;
-}
-/* Màu good/bad riêng cho bảng này - rực hơn --credit/--risk dùng ở nơi khác,
-   cộng đậm nét, để khớp màu trên app Schwab thay vì tông trầm hơn của
-   site. */
-.pftable td.good,
-.pftable .good {
-  color: var(--pf-good);
-  font-weight: 600;
-}
-.pftable td.bad,
-.pftable .bad {
-  color: var(--pf-bad);
-  font-weight: 600;
 }
 
 /* Cuộn ngang mà mất luôn cột mã thì các con số còn lại chẳng biết của ai. Ghim
@@ -1699,7 +1686,7 @@ table.results tbody tr.clickable {
   width: 100%;
   border-collapse: collapse;
   margin: 12px 0 6px;
-  font: 400 11.5px/1.5 var(--data);
+  font: 400 12.5px/1.5 var(--data);
 }
 .ratings th {
   text-align: left;
