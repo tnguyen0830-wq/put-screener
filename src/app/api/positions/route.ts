@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { quotes, traderGet } from '@/lib/schwab';
 import { loadEarnings } from '@/lib/screener';
-import { daysBetween, mapSchwabPositions, osiSymbol, type Position } from '@/lib/positions';
+import { daysBetween, mapCashBalances, mapSchwabPositions, osiSymbol, type Position } from '@/lib/positions';
 
 /**
  * Danh mục: đọc thẳng từ tài khoản Schwab, định giá lại bằng báo giá Schwab.
@@ -66,9 +66,10 @@ export async function GET() {
   // Gộp vị thế của mọi tài khoản nhìn thấy được thành một danh sách, không
   // tách riêng theo tài khoản.
   const { positions, skipped } = mapSchwabPositions(accounts);
+  const cash = mapCashBalances(accounts);
 
   if (!positions.length) {
-    return NextResponse.json({ rows: [], summary: null, skipped });
+    return NextResponse.json({ rows: [], summary: null, skipped, cash });
   }
 
   const now = today();
@@ -198,5 +199,5 @@ export async function GET() {
     quoteError,
   };
 
-  return NextResponse.json({ rows, summary, skipped });
+  return NextResponse.json({ rows, summary, skipped, cash });
 }

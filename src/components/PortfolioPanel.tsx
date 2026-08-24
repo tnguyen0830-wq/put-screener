@@ -52,6 +52,12 @@ type Summary = {
 
 type Skipped = { symbol: string; reason: string };
 
+type Cash = {
+  cash: number | null;
+  buyingPower: number | null;
+  accountValue: number | null;
+};
+
 const usd = (n: number | null | undefined, d = 2) =>
   n === null || n === undefined
     ? '—'
@@ -79,6 +85,7 @@ export default function PortfolioPanel() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [skipped, setSkipped] = useState<Skipped[]>([]);
+  const [cash, setCash] = useState<Cash | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
 
@@ -90,6 +97,7 @@ export default function PortfolioPanel() {
       setRows(j.rows ?? []);
       setSummary(j.summary ?? null);
       setSkipped(j.skipped ?? []);
+      setCash(j.cash ?? null);
       setError(null);
     } catch (e: any) {
       setError(e.message);
@@ -132,6 +140,37 @@ export default function PortfolioPanel() {
           </>
         )}
         {summary?.quoteError && <p className="cap warnline">{t('pf.quoteError')}</p>}
+
+        {/* Tiền mặt của tài khoản - hiện độc lập với việc có vị thế nào hay
+            không, vì đó chính là câu hỏi của người còn 100% tiền mặt. Từng ô
+            chỉ hiện khi Schwab thật sự trả về đúng trường đó (xem
+            mapCashBalances), nên thiếu một ô không có nghĩa là tài khoản
+            trống - có thể chỉ là trường đó không đọc được. */}
+        {!errBody && cash && (cash.cash !== null || cash.buyingPower !== null || cash.accountValue !== null) && (
+          <>
+            <h3 className="dsec">{t('pf.cashHead')}</h3>
+            <dl className="stats">
+              {cash.cash !== null && (
+                <div>
+                  <dt>{t('pf.cash')}</dt>
+                  <dd>{usd(cash.cash, 0)}</dd>
+                </div>
+              )}
+              {cash.buyingPower !== null && (
+                <div>
+                  <dt>{t('pf.buyingPower')}</dt>
+                  <dd>{usd(cash.buyingPower, 0)}</dd>
+                </div>
+              )}
+              {cash.accountValue !== null && (
+                <div>
+                  <dt>{t('pf.accountValue')}</dt>
+                  <dd>{usd(cash.accountValue, 0)}</dd>
+                </div>
+              )}
+            </dl>
+          </>
+        )}
 
         {summary && (rows?.length ?? 0) > 0 && (
           <dl className="stats">
