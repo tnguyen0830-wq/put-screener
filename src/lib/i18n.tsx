@@ -422,6 +422,23 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.accountValue': { vi: 'Tổng giá trị TK', en: 'Account value' },
 
   'pf.openPl': { vi: 'Lời/lỗ đang mở', en: 'Open P/L' },
+  'pf.dayPl': { vi: 'Lời/lỗ hôm nay', en: "Today's P/L" },
+  'pf.realized': {
+    vi: (y: number) => `Đã chốt ${y}`,
+    en: (y: number) => `Realized ${y}`,
+  },
+  'pf.yearPl': {
+    vi: (y: number) => `Cả năm ${y}`,
+    en: (y: number) => `Full year ${y}`,
+  },
+  'pf.realizedToggle': {
+    vi: (y: number) => `Lời/lỗ đã chốt ${y} theo từng mã`,
+    en: (y: number) => `Realized ${y} P/L by symbol`,
+  },
+  'pf.realizedGap': {
+    vi: 'Mấy mã này có lệnh bán mà không tìm được lô mua tương ứng trong lịch sử tải về (mua từ lâu hơn), nên đã bỏ khỏi tổng thay vì tính giá vốn bằng 0:',
+    en: 'These symbols had a sale with no matching purchase lot in the history fetched (bought longer ago), so they are excluded from the total rather than counted at zero cost:',
+  },
   'pf.collateral': { vi: 'Tiền thế chấp', en: 'Cash secured' },
   'pf.creditTotal': { vi: 'Credit đã nhận', en: 'Credit received' },
   'pf.stockValue': { vi: 'Giá trị cổ phiếu', en: 'Share value' },
@@ -451,6 +468,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colShares': { vi: 'Số cp', en: 'Shares' },
   'pf.colCost': { vi: 'Giá vốn', en: 'Cost' },
   'pf.colValue': { vi: 'Giá trị', en: 'Value' },
+  'pf.colDayPl': { vi: 'Hôm nay', en: 'Today' },
   'pf.earnings': {
     vi: (d: string) => `earnings ${d}`,
     en: (d: string) => `earnings ${d}`,

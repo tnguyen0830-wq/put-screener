@@ -41,6 +41,14 @@ export type Position = {
   /** Giá trị thị trường hiện tại của vị thế, theo Schwab tự tính (marketValue). */
   schwabValue?: number;
   /**
+   * Lời/lỗ trong ngày, Schwab tự tính (`currentDayProfitLoss`) - đúng cột
+   * "P/L Day" trên app của họ.
+   *
+   * Khác `pl` (lời/lỗ tính từ lúc mở vị thế) ở chỗ nó chỉ tính từ giá đóng
+   * cửa phiên trước, nên trả lời câu hỏi khác: hôm nay động tĩnh gì.
+   */
+  dayPl?: number;
+  /**
    * Tên các trường thật trên object vị thế Schwab trả về (cấp ngoài, cùng cấp
    * với `averagePrice`/`marketValue`) - không phải bên trong `instrument`.
    *
@@ -241,6 +249,8 @@ export function mapSchwabPositions(accounts: any[]): {
           expiration: parsed.expiration,
           contracts,
           credit,
+          dayPl:
+            typeof p.currentDayProfitLoss === 'number' ? p.currentDayProfitLoss : undefined,
         });
         continue;
       }
@@ -258,6 +268,8 @@ export function mapSchwabPositions(accounts: any[]): {
               ? p.averagePrice
               : null;
         const schwabValue = typeof p.marketValue === 'number' ? p.marketValue : undefined;
+        const dayPl =
+          typeof p.currentDayProfitLoss === 'number' ? p.currentDayProfitLoss : undefined;
         if (!shares || shares <= 0) {
           if ((p.shortQuantity ?? 0) > 0)
             skipped.push({ symbol: rawSymbol || '?', reason: 'short-stock' });
@@ -278,6 +290,7 @@ export function mapSchwabPositions(accounts: any[]): {
           shares,
           cost,
           schwabValue,
+          dayPl,
           rawKeys: schwabValue === undefined ? Object.keys(p) : undefined,
           raw,
         });

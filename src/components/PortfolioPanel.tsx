@@ -31,6 +31,8 @@ type Row = {
   cushion?: number | null;
   itm?: boolean | null;
   nextEarnings?: string | null;
+  /** Lời/lỗ hôm nay, Schwab tự tính - cột "P/L Day" trên app của họ. */
+  dayPl?: number;
   /* stock */
   value?: number | null;
   costTotal?: number;
@@ -51,6 +53,7 @@ type Summary = {
   itmCount: number;
   earningsCount: number;
   nearestDte: number | null;
+  dayPl: number | null;
   quoteError: string | null;
 };
 
@@ -60,6 +63,15 @@ type Cash = {
   cash: number | null;
   buyingPower: number | null;
   accountValue: number | null;
+};
+
+type Realized = {
+  year: number;
+  total: number;
+  bySymbol: Record<string, number>;
+  /** Mã có lệnh bán không tìm được lô mua - đã bỏ khỏi tổng, xem lib/realized.ts. */
+  unknownBasis: string[];
+  txCount: number;
 };
 
 const usd = (n: number | null | undefined, d = 2) =>
@@ -90,6 +102,7 @@ export default function PortfolioPanel() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [skipped, setSkipped] = useState<Skipped[]>([]);
   const [cash, setCash] = useState<Cash | null>(null);
+  const [realized, setRealized] = useState<Realized | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
 
@@ -116,6 +129,21 @@ export default function PortfolioPanel() {
     const timer = setInterval(load, 60_000);
     return () => clearInterval(timer);
   }, [load]);
+
+  // Lời/lỗ đã chốt chỉ tải một lần: phải đọc mấy năm lịch sử giao dịch, đắt
+  // hơn hẳn bảng vị thế, và con số đó không đổi trong lúc đang xem.
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/realized')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j && typeof j.total === 'number') setRealized(j);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
@@ -152,6 +180,11 @@ export default function PortfolioPanel() {
           <p className="cap warnline">
             {t('pf.stockFallback')}{' '}
             <code>{stockFallback.rawKeys?.join(', ')}</code>
+          </p>
+        )}
+        {realized && realized.unknownBasis.length > 0 && (
+          <p className="cap warnline">
+            {t('pf.realizedGap')} <code>{realized.unknownBasis.join(', ')}</code>
           </p>
         )}
 
@@ -192,6 +225,32 @@ export default function PortfolioPanel() {
               <dt>{t('pf.openPl')}</dt>
               <dd className={summary.openPl >= 0 ? 'good' : 'bad'}>{signed(summary.openPl)}</dd>
             </div>
+            {summary.dayPl !== null && (
+              <div>
+                <dt>{t('pf.dayPl')}</dt>
+                <dd className={summary.dayPl >= 0 ? 'good' : 'bad'}>{signed(summary.dayPl)}</dd>
+              </div>
+            )}
+            {/* Đã chốt trong năm + đang mở = cả năm. Hai ô riêng chứ không chỉ
+                một con số tổng: khoản đã chốt là tiền thật đã vào tài khoản,
+                khoản đang mở còn có thể bốc hơi - gộp lại thành một số làm mất
+                đúng cái khác biệt đó. */}
+            {realized && (
+              <>
+                <div>
+                  <dt>{t('pf.realized', realized.year)}</dt>
+                  <dd className={realized.total >= 0 ? 'good' : 'bad'}>
+                    {signed(realized.total)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('pf.yearPl', realized.year)}</dt>
+                  <dd className={realized.total + summary.openPl >= 0 ? 'good' : 'bad'}>
+                    {signed(realized.total + summary.openPl)}
+                  </dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>{t('pf.collateral')}</dt>
               <dd>{usd(summary.collateral, 0)}</dd>
@@ -297,6 +356,7 @@ export default function PortfolioPanel() {
                     <th>{t('pf.colCost')}</th>
                     <th>{t('pf.colNow')}</th>
                     <th>{t('pf.colValue')}</th>
+                    <th>{t('pf.colDayPl')}</th>
                     <th>{t('pf.colPl')}</th>
                   </tr>
                 </thead>
@@ -308,6 +368,9 @@ export default function PortfolioPanel() {
                       <td>{usd(r.cost)}</td>
                       <td>{usd(r.spot)}</td>
                       <td>{usd(r.value, 0)}</td>
+                      <td className={r.dayPl === undefined ? undefined : r.dayPl >= 0 ? 'good' : 'bad'}>
+                        {signed(r.dayPl)}
+                      </td>
                       <td className={(r.pl ?? 0) >= 0 ? 'good' : 'bad'}>
                         {signed(r.pl)}
                         <span className="pfsub">{pct(r.plPct, 1)}</span>
@@ -318,6 +381,21 @@ export default function PortfolioPanel() {
               </table>
             </div>
           </>
+        )}
+
+        {realized && Object.keys(realized.bySymbol).length > 0 && (
+          <details className="rrgtable">
+            <summary>{t('pf.realizedToggle', realized.year)}</summary>
+            <ul className="pfskipped">
+              {Object.entries(realized.bySymbol)
+                .sort((a, b) => b[1] - a[1])
+                .map(([sym, pl]) => (
+                  <li key={`realized-${sym}`}>
+                    <b>{sym}</b> — <span className={pl >= 0 ? 'good' : 'bad'}>{signed(pl)}</span>
+                  </li>
+                ))}
+            </ul>
+          </details>
         )}
 
         {stocks.some((r) => r.raw) && (

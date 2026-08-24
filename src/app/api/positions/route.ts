@@ -206,6 +206,12 @@ export async function GET() {
     collateral: sum(putRows.map((r) => r.collateral)),
     creditTotal: sum(putRows.map((r) => r.creditTotal)),
     openPl: sum(rows.map((r: any) => r.pl)),
+    // Lời/lỗ hôm nay, Schwab tự tính cho từng vị thế - null nếu không vị thế
+    // nào trả về trường đó, để không hiện $0 giả cho một ngày thật sự có biến
+    // động.
+    dayPl: rows.some((r: any) => typeof r.dayPl === 'number')
+      ? sum(rows.map((r: any) => (typeof r.dayPl === 'number' ? r.dayPl : null)))
+      : null,
     stockValue: sum(stockRows.map((r) => r.value)),
     itmCount: putRows.filter((r) => r.itm).length,
     earningsCount: putRows.filter((r) => r.nextEarnings).length,
