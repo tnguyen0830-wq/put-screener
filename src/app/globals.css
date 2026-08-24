@@ -20,6 +20,11 @@
   --credit-tint: #dcf1e7;
   --risk: #b93a24;
   --risk-tint: #fbe4de;
+  /* Xanh/đỏ đậm và sáng hơn --credit/--risk thường - riêng cho bảng cổ
+     phiếu/put trong My Portfolio, để giống app Schwab thật (chữ số to, màu
+     rực) mà không đổi màu good/bad ở mọi nơi khác trong site. */
+  --pf-good: #1a9c4a;
+  --pf-bad: #d43a2f;
   --warn: #9a6400;
   --warn-tint: #fdf0d8;
   --stamp: #2b4fe0;
@@ -68,6 +73,8 @@
   --credit-tint: #102c20;
   --risk: #f27054;
   --risk-tint: #351711;
+  --pf-good: #2ed86b;
+  --pf-bad: #ff5449;
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
   --stamp: #7d9bff;
@@ -102,6 +109,8 @@
     --credit-tint: #102c20;
     --risk: #f27054;
     --risk-tint: #351711;
+    --pf-good: #2ed86b;
+    --pf-bad: #ff5449;
   --warn: #e0a13a;
   --warn-tint: #3a2c10;
     --stamp: #7d9bff;
@@ -1399,6 +1408,29 @@ table.results tbody tr.clickable {
 
 .pftable {
   min-width: 640px;
+  /* To và đậm hơn bảng screener mặc định (11.5px) - giống cỡ chữ trên app
+     Schwab thật, đọc được ngay không phải nheo mắt. */
+  font-size: 14px;
+}
+.pftable th {
+  font-size: 11px;
+}
+.pftable td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+/* Màu good/bad riêng cho bảng này - rực hơn --credit/--risk dùng ở nơi khác,
+   cộng đậm nét, để khớp màu trên app Schwab thay vì tông trầm hơn của
+   site. */
+.pftable td.good,
+.pftable .good {
+  color: var(--pf-good);
+  font-weight: 600;
+}
+.pftable td.bad,
+.pftable .bad {
+  color: var(--pf-bad);
+  font-weight: 600;
 }
 
 /* Cuộn ngang mà mất luôn cột mã thì các con số còn lại chẳng biết của ai. Ghim
