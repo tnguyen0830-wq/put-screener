@@ -42,6 +42,22 @@ function basicAuth() {
   return 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
 }
 
+/**
+ * Gốc để quay về sau khi đăng nhập xong: chính là gốc của SCHWAB_CALLBACK_URL.
+ *
+ * Callback route từng dựng URL này từ req.nextUrl.origin - đúng cho điều
+ * hướng cùng gốc (như middleware chuyển sang /login), nhưng sai cho chính
+ * request này: nó tới từ schwabapi.com, tính origin kiểu đó ra địa chỉ nội bộ
+ * của container trên Render (localhost:10000) thay vì tên miền thật, và người
+ * vừa đăng nhập xong bị đưa tới một trang không tồn tại.
+ *
+ * SCHWAB_CALLBACK_URL do chính ta khai báo và đăng ký với Schwab, nên gốc của
+ * nó luôn đúng, không phụ thuộc proxy tính toán ra sao.
+ */
+export function appOrigin(): string {
+  return new URL(creds().callback).origin;
+}
+
 export function authorizeUrl() {
   const { key, callback } = creds();
   const q = new URLSearchParams({
