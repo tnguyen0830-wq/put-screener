@@ -8,6 +8,8 @@ export type ConnStatus = {
   configured: boolean;
   connected: boolean;
   daysLeft?: number;
+  /** Server đã đặt mật khẩu chưa. false nghĩa là ai có link cũng vào được. */
+  locked?: boolean;
 };
 
 /** Days of refresh-token life left below which the header should say so. */
@@ -25,6 +27,9 @@ const WARN_DAYS = 2;
  */
 function attentionOf(s: ConnStatus | null): 'none' | 'warn' | 'bad' {
   if (!s) return 'none';
+  // Trang chưa khoá mà đang chạy trên mạng thì đó là chuyện đáng báo động nhất
+  // trong cái menu này - trên đó có vị thế thật.
+  if (s.locked === false) return 'bad';
   if (!s.configured || !s.connected) return 'bad';
   if ((s.daysLeft ?? Infinity) < WARN_DAYS) return 'warn';
   return 'none';
@@ -90,6 +95,10 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
             ))}
           </div>
 
+          {status?.locked === false && (
+            <p className="pophint popwarn">{t('settings.unlocked')}</p>
+          )}
+
           <div className="popsec">{t('settings.connection')}</div>
           {!status && <p className="pophint">{t('settings.checking')}</p>}
 
@@ -114,6 +123,21 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
               <a className="popaction" href="/api/auth/login">
                 {t('settings.reconnect')}
               </a>
+            </>
+          )}
+
+          {status?.locked && (
+            <>
+              <div className="popsec">{t('settings.session')}</div>
+              <button
+                className="popaction"
+                onClick={async () => {
+                  await fetch('/api/session', { method: 'DELETE' });
+                  window.location.href = '/login';
+                }}
+              >
+                {t('settings.signOut')}
+              </button>
             </>
           )}
         </div>

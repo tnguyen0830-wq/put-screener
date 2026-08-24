@@ -1286,6 +1286,83 @@ table.results tbody tr.clickable {
   color: var(--muted);
 }
 
+/* ---------- trang đăng nhập ---------- */
+
+.loginwrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.loginbox {
+  width: 100%;
+  max-width: 340px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: 24px;
+  box-shadow: var(--shadow-2);
+}
+
+.loginbrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.loginfield {
+  display: block;
+  margin-bottom: 14px;
+}
+.loginfield span {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.loginfield input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 14px/1.2 var(--data);
+}
+
+.loginbox > button[type='submit'] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--navy);
+  border-radius: var(--r-sm);
+  background: var(--navy);
+  color: var(--on-navy);
+  font: 600 13px/1 var(--data);
+  cursor: pointer;
+}
+.loginbox > button[type='submit']:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.loginerr {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--risk);
+}
+
+/* Cảnh báo trang chưa khoá, trong menu cài đặt. */
+.popwarn {
+  color: var(--risk);
+  font-weight: 500;
+}
+
 /* ---------- danh mục nhập tay ---------- */
 
 /* Bảng vị thế rộng hơn màn điện thoại. Cho nó tự cuộn ngang trong khung của

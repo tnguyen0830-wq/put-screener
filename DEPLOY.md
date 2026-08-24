@@ -15,8 +15,11 @@ thay vì phải mở laptop.
 
 **2. Token bảo vệ nằm trong bundle của app.** `EXPO_PUBLIC_BACKEND_TOKEN` bị đóng gói
 vào file JS, ai mở devtools trên bản web đều đọc được. Nó chặn được bot và người dò
-URL ngẫu nhiên, **không** thay thế được hệ thống đăng nhập thật. Chỉ dùng cho deploy
-cá nhân — đừng chia sẻ URL rộng rãi.
+URL ngẫu nhiên, **không** thay thế được hệ thống đăng nhập thật.
+
+Đó là chuyện của app điện thoại gọi `/api/md/*`. Còn **giao diện web thì đã có đăng
+nhập thật** bằng `APP_PASSWORD` — xem Bước 2c. Bắt buộc phải đặt, vì tab My Portfolio
+hiện vị thế thật.
 
 **3. Tôi không thể tự tạo tài khoản Render/GitHub giúp bạn.** Bạn phải tự đăng ký và
 tự bấm nút deploy. Các bước dưới đây ghi rõ chỗ nào bạn làm.
@@ -68,8 +71,138 @@ nghĩa là `.gitignore` đã bị sửa hỏng ở đâu đó.
 4. Deploy. Render cấp URL — service hiện tại là `https://put-screener-y2hw.onrender.com`
    (đuôi `y2hw` là ngẫu nhiên; deploy lại từ đầu sẽ ra đuôi khác).
 
+> **URL này không còn là địa chỉ chính.** Xem Bước 2b: app chạy trên
+> `https://app.tylerinvestment.com`. URL `onrender.com` vẫn còn bật để làm đường lui,
+> nhưng Chrome đã gắn cờ nó — đó chính là lý do có tên miền riêng.
+
+### Hai biến nữa phải có, nếu không dữ liệu bạn nhập sẽ biến mất
+
+Render dựng lại thư mục mã nguồn mỗi lần deploy, nên bất cứ thứ gì ghi vào đó đều
+không sống qua lần deploy kế tiếp. Vị thế trong tab My Portfolio và watchlist là dữ
+liệu do bạn nhập, nên phải nằm trên ổ đĩa gắn thêm cùng chỗ với token:
+
+| Biến | Giá trị |
+|---|---|
+| `POSITIONS_PATH` | `/var/data/positions.json` |
+| `WATCHLIST_PATH` | `/var/data/watchlist.json` |
+
+Hai biến này có trong `render.yaml`, nhưng **Render không tự thêm biến mới vào service
+đã tạo sẵn** — phải vào Environment thêm tay, rồi Save. Thiếu chúng thì app vẫn chạy
+bình thường và lỗi chỉ lộ ra sau lần deploy sau, lúc danh mục trống trơn.
+
 > Gói `starter` là bắt buộc vì cần ổ đĩa lưu token. Gói free không có ổ đĩa,
 > token sẽ mất mỗi lần server ngủ dậy và bạn phải đăng nhập Schwab liên tục.
+
+---
+
+## Bước 2b — Tên miền riêng
+
+**Vì sao cần.** Ngày 23/08/2026 Google Safe Browsing gắn cờ
+`put-screener-y2hw.onrender.com` là trang lừa đảo. Đó là báo động nhầm — máy quét thấy
+một tên miền phụ ngẫu nhiên trên một dịch vụ hosting dùng chung, nội dung đầy chữ
+"Schwab", có nút chuyển sang trang đăng nhập ngân hàng và một đường dẫn
+`/api/auth/callback`; đúng hình dạng của một trang giả mạo. Chrome chặn nguyên trang
+bằng màn đỏ.
+
+Báo nhầm cho Google thì gỡ được, nhưng chừng nào còn ở `*.onrender.com` thì còn có thể
+bị gắn cờ lại, vì tiếng xấu là dùng chung với mọi trang khác trên đó. Tên miền riêng
+khoảng 10 đô một năm là xong hẳn.
+
+**Đặt tên.** Không được có chữ "schwab" trong tên miền — vừa là nhãn hiệu của người ta,
+vừa là thứ khiến máy quét gắn cờ lần nữa. Tránh luôn các đuôi rẻ tiền `.xyz` `.top`,
+chúng có tiếng xấu sẵn với bộ lọc. Tên đang dùng: `tylerinvestment.com`, mua ở
+Cloudflare Registrar (bán đúng giá gốc, không phụ phí).
+
+**Dùng tên miền phụ, không dùng tên miền gốc.** `app.tylerinvestment.com` chỉ cần một
+bản ghi CNAME; tên miền gốc phải dùng bản ghi A với địa chỉ IP, phiền hơn và dễ hỏng khi
+Render đổi hạ tầng.
+
+### Các bước
+
+1. **Render** → service → Settings → Custom Domains → Add Custom Domain →
+   `app.tylerinvestment.com`. Render hiện ra bản ghi cần tạo.
+2. **Cloudflare** → DNS → Records → Add record:
+
+   | Ô | Giá trị |
+   |---|---|
+   | Type | `CNAME` |
+   | Name | `app` |
+   | Target | `put-screener-y2hw.onrender.com` |
+   | Proxy status | **DNS only** — đám mây **xám** |
+   | TTL | Auto |
+
+   ⚠️ **Proxy phải tắt.** Cloudflare mặc định bật (đám mây cam), và khi bật thì Render
+   không xin được chứng chỉ HTTPS — Certificate Status kẹt ở Pending mãi mãi. Cloudflare
+   sẽ hiện dải vàng khuyên bật proxy; bỏ qua nó.
+3. Quay lại Render, bấm làm mới cạnh tên miền. `Verified` mất khoảng một phút,
+   `Certificate Issued` thêm vài phút nữa.
+4. **Schwab portal** → Modify App → **thêm** callback mới vào cuối, **giữ nguyên** các
+   dòng cũ:
+
+   ```
+   https://app.tylerinvestment.com/api/auth/callback
+   ```
+
+   App chuyển sang `Modification Pending`. Schwab xử lý thay đổi Callback URL **sau giờ
+   giao dịch**, nên phải chờ qua đêm. Trong lúc đó URL cũ vẫn đăng nhập được.
+5. Hôm sau, khi app về `Ready For Use`: Render → Environment → đổi
+   `SCHWAB_CALLBACK_URL` thành `https://app.tylerinvestment.com/api/auth/callback` →
+   Save.
+6. Mở tên miền mới → Cài đặt → **Kết nối lại** → đăng nhập Schwab.
+
+### Chỉ tắt URL cũ sau khi tất cả đã chuyển xong
+
+Render → Settings → **Render Subdomain** → tắt. Trước khi tắt, kiểm tra đủ ba thứ đã
+trỏ về tên miền mới:
+
+- `SCHWAB_CALLBACK_URL` trên Render
+- Đăng nhập Schwab đã thành công **trên tên miền mới**
+- `EXPO_PUBLIC_BACKEND_URL` trong `ProSellPutScanner` (Bước 5) — app điện thoại vẫn
+  đang gọi thẳng vào `onrender.com`, tắt subdomain trước khi build lại là app đó chết
+
+Tắt sớm hơn là tự khoá đường đăng nhập lại của chính mình.
+
+---
+
+## Bước 2c — Khoá trang bằng mật khẩu
+
+Trang chạy trên một URL công khai. Chừng nào trên đó chỉ có giá thị trường thì mở cũng
+được, nhưng từ lúc tab My Portfolio hiện vị thế thật thì không.
+
+Đặt trên Render → Environment:
+
+| Biến | Giá trị |
+|---|---|
+| `APP_PASSWORD` | mật khẩu bạn tự đặt, dài, không trùng mật khẩu Schwab |
+
+Đặt xong deploy lại. Vào trang sẽ thấy ô nhập mật khẩu; đăng nhập một lần, phiên giữ
+**30 ngày** trên máy đó. Đăng xuất nằm trong menu ⚙️.
+
+**Không đặt thì trang mở cho tất cả.** Để không ai vô tình chạy như vậy mà không biết,
+`/api/auth/status` trả về `locked: false` và menu ⚙️ hiện chấm đỏ kèm dòng cảnh báo.
+Ở máy nhà thì không cần đặt — không đặt là không có cổng, tiện cho lúc phát triển.
+
+### Những gì cổng này gác, và không gác
+
+- **Gác:** mọi trang và mọi `/api/*`, kể cả `/api/auth/callback` của Schwab. Để ngỏ
+  callback thì người lạ có thể đăng nhập tài khoản Schwab **của họ** vào server này và
+  ghi đè token của bạn.
+- **Không gác:** `/api/md/*` — cửa riêng của app điện thoại, vẫn dùng `MD_API_TOKEN`
+  trong header như cũ. App đó không có cookie nào để gửi.
+- **Mở sẵn:** trang `/login`, chỗ nhận mật khẩu `/api/session`, và `/api/auth/status`.
+  Cái cuối vì Render dùng nó làm health check — nó chỉ nói phiên Schwab còn hay hết và
+  trang đã khoá hay chưa, không một con số tài khoản nào.
+- File tĩnh (ảnh, icon) cũng mở, nếu không thì chính trang đăng nhập không tải nổi logo.
+
+### Vài điều đáng biết
+
+- Cookie phiên được **ký bằng HMAC**, không phải một cờ bật/tắt, nên không tự chế ra
+  được. Khoá ký mặc định chính là mật khẩu, nên **đổi mật khẩu là mọi phiên cũ chết
+  ngay** — kể cả phiên trên cái điện thoại vừa mất.
+- Sai mật khẩu 8 lần trong 15 phút thì IP đó bị khoá tạm. Bộ đếm nằm trong RAM, server
+  khởi động lại là hết — nhưng người dò cũng phải bắt đầu lại từ đầu.
+- Muốn tách khoá ký khỏi mật khẩu thì đặt thêm `SESSION_SECRET`; khi đó đổi mật khẩu
+  không làm rơi phiên đang có.
 
 ---
 
@@ -81,12 +214,16 @@ bên cạnh.
 
 ```
 https://127.0.0.1:3000/api/auth/callback                   ← laptop, GIỮ NGUYÊN
-https://put-screener-y2hw.onrender.com/api/auth/callback   ← thêm dòng này
+https://put-screener-y2hw.onrender.com/api/auth/callback   ← bản deploy đầu tiên
+https://app.tylerinvestment.com/api/auth/callback          ← tên miền riêng (Bước 2b)
 ```
 
 Nhờ vậy laptop và bản deploy **dùng chung một app Schwab** — không cần đăng ký app
 thứ hai. `.env` ở laptop vẫn để URL `127.0.0.1`, còn trên Render thì biến
-`SCHWAB_CALLBACK_URL` để URL `onrender.com`; cùng một `SCHWAB_APP_KEY` chạy được cả hai.
+`SCHWAB_CALLBACK_URL` để tên miền riêng; cùng một `SCHWAB_APP_KEY` chạy được cả hai.
+
+Giữ luôn cả ba dòng. Một callback thừa không gây hại gì, còn xoá nhầm là mất một đêm
+chờ đồng bộ mới thêm lại được.
 
 1. Portal → app của bạn → thêm dòng vào **Callback URL(s)** → **Save**.
 2. **Thay đổi chỉ có hiệu lực sau khi Schwab đồng bộ qua đêm.** Xác nhận từ Schwab
@@ -114,14 +251,14 @@ sửa code** — gần như chắc chắn là chưa tới lượt sync. Sáng h�
 
 Mở trên điện thoại hoặc máy tính:
 ```
-https://put-screener-y2hw.onrender.com
+https://app.tylerinvestment.com
 ```
 Bấm nút kết nối Schwab, đăng nhập. Token được ghi vào `/var/data/.tokens.json` trên ổ đĩa
 và sống qua các lần deploy.
 
 Kiểm tra:
 ```bash
-curl -H "x-md-token: <MD_API_TOKEN>" https://put-screener-y2hw.onrender.com/api/md/volatility
+curl -H "x-md-token: <MD_API_TOKEN>" https://app.tylerinvestment.com/api/md/volatility
 ```
 Phải trả về VIX và chỉ số S&P. Nếu trả `MD_TOKEN_INVALID` là token sai; nếu trả
 `REAUTH_REQUIRED` là chưa đăng nhập Schwab xong.
@@ -134,7 +271,7 @@ Trong `ProSellPutScanner`, sửa `.env`:
 
 ```
 EXPO_PUBLIC_MARKET_DATA_PROVIDER=schwab
-EXPO_PUBLIC_BACKEND_URL=https://put-screener-y2hw.onrender.com
+EXPO_PUBLIC_BACKEND_URL=https://app.tylerinvestment.com
 EXPO_PUBLIC_BACKEND_TOKEN=<đúng giá trị MD_API_TOKEN ở bước 2>
 ```
 
@@ -147,7 +284,7 @@ npx expo export --platform web
 **Luôn kiểm tra biến đã được nhúng vào bundle trước khi deploy:**
 
 ```bash
-grep -c "put-screener-y2hw.onrender.com" dist/_expo/static/js/web/*.js
+grep -c "app.tylerinvestment.com" dist/_expo/static/js/web/*.js
 ```
 
 Phải ra `1`. Nếu ra `0` thì biến chưa vào bundle và app sẽ chạy DEMO DATA mà **không
@@ -158,8 +295,8 @@ Thư mục `dist/` sinh ra đem thả vào Netlify Drop hoặc Vercel là xong (
 cần server vì đây chỉ là file tĩnh).
 
 > `resolveBackendUrl()` trong `src/config/env.ts` chỉ tự đổi host khi backend nằm trong
-> mạng nội bộ. Với URL `https://...onrender.com` nó giữ nguyên như bạn khai báo — đúng
-> như mong muốn.
+> mạng nội bộ. Với một URL công khai như `https://app.tylerinvestment.com` nó giữ nguyên
+> như bạn khai báo — đúng như mong muốn.
 
 Xong: mở URL web đó trên điện thoại, **Add to Home Screen** để thành icon như app thật.
 
