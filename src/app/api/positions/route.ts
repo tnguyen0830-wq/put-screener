@@ -101,27 +101,23 @@ export async function GET() {
 
     if (p.kind === 'stock') {
       /**
-       * Ưu tiên con số Schwab đã tự tính (marketValue, longOpenProfitLoss)
-       * hơn tự suy ra từ averagePrice.
-       *
-       * Đối chiếu với app Schwab thật cho thấy `averagePrice` không phải giá
-       * vốn thật - giá thị trường đọc đúng, nhưng lời/lỗ suy từ giá vốn đó
-       * sai lệch không theo quy luật cố định. Khi Schwab đã tự tính sẵn lời/lỗ
-       * cho vị thế, dùng thẳng con số đó thì chắc chắn khớp với app của họ;
-       * giá vốn hiển thị suy ngược lại từ đó, không dựa vào averagePrice nữa.
+       * Giá trị hiện tại lấy từ marketValue Schwab tự tính khi có (khớp app
+       * của họ), rơi về spot × số cổ phiếu khi không có. Lời/lỗ luôn tự tính
+       * từ (giá trị hiện tại − p.cost × số cổ phiếu) - p.cost giờ đã là
+       * averageLongPrice ("Trade Price"), field đối chiếu khớp app Schwab
+       * thật, không phải averagePrice/longOpenProfitLoss như hai lần đoán
+       * trước (xem ghi chú ở lib/positions.ts).
        */
-      const haveSchwabPl = p.schwabValue !== undefined && p.schwabPl !== undefined;
-      const value = haveSchwabPl ? p.schwabValue! : spot === null ? null : spot * p.shares!;
-      const pl = haveSchwabPl ? p.schwabPl! : value === null ? null : value - p.cost! * p.shares!;
-      const costTotal = haveSchwabPl ? p.schwabValue! - p.schwabPl! : p.cost! * p.shares!;
-      const cost = p.shares! > 0 ? costTotal / p.shares! : p.cost!;
-      // schwabValue/schwabPl là nguyên liệu nội bộ để tính cost/pl ở trên,
-      // không cần lộ ra response - value và pl đã mang đủ thông tin đó rồi.
-      // `raw` thì giữ lại, đi thẳng ra response - xem ghi chú ở lib/positions.ts.
-      const { schwabValue: _sv, schwabPl: _spl, ...pClean } = p;
+      const value = p.schwabValue !== undefined ? p.schwabValue : spot === null ? null : spot * p.shares!;
+      const costTotal = p.cost! * p.shares!;
+      const pl = value === null ? null : value - costTotal;
+      // schwabValue là nguyên liệu nội bộ để tính value ở trên, không cần lộ
+      // ra response. `raw` thì giữ lại, đi thẳng ra response - xem ghi chú ở
+      // lib/positions.ts.
+      const { schwabValue: _sv, ...pClean } = p;
       return {
         ...pClean,
-        cost,
+        cost: p.cost,
         spot,
         changePct: under?.netPercentChange ?? null,
         value,

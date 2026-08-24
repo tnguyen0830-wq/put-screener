@@ -35,7 +35,7 @@ type Row = {
   value?: number | null;
   costTotal?: number;
   plPct?: number | null;
-  /** Chỉ có khi Schwab không trả về marketValue/longOpenProfitLoss - xem lib/positions.ts. */
+  /** Chỉ có khi Schwab không trả về marketValue - xem lib/positions.ts. */
   rawKeys?: string[];
   /** Mọi trường số Schwab trả về cho vị thế này, luôn có mặt - xem lib/positions.ts. */
   raw?: Record<string, number>;
@@ -119,9 +119,9 @@ export default function PortfolioPanel() {
 
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
-  // marketValue/longOpenProfitLoss không đọc được thì lời/lỗ cổ phiếu đang
-  // dùng phương án dự phòng (averagePrice) - đúng cái đã sai một lần trước
-  // đó. Nói ra thay vì để một con số có thể sai lặng lẽ trông như đã sửa.
+  // marketValue không đọc được thì "Giá trị" dùng giá thị trường sống thay
+  // vì con số Schwab tự tính - lời/lỗ vẫn tự tính từ cost (averageLongPrice)
+  // như bình thường, không bị ảnh hưởng. Vẫn nói ra để không lặng lẽ đoán.
   const stockFallback = stocks.find((r) => r.rawKeys);
 
   const errBody =

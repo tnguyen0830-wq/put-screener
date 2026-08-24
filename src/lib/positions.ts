@@ -28,38 +28,35 @@ export type Position = {
   /* --- cổ phiếu đang giữ --- */
   shares?: number;
   /**
-   * Giá vốn trên mỗi cổ phiếu, đọc từ `averagePrice`.
+   * Giá vốn hiển thị, đọc từ `averageLongPrice`.
    *
-   * Chỉ dùng làm phương án dự phòng. Đối chiếu với app Schwab thật (24/08)
-   * cho thấy trường này không khớp giá vốn thật - lệch không theo quy luật
-   * cố định (không phải làm tròn hay lệch giờ, vì giá thị trường vẫn khớp).
-   * Khi `schwabValue`/`schwabPl` có mặt, chúng mới là nguồn đáng tin: đó là
-   * chính con số Schwab đã tính, nên chắc chắn khớp với app của họ.
+   * `averagePrice`/`taxLotAverageLongPrice` (hai field này luôn bằng nhau)
+   * là "Cost" trong app Schwab thật - giá vốn đã điều chỉnh theo lô thuế,
+   * KHÔNG phải giá đã dùng để tính lời/lỗ hiển thị. `averageLongPrice` mới
+   * là "Trade Price" - đối chiếu trực tiếp với app Schwab thật (24/08, toàn
+   * bộ vị thế) khớp chính xác từng mã một. Rơi về `averagePrice` chỉ khi
+   * `averageLongPrice` không có mặt.
    */
   cost?: number;
   /** Giá trị thị trường hiện tại của vị thế, theo Schwab tự tính (marketValue). */
   schwabValue?: number;
-  /** Lời/lỗ đang mở, theo Schwab tự tính (longOpenProfitLoss). */
-  schwabPl?: number;
   /**
    * Tên các trường thật trên object vị thế Schwab trả về (cấp ngoài, cùng cấp
    * với `averagePrice`/`marketValue`) - không phải bên trong `instrument`.
    *
-   * Chỉ đính kèm khi `schwabValue`/`schwabPl` KHÔNG đọc được, tức là
-   * `marketValue`/`longOpenProfitLoss` đoán tên sai. Một lần nhìn vào đây là
-   * biết tên trường thật, không phải đoán lần nữa từ một phiên không gọi
-   * được tài khoản thật.
+   * Chỉ đính kèm khi `schwabValue` KHÔNG đọc được, tức là `marketValue` đoán
+   * tên sai. Một lần nhìn vào đây là biết tên trường thật, không phải đoán
+   * lần nữa từ một phiên không gọi được tài khoản thật.
    */
   rawKeys?: string[];
   /**
    * MỌI trường số (cấp ngoài) trên object vị thế Schwab trả về, luôn đính
-   * kèm - không đợi tới lúc đoán sai mới lộ ra.
+   * kèm.
    *
-   * Lần đoán `averagePrice` sai, lần đoán `marketValue`/`longOpenProfitLoss`
-   * cũng cho ra cùng một con số sai (suy ngược lại thì gần như trùng khớp
-   * `averagePrice`) - tức là hai lần đoán khác tên nhưng cùng một công thức
-   * sai. Thay vì đoán tiếp tên thứ tư, in ra hết mọi con số Schwab thật sự
-   * gửi về, để so trực tiếp với app Schwab thật một lần cho xong.
+   * Chính mục này đã lộ ra `averageLongPrice` - field thật sự khớp "Trade
+   * Price" trên app Schwab, sau hai lần đoán sai (`averagePrice`, rồi
+   * `marketValue`/`longOpenProfitLoss`). Giữ lại để lần sau nếu có field
+   * nào lại sai, so trực tiếp một lần là xong, không cần đoán nữa.
    */
   raw?: Record<string, number>;
 };
@@ -250,19 +247,23 @@ export function mapSchwabPositions(accounts: any[]): {
 
       if (assetType === 'EQUITY' || assetType === 'COLLECTIVE_INVESTMENT') {
         const shares = p.longQuantity;
-        const cost = typeof p.averagePrice === 'number' ? p.averagePrice : null;
+        // averageLongPrice là "Trade Price" thật trên app Schwab - đối chiếu
+        // trực tiếp (24/08) khớp chính xác mọi mã. averagePrice chỉ là "Cost"
+        // (giá vốn đã điều chỉnh lô thuế), rơi về dùng khi averageLongPrice
+        // vắng mặt.
+        const cost =
+          typeof p.averageLongPrice === 'number'
+            ? p.averageLongPrice
+            : typeof p.averagePrice === 'number'
+              ? p.averagePrice
+              : null;
         const schwabValue = typeof p.marketValue === 'number' ? p.marketValue : undefined;
-        const schwabPl =
-          typeof p.longOpenProfitLoss === 'number' ? p.longOpenProfitLoss : undefined;
         if (!shares || shares <= 0) {
           if ((p.shortQuantity ?? 0) > 0)
             skipped.push({ symbol: rawSymbol || '?', reason: 'short-stock' });
           continue;
         }
-        // Cần ít nhất một trong hai nguồn giá vốn - averagePrice hoặc cặp
-        // marketValue/longOpenProfitLoss - nếu không có gì thì không vẽ được
-        // lời/lỗ đáng tin, bỏ qua thay vì đoán bằng 0.
-        if (!cost && (schwabValue === undefined || schwabPl === undefined)) {
+        if (cost === null) {
           skipped.push({ symbol: rawSymbol || '?', reason: 'missing-price' });
           continue;
         }
@@ -275,11 +276,9 @@ export function mapSchwabPositions(accounts: any[]): {
           kind: 'stock',
           symbol: normalizeSymbol(rawSymbol),
           shares,
-          cost: cost ?? 0,
+          cost,
           schwabValue,
-          schwabPl,
-          rawKeys:
-            schwabValue === undefined || schwabPl === undefined ? Object.keys(p) : undefined,
+          rawKeys: schwabValue === undefined ? Object.keys(p) : undefined,
           raw,
         });
         continue;
