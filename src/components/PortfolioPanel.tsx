@@ -238,6 +238,31 @@ export default function PortfolioPanel() {
 
         {summary && (rows?.length ?? 0) > 0 && (
           <dl className="stats">
+            {/* Cả năm đứng đầu: đó là câu hỏi lớn nhất, và hai ô ngay sau nó
+                là hai nửa cộng thành nó. Giữ ba ô này liền nhau và đúng thứ
+                tự tổng-rồi-mới-tới-phần thì đọc một lượt là hiểu phép cộng,
+                không phải đi tìm.
+
+                Vẫn tách "đã chốt" và "đang mở" thành hai ô riêng chứ không
+                gộp: khoản đã chốt là tiền thật đã vào tài khoản, khoản đang
+                mở còn có thể bốc hơi - gộp lại thành một số làm mất đúng cái
+                khác biệt đó. */}
+            {realized && (
+              <>
+                <div>
+                  <dt>{t('pf.yearPl', realized.year)}</dt>
+                  <dd className={realized.total + summary.openPl >= 0 ? 'good' : 'bad'}>
+                    {signed(realized.total + summary.openPl)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('pf.realized', realized.year)}</dt>
+                  <dd className={realized.total >= 0 ? 'good' : 'bad'}>
+                    {signed(realized.total)}
+                  </dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>{t('pf.openPl')}</dt>
               <dd className={summary.openPl >= 0 ? 'good' : 'bad'}>{signed(summary.openPl)}</dd>
@@ -247,26 +272,6 @@ export default function PortfolioPanel() {
                 <dt>{t('pf.dayPl')}</dt>
                 <dd className={summary.dayPl >= 0 ? 'good' : 'bad'}>{signed(summary.dayPl)}</dd>
               </div>
-            )}
-            {/* Đã chốt trong năm + đang mở = cả năm. Hai ô riêng chứ không chỉ
-                một con số tổng: khoản đã chốt là tiền thật đã vào tài khoản,
-                khoản đang mở còn có thể bốc hơi - gộp lại thành một số làm mất
-                đúng cái khác biệt đó. */}
-            {realized && (
-              <>
-                <div>
-                  <dt>{t('pf.realized', realized.year)}</dt>
-                  <dd className={realized.total >= 0 ? 'good' : 'bad'}>
-                    {signed(realized.total)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t('pf.yearPl', realized.year)}</dt>
-                  <dd className={realized.total + summary.openPl >= 0 ? 'good' : 'bad'}>
-                    {signed(realized.total + summary.openPl)}
-                  </dd>
-                </div>
-              </>
             )}
             <div>
               <dt>{t('pf.collateral')}</dt>
