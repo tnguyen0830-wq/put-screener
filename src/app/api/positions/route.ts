@@ -17,6 +17,17 @@ export const dynamic = 'force-dynamic';
 /** Dưới ngần này ngày thì quy ra năm chỉ khuếch đại nhiễu, không nói lên gì. */
 const MIN_DAYS_FOR_ANNUAL = 5;
 
+/**
+ * Cửa sổ cảnh báo earnings cho cổ phiếu đang giữ.
+ *
+ * Put có sẵn một mốc tự nhiên - ngày đáo hạn của chính hợp đồng đó, nên
+ * earnings chỉ tính khi rơi trước ngày đó. Cổ phiếu không có mốc nào tương
+ * tự - giữ vô thời hạn - nên phải chọn một cửa sổ cố định. 14 ngày đủ để
+ * chuẩn bị (tăng/giảm vị thế trước khi biến động) mà không cảnh báo quá sớm
+ * tới mức mất tác dụng.
+ */
+const STOCK_EARNINGS_WINDOW_DAYS = 14;
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -115,6 +126,14 @@ export async function GET() {
       // ra response. `raw` thì giữ lại, đi thẳng ra response - xem ghi chú ở
       // lib/positions.ts.
       const { schwabValue: _sv, ...pClean } = p;
+      // Cùng một cảnh báo earnings như put, nhưng cửa sổ cố định 14 ngày
+      // thay vì "trước ngày đáo hạn" - cổ phiếu không có ngày đáo hạn.
+      const stockEarningsWindow = new Date(now);
+      stockEarningsWindow.setUTCDate(stockEarningsWindow.getUTCDate() + STOCK_EARNINGS_WINDOW_DAYS);
+      const nextEarnings =
+        (earnings[p.symbol] || []).find(
+          (d) => d >= now && d <= stockEarningsWindow.toISOString().slice(0, 10)
+        ) ?? null;
       return {
         ...pClean,
         cost: p.cost,
@@ -125,6 +144,11 @@ export async function GET() {
         pl,
         plPct: pl === null || !costTotal ? null : pl / costTotal,
         daysHeld: p.openedAt ? daysBetween(p.openedAt, now) : null,
+        nextEarnings,
+        // Không có mã này trong data/earnings.json - "không sắp earnings" và
+        // "chưa có dữ liệu để biết" là hai chuyện khác nhau, và im lặng đúng
+        // là lý do CRWD từng bị bỏ sót dù chỉ còn 2 ngày.
+        earningsUnknown: !(p.symbol in earnings),
       };
     }
 
@@ -149,9 +173,11 @@ export async function GET() {
     // một đêm.
     const nextEarnings =
       (earnings[p.symbol] || []).find((d) => d >= now && d <= p.expiration!) ?? null;
+    const earningsUnknown = !(p.symbol in earnings);
 
     return {
       ...p,
+      earningsUnknown,
       spot,
       changePct: under?.netPercentChange ?? null,
       mark,
@@ -214,9 +240,20 @@ export async function GET() {
       : null,
     stockValue: sum(stockRows.map((r) => r.value)),
     itmCount: putRows.filter((r) => r.itm).length,
-    earningsCount: putRows.filter((r) => r.nextEarnings).length,
+    // Đếm cả cổ phiếu lẫn put - trước đây chỉ tính put, nên một mã đang
+    // giữ dạng cổ phiếu sắp earnings không hiện cảnh báo dù chỉ còn vài
+    // ngày.
+    earningsCount:
+      putRows.filter((r) => r.nextEarnings).length +
+      stockRows.filter((r) => r.nextEarnings).length,
     nearestDte: putRows.length ? Math.min(...putRows.map((r) => r.dte)) : null,
     quoteError,
+    // Mã đang giữ vị thế mà data/earnings.json hoàn toàn không có - "Cần để
+    // ý" không thể cảnh báo earnings cho những mã này, không phải vì chúng
+    // không sắp earnings, mà vì không có dữ liệu để biết. Chính đây là lý do
+    // CRWD từng bị bỏ sót dù chỉ còn 2 ngày - CRWD chưa từng nằm trong
+    // watchlist nên script đồng bộ chưa bao giờ lấy ngày của nó.
+    earningsDataGap: [...new Set(rows.filter((r: any) => r.earningsUnknown).map((r: any) => r.symbol))],
   };
 
   return NextResponse.json({ rows, summary, skipped, cash });
