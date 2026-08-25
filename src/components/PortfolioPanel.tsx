@@ -171,6 +171,12 @@ export default function PortfolioPanel() {
 
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
+  // Ô "Cần để ý" chỉ in ra số lượng - bấm vào mới biết đúng mã nào, dùng
+  // ngay dữ liệu rows đã có sẵn, không cần gọi thêm API.
+  const itmSoon = puts.filter((r) => r.itm);
+  const earningsSoon = [...puts, ...stocks]
+    .filter((r) => r.nextEarnings)
+    .sort((a, b) => (a.nextEarnings! < b.nextEarnings! ? -1 : 1));
   // marketValue không đọc được thì "Giá trị" dùng giá thị trường sống thay
   // vì con số Schwab tự tính - lời/lỗ vẫn tự tính từ cost (averageLongPrice)
   // như bình thường, không bị ảnh hưởng. Vẫn nói ra để không lặng lẽ đoán.
@@ -304,12 +310,34 @@ export default function PortfolioPanel() {
             </div>
             <div>
               <dt>{t('pf.attention')}</dt>
-              <dd className={summary.itmCount || summary.earningsCount ? 'warn' : undefined}>
-                {t('pf.attentionValue', {
-                  itm: summary.itmCount,
-                  earnings: summary.earningsCount,
-                })}
-              </dd>
+              {summary.itmCount || summary.earningsCount ? (
+                // Có gì để nói mới cho bấm mở - ô "0 · 0" thì không có gì để
+                // liệt kê, giữ dạng chữ thường như cũ.
+                <dd className="warn">
+                  <details>
+                    <summary>
+                      {t('pf.attentionValue', {
+                        itm: summary.itmCount,
+                        earnings: summary.earningsCount,
+                      })}
+                    </summary>
+                    <ul className="pfattnlist">
+                      {itmSoon.map((r) => (
+                        <li key={`itm-${r.id}`}>
+                          {t('pf.attnItm', { symbol: r.symbol, strike: r.strike ?? 0 })}
+                        </li>
+                      ))}
+                      {earningsSoon.map((r) => (
+                        <li key={`earn-${r.id}`}>
+                          {t('pf.attnEarnings', { symbol: r.symbol, date: r.nextEarnings ?? '' })}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </dd>
+              ) : (
+                <dd>{t('pf.attentionValue', { itm: 0, earnings: 0 })}</dd>
+              )}
             </div>
           </dl>
         )}

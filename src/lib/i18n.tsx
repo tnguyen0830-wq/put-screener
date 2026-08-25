@@ -459,6 +459,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (v: any) => `${v.itm} trong tiền · ${v.earnings} sắp earnings`,
     en: (v: any) => `${v.itm} in the money · ${v.earnings} with earnings due`,
   },
+  'pf.attnItm': {
+    vi: (v: any) => `${v.symbol} — đã vào trong tiền (strike $${v.strike})`,
+    en: (v: any) => `${v.symbol} — in the money (strike $${v.strike})`,
+  },
+  'pf.attnEarnings': {
+    vi: (v: any) => `${v.symbol} — earnings ${v.date}`,
+    en: (v: any) => `${v.symbol} — earnings ${v.date}`,
+  },
   'pf.days': {
     vi: (n: number) => `${n} ngày`,
     en: (n: number) => `${n} days`,
