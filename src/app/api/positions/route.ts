@@ -17,6 +17,17 @@ export const dynamic = 'force-dynamic';
 /** Dưới ngần này ngày thì quy ra năm chỉ khuếch đại nhiễu, không nói lên gì. */
 const MIN_DAYS_FOR_ANNUAL = 5;
 
+/**
+ * Cửa sổ cảnh báo earnings cho cổ phiếu đang giữ.
+ *
+ * Put có sẵn một mốc tự nhiên - ngày đáo hạn của chính hợp đồng đó, nên
+ * earnings chỉ tính khi rơi trước ngày đó. Cổ phiếu không có mốc nào tương
+ * tự - giữ vô thời hạn - nên phải chọn một cửa sổ cố định. 14 ngày đủ để
+ * chuẩn bị (tăng/giảm vị thế trước khi biến động) mà không cảnh báo quá sớm
+ * tới mức mất tác dụng.
+ */
+const STOCK_EARNINGS_WINDOW_DAYS = 14;
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -115,6 +126,14 @@ export async function GET() {
       // ra response. `raw` thì giữ lại, đi thẳng ra response - xem ghi chú ở
       // lib/positions.ts.
       const { schwabValue: _sv, ...pClean } = p;
+      // Cùng một cảnh báo earnings như put, nhưng cửa sổ cố định 14 ngày
+      // thay vì "trước ngày đáo hạn" - cổ phiếu không có ngày đáo hạn.
+      const stockEarningsWindow = new Date(now);
+      stockEarningsWindow.setUTCDate(stockEarningsWindow.getUTCDate() + STOCK_EARNINGS_WINDOW_DAYS);
+      const nextEarnings =
+        (earnings[p.symbol] || []).find(
+          (d) => d >= now && d <= stockEarningsWindow.toISOString().slice(0, 10)
+        ) ?? null;
       return {
         ...pClean,
         cost: p.cost,
@@ -125,6 +144,7 @@ export async function GET() {
         pl,
         plPct: pl === null || !costTotal ? null : pl / costTotal,
         daysHeld: p.openedAt ? daysBetween(p.openedAt, now) : null,
+        nextEarnings,
       };
     }
 
@@ -214,7 +234,12 @@ export async function GET() {
       : null,
     stockValue: sum(stockRows.map((r) => r.value)),
     itmCount: putRows.filter((r) => r.itm).length,
-    earningsCount: putRows.filter((r) => r.nextEarnings).length,
+    // Đếm cả cổ phiếu lẫn put - trước đây chỉ tính put, nên một mã đang
+    // giữ dạng cổ phiếu sắp earnings không hiện cảnh báo dù chỉ còn vài
+    // ngày.
+    earningsCount:
+      putRows.filter((r) => r.nextEarnings).length +
+      stockRows.filter((r) => r.nextEarnings).length,
     nearestDte: putRows.length ? Math.min(...putRows.map((r) => r.dte)) : null,
     quoteError,
   };
