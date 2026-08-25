@@ -1457,6 +1457,24 @@ table.results tbody tr.clickable {
   padding: 3px 0;
 }
 
+/* Ô "Cần để ý" trong khối .stats: dd bọc details/summary nên chữ tổng vẫn
+   giữ cỡ/đậm/màu warn của .stats dd - chỉ list bên trong đổi nhỏ hơn, giống
+   .pfskipped, và có con trỏ tay để biết bấm được. */
+.stats dd summary {
+  cursor: pointer;
+}
+.pfattnlist {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--ink);
+}
+.pfattnlist li {
+  padding: 3px 0;
+}
+
 /* Từng tài khoản, ngay trên dòng tổng: thụt vào và nhạt hơn để đọc ra ngay
    đây là phần chia nhỏ của tổng, không phải thêm một mã nữa. */
 .pfacct {
