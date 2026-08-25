@@ -440,6 +440,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Could not read the realized gain/loss report. The raw error:',
   },
   'pf.realizedTotal': { vi: 'Tổng đã chốt', en: 'Realized total' },
+  'pf.earningsGap': {
+    vi: 'Chưa có dữ liệu earnings cho những mã này, nên "Cần để ý" không cảnh báo được dù sắp earnings thật - thêm vào watchlist rồi chạy scripts/earnings-sync.js để lấy ngày:',
+    en: 'No earnings data for these symbols yet, so "Needs attention" cannot warn even if earnings are close - add them to the watchlist and run scripts/earnings-sync.js to fetch the dates:',
+  },
   'pf.realizedAsOf': {
     vi: (d: string) =>
       `Theo báo cáo Realized Gain/Loss của Schwab, tính tới ${d}. Muốn cập nhật thì xuất lại báo cáo và thay file trong data/realized.`,

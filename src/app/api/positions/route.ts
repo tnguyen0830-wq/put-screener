@@ -145,6 +145,10 @@ export async function GET() {
         plPct: pl === null || !costTotal ? null : pl / costTotal,
         daysHeld: p.openedAt ? daysBetween(p.openedAt, now) : null,
         nextEarnings,
+        // Không có mã này trong data/earnings.json - "không sắp earnings" và
+        // "chưa có dữ liệu để biết" là hai chuyện khác nhau, và im lặng đúng
+        // là lý do CRWD từng bị bỏ sót dù chỉ còn 2 ngày.
+        earningsUnknown: !(p.symbol in earnings),
       };
     }
 
@@ -169,9 +173,11 @@ export async function GET() {
     // một đêm.
     const nextEarnings =
       (earnings[p.symbol] || []).find((d) => d >= now && d <= p.expiration!) ?? null;
+    const earningsUnknown = !(p.symbol in earnings);
 
     return {
       ...p,
+      earningsUnknown,
       spot,
       changePct: under?.netPercentChange ?? null,
       mark,
@@ -242,6 +248,12 @@ export async function GET() {
       stockRows.filter((r) => r.nextEarnings).length,
     nearestDte: putRows.length ? Math.min(...putRows.map((r) => r.dte)) : null,
     quoteError,
+    // Mã đang giữ vị thế mà data/earnings.json hoàn toàn không có - "Cần để
+    // ý" không thể cảnh báo earnings cho những mã này, không phải vì chúng
+    // không sắp earnings, mà vì không có dữ liệu để biết. Chính đây là lý do
+    // CRWD từng bị bỏ sót dù chỉ còn 2 ngày - CRWD chưa từng nằm trong
+    // watchlist nên script đồng bộ chưa bao giờ lấy ngày của nó.
+    earningsDataGap: [...new Set(rows.filter((r: any) => r.earningsUnknown).map((r: any) => r.symbol))],
   };
 
   return NextResponse.json({ rows, summary, skipped, cash });

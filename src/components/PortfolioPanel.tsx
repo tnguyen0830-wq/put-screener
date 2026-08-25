@@ -55,6 +55,10 @@ type Summary = {
   nearestDte: number | null;
   dayPl: number | null;
   quoteError: string | null;
+  /** Mã đang giữ vị thế mà data/earnings.json không có - "Cần để ý" không
+   *  cảnh báo earnings được cho những mã này, không phải vì không sắp
+   *  earnings mà vì không có dữ liệu để biết. */
+  earningsDataGap: string[];
 };
 
 type Skipped = { symbol: string; reason: string };
@@ -205,6 +209,11 @@ export default function PortfolioPanel() {
         {realizedError && (
           <p className="cap warnline">
             {t('pf.realizedFailed')} <code>{realizedError}</code>
+          </p>
+        )}
+        {summary && summary.earningsDataGap.length > 0 && (
+          <p className="cap warnline">
+            {t('pf.earningsGap')} <code>{summary.earningsDataGap.join(', ')}</code>
           </p>
         )}
 
