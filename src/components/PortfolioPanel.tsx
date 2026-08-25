@@ -218,6 +218,12 @@ export default function PortfolioPanel() {
           <>
             <h3 className="dsec">{t('pf.cashHead')}</h3>
             <dl className="stats">
+              {cash.accountValue !== null && (
+                <div>
+                  <dt>{t('pf.accountValue')}</dt>
+                  <dd className={sc(cash.accountValue)}>{usd(cash.accountValue, 0)}</dd>
+                </div>
+              )}
               {cash.cash !== null && (
                 <div>
                   <dt>{t('pf.cash')}</dt>
@@ -228,12 +234,6 @@ export default function PortfolioPanel() {
                 <div>
                   <dt>{t('pf.buyingPower')}</dt>
                   <dd className={sc(cash.buyingPower)}>{usd(cash.buyingPower, 0)}</dd>
-                </div>
-              )}
-              {cash.accountValue !== null && (
-                <div>
-                  <dt>{t('pf.accountValue')}</dt>
-                  <dd className={sc(cash.accountValue)}>{usd(cash.accountValue, 0)}</dd>
                 </div>
               )}
             </dl>
