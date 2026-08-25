@@ -84,6 +84,10 @@ const pct = (n: number | null | undefined, d = 1) =>
   n === null || n === undefined ? '—' : `${(n * 100).toFixed(d)}%`;
 const signed = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `${n >= 0 ? '+' : ''}${usd(n, 0)}`;
+/** Xanh nếu số ≥ 0, đỏ nếu âm - áp cho mọi ô tiền/% trong bảng, không riêng
+ *  các cột lời/lỗ. null/undefined thì không tô màu, không có số để so dấu. */
+const sc = (n: number | null | undefined) =>
+  n === null || n === undefined ? undefined : n >= 0 ? 'good' : 'bad';
 
 /** Nhãn cho lý do một vị thế Schwab không hiện ở đây - xem mapSchwabPositions(). */
 const reasonKey = (reason: string) => {
@@ -217,19 +221,19 @@ export default function PortfolioPanel() {
               {cash.cash !== null && (
                 <div>
                   <dt>{t('pf.cash')}</dt>
-                  <dd>{usd(cash.cash, 0)}</dd>
+                  <dd className={sc(cash.cash)}>{usd(cash.cash, 0)}</dd>
                 </div>
               )}
               {cash.buyingPower !== null && (
                 <div>
                   <dt>{t('pf.buyingPower')}</dt>
-                  <dd>{usd(cash.buyingPower, 0)}</dd>
+                  <dd className={sc(cash.buyingPower)}>{usd(cash.buyingPower, 0)}</dd>
                 </div>
               )}
               {cash.accountValue !== null && (
                 <div>
                   <dt>{t('pf.accountValue')}</dt>
-                  <dd>{usd(cash.accountValue, 0)}</dd>
+                  <dd className={sc(cash.accountValue)}>{usd(cash.accountValue, 0)}</dd>
                 </div>
               )}
             </dl>
@@ -275,15 +279,15 @@ export default function PortfolioPanel() {
             )}
             <div>
               <dt>{t('pf.collateral')}</dt>
-              <dd>{usd(summary.collateral, 0)}</dd>
+              <dd className={sc(summary.collateral)}>{usd(summary.collateral, 0)}</dd>
             </div>
             <div>
               <dt>{t('pf.creditTotal')}</dt>
-              <dd>{usd(summary.creditTotal, 0)}</dd>
+              <dd className={sc(summary.creditTotal)}>{usd(summary.creditTotal, 0)}</dd>
             </div>
             <div>
               <dt>{t('pf.stockValue')}</dt>
-              <dd>{usd(summary.stockValue, 0)}</dd>
+              <dd className={sc(summary.stockValue)}>{usd(summary.stockValue, 0)}</dd>
             </div>
             <div>
               <dt>{t('pf.nearestDte')}</dt>
@@ -338,26 +342,28 @@ export default function PortfolioPanel() {
                           {r.nextEarnings ? ` · ⚠ ${t('pf.earnings', r.nextEarnings)}` : ''}
                         </span>
                       </td>
-                      <td>{usd(r.strike, 0)}</td>
+                      <td className={sc(r.strike)}>{usd(r.strike, 0)}</td>
                       <td>
                         {r.expiration}
                         <span className="pfsub">{t('pf.days', r.dte ?? 0)}</span>
                       </td>
-                      <td>
+                      <td className={sc(r.credit)}>
                         {usd(r.credit)}
                         <span className="pfsub">×{r.contracts}</span>
                       </td>
-                      <td>{usd(r.mark)}</td>
+                      <td className={sc(r.mark)}>{usd(r.mark)}</td>
                       <td className={(r.pl ?? 0) >= 0 ? 'good' : 'bad'}>{signed(r.pl)}</td>
-                      <td>{pct(r.captured, 0)}</td>
+                      <td className={sc(r.captured)}>{pct(r.captured, 0)}</td>
                       {/* Khoảng cách từ giá hiện tại xuống strike. Âm là đã vào
-                          trong tiền, tức là đang đứng trước khả năng bị assign. */}
-                      <td className={r.itm ? 'bad' : (r.cushion ?? 1) < 0.03 ? 'warn' : undefined}>
+                          trong tiền, tức là đang đứng trước khả năng bị assign -
+                          ưu tiên hơn màu theo dấu thường, vì đây là cảnh báo rủi
+                          ro chứ không chỉ là số dương/âm đơn thuần. */}
+                      <td className={r.itm ? 'bad' : (r.cushion ?? 1) < 0.03 ? 'warn' : sc(r.cushion)}>
                         {pct(r.cushion, 1)}
                       </td>
                       {/* Con số chính là phần credit còn lại quy năm - thứ
                           quyết định giữ tiếp hay đóng sớm. */}
-                      <td>{pct(r.rocRemaining, 0)}</td>
+                      <td className={sc(r.rocRemaining)}>{pct(r.rocRemaining, 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -387,9 +393,9 @@ export default function PortfolioPanel() {
                     <tr key={r.id}>
                       <td><b>{r.symbol}</b></td>
                       <td>{r.shares}</td>
-                      <td>{usd(r.cost)}</td>
-                      <td>{usd(r.spot)}</td>
-                      <td>{usd(r.value, 0)}</td>
+                      <td className={sc(r.cost)}>{usd(r.cost)}</td>
+                      <td className={sc(r.spot)}>{usd(r.spot)}</td>
+                      <td className={sc(r.value)}>{usd(r.value, 0)}</td>
                       <td className={r.dayPl === undefined ? undefined : r.dayPl >= 0 ? 'good' : 'bad'}>
                         {signed(r.dayPl)}
                       </td>
