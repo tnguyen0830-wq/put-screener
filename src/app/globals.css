@@ -706,7 +706,7 @@ table.results {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--data);
-  font-size: 15.5px;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -748,7 +748,7 @@ table.results tbody tr:hover {
 .sym {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 15px;
   letter-spacing: 0.02em;
 }
 
@@ -928,7 +928,7 @@ table.results tbody tr.clickable {
 .stats dd {
   margin: 2px 0 0;
   font-family: var(--data);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1407,10 +1407,9 @@ table.results tbody tr.clickable {
 
 .pftable {
   min-width: 640px;
-  /* To hơn bảng screener mặc định - giống cỡ chữ trên app Schwab thật, đọc
-     được ngay không phải nheo mắt. Màu good/bad rực và đậm đã là mặc định
-     chung của site, không cần định nghĩa riêng ở đây nữa. */
-  font-size: 17px;
+  /* Cùng cỡ 15px với mọi bảng khác trên site (results, ratings, stats) -
+     một mặt bằng chữ thống nhất giữa các tab, không riêng bảng này to hơn. */
+  font-size: 15px;
 }
 .pftable th {
   font-size: 12px;
