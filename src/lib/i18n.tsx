@@ -475,8 +475,29 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.nearestDte': { vi: 'Đáo hạn gần nhất', en: 'Nearest expiry' },
   'pf.attention': { vi: 'Cần để ý', en: 'Needs attention' },
   'pf.attentionValue': {
-    vi: (v: any) => `${v.itm} trong tiền · ${v.earnings} sắp earnings`,
-    en: (v: any) => `${v.itm} in the money · ${v.earnings} with earnings due`,
+    vi: (v: any) => `${v.itm} trong tiền · ${v.earnings} sắp earnings · ${v.vol} vol cảnh báo`,
+    en: (v: any) =>
+      `${v.itm} in the money · ${v.earnings} with earnings due · ${v.vol} vol warnings`,
+  },
+  'pf.attnBackwardation': {
+    vi: (v: any) =>
+      `${v.symbol} — term structure ${v.slope} (dưới 0.95): thị trường đang định giá một sự kiện sắp xảy ra`,
+    en: (v: any) =>
+      `${v.symbol} — term structure ${v.slope} (below 0.95): the market is pricing a near-term event`,
+  },
+  'pf.attnSkew': {
+    vi: (v: any) =>
+      `${v.symbol} — put skew z-score ${v.z} (trên 2): thị trường đang trả giá cao bất thường cho bảo hiểm chiều giảm`,
+    en: (v: any) =>
+      `${v.symbol} — put skew z-score ${v.z} (above 2): the market is paying unusually much for downside protection`,
+  },
+  'pf.volWarming': {
+    vi: 'Đang tính term structure và put skew cho các mã đang giữ — số sẽ hiện ở lần làm mới sau (mỗi 15 phút một lần, vì mỗi mã tốn một request chuỗi quyền chọn).',
+    en: 'Computing term structure and put skew for held symbols — the numbers appear on the next refresh (every 15 minutes, since each symbol costs one option-chain request).',
+  },
+  'pf.volFailed': {
+    vi: 'Chưa đọc được bề mặt vol cho những mã này. Nguyên văn lỗi:',
+    en: 'Could not read the vol surface for these symbols. The raw error:',
   },
   'pf.attnItm': {
     vi: (v: any) => `${v.symbol} — đã vào trong tiền (strike $${v.strike})`,

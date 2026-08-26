@@ -3,6 +3,7 @@ import { quotes, traderGet } from '@/lib/schwab';
 import { loadEarnings } from '@/lib/screener';
 import { daysBetween, mapCashBalances, mapSchwabPositions, osiSymbol, type Position } from '@/lib/positions';
 import { computePositionSizing } from '@/lib/exposure';
+import { readVolWatch } from '@/lib/volwatch';
 
 /**
  * Danh mục: đọc thẳng từ tài khoản Schwab, định giá lại bằng báo giá Schwab.
@@ -234,6 +235,23 @@ export async function GET() {
   const sum = (xs: (number | null)[]) =>
     xs.reduce<number>((a, b) => a + (b ?? 0), 0);
 
+  /**
+   * Vol-surface watch on the puts already open: the same term-structure and
+   * put-skew checks the screener runs as hard gates, pointed at what is
+   * held rather than at what is being shopped for. Served from a 15-minute
+   * cache and refreshed in the background, so this adds no latency here
+   * (see lib/volwatch.ts for why its clock differs from the panel's 60s).
+   */
+  const vol = readVolWatch(putRows.map((r) => r.symbol));
+  for (const r of putRows) {
+    const v = vol.bySymbol[r.symbol];
+    r.tsSlope = v?.tsSlope ?? null;
+    r.skewZ = v?.skewZ ?? null;
+    r.backwardation = v?.backwardation ?? false;
+    r.skewElevated = v?.skewElevated ?? false;
+    r.volAt = v?.at ?? null;
+  }
+
   const summary = {
     putCount: putRows.length,
     stockCount: stockRows.length,
@@ -255,6 +273,15 @@ export async function GET() {
       putRows.filter((r) => r.nextEarnings).length +
       stockRows.filter((r) => r.nextEarnings).length,
     nearestDte: putRows.length ? Math.min(...putRows.map((r) => r.dte)) : null,
+    // Put đang giữ mà bề mặt vol đang cảnh báo: backwardation (thị trường
+    // định giá một sự kiện gần) hoặc skew bất thường cao (thị trường trả
+    // giá cao bất thường cho bảo hiểm chiều giảm ở đúng mã đó).
+    volAlertCount: putRows.filter((r) => r.backwardation || r.skewElevated).length,
+    // "Chưa tính xong" khác hẳn "không có cảnh báo" - lần tải đầu sau khi
+    // cache hết hạn sẽ trả về rỗng trong lúc làm mới ngầm, và im lặng ở đây
+    // đọc thành "mọi thứ ổn" trong khi thật ra là chưa biết.
+    volWarmingUp: vol.warmingUp,
+    volErrors: vol.errors,
     quoteError,
     // Mã đang giữ vị thế mà data/earnings.json hoàn toàn không có - "Cần để
     // ý" không thể cảnh báo earnings cho những mã này, không phải vì chúng

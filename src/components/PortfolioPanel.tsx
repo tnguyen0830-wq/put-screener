@@ -31,6 +31,11 @@ type Row = {
   cushion?: number | null;
   itm?: boolean | null;
   nextEarnings?: string | null;
+  /* bề mặt vol của chính mã đang giữ - xem lib/volwatch.ts */
+  tsSlope?: number | null;
+  skewZ?: number | null;
+  backwardation?: boolean;
+  skewElevated?: boolean;
   /** Lời/lỗ hôm nay, Schwab tự tính - cột "P/L Day" trên app của họ. */
   dayPl?: number;
   /* stock */
@@ -52,6 +57,11 @@ type Summary = {
   stockValue: number;
   itmCount: number;
   earningsCount: number;
+  /** Put đang giữ có backwardation hoặc skew bất thường - xem lib/volwatch.ts. */
+  volAlertCount: number;
+  /** Còn mã chưa có số đo nào: "chưa biết", không phải "không sao". */
+  volWarmingUp: boolean;
+  volErrors: Record<string, string>;
   nearestDte: number | null;
   dayPl: number | null;
   quoteError: string | null;
@@ -201,6 +211,7 @@ export default function PortfolioPanel() {
   const earningsSoon = [...puts, ...stocks]
     .filter((r) => r.nextEarnings)
     .sort((a, b) => (a.nextEarnings! < b.nextEarnings! ? -1 : 1));
+  const volAlerts = puts.filter((r) => r.backwardation || r.skewElevated);
   // marketValue không đọc được thì "Giá trị" dùng giá thị trường sống thay
   // vì con số Schwab tự tính - lời/lỗ vẫn tự tính từ cost (averageLongPrice)
   // như bình thường, không bị ảnh hưởng. Vẫn nói ra để không lặng lẽ đoán.
@@ -239,6 +250,19 @@ export default function PortfolioPanel() {
         {realizedError && (
           <p className="cap warnline">
             {t('pf.realizedFailed')} <code>{realizedError}</code>
+          </p>
+        )}
+        {summary && summary.volWarmingUp && (
+          <p className="cap">{t('pf.volWarming')}</p>
+        )}
+        {summary && Object.keys(summary.volErrors ?? {}).length > 0 && (
+          <p className="cap warnline">
+            {t('pf.volFailed')}{' '}
+            <code>
+              {Object.entries(summary.volErrors)
+                .map(([s, e]) => `${s}: ${e}`)
+                .join(' · ')}
+            </code>
           </p>
         )}
         {summary && summary.earningsDataGap.length > 0 && (
@@ -334,15 +358,16 @@ export default function PortfolioPanel() {
             </div>
             <div>
               <dt>{t('pf.attention')}</dt>
-              {summary.itmCount || summary.earningsCount ? (
-                // Có gì để nói mới cho bấm mở - ô "0 · 0" thì không có gì để
-                // liệt kê, giữ dạng chữ thường như cũ.
+              {summary.itmCount || summary.earningsCount || summary.volAlertCount ? (
+                // Có gì để nói mới cho bấm mở - ô "0 · 0 · 0" thì không có gì
+                // để liệt kê, giữ dạng chữ thường như cũ.
                 <dd className="warn">
                   <details>
                     <summary>
                       {t('pf.attentionValue', {
                         itm: summary.itmCount,
                         earnings: summary.earningsCount,
+                        vol: summary.volAlertCount,
                       })}
                     </summary>
                     <ul className="pfattnlist">
@@ -356,11 +381,24 @@ export default function PortfolioPanel() {
                           {t('pf.attnEarnings', { symbol: r.symbol, date: r.nextEarnings ?? '' })}
                         </li>
                       ))}
+                      {volAlerts.map((r) => (
+                        <li key={`vol-${r.id}`}>
+                          {r.backwardation
+                            ? t('pf.attnBackwardation', {
+                                symbol: r.symbol,
+                                slope: (r.tsSlope ?? 0).toFixed(2),
+                              })
+                            : t('pf.attnSkew', {
+                                symbol: r.symbol,
+                                z: (r.skewZ ?? 0).toFixed(1),
+                              })}
+                        </li>
+                      ))}
                     </ul>
                   </details>
                 </dd>
               ) : (
-                <dd>{t('pf.attentionValue', { itm: 0, earnings: 0 })}</dd>
+                <dd>{t('pf.attentionValue', { itm: 0, earnings: 0, vol: 0 })}</dd>
               )}
             </div>
           </dl>
@@ -475,6 +513,27 @@ export default function PortfolioPanel() {
                           {usd(r.spot)}
                           {r.nextEarnings ? ` · ⚠ ${t('pf.earnings', r.nextEarnings)}` : ''}
                         </span>
+                        {/* Hiện cả con số chứ không chỉ bật/tắt cảnh báo: 0.96
+                            và 0.80 đều "chưa backwardation" nhưng nói hai
+                            chuyện rất khác nhau. */}
+                        {(r.tsSlope !== null && r.tsSlope !== undefined) ||
+                        (r.skewZ !== null && r.skewZ !== undefined) ? (
+                          <span className="pfsub">
+                            {r.tsSlope !== null && r.tsSlope !== undefined && (
+                              <span className={r.backwardation ? 'bad' : undefined}>
+                                TS {r.tsSlope.toFixed(2)}
+                              </span>
+                            )}
+                            {r.skewZ !== null && r.skewZ !== undefined && (
+                              <>
+                                {' · '}
+                                <span className={r.skewElevated ? 'bad' : undefined}>
+                                  skew z {r.skewZ.toFixed(1)}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                        ) : null}
                       </td>
                       <td className={sc(r.strike)}>{usd(r.strike, 0)}</td>
                       <td>
