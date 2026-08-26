@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { quotes, fullChain, dailyHistory } from '@/lib/schwab';
+import { quotes, fullChain } from '@/lib/schwab';
 import {
   evaluate,
   flattenPuts,
@@ -17,10 +17,10 @@ import {
   loadEarnings,
   windowFrom,
   windowTo,
-  type Bar,
   type UnderlyingContext,
 } from '@/lib/screener';
 import { readWatchlist } from '@/lib/watchlist';
+import { historyBars } from '@/lib/history';
 import { isOn, type Filters, type StreamEvent } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -38,27 +38,6 @@ async function constituents(): Promise<Constituent[]> {
 
 /* Price history barely moves during a session and costs a request each,
    so it is cached per symbol per day. */
-const HIST_DIR = path.resolve('./.cache/history');
-
-async function historyBars(symbol: string): Promise<Bar[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  const file = path.join(HIST_DIR, `${symbol.replace('/', '_')}.json`);
-  try {
-    const cached = JSON.parse(await fs.readFile(file, 'utf8'));
-    if (cached.d === today) return cached.bars as Bar[];
-  } catch {
-    /* cache miss */
-  }
-  const data = await dailyHistory(symbol, 1);
-  const bars: Bar[] = (data?.candles ?? []).map((c: any) => ({
-    datetime: c.datetime,
-    close: c.close,
-  }));
-  await fs.mkdir(HIST_DIR, { recursive: true });
-  await fs.writeFile(file, JSON.stringify({ d: today, bars }));
-  return bars;
-}
-
 async function pooled<T>(
   items: T[],
   size: number,

@@ -491,6 +491,38 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `${n} days`,
   },
 
+  'pf.sizingHead': { vi: 'Quản lý quy mô vị thế', en: 'Position sizing' },
+  'pf.sizingFailed': {
+    vi: 'Chưa tính được cluster exposure. Nguyên văn lỗi:',
+    en: 'Could not compute cluster exposure. The raw error:',
+  },
+  'pf.sizingTotal': {
+    vi: (limit: number) => `Tổng cash-secured / TK (giới hạn ${limit}%)`,
+    en: (limit: number) => `Total cash-secured / account (limit ${limit}%)`,
+  },
+  'pf.sizingCluster': {
+    vi: (limit: number) => `Cluster exposure (giới hạn ${limit}%)`,
+    en: (limit: number) => `Cluster exposure (limit ${limit}%)`,
+  },
+  'pf.sizingBySymbol': {
+    vi: (limit: number) => `Theo mã (giới hạn ${limit}%/mã)`,
+    en: (limit: number) => `By symbol (limit ${limit}%/symbol)`,
+  },
+  'pf.sizingBySector': {
+    vi: (limit: number) => `Theo ngành (giới hạn ${limit}%/ngành)`,
+    en: (limit: number) => `By sector (limit ${limit}%/sector)`,
+  },
+  'pf.sizingClusterPairs': { vi: 'Các cặp tương quan cao', en: 'Highest-correlated pairs' },
+  'pf.sizingClusterNote': {
+    vi: 'Đóng góp = căn bậc hai (thế chấp mã A × thế chấp mã B) × hệ số tương quan 60 phiên. Hai vị thế tương quan gần 1 coi như cộng gộp thành một vị thế lớn hơn về rủi ro tập trung.',
+    en: 'Contribution = sqrt(symbol A collateral × symbol B collateral) × 60-session correlation. Two positions correlated near 1 behave like one larger position for concentration risk.',
+  },
+  'pf.sizingClusterContribution': { vi: 'đóng góp', en: 'contribution' },
+  'pf.sizingClusterGap': {
+    vi: 'Chưa đủ lịch sử giá 60 phiên cho những mã này nên chưa tính được tương quan:',
+    en: 'Not enough 60-session price history for these symbols to compute correlation yet:',
+  },
+
   'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
   'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
 

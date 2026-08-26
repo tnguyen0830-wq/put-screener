@@ -80,12 +80,32 @@ type Realized = {
   lots: number;
 };
 
+type SymbolExposure = { symbol: string; collateral: number; pct: number | null; overLimit: boolean };
+type SectorExposure = { sector: string; collateral: number; pct: number | null; overLimit: boolean };
+type ClusterPair = { a: string; b: string; corr: number; contribution: number };
+type PositionSizing = {
+  accountValue: number | null;
+  totalCollateral: number;
+  totalCollateralPct: number | null;
+  totalCollateralOverLimit: boolean;
+  bySymbol: SymbolExposure[];
+  bySector: SectorExposure[];
+  clusterExposurePct: number | null;
+  clusterOverLimit: boolean;
+  clusterPairs: ClusterPair[];
+  clusterDataGap: string[];
+  limits: { perSymbolPct: number; perSectorPct: number; totalCollateralPct: number; clusterPct: number };
+};
+
 const usd = (n: number | null | undefined, d = 2) =>
   n === null || n === undefined
     ? '—'
     : n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: d });
 const pct = (n: number | null | undefined, d = 1) =>
   n === null || n === undefined ? '—' : `${(n * 100).toFixed(d)}%`;
+/** For fields already scaled 0-100 (position sizing), unlike pct() above which expects a decimal. */
+const pctN = (n: number | null | undefined, d = 1) =>
+  n === null || n === undefined ? '—' : `${n.toFixed(d)}%`;
 const signed = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `${n >= 0 ? '+' : ''}${usd(n, 0)}`;
 /** Xanh nếu số ≥ 0, đỏ nếu âm - áp cho mọi ô tiền/% trong bảng, không riêng
@@ -116,6 +136,8 @@ export default function PortfolioPanel() {
   const [realizedError, setRealizedError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [positionSizing, setPositionSizing] = useState<PositionSizing | null>(null);
+  const [positionSizingError, setPositionSizingError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -126,6 +148,8 @@ export default function PortfolioPanel() {
       setSummary(j.summary ?? null);
       setSkipped(j.skipped ?? []);
       setCash(j.cash ?? null);
+      setPositionSizing(j.positionSizing ?? null);
+      setPositionSizingError(j.positionSizingError ?? null);
       setError(null);
     } catch (e: any) {
       setError(e.message);
@@ -340,6 +364,79 @@ export default function PortfolioPanel() {
               )}
             </div>
           </dl>
+        )}
+
+        {positionSizingError && (
+          <p className="cap warnline">
+            {t('pf.sizingFailed')} <code>{positionSizingError}</code>
+          </p>
+        )}
+
+        {positionSizing && (
+          <>
+            <h3 className="dsec">{t('pf.sizingHead')}</h3>
+            <dl className="stats">
+              <div>
+                <dt>{t('pf.sizingTotal', positionSizing.limits.totalCollateralPct)}</dt>
+                <dd className={positionSizing.totalCollateralOverLimit ? 'bad' : 'good'}>
+                  {pctN(positionSizing.totalCollateralPct)}
+                </dd>
+              </div>
+              {positionSizing.clusterExposurePct !== null && (
+                <div>
+                  <dt>{t('pf.sizingCluster', positionSizing.limits.clusterPct)}</dt>
+                  <dd className={positionSizing.clusterOverLimit ? 'bad' : 'good'}>
+                    {pctN(positionSizing.clusterExposurePct)}
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            <details className="rrgtable">
+              <summary>{t('pf.sizingBySymbol', positionSizing.limits.perSymbolPct)}</summary>
+              <ul className="pfskipped">
+                {positionSizing.bySymbol.map((s) => (
+                  <li key={`sz-sym-${s.symbol}`}>
+                    <b>{s.symbol}</b> — {usd(s.collateral, 0)}{' '}
+                    <span className={s.overLimit ? 'bad' : 'good'}>({pctN(s.pct)})</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
+            <details className="rrgtable">
+              <summary>{t('pf.sizingBySector', positionSizing.limits.perSectorPct)}</summary>
+              <ul className="pfskipped">
+                {positionSizing.bySector.map((s) => (
+                  <li key={`sz-sec-${s.sector}`}>
+                    <b>{s.sector}</b> — {usd(s.collateral, 0)}{' '}
+                    <span className={s.overLimit ? 'bad' : 'good'}>({pctN(s.pct)})</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
+            {positionSizing.clusterPairs.length > 0 && (
+              <details className="rrgtable">
+                <summary>{t('pf.sizingClusterPairs')}</summary>
+                <p className="cap">{t('pf.sizingClusterNote')}</p>
+                <ul className="pfskipped">
+                  {positionSizing.clusterPairs.map((p) => (
+                    <li key={`sz-pair-${p.a}-${p.b}`}>
+                      <b>{p.a}</b> ↔ <b>{p.b}</b> — corr {p.corr.toFixed(2)},{' '}
+                      {t('pf.sizingClusterContribution')} {usd(p.contribution, 0)}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
+            {positionSizing.clusterDataGap.length > 0 && (
+              <p className="cap warnline">
+                {t('pf.sizingClusterGap')} <code>{positionSizing.clusterDataGap.join(', ')}</code>
+              </p>
+            )}
+          </>
         )}
 
         {rows === null && !errBody ? (
