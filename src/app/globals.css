@@ -942,6 +942,13 @@ table.results tbody tr.clickable {
   line-height: 1.55;
 }
 
+.dd-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: -6px 0 14px;
+}
+
 .warnlist {
   margin: 0 0 16px;
   padding-left: 18px;

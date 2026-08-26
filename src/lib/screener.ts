@@ -295,6 +295,9 @@ export async function evaluate(
       breakeven,
       cushionPct: (u.spot - c.strikePrice) / u.spot,
       beVsLow52Pct: u.low52 > 0 ? ((breakeven - u.low52) / u.low52) * 100 : 0,
+      maxLoss: capital - credit,
+      returnIfAssignedPct:
+        ((credit - Math.max(0, c.strikePrice - u.spot) * 100) / capital) * 100,
       earningsBefore: earn ?? null,
       warnings,
     };

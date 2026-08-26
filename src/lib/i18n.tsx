@@ -330,7 +330,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dd.credit': { vi: 'Credit nhận', en: 'Credit received' },
   'dd.capital': { vi: 'Vốn khoá', en: 'Capital tied up' },
   'dd.breakeven': { vi: 'Break-even', en: 'Break-even' },
-  'dd.annual': { vi: 'Lợi suất/năm', en: 'Annualized' },
+  'dd.annual': { vi: 'Lợi suất/năm (quy đổi)', en: 'Annualized (naive)' },
+  'dd.roiExpired': { vi: 'Lợi suất nếu đáo hạn', en: 'Return if expired' },
+  'dd.roiAssigned': { vi: 'Lợi suất nếu bị assign', en: 'Return if assigned' },
+  'dd.maxLoss': { vi: 'Lỗ tối đa', en: 'Max loss' },
+  'dd.yieldNote': {
+    vi: 'Lợi suất/năm chỉ là quy đổi theo tỷ lệ ngày, không phải cam kết lặp lại suốt năm. "Nếu bị assign" tính theo giá hiện tại, không phải giá lúc đáo hạn thật - giá còn thay đổi tới lúc đó. Lỗ tối đa giả định cổ phiếu về 0.',
+    en: 'Annualized is a naive day-count scaling, not a promise this rate repeats all year. "If assigned" uses today’s spot, not the real price at expiration - spot will move before then. Max loss assumes the stock goes to zero.',
+  },
   'dd.assigned': {
     vi: (v: any) =>
       `Nếu bị assign: bạn mua 100 ${v.symbol} với giá vốn thực ${v.be}, tức thấp hơn giá hiện tại ${v.pct}%.`,
