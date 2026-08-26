@@ -58,6 +58,8 @@ export default function Page() {
   const [selected, setSelected] = useState<Candidate | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [savingList, setSavingList] = useState(false);
+  /** Thời điểm của kết quả đang hiện, nếu nó được nạp lại từ lần quét trước. */
+  const [scanAt, setScanAt] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/watchlist')
@@ -82,6 +84,30 @@ export default function Page() {
     }
   }, []);
 
+  /**
+   * Mở app lên là có ngay kết quả lần quét trước.
+   *
+   * Chạy lại mỗi khi đổi phạm vi quét, vì hai phạm vi lưu riêng - gạt từ
+   * watchlist sang cả rổ thì phải thấy đúng kết quả của cả rổ, không phải
+   * bảng trống.
+   */
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/screen/last?universe=${filters.universe}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive || !j.scan) return;
+        // Không đè lên kết quả đang quét dở hay vừa quét xong trong phiên này.
+        setRows((prev) => (prev.length ? prev : j.scan.rows ?? []));
+        setScanAt((prev) => prev ?? j.scan.at ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.universe]);
+
   useEffect(() => {
     fetch('/api/auth/status')
       .then((r) => r.json())
@@ -92,6 +118,7 @@ export default function Page() {
   const run = useCallback(async () => {
     setRunning(true);
     setRows([]);
+    setScanAt(null);
     setError(null);
     setProgress({ done: 0, total: 0 });
     setPhase(t('phase.quotes'));
@@ -236,6 +263,13 @@ export default function Page() {
                 : phase || t('res.count', rows.length)}
             </div>
             <div className="panel-body" style={{ paddingBottom: 0 }}>
+              {/* Kết quả nạp lại là ẢNH CHỤP: giá, IV, spread đều đã cũ. Nói
+                  rõ giờ quét ngay trên đầu bảng, vì một bảng số trông y hệt
+                  lúc mới quét mà thật ra đã cũ vài tiếng là thứ dễ đọc nhầm
+                  thành giá sống nhất. */}
+              {scanAt !== null && !running && (
+                <p className="cap warnline">{t('res.saved', scanAt)}</p>
+              )}
               <ColorLegend />
             </div>
             <ResultsTable rows={rows} onSelect={setSelected} />

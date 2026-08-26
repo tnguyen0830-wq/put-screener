@@ -20,8 +20,9 @@ import {
   type UnderlyingContext,
 } from '@/lib/screener';
 import { readWatchlist } from '@/lib/watchlist';
+import { saveScan } from '@/lib/scan-store';
 import { historyBars } from '@/lib/history';
-import { isOn, type Filters, type StreamEvent } from '@/lib/types';
+import { isOn, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 900;
@@ -138,6 +139,10 @@ export async function POST(req: NextRequest) {
         const to = windowTo(filters);
         let done = 0;
         let found = 0;
+        // Gom lại để lưu khi quét xong. Server đã cầm sẵn từng ứng viên lúc
+        // gửi đi, nên lưu ở đây rẻ hơn hẳn việc bắt trình duyệt gửi ngược
+        // toàn bộ kết quả về.
+        const collected: Candidate[] = [];
 
         await pooled(survivors, 4, async (c) => {
           try {
@@ -190,6 +195,7 @@ export async function POST(req: NextRequest) {
             const best = await evaluate(u, contracts, filters, earnings, termSkew);
             if (best) {
               found++;
+              collected.push(best);
               send({ type: 'candidate', data: best });
             }
           } catch (e: any) {
@@ -203,6 +209,25 @@ export async function POST(req: NextRequest) {
 
         await flushSnapshots();
         await flushSkewSnapshots();
+
+        // Lưu tự động, không có nút "Lưu": một lần quét tám phút mà phải nhớ
+        // bấm lưu thì sớm muộn cũng có lần quên. Hỏng chỗ này không được
+        // làm hỏng lần quét - kết quả đã stream xong về màn hình rồi.
+        try {
+          await saveScan({
+            universe: filters.universe,
+            at: Date.now(),
+            scanned: survivors.length,
+            ms: Date.now() - started,
+            rows: collected,
+          });
+        } catch (e: any) {
+          send({
+            type: 'error',
+            message: `Quét xong nhưng không lưu lại được: ${String(e?.message ?? e)}`,
+          });
+        }
+
         send({
           type: 'done',
           scanned: survivors.length,

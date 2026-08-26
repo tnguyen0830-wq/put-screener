@@ -227,6 +227,22 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   // ---- results ----
   'res.symbol': { vi: 'Mã', en: 'Ticker' },
+  'res.saved': {
+    vi: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const gio = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const ngay = same ? 'hôm nay' : d.toLocaleDateString('vi-VN');
+      return `Kết quả của lần quét lúc ${gio} ${ngay} - đây là ảnh chụp, giá và IV đã cũ. Bấm quét lại để lấy số mới.`;
+    },
+    en: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const day = same ? 'today' : d.toLocaleDateString('en-US');
+      return `From the scan at ${time} ${day} - a snapshot, so prices and IV are stale. Run the scan again for fresh numbers.`;
+    },
+  },
   'res.score': { vi: 'Điểm', en: 'Score' },
   'res.roc': { vi: 'LS/năm', en: 'Ann. yield' },
   'res.credit': { vi: 'Credit', en: 'Credit' },
