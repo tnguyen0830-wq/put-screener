@@ -19,6 +19,8 @@ const usd = (n: number) =>
     maximumFractionDigits: 2,
   });
 
+const sc = (n: number) => (n >= 0 ? 'good' : 'bad');
+
 export default function DetailDrawer({
   row,
   onClose,
@@ -78,23 +80,40 @@ export default function DetailDrawer({
             </div>
             <div>
               <dt>{t('dd.credit')}</dt>
-              <dd className="num-key">{usd(row.credit)}</dd>
+              <dd className={`num-key ${sc(row.credit)}`}>{usd(row.credit)}</dd>
             </div>
             <div>
               <dt>{t('dd.capital')}</dt>
-              <dd>{usd(row.capital)}</dd>
+              <dd className={sc(row.capital)}>{usd(row.capital)}</dd>
             </div>
             <div>
               <dt>{t('dd.breakeven')}</dt>
-              <dd className={row.breakeven < row.low52 ? 'warn' : undefined}>
+              <dd className={row.breakeven < row.low52 ? 'warn' : sc(row.breakeven)}>
                 {usd(row.breakeven)}
               </dd>
             </div>
             <div>
               <dt>{t('dd.annual')}</dt>
-              <dd className="num-key">{row.annualRocPct.toFixed(1)}%</dd>
+              <dd className={`num-key ${sc(row.annualRocPct)}`}>
+                {row.annualRocPct.toFixed(1)}%
+              </dd>
+            </div>
+            <div>
+              <dt>{t('dd.roiExpired')}</dt>
+              <dd className={`num-key ${sc(row.rocPct)}`}>{row.rocPct.toFixed(1)}%</dd>
+            </div>
+            <div>
+              <dt>{t('dd.roiAssigned')}</dt>
+              <dd className={`num-key ${sc(row.returnIfAssignedPct)}`}>
+                {row.returnIfAssignedPct.toFixed(1)}%
+              </dd>
+            </div>
+            <div>
+              <dt>{t('dd.maxLoss')}</dt>
+              <dd className="bad">{usd(row.maxLoss)}</dd>
             </div>
           </dl>
+          <p className="dd-note">{t('dd.yieldNote')}</p>
 
           <p className="assigned">
             {t('dd.assigned', {

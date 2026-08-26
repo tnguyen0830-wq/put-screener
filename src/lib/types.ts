@@ -89,11 +89,20 @@ export type Candidate = {
   // derived
   capital: number; // strike * 100
   credit: number; // mid * 100
-  rocPct: number; // credit / capital
-  annualRocPct: number;
+  rocPct: number; // credit / capital - also "return if expired" (max profit stays if the put expires worthless)
+  annualRocPct: number; // rocPct naively annualized by 365/dte - a rate, not a promise of that return over a year
   breakeven: number;
   cushionPct: number; // (spot - strike) / spot
   beVsLow52Pct: number; // (breakeven - low52) / low52
+  /** Cash put at risk if assigned and the stock went to zero: capital - credit. */
+  maxLoss: number;
+  /**
+   * P/L if assigned today at the current spot price, as a percent of capital.
+   * Not a forecast of assignment P/L at actual future expiration - spot will
+   * have moved by then. Uses today's spot as the only price this screener
+   * can know, so it reads "if nothing moves from here," not "at expiry."
+   */
+  returnIfAssignedPct: number;
   earningsBefore: string | null; // known earnings date inside the contract window
   score: number;
   warnings: string[];
