@@ -2226,3 +2226,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+
+/* Hàng nút của khu cảnh báo - xuống dòng gọn trên điện thoại. */
+.alrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}

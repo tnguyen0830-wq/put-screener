@@ -544,6 +544,38 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Not enough 60-session price history for these symbols to compute correlation yet:',
   },
 
+  // ---- cảnh báo đẩy ----
+  'al.head': { vi: 'Thông báo về điện thoại', en: 'Phone alerts' },
+  'al.on': { vi: 'Đang bật', en: 'On' },
+  'al.off': { vi: 'Chưa cấu hình', en: 'Not configured' },
+  'al.notSubscribed': { vi: 'Chưa đăng ký trên máy này', en: 'Not subscribed on this device' },
+  'al.webPush': { vi: 'Thông báo trình duyệt', en: 'Browser push' },
+  'al.lastRun': { vi: 'Kiểm tra lúc', en: 'Last checked' },
+  'al.enablePush': { vi: 'Bật thông báo trên máy này', en: 'Enable on this device' },
+  'al.test': { vi: 'Gửi thử ngay', en: 'Send a test now' },
+  'al.closed': {
+    vi: 'Ngoài giờ giao dịch nên không kiểm tra - chuỗi quyền chọn không đổi, kiểm tra chỉ tốn hạn mức request.',
+    en: 'Outside market hours, so no check runs - the option chain does not move and checking only burns rate limit.',
+  },
+  'al.nothingOn': {
+    vi: 'Chưa kênh nào được cấu hình, nên sẽ không có thông báo nào được gửi. Đặt TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID hoặc VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY trên Render.',
+    en: 'No channel configured, so nothing will be sent. Set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID or VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY on Render.',
+  },
+  'al.runErrors': { vi: 'Lần kiểm tra gần nhất báo lỗi:', en: 'The last check reported:' },
+  'al.testOk': {
+    vi: (v: any) => `Đã chạy: tìm thấy ${v.found} cảnh báo, gửi đi ${v.sent}. (Đã gửi hôm nay rồi thì không gửi lại.)`,
+    en: (v: any) => `Ran: ${v.found} alerts found, ${v.sent} sent. (Anything already sent today is not re-sent.)`,
+  },
+  'al.unsupported': { vi: 'Trình duyệt này không hỗ trợ thông báo đẩy.', en: 'This browser does not support push notifications.' },
+  'al.noVapid': { vi: 'Server chưa đặt khoá VAPID.', en: 'The server has no VAPID key set.' },
+  'al.denied': { vi: 'Bạn đã từ chối quyền thông báo. Bật lại trong cài đặt trình duyệt.', en: 'Notification permission was denied. Re-enable it in browser settings.' },
+  'al.subFailed': { vi: 'Không lưu được đăng ký.', en: 'Could not save the subscription.' },
+  'al.subOk': { vi: 'Xong - máy này sẽ nhận thông báo.', en: 'Done - this device will receive alerts.' },
+  'al.note': {
+    vi: 'Kiểm tra 15 phút một lần trong giờ giao dịch. Mỗi loại cảnh báo mỗi mã chỉ gửi tối đa một lần mỗi ngày, nên hộp thư không bị dội. Cố tình KHÔNG báo lời/lỗ hằng ngày - thứ kêu suốt là thứ bị bỏ qua. Trên iPhone, thông báo trình duyệt chỉ chạy sau khi bạn "Thêm vào màn hình chính"; Telegram thì không cần.',
+    en: 'Checks every 15 minutes during market hours. Each alert per symbol is sent at most once a day, so the inbox never floods. Daily P/L is deliberately NOT alerted - something that pings constantly is something you learn to ignore. On iPhone, browser push only works after "Add to Home Screen"; Telegram needs no such step.',
+  },
+
   'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
   'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
 
