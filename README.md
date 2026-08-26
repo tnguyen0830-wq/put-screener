@@ -3,6 +3,15 @@
 Quét toàn bộ rổ S&P 500 và trả về những hợp đồng **cash-secured put** đáp ứng
 tiêu chí của bạn, lấy dữ liệu trực tiếp từ tài khoản Charles Schwab.
 
+App có bốn tab, đi theo đúng vòng đời của một lệnh bán put:
+
+| Tab | Trả lời câu hỏi |
+|---|---|
+| **Sell Put Screener** | Bán con gì, strike nào, kỳ nào |
+| **Analyze** | Con này thực sự đang thế nào |
+| **Heatmap** | Cả thị trường đang thế nào |
+| **My Portfolio** | Cái đang cầm có gì cần để ý |
+
 ---
 
 ## 1. Đăng ký app trên Schwab
@@ -61,21 +70,60 @@ Cột **Biên độ 52T** là thanh trực quan: vạch xám là biên độ 52 
 là vùng đệm từ strike lên giá hiện tại, vạch đứng là break-even. Nếu break-even
 nằm dưới đáy 52 tuần, vạch chuyển đỏ.
 
+## Cổng cứng — bảy điều kiện điểm số không cứu được
+
+Ngoài các tiêu chí bạn tự chỉnh, screener còn bảy kiểm tra **đạt/không đạt** loại
+thẳng hợp đồng ra khỏi kết quả. Bật/tắt cả cụm bằng công tắc **Cổng cứng** trong
+panel lọc (mặc định bật), nhưng **ngưỡng thì không sửa được** — và điểm cao đến
+mấy cũng không cứu nổi một lần trượt.
+
+| Cổng | Ngưỡng |
+|---|---|
+| VRP | IV/HV20 ≥ 1.0 |
+| Earnings | không có earnings trong kỳ hợp đồng |
+| Thanh khoản | OI ≥ 500 **và** khối lượng ≥ 100 |
+| Spread | ≤ 5% |
+| Dao rơi | chưa rơi quá 20% trong 20 phiên |
+| Term structure | IV60/IV30 ≥ 0.95 — chưa backwardation |
+| Put skew | z-score ≤ 2 |
+
+Đây là lời giải thích cho tình huống dễ hoang mang nhất: **một mã điểm đẹp nhưng
+không thấy đâu trong bảng.** Gần như luôn là do trượt một cổng nào đó.
+
+Hai điểm về cách cổng hành xử:
+
+- **Thiếu dữ liệu thì cho qua, không đánh trượt.** Chưa đủ lịch sử để tính HV20,
+  skew z-score chưa warm-up xong, chuỗi giá quá ngắn — tất cả đều tính là đạt.
+  Không có dữ liệu không phải là bằng chứng có vấn đề.
+- **Tắt cổng không làm mất phần đánh giá.** Kết quả cổng vẫn được tính cho mọi
+  ứng viên, nên tắt đi thì checklist trong panel chi tiết biến thành phần chú
+  giải ✓/✗ thật, chứ không phải biến mất.
+
 ---
 
 ## Ba giới hạn cần biết
 
-**IV Rank chưa dùng được ngay.** Schwab trả về IV hiện tại nhưng không có lịch
-sử IV, nên không thể tính IV Rank thật trong lần chạy đầu. App ghi lại một
-điểm IV mỗi mã mỗi ngày vào `.cache/iv-history.json`; sau khoảng 3 tháng chạy
-đều, cột IV Rank sẽ có nghĩa. Trong lúc chờ, tỷ lệ **IV/HV20** đóng vai trò
-tương đương: trên 1.2 nghĩa là quyền chọn đang được định giá đắt hơn biến động
-thực tế 20 phiên gần nhất.
+**IV Rank và put skew đều cần thời gian khởi động.** Schwab trả về IV hiện tại
+nhưng không có lịch sử IV, nên không thể tính IV Rank thật trong lần chạy đầu.
+App ghi một điểm IV mỗi mã mỗi ngày vào `.cache/iv-history.json`, và một điểm
+skew vào `.cache/skew-history.json`; cả hai chỉ trả về số khi đã tích được **60
+phiên**, trước đó là `null`. Sau khoảng 3 tháng chạy đều thì hai cột này mới có
+nghĩa. Trong lúc chờ, tỷ lệ **IV/HV20** đóng vai trò tương đương: trên 1.2 nghĩa
+là quyền chọn đang được định giá đắt hơn biến động thực tế 20 phiên gần nhất.
 
-**Ngày earnings phải nhập tay.** Market Data API không có lịch earnings. Điền
-vào `data/earnings.json` theo dạng `{"AAPL": ["2026-10-29"]}`. Nếu bật
-"Loại hợp đồng vắt qua earnings" mà file rỗng thì không có gì bị loại — hãy
-tự kiểm tra trước khi vào lệnh.
+Term structure thì không cần khởi động — nó là tỷ lệ trong cùng một ngày, có số
+ngay từ lần quét đầu tiên.
+
+**Ngày earnings không có trong Market Data API.** Chạy `node scripts/earnings-sync.js`
+để dựng `data/earnings.json`. Script lấy theo ba nguồn ưu tiên giảm dần — Yahoo
+Finance, lịch Nasdaq, rồi `lastEarningsDate` của Schwab cộng chu kỳ 91 ngày — và
+**khi các nguồn lệch nhau thì lấy ngày sớm nhất**, vì đoán muộn hơn ngày thật là
+hướng sai nguy hiểm. Cần mạng, phải chạy tay, không tự động.
+
+> Script chỉ lấy earnings cho **các mã có trong `data/watchlist.json`**. Một vị
+> thế đang giữ mà symbol chưa từng được thêm vào watchlist thì không có dữ liệu
+> earnings và không thể cảnh báo được. App nói thẳng chỗ này ra thay vì để trống
+> — vì một ô trống rất dễ đọc nhầm thành "không có gì sắp tới".
 
 **Delta là delta của Schwab.** Chuỗi quyền chọn trả greeks tính theo mô hình
 của Schwab, có thể lệch nhẹ so với thinkorswim hay broker khác. Dùng nó để
@@ -152,20 +200,138 @@ deep-link, không cào dữ liệu, và app chạy đầy đủ mà không cần
 
 ---
 
+## Analyze — soi kỹ một mã
+
+Gõ một mã (hoặc bấm từ Heatmap) để gom về một chỗ: chỉ báo kỹ thuật tự tính từ
+lịch sử giá Schwab, hồ sơ công ty, tin tức, và biểu đồ TradingView nhúng. Route
+`/api/analyze` nói rõ **nguồn nào trả lời được, nguồn nào không** thay vì lặng lẽ
+để trống — một mục trống vì API lỗi trông y hệt một mục trống vì không có tin gì.
+
+## Heatmap — nhìn cả thị trường
+
+Bản đồ nhiệt toàn rổ theo nhiều khung thời gian, kèm biểu đồ **RRG** (xoay vòng
+sức mạnh tương đối theo ngành) và đồng hồ Fear & Greed. Bấm vào một ô sẽ nhảy
+thẳng sang tab Analyze của mã đó.
+
+## My Portfolio — chỉ đọc, đồng bộ thẳng từ Schwab
+
+Không nhập tay gì cả, cũng không đặt lệnh được. App đọc vị thế đang mở từ Schwab
+và tự tính lại mọi con số thay vì tin vào trường P/L mà Schwab trả về.
+
+Bốn loại vị thế được nhận: **put bán**, **call bán**, **put mua**, **cổ phiếu**.
+Call mua bị bỏ qua có chủ ý — đó là đặt cược một chiều, không thuộc vòng đời bán
+put. Ba bảng tách riêng vì phép tính thật sự khác nhau, không phải để cho đẹp:
+call bán sợ giá **lên** xuyên strike còn put bán sợ giá **xuống**, nên "trong
+tiền" và "đệm giá" đảo ngược; put mua là bảo hiểm, trong tiền là tin **tốt** nên
+hiện màu xanh và không bị tính vào số cảnh báo ITM.
+
+Panel còn có:
+
+- **Giới hạn kích thước vị thế** — bốn trần so với giá trị tài khoản: 5% mỗi mã,
+  20% mỗi ngành, 50% tổng tiền thế chấp, 30% cho cụm mã tương quan. Cụm là phần
+  tính nặng nhất: 60 phiên giá để tính tương quan từng cặp. Tương quan giữ
+  **nguyên dấu**, nên một vị thế phòng hộ làm giảm con số thay vì bị bỏ qua.
+- **Theo dõi vol trên vị thế đang giữ** — đúng hai kiểm tra term structure và
+  skew mà screener dùng làm cổng, nhưng chĩa vào cái đang cầm: thị trường có
+  đang bắt đầu định giá rắc rối vào thứ bạn đã bán put không.
+- **P/L đã chốt** — đọc từ file CSV `data/realized/*.csv` xuất từ Schwab, **không
+  phải dữ liệu sống**. Ngày chốt sổ được in ra màn hình đúng vì lý do đó: để một
+  ảnh chụp cũ không bao giờ lặng lẽ trông như số mới.
+
+### Cảnh báo đẩy
+
+Vòng lặp nền 15 phút — thứ duy nhất trong app tự chạy mà không cần trình duyệt —
+đẩy thông báo qua **Telegram** và **web push**. Nó cảnh báo những thứ bạn buộc
+phải xử lý: phiên Schwab còn 2/1/0 ngày, put đã vào trong tiền, earnings rơi
+trước ngày đáo hạn, backwardation hoặc skew cao, giới hạn kích thước bị vượt.
+
+**Lãi/lỗ trong ngày bị loại trừ có chủ ý** — thứ báo liên tục là thứ người ta học
+được cách phớt lờ, kể cả vào đúng ngày nó nói đúng.
+
+Chống spam quan trọng hơn bản thân luật báo: mỗi loại cảnh báo chỉ gửi tối đa một
+lần mỗi phiên giao dịch New York, trạng thái lưu xuống đĩa nên deploy lại không
+bắn lại từ đầu, và chỉ đánh dấu đã gửi khi kênh thật sự nhận — kênh chết thì lần
+sau thử lại chứ không nuốt mất. Ngoài giờ giao dịch thì không kiểm tra.
+
+Không cấu hình biến môi trường thì cả hai kênh **tự tắt**, app chạy y như cũ chứ
+không báo lỗi. Xem `DEPLOY.md` cho `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` và
+cặp khoá `VAPID_*`.
+
+> Điểm yếu của một vòng lặp nền là nó vô hình. Vì thế My Portfolio in giờ chạy
+> gần nhất ra màn hình — một cái đồng hồ chết đọc thành một con số đứng yên, chứ
+> không đọc thành "mọi thứ đều ổn".
+
+---
+
 ## Cấu trúc
 
+**Nền chung**
+
 ```
-src/lib/schwab.ts        OAuth + rate limiter 100 req/phút + 3 endpoint market data
-src/lib/screener.ts      HV, SMA, IV rank snapshot, chọn hợp đồng, chấm điểm
-src/app/api/screen       Stream NDJSON, kết quả hiện dần từng mã
+src/lib/schwab.ts        OAuth + rate limiter 100 req/phút, bọc CẢ HAI API của
+                         Schwab: Market Data (quotes/chains/pricehistory) và
+                         Trader (traderGet — tài khoản, vị thế; cần Schwab duyệt
+                         sản phẩm riêng, không đi kèm Market Data)
+src/lib/types.ts         Kiểu dùng chung + isOn() cho các tiêu chí bật/tắt
+src/lib/session.ts       Cookie phiên ký HMAC (Web Crypto, chạy được ở Edge)
+src/middleware.ts        Hai cổng riêng biệt: APP_PASSWORD cho toàn app,
+                         MD_API_TOKEN cho /api/md/* của app điện thoại
+src/lib/i18n.tsx         Toàn bộ chuỗi hiển thị, mỗi khoá một cặp { vi, en }
+```
+
+**Quét và chấm điểm**
+
+```
+src/lib/screener.ts      HV, SMA, IV rank, skew, bảy cổng cứng, chọn hợp đồng
+src/lib/scan-job.ts      Lần quét sống trong tiến trình server, KHÔNG phụ thuộc
+                         trình duyệt còn mở hay không
+src/lib/scan-store.ts    Lưu lần quét cuối, tách riêng theo từng phạm vi quét
+src/app/api/screen       Luồng NDJSON chỉ ĐỌC THEO công việc quét ở trên
+src/lib/history.ts       Nến ngày dùng chung, cache theo ngày
 src/lib/gex.ts           Tính gamma exposure, put/call wall, zero gamma
-src/app/api/gex          Route tính GEX theo yêu cầu, 1 request mỗi mã
-src/lib/links.ts         Ánh xạ symbol sang TradingView + deep link
-src/components           Bảng kết quả, thanh đệm giá SVG, panel chi tiết
-data/sp500.json          503 mã, cập nhật lại khi rổ thay đổi
-data/earnings.json       Lịch earnings tự nhập
-data/watchlist.json      Danh sách mã tự chọn
 ```
+
+**Danh mục và cảnh báo**
+
+```
+src/lib/positions.ts     Ánh xạ vị thế thô của Schwab thành bốn loại nhận biết
+src/lib/portfolio.ts     MỘT bộ luật dùng chung cho cả màn hình lẫn cảnh báo,
+                         để điện thoại và màn hình không nói khác nhau
+src/lib/exposure.ts      Bốn trần kích thước vị thế + tương quan từng cặp
+src/lib/volwatch.ts      Term structure và skew trên vị thế đang giữ
+src/lib/realized.ts      Đọc P/L đã chốt từ CSV Schwab xuất ra
+src/lib/alerts.ts        Luật cảnh báo + chống spam theo phiên New York
+src/lib/alert-runner.ts  Vòng lặp nền 15 phút, thứ duy nhất tự chạy
+src/lib/notify.ts        Gửi Telegram + web push, tự tắt khi chưa cấu hình
+```
+
+**Phân tích và thị trường**
+
+```
+src/lib/indicators.ts    Chỉ báo kỹ thuật tự tính từ lịch sử giá Schwab
+src/lib/news.ts          Tin tức theo mã
+src/lib/profile.ts       Hồ sơ công ty
+src/lib/finviz.ts        Số liệu đối chiếu chéo
+src/lib/treemap.ts       Dựng bản đồ nhiệt
+src/lib/rrg.ts           Xoay vòng sức mạnh tương đối theo ngành
+src/lib/links.ts         Ánh xạ symbol sang TradingView + deep link
+```
+
+**Dữ liệu và script**
+
+```
+data/sp500.json          503 mã, cập nhật lại khi rổ thay đổi
+data/watchlist.json      Danh sách mã tự chọn
+data/earnings.json       Lịch earnings, dựng bằng script bên dưới
+data/realized/*.csv      Ảnh chụp P/L đã chốt, tự xuất từ Schwab
+scripts/earnings-sync.js Kéo earnings từ Yahoo → Nasdaq → Schwab. Cần mạng,
+                         chạy tay, chỉ phủ các mã trong watchlist
+```
+
+Dữ liệu phải sống qua mỗi lần deploy (token OAuth, watchlist, lần quét cuối,
+trạng thái chống spam cảnh báo, danh sách đăng ký push) nằm trên đĩa gắn ngoài
+— xem `DEPLOY.md`. Mọi thứ ghi ở chỗ khác, kể cả `.cache/*`, đều coi như mất
+được và dựng lại được.
 
 ---
 
