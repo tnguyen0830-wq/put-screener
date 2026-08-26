@@ -111,7 +111,10 @@ export async function loadPortfolio() {
   // một danh sách. Cả ba loại hợp đồng đều cần giá mua/bán lại hiện tại.
   const optionSymbols = new Map<string, string>();
   for (const p of contracts)
-    optionSymbols.set(p.id, osiSymbol(p.symbol, p.expiration!, p.strike!));
+    optionSymbols.set(
+      p.id,
+      osiSymbol(p.symbol, p.expiration!, p.strike!, p.kind === 'call' ? 'C' : 'P')
+    );
 
   // Call đã bán có được cổ phiếu bảo chứng hay không quyết định toàn bộ hồ sơ
   // rủi ro: covered call thì xấu nhất là bị gọi mất cổ phiếu ở giá strike;
