@@ -93,15 +93,33 @@ export default function Page() {
    */
   useEffect(() => {
     let alive = true;
-    fetch(`/api/screen/last?universe=${filters.universe}`)
-      .then((r) => r.json())
-      .then((j) => {
+    (async () => {
+      // Hỏi trước xem server có đang quét dở không. Nếu có thì nối vào xem
+      // tiếp, đừng nạp kết quả cũ đè lên - lần quét đang chạy mới là thứ
+      // người dùng đang chờ.
+      try {
+        const st = await fetch('/api/screen').then((r) => r.json());
+        if (!alive) return;
+        if (st.running) {
+          run();
+          return;
+        }
+      } catch {
+        /* không hỏi được thì cứ nạp kết quả cũ như thường */
+      }
+
+      try {
+        const j = await fetch(
+          `/api/screen/last?universe=${filters.universe}`
+        ).then((r) => r.json());
         if (!alive || !j.scan) return;
         // Không đè lên kết quả đang quét dở hay vừa quét xong trong phiên này.
         setRows((prev) => (prev.length ? prev : j.scan.rows ?? []));
         setScanAt((prev) => prev ?? j.scan.at ?? null);
-      })
-      .catch(() => {});
+      } catch {
+        /* chưa quét lần nào */
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -115,6 +133,13 @@ export default function Page() {
       .catch(() => setStatus({ configured: false, connected: false }));
   }, []);
 
+  /**
+   * Đọc luồng NDJSON của một lần quét.
+   *
+   * Dùng chung cho hai đường vào: bấm nút quét, và mở app lên trong lúc
+   * server đang quét dở. Cùng một luồng, vì server phát lại từ sự kiện đầu
+   * tiên nên nối vào giữa chừng cũng thấy đủ các mã đã tìm được.
+   */
   const run = useCallback(async () => {
     setRunning(true);
     setRows([]);
