@@ -34,6 +34,16 @@ services:
       # còn lưu file.
       - key: WATCHLIST_PATH
         value: /var/data/watchlist.json
+      # Kết quả quét gần nhất. Quét cả rổ mất 4-8 phút, để trong thư mục
+      # build thì mỗi lần deploy là mất, mở app lên lại thấy bảng trống.
+      - key: SCAN_PATH
+        value: /var/data/last-scan.json
+      # Trạng thái chống lặp của cảnh báo, và đăng ký thông báo trình duyệt.
+      # Không nằm trên đĩa thì mỗi lần deploy sẽ gửi lại toàn bộ cảnh báo cũ.
+      - key: ALERT_STATE_PATH
+        value: /var/data/alert-state.json
+      - key: PUSH_SUBS_PATH
+        value: /var/data/push-subs.json
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL
