@@ -93,7 +93,16 @@ export function osiSymbol(
   symbol: string,
   expiration: string,
   strike: number,
-  right: 'P' | 'C' = 'P'
+  /**
+   * BẮT BUỘC truyền, cố ý không có giá trị mặc định.
+   *
+   * Trước đây mặc định là 'P' vì hàm chỉ dùng cho put đã bán. Khi thêm call
+   * đã bán, nơi gọi quên truyền tham số này, nên app đi hỏi giá một hợp đồng
+   * PUT cùng strike - một hợp đồng khác hẳn, người dùng không hề sở hữu - rồi
+   * tính lời/lỗ từ giá đó. Không có gì báo lỗi, chỉ là mọi con số đều sai.
+   * Bỏ mặc định đi thì lần sau trình biên dịch bắt lỗi ngay tại chỗ gọi.
+   */
+  right: 'P' | 'C'
 ): string {
   const root = symbol.replace(/\//g, '').toUpperCase().padEnd(6, ' ');
   const [y, m, d] = expiration.split('-');
