@@ -120,8 +120,23 @@ export type Candidate = {
    * passed all five, so this is confirmation rather than a live filter here.
    */
   gates: { key: string; label: string; passed: boolean }[];
+  /**
+   * The four weighted pieces that sum to `score`, kept alongside it instead
+   * of discarded after the sum - two candidates can land on the same total
+   * for very different reasons (rich premium vs. wide cushion), and the
+   * single number can't tell those apart.
+   */
+  scoreBreakdown: ScoreBreakdown;
   score: number;
   warnings: string[];
+};
+
+/** Points earned on each axis, out of the max noted per field. */
+export type ScoreBreakdown = {
+  yield: number; // 0-45, annualized ROC
+  cushion: number; // 0-25, room before the strike
+  richness: number; // 0-15, IV priced above realized vol
+  liquidity: number; // 0-15, open interest + spread
 };
 
 export type StreamEvent =

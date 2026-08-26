@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { quotes, traderGet } from '@/lib/schwab';
 import { loadEarnings } from '@/lib/screener';
 import { daysBetween, mapCashBalances, mapSchwabPositions, osiSymbol, type Position } from '@/lib/positions';
+import { computePositionSizing } from '@/lib/exposure';
 
 /**
  * Danh mục: đọc thẳng từ tài khoản Schwab, định giá lại bằng báo giá Schwab.
@@ -80,7 +81,14 @@ export async function GET() {
   const cash = mapCashBalances(accounts);
 
   if (!positions.length) {
-    return NextResponse.json({ rows: [], summary: null, skipped, cash });
+    return NextResponse.json({
+      rows: [],
+      summary: null,
+      skipped,
+      cash,
+      positionSizing: null,
+      positionSizingError: null,
+    });
   }
 
   const now = today();
@@ -256,5 +264,22 @@ export async function GET() {
     earningsDataGap: [...new Set(rows.filter((r: any) => r.earningsUnknown).map((r: any) => r.symbol))],
   };
 
-  return NextResponse.json({ rows, summary, skipped, cash });
+  // Cluster exposure needs one price-history fetch per held put symbol on
+  // top of everything else this route already does - a failure here (rate
+  // limit, a symbol Market Data can't price) should not take down the rest
+  // of the portfolio page, so it's caught and reported on its own.
+  let positionSizing: Awaited<ReturnType<typeof computePositionSizing>> | null = null;
+  let positionSizingError: string | null = null;
+  if (putRows.length > 0) {
+    try {
+      positionSizing = await computePositionSizing(
+        putRows.map((r) => ({ symbol: r.symbol, collateral: r.collateral })),
+        cash.accountValue
+      );
+    } catch (e: any) {
+      positionSizingError = String(e?.message ?? e);
+    }
+  }
+
+  return NextResponse.json({ rows, summary, skipped, cash, positionSizing, positionSizingError });
 }

@@ -1,22 +1,26 @@
 import { NextRequest } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { quotes, putChain, dailyHistory } from '@/lib/schwab';
+import { quotes, fullChain } from '@/lib/schwab';
 import {
   evaluate,
   flattenPuts,
+  flattenCalls,
+  termStructureAndSkew,
   realizedVol,
   changePct,
   sma,
   recordIv,
+  recordSkew,
   flushSnapshots,
+  flushSkewSnapshots,
   loadEarnings,
   windowFrom,
   windowTo,
-  type Bar,
   type UnderlyingContext,
 } from '@/lib/screener';
 import { readWatchlist } from '@/lib/watchlist';
+import { historyBars } from '@/lib/history';
 import { isOn, type Filters, type StreamEvent } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -34,27 +38,6 @@ async function constituents(): Promise<Constituent[]> {
 
 /* Price history barely moves during a session and costs a request each,
    so it is cached per symbol per day. */
-const HIST_DIR = path.resolve('./.cache/history');
-
-async function historyBars(symbol: string): Promise<Bar[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  const file = path.join(HIST_DIR, `${symbol.replace('/', '_')}.json`);
-  try {
-    const cached = JSON.parse(await fs.readFile(file, 'utf8'));
-    if (cached.d === today) return cached.bars as Bar[];
-  } catch {
-    /* cache miss */
-  }
-  const data = await dailyHistory(symbol, 1);
-  const bars: Bar[] = (data?.candles ?? []).map((c: any) => ({
-    datetime: c.datetime,
-    close: c.close,
-  }));
-  await fs.mkdir(HIST_DIR, { recursive: true });
-  await fs.writeFile(file, JSON.stringify({ d: today, bars }));
-  return bars;
-}
-
 async function pooled<T>(
   items: T[],
   size: number,
@@ -180,8 +163,13 @@ export async function POST(req: NextRequest) {
               return;
             }
 
-            const chain = await putChain(c.symbol, from, to);
+            // ALL, not PUT: term structure and put skew need call IV too,
+            // and windowFrom/windowTo already widen the range to bracket
+            // 20-65 DTE for them. Same one request as the old PUT-only
+            // fetch, just a bigger payload.
+            const chain = await fullChain(c.symbol, from, to);
             const contracts = flattenPuts(chain);
+            const calls = flattenCalls(chain);
 
             // One IV reading per symbol per day builds the IV Rank history.
             const ref = contracts
@@ -193,7 +181,13 @@ export async function POST(req: NextRequest) {
               )[0];
             if (ref) await recordIv(c.symbol, ref.volatility / 100);
 
-            const best = await evaluate(u, contracts, filters, earnings);
+            // Same idea for put skew: today's reading is recorded before
+            // evaluate() reads the z-score, so the gate never blocks on
+            // history that does not exist yet.
+            const termSkew = termStructureAndSkew(contracts, calls, u.spot);
+            if (termSkew.skew !== null) await recordSkew(c.symbol, termSkew.skew);
+
+            const best = await evaluate(u, contracts, filters, earnings, termSkew);
             if (best) {
               found++;
               send({ type: 'candidate', data: best });
@@ -208,6 +202,7 @@ export async function POST(req: NextRequest) {
         });
 
         await flushSnapshots();
+        await flushSkewSnapshots();
         send({
           type: 'done',
           scanned: survivors.length,
