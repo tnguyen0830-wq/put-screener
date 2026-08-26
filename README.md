@@ -70,10 +70,10 @@ Cột **Biên độ 52T** là thanh trực quan: vạch xám là biên độ 52 
 là vùng đệm từ strike lên giá hiện tại, vạch đứng là break-even. Nếu break-even
 nằm dưới đáy 52 tuần, vạch chuyển đỏ.
 
-## Cổng cứng — bảy điều kiện điểm số không cứu được
+## Hard gates — bảy điều kiện điểm số không cứu được
 
 Ngoài các tiêu chí bạn tự chỉnh, screener còn bảy kiểm tra **đạt/không đạt** loại
-thẳng hợp đồng ra khỏi kết quả. Bật/tắt cả cụm bằng công tắc **Cổng cứng** trong
+thẳng hợp đồng ra khỏi kết quả. Bật/tắt cả cụm bằng ô **"Bật hard gates"** trong
 panel lọc (mặc định bật), nhưng **ngưỡng thì không sửa được** — và điểm cao đến
 mấy cũng không cứu nổi một lần trượt.
 
@@ -122,8 +122,10 @@ hướng sai nguy hiểm. Cần mạng, phải chạy tay, không tự động.
 
 > Script chỉ lấy earnings cho **các mã có trong `data/watchlist.json`**. Một vị
 > thế đang giữ mà symbol chưa từng được thêm vào watchlist thì không có dữ liệu
-> earnings và không thể cảnh báo được. App nói thẳng chỗ này ra thay vì để trống
-> — vì một ô trống rất dễ đọc nhầm thành "không có gì sắp tới".
+> earnings và **không thể cảnh báo được** — đây chính là cách CRWD từng lọt lưới
+> dù earnings chỉ còn hai ngày. App giờ nói thẳng chỗ thiếu ra và liệt kê đúng
+> những mã bị hụt dữ liệu, thay vì để trống: một ô trống rất dễ đọc nhầm thành
+> "không có gì sắp tới".
 
 **Delta là delta của Schwab.** Chuỗi quyền chọn trả greeks tính theo mô hình
 của Schwab, có thể lệch nhẹ so với thinkorswim hay broker khác. Dùng nó để
@@ -265,73 +267,48 @@ cặp khoá `VAPID_*`.
 
 ## Cấu trúc
 
-**Nền chung**
+`src/lib` có 28 file, liệt kê hết ra thì thành mục lục chứ không thành hiểu
+biết. Dưới đây là năm nhóm chức năng, mỗi nhóm kèm chỗ nên mở ra đọc trước.
 
-```
-src/lib/schwab.ts        OAuth + rate limiter 100 req/phút, bọc CẢ HAI API của
-                         Schwab: Market Data (quotes/chains/pricehistory) và
-                         Trader (traderGet — tài khoản, vị thế; cần Schwab duyệt
-                         sản phẩm riêng, không đi kèm Market Data)
-src/lib/types.ts         Kiểu dùng chung + isOn() cho các tiêu chí bật/tắt
-src/lib/session.ts       Cookie phiên ký HMAC (Web Crypto, chạy được ở Edge)
-src/middleware.ts        Hai cổng riêng biệt: APP_PASSWORD cho toàn app,
-                         MD_API_TOKEN cho /api/md/* của app điện thoại
-src/lib/i18n.tsx         Toàn bộ chuỗi hiển thị, mỗi khoá một cặp { vi, en }
-```
+**Hạ tầng** — `schwab.ts` là cửa duy nhất ra ngoài: OAuth, rate limiter 100
+request/phút, và bọc **cả hai** API của Schwab — Market Data cho báo giá và
+chuỗi quyền chọn, Trader cho tài khoản và vị thế. Hai thứ này được Schwab duyệt
+**riêng biệt**: tab My Portfolio cần sản phẩm "Accounts and Trading Production"
+ở bước 1, và app duyệt xong Market Data vẫn sẽ trả 401 cho toàn bộ phần vị thế
+nếu thiếu nó. `session.ts` giữ cookie phiên ký
+HMAC bằng Web Crypto để chạy được trong middleware; `middleware.ts` dựng hai
+cổng riêng biệt — mật khẩu app cho toàn bộ giao diện, token riêng cho
+`/api/md/*` mà app điện thoại gọi vào. `history.ts` là nến ngày dùng chung, cache
+theo ngày nên nhiều nơi cùng hỏi một mã cũng chỉ tốn một request.
 
-**Quét và chấm điểm**
+**Quét và chấm điểm** — `screener.ts` chứa toàn bộ phần tính: HV, SMA, IV rank,
+skew, bảy cổng cứng, và việc chọn ra hợp đồng tốt nhất cho mỗi mã. `scan-job.ts`
+là thứ đáng đọc nhất nhóm này: một lần quét sống trong tiến trình server chứ
+không nằm trong luồng HTTP, nên đóng tab không giết nó. `scan-store.ts` lưu kết
+quả, tách riêng theo từng phạm vi quét.
 
-```
-src/lib/screener.ts      HV, SMA, IV rank, skew, bảy cổng cứng, chọn hợp đồng
-src/lib/scan-job.ts      Lần quét sống trong tiến trình server, KHÔNG phụ thuộc
-                         trình duyệt còn mở hay không
-src/lib/scan-store.ts    Lưu lần quét cuối, tách riêng theo từng phạm vi quét
-src/app/api/screen       Luồng NDJSON chỉ ĐỌC THEO công việc quét ở trên
-src/lib/history.ts       Nến ngày dùng chung, cache theo ngày
-src/lib/gex.ts           Tính gamma exposure, put/call wall, zero gamma
-```
+**Danh mục và vị thế** — `positions.ts` ánh xạ dữ liệu thô của Schwab thành bốn
+loại vị thế; `portfolio.ts` là **một bộ luật dùng chung** cho cả màn hình lẫn
+cảnh báo, cố ý gộp vào một chỗ để điện thoại và màn hình không bao giờ nói khác
+nhau về cùng một vị thế. `exposure.ts` giữ bốn trần kích thước và phần tính
+tương quan từng cặp; `realized.ts` đọc P/L đã chốt từ CSV Schwab xuất ra.
 
-**Danh mục và cảnh báo**
+**Cảnh báo** — `alert-runner.ts` là vòng lặp nền duy nhất trong toàn bộ codebase;
+`alerts.ts` giữ luật báo và phần chống spam theo phiên New York; `notify.ts` gửi
+đi Telegram và web push, tự tắt khi chưa cấu hình. `volwatch.ts` là term
+structure và skew chĩa vào vị thế đang giữ thay vì vào ứng viên mới.
 
-```
-src/lib/positions.ts     Ánh xạ vị thế thô của Schwab thành bốn loại nhận biết
-src/lib/portfolio.ts     MỘT bộ luật dùng chung cho cả màn hình lẫn cảnh báo,
-                         để điện thoại và màn hình không nói khác nhau
-src/lib/exposure.ts      Bốn trần kích thước vị thế + tương quan từng cặp
-src/lib/volwatch.ts      Term structure và skew trên vị thế đang giữ
-src/lib/realized.ts      Đọc P/L đã chốt từ CSV Schwab xuất ra
-src/lib/alerts.ts        Luật cảnh báo + chống spam theo phiên New York
-src/lib/alert-runner.ts  Vòng lặp nền 15 phút, thứ duy nhất tự chạy
-src/lib/notify.ts        Gửi Telegram + web push, tự tắt khi chưa cấu hình
-```
+**Phân tích và thị trường** — `gex.ts` tính gamma exposure; `rrg.ts` dựng vòng
+xoay sức mạnh tương đối; `indicators.ts` là chỉ báo kỹ thuật tự tính; `treemap.ts`
+dựng bản đồ nhiệt. Các file còn lại trong nhóm này (`news`, `profile`, `finviz`,
+`links`) đều là bọc một nguồn ngoài, hỏng một cái không kéo sập cái nào khác.
 
-**Phân tích và thị trường**
-
-```
-src/lib/indicators.ts    Chỉ báo kỹ thuật tự tính từ lịch sử giá Schwab
-src/lib/news.ts          Tin tức theo mã
-src/lib/profile.ts       Hồ sơ công ty
-src/lib/finviz.ts        Số liệu đối chiếu chéo
-src/lib/treemap.ts       Dựng bản đồ nhiệt
-src/lib/rrg.ts           Xoay vòng sức mạnh tương đối theo ngành
-src/lib/links.ts         Ánh xạ symbol sang TradingView + deep link
-```
-
-**Dữ liệu và script**
-
-```
-data/sp500.json          503 mã, cập nhật lại khi rổ thay đổi
-data/watchlist.json      Danh sách mã tự chọn
-data/earnings.json       Lịch earnings, dựng bằng script bên dưới
-data/realized/*.csv      Ảnh chụp P/L đã chốt, tự xuất từ Schwab
-scripts/earnings-sync.js Kéo earnings từ Yahoo → Nasdaq → Schwab. Cần mạng,
-                         chạy tay, chỉ phủ các mã trong watchlist
-```
-
-Dữ liệu phải sống qua mỗi lần deploy (token OAuth, watchlist, lần quét cuối,
-trạng thái chống spam cảnh báo, danh sách đăng ký push) nằm trên đĩa gắn ngoài
-— xem `DEPLOY.md`. Mọi thứ ghi ở chỗ khác, kể cả `.cache/*`, đều coi như mất
-được và dựng lại được.
+**Dữ liệu** nằm ở `data/`: `sp500.json` (503 mã), `watchlist.json`,
+`earnings.json` dựng bằng `scripts/earnings-sync.js`, và `realized/*.csv` bạn tự
+xuất từ Schwab. Thứ phải sống qua mỗi lần deploy — token OAuth, watchlist, lần
+quét cuối, trạng thái chống spam cảnh báo, danh sách đăng ký push — nằm trên đĩa
+gắn ngoài, xem `DEPLOY.md`. Mọi thứ ghi ở chỗ khác, kể cả `.cache/*`, đều coi như
+mất được và dựng lại được.
 
 ---
 
