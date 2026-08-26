@@ -323,6 +323,16 @@ const OPEN_DTE_CEILING = 180;
 const TS_FLOOR = 20;
 const TS_CEIL = 65;
 
+/**
+ * The bare 20-65 DTE window on its own, for callers that want term
+ * structure and skew without running a scan - My Portfolio reads it for
+ * positions already held, which have no Filters object behind them.
+ */
+export const termSkewWindow = () => ({
+  from: addDays(TS_FLOOR),
+  to: addDays(TS_CEIL),
+});
+
 export const windowFrom = (f: Filters) => {
   const own = addDays(isOn(f, 'dte') ? f.minDte : 0);
   const floor = addDays(TS_FLOOR);
