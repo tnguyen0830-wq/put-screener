@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getLastRun, runOnce, startAlertLoop } from '@/lib/alert-runner';
-import { telegramConfigured, webPushConfigured } from '@/lib/notify';
+import { telegramConfigured, telegramTokenSet, telegramChatSet, webPushConfigured } from '@/lib/notify';
 
 /**
  * Trạng thái bộ cảnh báo, và cũng là chỗ khởi động vòng lặp.
@@ -16,6 +16,8 @@ export async function GET() {
   startAlertLoop();
   return NextResponse.json({
     telegram: telegramConfigured(),
+    telegramTokenSet: telegramTokenSet(),
+    telegramChatSet: telegramChatSet(),
     webPush: webPushConfigured(),
     vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? null,
     lastRun: getLastRun(),
