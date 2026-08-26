@@ -15,6 +15,36 @@ npm run start                 # next start, after build
 
 There is no test runner configured. Note that this sandbox has **no outbound network**: Schwab, sec.gov, api.telegram.org and most other hosts are blocked by egress policy, so anything touching a live API can only be verified in production. That is why the self-diagnosing idiom below matters so much, and why real numbers from the user's Schwab app have repeatedly been the thing that caught bugs the tests missed. Verification in this repo has historically meant: `npx tsc --noEmit`, `npm run build`, small standalone Node scripts (compile a single `src/lib/*.ts` with `npx tsc <file> --outDir <tmp> --module commonjs --target es2020 --skipLibCheck --esModuleInterop`, then `require()` it from a plain `.js` test script) for pure logic, and Playwright (`playwright-core`, launched with `executablePath: '/opt/pw-browsers/chromium-*/chrome-linux/chrome'` in the sandbox) against `next start` for UI changes — check both themes (`colorScheme: 'light'|'dark'`) and both languages where relevant.
 
+## Two Claude accounts share this repo
+
+The owner runs this project from two Claude accounts so work can continue when
+one hits its usage limit. Both push to the same GitHub repo, so the only thing
+preventing lost work is discipline about branches.
+
+**One branch per task. Never share a branch name between accounts.** Reusing a
+single long-lived branch is what actually destroys work: the other account
+force-pushes and your commits are gone. Name a branch after the task
+(`claude/wheel-covered-calls`), not after the session, and open a PR from it.
+`--force-with-lease` is the only acceptable force, and only on a branch this
+session created.
+
+**Read what already landed before starting.** `git fetch origin main && git log
+--oneline origin/main -15` costs nothing and shows whether the other account
+just changed the files you were about to rewrite. Check open PRs too - work in
+review is work that exists, and rewriting the same file from `main` will collide
+with it at merge time.
+
+**Say which files a PR touches, in the PR body.** That is the cheapest way for
+the other account to notice an overlap before it becomes a conflict.
+
+**Do not rewrite a whole file the other account is mid-way through.** If two
+tasks genuinely need the same file, they go one after the other, not in
+parallel. `src/lib/i18n.tsx` and `src/components/PortfolioPanel.tsx` are the two
+files nearly every change touches, so they collide most.
+
+Merging is the owner's call. This project's convention is that Claude waits for
+the owner to say "merge" and never merges on its own initiative.
+
 ## Architecture
 
 This is a single-user Next.js 14 App Router tool with five tabs (`src/app/page.tsx`): **Sell Put Screener**, **Analyze**, **Heatmap**, **My Portfolio**, plus a login gate. Everything reads from Charles Schwab's API using the app owner's own OAuth session — there is no multi-tenant concept anywhere in the code.

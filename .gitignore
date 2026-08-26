@@ -8,3 +8,9 @@ certificates
 
 log.txt
 dist
+
+# Cache build tăng dần của TypeScript. Sinh lại được, và thay đổi ở MỌI lần
+# build - để git theo dõi thì hai người (hoặc hai tài khoản Claude) làm song
+# song sẽ đụng nhau ở file này gần như mỗi lần merge, trong khi nó không mang
+# một thông tin nào đáng giữ.
+tsconfig.tsbuildinfo
