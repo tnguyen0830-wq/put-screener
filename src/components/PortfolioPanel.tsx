@@ -6,13 +6,19 @@ import AlertSettings from './AlertSettings';
 
 type Row = {
   id: string;
-  kind: 'put' | 'stock';
+  kind: 'put' | 'call' | 'longPut' | 'stock';
   symbol: string;
   openedAt?: string;
   strike?: number;
   expiration?: string;
   contracts?: number;
   credit?: number;
+  /** Chỉ có ở put ĐÃ MUA - số tiền đã trả, không phải nhận. */
+  debit?: number;
+  /** Call đã bán: cổ phiếu đang giữ có đủ bảo chứng không. */
+  covered?: boolean;
+  /** Call đã bán: bị gọi thì thu về bao nhiêu (strike × 100 × hợp đồng). */
+  callAwayValue?: number;
   shares?: number;
   cost?: number;
   spot: number | null;
@@ -51,9 +57,12 @@ type Row = {
 
 type Summary = {
   putCount: number;
+  callCount: number;
+  longPutCount: number;
   stockCount: number;
   collateral: number;
   creditTotal: number;
+  callAwayValue: number;
   openPl: number;
   stockValue: number;
   itmCount: number;
@@ -128,8 +137,7 @@ const sc = (n: number | null | undefined) =>
 const reasonKey = (reason: string) => {
   if (reason.startsWith('asset-type:')) return 'pf.skipAssetType';
   const known: Record<string, string> = {
-    'call-option': 'pf.skipCall',
-    'long-put': 'pf.skipLongPut',
+    'long-call': 'pf.skipLongCall',
     'short-stock': 'pf.skipShortStock',
     'missing-price': 'pf.skipMissingPrice',
     'unrecognized-option-symbol': 'pf.skipUnrecognized',
@@ -205,10 +213,12 @@ export default function PortfolioPanel() {
   }, []);
 
   const puts = (rows ?? []).filter((r) => r.kind === 'put');
+  const calls = (rows ?? []).filter((r) => r.kind === 'call');
+  const longPuts = (rows ?? []).filter((r) => r.kind === 'longPut');
   const stocks = (rows ?? []).filter((r) => r.kind === 'stock');
   // Ô "Cần để ý" chỉ in ra số lượng - bấm vào mới biết đúng mã nào, dùng
   // ngay dữ liệu rows đã có sẵn, không cần gọi thêm API.
-  const itmSoon = puts.filter((r) => r.itm);
+  const itmSoon = [...puts, ...calls].filter((r) => r.itm);
   const earningsSoon = [...puts, ...stocks]
     .filter((r) => r.nextEarnings)
     .sort((a, b) => (a.nextEarnings! < b.nextEarnings! ? -1 : 1));
@@ -563,6 +573,118 @@ export default function PortfolioPanel() {
                       {/* Con số chính là phần credit còn lại quy năm - thứ
                           quyết định giữ tiếp hay đóng sớm. */}
                       <td className={sc(r.rocRemaining)}>{pct(r.rocRemaining, 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {calls.length > 0 && (
+          <>
+            <h3 className="dsec">{t('pf.calls')}</h3>
+            <p className="cap">{t('pf.callsNote')}</p>
+            <div className="tablewrap">
+              <table className="pftable">
+                <thead>
+                  <tr>
+                    <th>{t('pf.colSymbol')}</th>
+                    <th>{t('pf.colStrike')}</th>
+                    <th>{t('pf.colExp')}</th>
+                    <th>{t('pf.colCredit')}</th>
+                    <th>{t('pf.colNow')}</th>
+                    <th>{t('pf.colPl')}</th>
+                    <th>{t('pf.colCaptured')}</th>
+                    <th>{t('pf.colToStrike')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {calls.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <b>{r.symbol}</b>
+                        <span className="pfsub">
+                          {usd(r.spot)}
+                          {r.nextEarnings ? ` · ⚠ ${t('pf.earnings', r.nextEarnings)}` : ''}
+                        </span>
+                        {/* Covered hay naked đổi hẳn hồ sơ rủi ro, nên nói ra
+                            ngay cạnh mã chứ không giấu trong chú thích. */}
+                        <span className={r.covered ? 'pfsub' : 'pfsub bad'}>
+                          {t(r.covered ? 'pf.covered' : 'pf.naked')}
+                        </span>
+                      </td>
+                      <td className={sc(r.strike)}>{usd(r.strike, 0)}</td>
+                      <td>
+                        {r.expiration}
+                        <span className="pfsub">{t('pf.days', r.dte ?? 0)}</span>
+                      </td>
+                      <td className={sc(r.credit)}>
+                        {usd(r.credit)}
+                        <span className="pfsub">×{r.contracts}</span>
+                      </td>
+                      <td className={sc(r.mark)}>{usd(r.mark)}</td>
+                      <td className={(r.pl ?? 0) >= 0 ? 'good' : 'bad'}>{signed(r.pl)}</td>
+                      <td className={sc(r.captured)}>{pct(r.captured, 0)}</td>
+                      {/* Đỏ khi đã trên strike (sắp bị gọi mất cổ phiếu),
+                          vàng khi chỉ còn dưới 3% đệm. */}
+                      <td className={r.itm ? 'bad' : (r.cushion ?? 1) < 0.03 ? 'warn' : sc(r.cushion)}>
+                        {pct(r.cushion, 1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {longPuts.length > 0 && (
+          <>
+            <h3 className="dsec">{t('pf.longPuts')}</h3>
+            <p className="cap">{t('pf.longPutsNote')}</p>
+            <div className="tablewrap">
+              <table className="pftable">
+                <thead>
+                  <tr>
+                    <th>{t('pf.colSymbol')}</th>
+                    <th>{t('pf.colStrike')}</th>
+                    <th>{t('pf.colExp')}</th>
+                    <th>{t('pf.colPaid')}</th>
+                    <th>{t('pf.colNow')}</th>
+                    <th>{t('pf.colValue')}</th>
+                    <th>{t('pf.colPl')}</th>
+                    <th>{t('pf.colToStrike')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {longPuts.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <b>{r.symbol}</b>
+                        <span className="pfsub">
+                          {usd(r.spot)}
+                          {r.nextEarnings ? ` · ⚠ ${t('pf.earnings', r.nextEarnings)}` : ''}
+                        </span>
+                      </td>
+                      <td className={sc(r.strike)}>{usd(r.strike, 0)}</td>
+                      <td>
+                        {r.expiration}
+                        <span className="pfsub">{t('pf.days', r.dte ?? 0)}</span>
+                      </td>
+                      <td className={sc(r.debit)}>
+                        {usd(r.debit)}
+                        <span className="pfsub">×{r.contracts}</span>
+                      </td>
+                      <td className={sc(r.mark)}>{usd(r.mark)}</td>
+                      <td className={sc(r.value)}>{usd(r.value, 0)}</td>
+                      <td className={(r.pl ?? 0) >= 0 ? 'good' : 'bad'}>
+                        {signed(r.pl)}
+                        <span className="pfsub">{pct(r.plPct, 1)}</span>
+                      </td>
+                      {/* KHÔNG tô đỏ khi trong tiền: bảo hiểm có giá trị là
+                          chuyện tốt, ngược hẳn với put đã bán. */}
+                      <td className={r.itm ? 'good' : undefined}>{pct(r.cushion, 1)}</td>
                     </tr>
                   ))}
                 </tbody>
