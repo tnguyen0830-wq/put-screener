@@ -13,7 +13,7 @@ npm run build                 # next build — this repo has no test suite or li
 npm run start                 # next start, after build
 ```
 
-There is no test runner configured. Verification in this repo has historically meant: `npx tsc --noEmit`, `npm run build`, small standalone Node scripts (compile a single `src/lib/*.ts` with `npx tsc <file> --outDir <tmp> --module commonjs --target es2020 --skipLibCheck --esModuleInterop`, then `require()` it from a plain `.js` test script) for pure logic, and Playwright (`playwright-core`, launched with `executablePath: '/opt/pw-browsers/chromium-*/chrome-linux/chrome'` in the sandbox) against `next start` for UI changes — check both themes (`colorScheme: 'light'|'dark'`) and both languages where relevant.
+There is no test runner configured. Note that this sandbox has **no outbound network**: Schwab, sec.gov, api.telegram.org and most other hosts are blocked by egress policy, so anything touching a live API can only be verified in production. That is why the self-diagnosing idiom below matters so much, and why real numbers from the user's Schwab app have repeatedly been the thing that caught bugs the tests missed. Verification in this repo has historically meant: `npx tsc --noEmit`, `npm run build`, small standalone Node scripts (compile a single `src/lib/*.ts` with `npx tsc <file> --outDir <tmp> --module commonjs --target es2020 --skipLibCheck --esModuleInterop`, then `require()` it from a plain `.js` test script) for pure logic, and Playwright (`playwright-core`, launched with `executablePath: '/opt/pw-browsers/chromium-*/chrome-linux/chrome'` in the sandbox) against `next start` for UI changes — check both themes (`colorScheme: 'light'|'dark'`) and both languages where relevant.
 
 ## Architecture
 
@@ -41,13 +41,64 @@ Realized (closed-lot) P/L (`src/lib/realized.ts`, `src/app/api/realized/route.ts
 
 Earnings-date awareness (the "Needs attention" tile) depends on `data/earnings.json`, which Schwab's API does not provide at all. It's built by `scripts/earnings-sync.js` (Yahoo → Nasdaq → Schwab-estimate fallback, run manually, needs network) **for symbols in `data/watchlist.json` only**. A held position whose symbol was never added to the watchlist has no earnings data and cannot be warned about — this is surfaced explicitly (`earningsUnknown` per row, `summary.earningsDataGap` listing affected symbols) rather than silently reading as "nothing upcoming."
 
+### One rulebook for the page and the alerts (`src/lib/portfolio.ts`)
+
+`/api/positions` used to hold all the reading and computing inline. It was extracted wholesale into `loadPortfolio()` so the background alert checker runs the *same* code — duplicating it would let the phone and the screen drift into saying different things about the same position. The route is now a thin wrapper that only maps `PortfolioLoadError` onto its two statuses: session expired (401, press reconnect) versus missing Accounts and Trading approval (502, ask Schwab). Those need opposite fixes, so they must not collapse into one error.
+
+### Four position kinds, and why they need separate maths
+
+`positions.ts` recognises short put, short call, long put and long stock. Long calls stay skipped (a directional bet, not part of the put-selling lifecycle). The three tables in My Portfolio are separate because the arithmetic genuinely differs, not for layout:
+
+- A **short call** mirrors a short put. A put fears price falling through the strike (you must buy); a call fears it rising through (shares called away). So `itm` and `cushion` invert. Whether it is *covered* decides the whole risk profile, so shares held per symbol are counted and printed beside the ticker.
+- A **long put** is insurance: you paid a debit, so P/L is `value now − what you paid`, the reverse of `credit − buyback`. In the money there is **good** news, so it renders green and is excluded from the ITM warning count.
+
+Two summary rules that are easy to get wrong: call credit **does** count toward "credit received" (money in the account), but call collateral **does not** count toward "cash secured" — a covered call ties up shares, not cash, and those shares are already in their own tile. Counting them double-counts. Position sizing reads short puts only, same reason.
+
+**`osiSymbol()` takes a required `right: 'P' | 'C'`, deliberately with no default.** It once defaulted to `'P'`, from when only puts existed. Adding short calls missed the one call site, so a sold call was priced off the *put* at the same strike — a contract the account does not even hold. Nothing failed: the symbol was well-formed, the quote came back, the arithmetic ran, and the row looked plausible. It was caught only by comparing against the Schwab app. A default that silently picks one of two contracts cannot be right; making it required turns the same mistake into a compile error.
+
+### Vol surface on held positions (`src/lib/volwatch.ts`)
+
+The same term-structure and skew checks the screener uses as gates, pointed at what is already open — the day-to-day question is whether the market is starting to price trouble into something you are already short. `BACKWARDATION_BELOW` and `SKEW_Z_ABOVE` are shared constants so gates and warnings cannot drift.
+
+Cached on a **15-minute** clock rather than the panel's 60-second price refresh, because the two differ in cost by an order of magnitude: prices are one shared `/quotes` call for the whole account, the vol surface is one chain request *per symbol*. Reads are served from cache immediately even when stale and refresh in the background, so `/api/positions` keeps its response time. A failed refresh keeps the last good reading rather than blanking it.
+
+### Position sizing (`src/lib/exposure.ts`)
+
+Four limits against account value: 5%/symbol, 20%/sector, 50% total cash-secured, 30% cluster. The first three read off already-synced data. Cluster exposure is the real work — 60 sessions of daily bars per held symbol for pairwise correlation, reusing `lib/history.ts` (extracted from the scan route) so overlapping symbols cost nothing extra.
+
+The spec's own cluster formula is underspecified — read literally it double-counts with no ceiling. The interpretation implemented here, and documented in the code: for every pair, `sqrt(collateral_a × collateral_b) × corr_ab`, summed over all pairs ÷ account value, so two fully-correlated equal positions contribute their combined size once. Correlation stays **signed**, so a hedge lowers the number instead of being ignored.
+
+### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
+
+Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".
+
+Alerts cover what you must act on: Schwab session at 2/1/0 days left (the 7-day cap is non-renewable and its expiry stops the whole app), puts gone ITM, earnings before expiry, backwardation or elevated skew, sizing limits breached. **Daily P/L is deliberately excluded** — a thing that pings constantly is a thing you learn to ignore, including on the day it is right.
+
+Anti-spam matters more than the rules: checking every 15 minutes with one put ITM would otherwise mean 96 notifications a day. Each alert key sends at most once per New York trading day, state on disk so a redeploy does not re-fire everything, and keys are marked sent only once a channel actually accepted them so an outage retries instead of being swallowed. Checks skip outside market hours.
+
+Telegram and web push both self-disable when unconfigured, matching the middleware gates — no env vars means the machine behaves exactly as before rather than erroring. Failures surface the provider's own words (a bad bot token and a bad chat id are different problems).
+
 ### The self-diagnosing degradation idiom
 
-Repeated deliberately across this codebase: when an external API's exact field names or shape can't be verified from this sandbox (no live Schwab network access), code captures and surfaces the *real* raw keys/values on a mismatch instead of guessing silently or crashing. Examples: ticker tape's `missing`, fear/greed's `topLevelKeys`, trader-check's status parsing, cash balances' `keys` (`mapCashBalances`), positions' `rawKeys`/`raw` (full raw Schwab object dumped when a guessed field fails to resolve). Follow this pattern for any new field read from an API whose response shape isn't pinned down by a type from Schwab's own docs.
+Repeated deliberately across this codebase: when an external API's exact field names or shape can't be verified from this sandbox (no live Schwab network access), code captures and surfaces the *real* raw keys/values on a mismatch instead of guessing silently or crashing. Examples: ticker tape's `missing`, fear/greed's `topLevelKeys`, trader-check's status parsing, cash balances' `keys` (`mapCashBalances`), positions' `rawKeys`/`raw` (full raw Schwab object dumped when a guessed field fails to resolve), positions' `earningsUnknown`/`earningsDataGap`, volwatch's `volWarmingUp`/`volErrors`, and the alert panel's channel state. The rule extends past field names to *state*: "not computed yet" must never render the same as "nothing is wrong", because silence reads as all-clear — which is exactly how CRWD's earnings were missed. The alert panel originally returned `null` while its status was unknown and so vanished entirely; it now always renders and prints the real HTTP status. Follow this pattern for any new field read from an API whose response shape isn't pinned down by a type from Schwab's own docs.
 
 ### Screener (`src/lib/screener.ts`, `src/app/api/screen`)
 
-Two-tier scan to stay under the rate limit: a cheap batched `/quotes` pass eliminates symbols where `spot × 100 > max capital` (no strike could fit the budget), then only survivors get the expensive `/pricehistory` (SMA200/HV20, cached daily) and `/chains` (DTE-windowed) calls. Results stream as NDJSON (`{type: 'phase'|'progress'|'candidate'|'skip'|'error'|'done'}`) so the UI fills in row by row instead of waiting for the whole scan. Scoring is a weighted sum documented in `README.md` (annualized ROC 45, cushion 25, IV/HV 15, liquidity 15) — don't recompute this from first principles, it's a product decision, not a derived formula.
+Two-tier scan to stay under the rate limit: a cheap batched `/quotes` pass eliminates symbols where `spot × 100 > max capital` (no strike could fit the budget), then only survivors get the expensive `/pricehistory` (SMA200/HV20, cached daily) and `/chains` (DTE-windowed) calls. Results stream as NDJSON (`{type: 'phase'|'progress'|'candidate'|'skip'|'error'|'done'}`) so the UI fills in row by row instead of waiting for the whole scan. Scoring is a weighted sum documented in `README.md` (annualized ROC 45, cushion 25, IV/HV 15, liquidity 15) — don't recompute this from first principles, it's a product decision, not a derived formula. `scoreComponents()` returns the four pieces and `scoreOf()` only sums them, so `Candidate.scoreBreakdown` can show *why* two candidates tie on the same total.
+
+The chain fetch is `fullChain` (contractType ALL), not puts only, because term structure and put skew need call IV from the same request. `windowFrom`/`windowTo` therefore always widen to bracket 20-65 DTE regardless of the user's DTE filter — free, since Schwab answers with one request either way.
+
+**Hard gates** (`Filters.hardGates`, default on) are seven fixed pass/fail checks that drop a contract outright: VRP ≥ 1.0, no earnings in the contract window, OI ≥ 500 and volume ≥ 100, spread ≤ 5%, not down >20% over 20 sessions, term structure ≥ 0.95, put skew z ≤ 2. Unlike every other criterion these thresholds are *not* user-editable, and a high score never rescues a failure. `Candidate.gates` is computed for every candidate regardless of the toggle, so switching gates off turns the drawer's checklist into real ✓/✗ annotation with no separate code path. A null reading (missing HV20, missing history) **passes** — a data gap is not evidence of a problem.
+
+**Put skew z-score has the same bootstrapping problem as IV Rank**: it needs a rolling mean/std that cannot exist on day one. `.cache/skew-history.json` accumulates one reading per symbol per day (mirroring `iv-history.json` exactly) and `skewZScore()` returns null until ~60 readings exist. Term structure needs no such warm-up — it is a same-day ratio, live from the first scan.
+
+### The scan outlives the browser (`src/lib/scan-job.ts`, `src/lib/scan-store.ts`)
+
+A full-basket scan takes 4-8 minutes. Originally the scan *was* the body of the NDJSON stream, so closing the tab cancelled the stream and killed the scan partway. The work now lives in a job in the server process; the route only follows it and forwards events. A closed tab stops the stream and nothing else.
+
+Consequences worth knowing: pressing scan while one runs **joins** it rather than starting a second (two concurrent full scans would throttle each other against the shared 100/min limit); a stream attaching part-way replays from the first event so a reopened app shows what was already found; and `GET /api/screen` reports whether one is in flight, which the page checks *before* loading a saved scan so yesterday's results never bury a run in progress.
+
+Finished scans are saved to `SCAN_PATH` **per universe** — a 30-second watchlist pass must not overwrite the 8-minute basket run. Restored results are a snapshot, so the UI prints the scan time and says prices are stale; a table of numbers looks identical whether it is live or four hours old.
 
 ### GEX (`src/lib/gex.ts`)
 
@@ -61,4 +112,4 @@ Self-computed from option-chain gamma × open interest, not a paid data feed —
 
 ### Deployment (`render.yaml`, `DEPLOY.md`)
 
-Render, persistent disk at `/var/data` for anything that must survive a redeploy (OAuth tokens, watchlist) — the rest of the filesystem is rebuilt from scratch on every deploy, so anything written elsewhere (e.g. `.cache/*`) is expected to be lossy/regenerable. `DEPLOY.md` has the full runbook including the custom-domain migration history and Google Safe Browsing false-positive process — read it before touching deploy config, it documents *why* several non-obvious things are set the way they are (e.g. why `SCHWAB_CALLBACK_URL` doubles as the source of truth for the app's public origin).
+Render, persistent disk at `/var/data` for anything that must survive a redeploy — `TOKEN_PATH` (OAuth), `WATCHLIST_PATH`, `SCAN_PATH` (last scan per universe), `ALERT_STATE_PATH` (alert dedupe — off the disk it resets on every deploy and re-fires every alert already sent that day) and `PUSH_SUBS_PATH`, all declared in `render.yaml`. Telegram needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` and web push needs `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`, set by hand in the dashboard since they are secrets — the rest of the filesystem is rebuilt from scratch on every deploy, so anything written elsewhere (e.g. `.cache/*`) is expected to be lossy/regenerable. `DEPLOY.md` has the full runbook including the custom-domain migration history and Google Safe Browsing false-positive process — read it before touching deploy config, it documents *why* several non-obvious things are set the way they are (e.g. why `SCHWAB_CALLBACK_URL` doubles as the source of truth for the app's public origin).
