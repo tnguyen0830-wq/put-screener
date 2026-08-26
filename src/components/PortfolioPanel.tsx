@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import AlertSettings from './AlertSettings';
 
 type Row = {
   id: string;
@@ -671,6 +672,8 @@ export default function PortfolioPanel() {
             </ul>
           </details>
         )}
+
+        <AlertSettings />
 
         <p className="cap">{t('pf.note')}</p>
       </div>
