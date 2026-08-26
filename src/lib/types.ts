@@ -34,6 +34,14 @@ export type Filters = {
   minIv: number;
   requireAboveSma200: boolean;
   excludeEarnings: boolean;
+  /**
+   * Bundle of five fixed pass/fail checks (VRP, earnings, liquidity, spread,
+   * falling-knife) that, when on, drop a contract outright regardless of
+   * score - unlike every other criterion here, these numbers are not
+   * user-editable, and there is no "loosen but keep looking" version of a
+   * failed gate. Off falls back to the ordinary optional filters/warnings.
+   */
+  hardGates: boolean;
   sectors: string[]; // empty = all
   limit: number; // max tickers to scan (0 = all)
   /**
@@ -104,6 +112,14 @@ export type Candidate = {
    */
   returnIfAssignedPct: number;
   earningsBefore: string | null; // known earnings date inside the contract window
+  /**
+   * The five fixed hard-gate checks, always computed and attached regardless
+   * of whether `Filters.hardGates` is on - so a candidate shown while the
+   * bundle is switched off can still show a real ✗, not just a blank. When
+   * the bundle is on, every candidate that reaches the results has already
+   * passed all five, so this is confirmation rather than a live filter here.
+   */
+  gates: { key: string; label: string; passed: boolean }[];
   score: number;
   warnings: string[];
 };

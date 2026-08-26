@@ -269,6 +269,16 @@ export default function FilterPanel({
           {t('filters.earnings')}
         </label>
 
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={value.hardGates}
+            onChange={(e) => set('hardGates', e.target.checked)}
+          />
+          {t('filters.hardGates')}
+        </label>
+        <p className="hint">{t('filters.hardGatesNote')}</p>
+
         <button className="run" onClick={onRun} disabled={running}>
           {running
             ? t('filters.running')

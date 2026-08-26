@@ -12,6 +12,15 @@ export function sma(bars: Bar[], n: number): number | null {
   return slice.reduce((s, b) => s + b.close, 0) / n;
 }
 
+/** Percent price change from n sessions ago to the most recent close. */
+export function changePct(bars: Bar[], n: number): number | null {
+  if (bars.length < n + 1) return null;
+  const now = bars[bars.length - 1].close;
+  const then = bars[bars.length - 1 - n].close;
+  if (then <= 0) return null;
+  return ((now - then) / then) * 100;
+}
+
 /** Annualized close-to-close realized volatility over the last n sessions. */
 export function realizedVol(bars: Bar[], n: number): number | null {
   if (bars.length < n + 1) return null;
@@ -154,6 +163,8 @@ export type UnderlyingContext = {
   high52: number;
   sma200: number | null;
   hv20: number | null;
+  /** Percent change over the last 20 sessions, for the falling-knife gate. */
+  chg20Pct: number | null;
 };
 
 function addDays(days: number) {
@@ -260,6 +271,38 @@ export async function evaluate(
     }
     if (spreadPct > 3) warnings.push('Spread rộng');
 
+    /**
+     * Five fixed checks from the Smart Money spec - unlike the filters above,
+     * these numbers are not tied to what the user typed into the panel (the
+     * liquidity/spread sliders can be loosened; these can't). ivHv/chg20Pct
+     * null means "can't be computed", not "failed", so those pass rather
+     * than silently reject on a data gap.
+     */
+    const gates = [
+      {
+        key: 'vrp',
+        label: 'VRP (IV/HV20) ≥ 1.0',
+        passed: ivHv === null || ivHv >= 1.0,
+      },
+      {
+        key: 'earnings',
+        label: 'Không có earnings trong kỳ hợp đồng',
+        passed: !earn,
+      },
+      {
+        key: 'liquidity',
+        label: 'OI ≥ 500 và khối lượng ≥ 100',
+        passed: (c.openInterest ?? 0) >= 500 && (c.totalVolume ?? 0) >= 100,
+      },
+      { key: 'spread', label: 'Spread ≤ 5%', passed: spreadPct <= 5 },
+      {
+        key: 'fallingKnife',
+        label: 'Chưa rơi quá 20% trong 20 phiên',
+        passed: u.chg20Pct === null || u.chg20Pct > -20,
+      },
+    ];
+    if (f.hardGates && gates.some((g) => !g.passed)) continue;
+
     const rank = await ivRank(u.symbol, iv);
 
     const partial: Omit<Candidate, 'score'> = {
@@ -299,6 +342,7 @@ export async function evaluate(
       returnIfAssignedPct:
         ((credit - Math.max(0, c.strikePrice - u.spot) * 100) / capital) * 100,
       earningsBefore: earn ?? null,
+      gates,
       warnings,
     };
 
