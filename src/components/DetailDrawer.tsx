@@ -144,6 +144,36 @@ export default function DetailDrawer({
             </>
           )}
 
+          {row.scoreBreakdown && (
+            <>
+              <h3 className="dsec">{t('dd.scoreHead')}</h3>
+              <div className="scorebars">
+                {(
+                  [
+                    ['yield', 'dd.scoreYield', row.scoreBreakdown.yield, 45],
+                    ['cushion', 'dd.scoreCushion', row.scoreBreakdown.cushion, 25],
+                    ['richness', 'dd.scoreRichness', row.scoreBreakdown.richness, 15],
+                    ['liquidity', 'dd.scoreLiquidity', row.scoreBreakdown.liquidity, 15],
+                  ] as const
+                ).map(([key, labelKey, val, max]) => (
+                  <div className="scorerow" key={key}>
+                    <span className="scorerow-label">{t(labelKey)}</span>
+                    <span className="bar scorerow-bar">
+                      <i style={{ width: `${Math.min((val / max) * 100, 100)}%` }} />
+                    </span>
+                    <span className="scorerow-val">
+                      {val.toFixed(0)}/{max}
+                    </span>
+                  </div>
+                ))}
+                <div className="scorerow scorerow-total">
+                  <span className="scorerow-label">{t('dd.scoreTotal')}</span>
+                  <span className="scorerow-val">{row.score}/100</span>
+                </div>
+              </div>
+            </>
+          )}
+
           <h3 className="dsec">{t('dd.chart')}</h3>
           <TradingViewWidget
             type="advanced-chart"

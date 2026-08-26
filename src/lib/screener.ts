@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { isOn, type Candidate, type Filters } from './types';
+import { isOn, type Candidate, type Filters, type ScoreBreakdown } from './types';
 
 /* ---------------- price-history math ---------------- */
 
@@ -186,18 +186,33 @@ export const windowTo = (f: Filters) =>
   addDays(isOn(f, 'dte') ? f.maxDte : OPEN_DTE_CEILING);
 
 /**
- * Score blends the three things that decide whether a cash-secured put was a
+ * Score blends the four things that decide whether a cash-secured put was a
  * good idea in hindsight: how much you got paid, how much room the stock has
- * before you are assigned, and whether the option was liquid enough to manage.
+ * before you are assigned, whether the option was rich relative to realized
+ * vol, and whether it was liquid enough to manage. Kept as two functions
+ * rather than one - the breakdown is attached to the candidate as-is, not
+ * just summed and thrown away, so two contracts tied on score can still be
+ * told apart by where their points came from.
  */
-function scoreOf(c: Omit<Candidate, 'score'>): number {
-  const yieldScore = Math.min(c.annualRocPct / 40, 1) * 45;
-  const cushionScore = Math.min(c.cushionPct / 0.2, 1) * 25;
-  const richness = c.ivHv ? Math.min(Math.max(c.ivHv - 0.9, 0) / 0.6, 1) * 15 : 7;
-  const liquidity =
-    Math.min(c.openInterest / 2000, 1) * 8 +
-    Math.max(0, 1 - c.spreadPct / 8) * 7;
-  return Math.round(yieldScore + cushionScore + richness + liquidity);
+function scoreComponents(c: {
+  annualRocPct: number;
+  cushionPct: number;
+  ivHv: number | null;
+  openInterest: number;
+  spreadPct: number;
+}): ScoreBreakdown {
+  return {
+    yield: Math.min(c.annualRocPct / 40, 1) * 45,
+    cushion: Math.min(c.cushionPct / 0.2, 1) * 25,
+    richness: c.ivHv ? Math.min(Math.max(c.ivHv - 0.9, 0) / 0.6, 1) * 15 : 7,
+    liquidity:
+      Math.min(c.openInterest / 2000, 1) * 8 +
+      Math.max(0, 1 - c.spreadPct / 8) * 7,
+  };
+}
+
+function scoreOf(b: ScoreBreakdown): number {
+  return Math.round(b.yield + b.cushion + b.richness + b.liquidity);
 }
 
 export async function evaluate(
@@ -304,6 +319,14 @@ export async function evaluate(
     if (f.hardGates && gates.some((g) => !g.passed)) continue;
 
     const rank = await ivRank(u.symbol, iv);
+    const cushionPct = (u.spot - c.strikePrice) / u.spot;
+    const breakdown = scoreComponents({
+      annualRocPct,
+      cushionPct,
+      ivHv,
+      openInterest: c.openInterest ?? 0,
+      spreadPct,
+    });
 
     const partial: Omit<Candidate, 'score'> = {
       symbol: u.symbol,
@@ -336,17 +359,18 @@ export async function evaluate(
       rocPct,
       annualRocPct,
       breakeven,
-      cushionPct: (u.spot - c.strikePrice) / u.spot,
+      cushionPct,
       beVsLow52Pct: u.low52 > 0 ? ((breakeven - u.low52) / u.low52) * 100 : 0,
       maxLoss: capital - credit,
       returnIfAssignedPct:
         ((credit - Math.max(0, c.strikePrice - u.spot) * 100) / capital) * 100,
       earningsBefore: earn ?? null,
       gates,
+      scoreBreakdown: breakdown,
       warnings,
     };
 
-    const candidate: Candidate = { ...partial, score: scoreOf(partial) };
+    const candidate: Candidate = { ...partial, score: scoreOf(breakdown) };
     if (!best || candidate.score > best.score) best = candidate;
   }
 

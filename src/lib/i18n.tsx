@@ -340,6 +340,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dd.roiAssigned': { vi: 'Lợi suất nếu bị assign', en: 'Return if assigned' },
   'dd.maxLoss': { vi: 'Lỗ tối đa', en: 'Max loss' },
   'dd.gates': { vi: 'Hard gates', en: 'Hard gates' },
+  'dd.scoreHead': { vi: 'Điểm số chi tiết', en: 'Score breakdown' },
+  'dd.scoreYield': { vi: 'Lợi suất quy năm', en: 'Annualized yield' },
+  'dd.scoreCushion': { vi: 'Đệm giá', en: 'Cushion' },
+  'dd.scoreRichness': { vi: 'IV/HV', en: 'IV/HV' },
+  'dd.scoreLiquidity': { vi: 'Thanh khoản', en: 'Liquidity' },
+  'dd.scoreTotal': { vi: 'Tổng điểm', en: 'Total' },
   'dd.yieldNote': {
     vi: 'Lợi suất/năm chỉ là quy đổi theo tỷ lệ ngày, không phải cam kết lặp lại suốt năm. "Nếu bị assign" tính theo giá hiện tại, không phải giá lúc đáo hạn thật - giá còn thay đổi tới lúc đó. Lỗ tối đa giả định cổ phiếu về 0.',
     en: 'Annualized is a naive day-count scaling, not a promise this rate repeats all year. "If assigned" uses today’s spot, not the real price at expiration - spot will move before then. Max loss assumes the stock goes to zero.',
