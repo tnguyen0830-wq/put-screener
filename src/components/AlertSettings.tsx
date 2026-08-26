@@ -5,6 +5,8 @@ import { useLang } from '@/lib/i18n';
 
 type Status = {
   telegram: boolean;
+  telegramTokenSet: boolean;
+  telegramChatSet: boolean;
   webPush: boolean;
   vapidPublicKey: string | null;
   lastRun: {
@@ -38,13 +40,19 @@ export default function AlertSettings() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [subscribed, setSubscribed] = useState<boolean | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [probe, setProbe] = useState<
+    { bot: string | null; chats: { id: number; name: string }[]; error: string | null } | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
       const r = await fetch('/api/alerts/status');
+      if (!r.ok) throw new Error(`/api/alerts/status trả về HTTP ${r.status}`);
       setStatus(await r.json());
+      setLoadError(null);
     } catch (e: any) {
-      setMsg(String(e?.message ?? e));
+      setLoadError(String(e?.message ?? e));
     }
   }, []);
 
@@ -100,6 +108,19 @@ export default function AlertSettings() {
     }
   };
 
+  const findChatId = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await fetch('/api/alerts/telegram-probe', { method: 'POST' });
+      setProbe(await r.json());
+    } catch (e: any) {
+      setMsg(String(e?.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const testRun = async () => {
     setBusy(true);
     setMsg(null);
@@ -119,7 +140,18 @@ export default function AlertSettings() {
     }
   };
 
-  if (!status) return null;
+  // Trước đây chỗ này `return null` khi chưa đọc được trạng thái, nên cả khu
+  // vực biến mất và người dùng nhìn vào chỉ thấy trống - không biết là chưa
+  // cấu hình hay là hỏng. Giờ luôn hiện, và nói rõ đang vướng gì.
+  if (!status)
+    return (
+      <>
+        <h3 className="dsec">{t('al.head')}</h3>
+        <p className="cap warnline">
+          {loadError ? `${t('al.statusFailed')} ${loadError}` : t('al.loading')}
+        </p>
+      </>
+    );
 
   const nothingOn = !status.telegram && !status.webPush;
   const lr = status.lastRun;
@@ -132,7 +164,11 @@ export default function AlertSettings() {
         <div>
           <dt>Telegram</dt>
           <dd className={status.telegram ? 'good' : undefined}>
-            {t(status.telegram ? 'al.on' : 'al.off')}
+            {status.telegram
+              ? t('al.on')
+              : status.telegramTokenSet
+                ? t('al.needChatId')
+                : t('al.off')}
           </dd>
         </div>
         <div>
@@ -172,10 +208,40 @@ export default function AlertSettings() {
             {t('al.enablePush')}
           </button>
         )}
-        <button className="aibtn" onClick={testRun} disabled={busy || nothingOn}>
+        {status.telegramTokenSet && !status.telegramChatSet && (
+          <button className="aibtn" onClick={findChatId} disabled={busy}>
+            {t('al.findChat')}
+          </button>
+        )}
+        {/* Luôn bấm được. Khoá nút lúc chưa cấu hình thì không dạy được gì -
+            chạy thử rồi đọc lý do mới biết mình đang thiếu cái nào. */}
+        <button className="aibtn" onClick={testRun} disabled={busy}>
           {t('al.test')}
         </button>
       </div>
+
+      {probe && (
+        <div className="cap">
+          {probe.error ? (
+            <p className="warnline">{t('al.probeFailed')} <code>{probe.error}</code></p>
+          ) : (
+            <>
+              <p>{t('al.probeBot', probe.bot ?? '?')}</p>
+              {probe.chats.length === 0 ? (
+                <p className="warnline">{t('al.probeNoChat', probe.bot ?? '')}</p>
+              ) : (
+                <ul className="pfattnlist">
+                  {probe.chats.map((c) => (
+                    <li key={c.id}>
+                      <b>{c.name}</b> — TELEGRAM_CHAT_ID = <code>{c.id}</code>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {msg && <p className="cap">{msg}</p>}
       <p className="cap">{t('al.note')}</p>

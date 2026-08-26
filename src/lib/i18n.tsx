@@ -571,6 +571,19 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'al.denied': { vi: 'Bạn đã từ chối quyền thông báo. Bật lại trong cài đặt trình duyệt.', en: 'Notification permission was denied. Re-enable it in browser settings.' },
   'al.subFailed': { vi: 'Không lưu được đăng ký.', en: 'Could not save the subscription.' },
   'al.subOk': { vi: 'Xong - máy này sẽ nhận thông báo.', en: 'Done - this device will receive alerts.' },
+  'al.statusFailed': { vi: 'Không đọc được trạng thái bộ cảnh báo:', en: 'Could not read alert status:' },
+  'al.loading': { vi: 'Đang đọc trạng thái…', en: 'Reading status…' },
+  'al.needChatId': { vi: 'Có token, thiếu chat id', en: 'Token set, chat id missing' },
+  'al.findChat': { vi: 'Tìm chat id giúp tôi', en: 'Find my chat id' },
+  'al.probeFailed': { vi: 'Telegram từ chối:', en: 'Telegram refused:' },
+  'al.probeBot': {
+    vi: (b: string) => `Token này thuộc bot ${b}. Nếu không phải bot bạn định dùng thì token đang sai.`,
+    en: (b: string) => `This token belongs to bot ${b}. If that is not the bot you meant, the token is wrong.`,
+  },
+  'al.probeNoChat': {
+    vi: (b: string) => `Chưa ai nhắn cho bot ${b}. Mở Telegram, tìm đúng ${b}, bấm START rồi gửi một chữ bất kỳ, sau đó bấm lại nút này.`,
+    en: (b: string) => `Nobody has messaged ${b} yet. Open Telegram, find ${b}, press START, send any message, then press this button again.`,
+  },
   'al.note': {
     vi: 'Kiểm tra 15 phút một lần trong giờ giao dịch. Mỗi loại cảnh báo mỗi mã chỉ gửi tối đa một lần mỗi ngày, nên hộp thư không bị dội. Cố tình KHÔNG báo lời/lỗ hằng ngày - thứ kêu suốt là thứ bị bỏ qua. Trên iPhone, thông báo trình duyệt chỉ chạy sau khi bạn "Thêm vào màn hình chính"; Telegram thì không cần.',
     en: 'Checks every 15 minutes during market hours. Each alert per symbol is sent at most once a day, so the inbox never floods. Daily P/L is deliberately NOT alerted - something that pings constantly is something you learn to ignore. On iPhone, browser push only works after "Add to Home Screen"; Telegram needs no such step.',
