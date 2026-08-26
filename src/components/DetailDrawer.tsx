@@ -131,6 +131,19 @@ export default function DetailDrawer({
             </ul>
           )}
 
+          {row.gates?.length > 0 && (
+            <>
+              <h3 className="dsec">{t('dd.gates')}</h3>
+              <ul className="gatelist">
+                {row.gates.map((g) => (
+                  <li key={g.key} className={g.passed ? 'good' : 'bad'}>
+                    {g.passed ? '✓' : '✗'} {g.label}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           <h3 className="dsec">{t('dd.chart')}</h3>
           <TradingViewWidget
             type="advanced-chart"

@@ -6,6 +6,7 @@ import {
   evaluate,
   flattenPuts,
   realizedVol,
+  changePct,
   sma,
   recordIv,
   flushSnapshots,
@@ -171,6 +172,7 @@ export async function POST(req: NextRequest) {
               high52: c.quote.quote['52WeekHigh'] ?? 0,
               sma200: sma(bars, 200),
               hv20: realizedVol(bars, 20),
+              chg20Pct: changePct(bars, 20),
             };
 
             if (filters.requireAboveSma200 && u.sma200 && u.spot <= u.sma200) {

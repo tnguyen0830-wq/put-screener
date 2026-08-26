@@ -30,6 +30,7 @@ const DEFAULTS: Filters = {
   minIv: 35,
   requireAboveSma200: true,
   excludeEarnings: true,
+  hardGates: true,
   sectors: [],
   limit: 0,
   off: [...DEFAULT_OFF],

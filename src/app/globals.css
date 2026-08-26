@@ -956,6 +956,18 @@ table.results tbody tr.clickable {
   color: var(--warn);
 }
 
+.gatelist {
+  margin: 0 0 16px;
+  padding-left: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.gatelist li {
+  font-weight: 600;
+}
+
 .dsec {
   font-family: var(--display);
   font-weight: 700;

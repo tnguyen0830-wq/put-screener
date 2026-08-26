@@ -202,6 +202,11 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Loại hợp đồng vắt qua earnings',
     en: 'Exclude contracts spanning earnings',
   },
+  'filters.hardGates': { vi: 'Bật hard gates', en: 'Enable hard gates' },
+  'filters.hardGatesNote': {
+    vi: 'Loại thẳng hợp đồng trượt 1 trong 5 tiêu chí cố định: VRP (IV/HV) ≥ 1.0, không có earnings trong kỳ hợp đồng, OI ≥ 500 và khối lượng ≥ 100, spread ≤ 5%, chưa rơi quá 20% trong 20 phiên. Đây là số cố định, không đổi theo các ô phía trên - điểm số cao cũng không cứu được hợp đồng trượt.',
+    en: 'Drops any contract failing one of five fixed checks: VRP (IV/HV) ≥ 1.0, no earnings inside the contract window, OI ≥ 500 and volume ≥ 100, spread ≤ 5%, not down more than 20% over 20 sessions. Fixed numbers, independent of the fields above - a high score never overrides a failed gate.',
+  },
   'filters.running': { vi: 'Đang quét…', en: 'Scanning…' },
   'filters.runWatchlist': { vi: 'Quét watchlist', en: 'Scan watchlist' },
   'filters.runSp500': { vi: 'Quét S&P 500', en: 'Scan S&P 500' },
@@ -334,6 +339,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dd.roiExpired': { vi: 'Lợi suất nếu đáo hạn', en: 'Return if expired' },
   'dd.roiAssigned': { vi: 'Lợi suất nếu bị assign', en: 'Return if assigned' },
   'dd.maxLoss': { vi: 'Lỗ tối đa', en: 'Max loss' },
+  'dd.gates': { vi: 'Hard gates', en: 'Hard gates' },
   'dd.yieldNote': {
     vi: 'Lợi suất/năm chỉ là quy đổi theo tỷ lệ ngày, không phải cam kết lặp lại suốt năm. "Nếu bị assign" tính theo giá hiện tại, không phải giá lúc đáo hạn thật - giá còn thay đổi tới lúc đó. Lỗ tối đa giả định cổ phiếu về 0.',
     en: 'Annualized is a naive day-count scaling, not a promise this rate repeats all year. "If assigned" uses today’s spot, not the real price at expiration - spot will move before then. Max loss assumes the stock goes to zero.',
