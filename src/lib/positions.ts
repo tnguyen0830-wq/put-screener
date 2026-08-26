@@ -10,7 +10,14 @@ import { normalizeSymbol } from './watchlist';
  * nguyên như trước, chỉ đổi nguồn dữ liệu đầu vào.
  */
 
-export type PositionKind = 'put' | 'stock';
+/**
+ * Bốn hình dạng vị thế app theo dõi.
+ *
+ * 'put' và 'call' đều là ĐÃ BÁN - nhận credit, mong hợp đồng chết. 'longPut'
+ * là ĐÃ MUA - đã trả tiền, nó là tài sản chứ không phải nghĩa vụ, nên lời/lỗ
+ * tính ngược dấu. Giữ tên 'put' như cũ để không phải sửa toàn bộ nơi đã dùng.
+ */
+export type PositionKind = 'put' | 'call' | 'longPut' | 'stock';
 
 export type Position = {
   id: string;
@@ -23,8 +30,10 @@ export type Position = {
   strike?: number;
   expiration?: string;
   contracts?: number;
-  /** Credit nhận được, tính trên mỗi cổ phiếu (1.85 nghĩa là $185 một hợp đồng). */
+  /** Credit nhận được, tính trên mỗi cổ phiếu (1.85 nghĩa là $185 một hợp đồng). Chỉ có ở vị thế ĐÃ BÁN. */
   credit?: number;
+  /** Debit đã trả, trên mỗi cổ phiếu. Chỉ có ở vị thế ĐÃ MUA (longPut). */
+  debit?: number;
   /* --- cổ phiếu đang giữ --- */
   shares?: number;
   /**
@@ -227,28 +236,31 @@ export function mapSchwabPositions(accounts: any[]): {
           skipped.push({ symbol: rawSymbol || '?', reason: 'unrecognized-option-symbol' });
           continue;
         }
-        if (!isPut) {
-          skipped.push({ symbol: inst.underlyingSymbol ?? parsed.root, reason: 'call-option' });
+        // Call đã MUA là thứ duy nhất còn bỏ qua: nó là cược tăng thuần
+        // tuý, không nằm trong vòng đời bán quyền chọn mà app này theo dõi.
+        if (!isPut && !isShort) {
+          skipped.push({ symbol: inst.underlyingSymbol ?? parsed.root, reason: 'long-call' });
           continue;
         }
-        if (!isShort) {
-          skipped.push({ symbol: inst.underlyingSymbol ?? parsed.root, reason: 'long-put' });
-          continue;
-        }
-        const credit = typeof p.averagePrice === 'number' ? p.averagePrice : null;
-        const contracts = p.shortQuantity;
-        if (!credit || !contracts) {
+
+        const kind: PositionKind = isPut ? (isShort ? 'put' : 'longPut') : 'call';
+        const contracts = isShort ? p.shortQuantity : p.longQuantity;
+        // averagePrice ở đây là giá đã khớp trên mỗi cổ phiếu: với vị thế bán
+        // đó là credit nhận được, với vị thế mua đó là debit đã trả. Cùng một
+        // trường, hai ý nghĩa ngược nhau - nên đặt vào hai tên khác nhau.
+        const price = typeof p.averagePrice === 'number' ? p.averagePrice : null;
+        if (!price || !contracts) {
           skipped.push({ symbol: inst.underlyingSymbol ?? parsed.root, reason: 'missing-price' });
           continue;
         }
         positions.push({
           id: `p${n}`,
-          kind: 'put',
+          kind,
           symbol: normalizeSymbol(inst.underlyingSymbol ?? parsed.root),
           strike: parsed.strike,
           expiration: parsed.expiration,
           contracts,
-          credit,
+          ...(isShort ? { credit: price } : { debit: price }),
           dayPl:
             typeof p.currentDayProfitLoss === 'number' ? p.currentDayProfitLoss : undefined,
         });

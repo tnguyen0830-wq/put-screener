@@ -103,13 +103,24 @@ export async function loadPortfolio() {
   }
 
   const now = today();
-  const puts = positions.filter((p) => p.kind === 'put');
+  const contracts = positions.filter(
+    (p) => p.kind === 'put' || p.kind === 'call' || p.kind === 'longPut'
+  );
 
   // Một lần /quotes cho cả danh mục: mã cơ sở và hợp đồng quyền chọn đi chung
-  // một danh sách.
+  // một danh sách. Cả ba loại hợp đồng đều cần giá mua/bán lại hiện tại.
   const optionSymbols = new Map<string, string>();
-  for (const p of puts)
+  for (const p of contracts)
     optionSymbols.set(p.id, osiSymbol(p.symbol, p.expiration!, p.strike!));
+
+  // Call đã bán có được cổ phiếu bảo chứng hay không quyết định toàn bộ hồ sơ
+  // rủi ro: covered call thì xấu nhất là bị gọi mất cổ phiếu ở giá strike;
+  // naked call thì lỗ về lý thuyết là vô hạn. Đếm cổ phiếu đang giữ theo mã
+  // để phân biệt, thay vì gộp chung một chữ "call".
+  const sharesHeld = new Map<string, number>();
+  for (const p of positions)
+    if (p.kind === 'stock')
+      sharesHeld.set(p.symbol, (sharesHeld.get(p.symbol) ?? 0) + (p.shares ?? 0));
 
   let q: Record<string, any> = {};
   let quoteError: string | null = null;
@@ -168,6 +179,84 @@ export async function loadPortfolio() {
         // "chưa có dữ liệu để biết" là hai chuyện khác nhau, và im lặng đúng
         // là lý do CRWD từng bị bỏ sót dù chỉ còn 2 ngày.
         earningsUnknown: !(p.symbol in earnings),
+      };
+    }
+
+    const optQuote = q[optionSymbols.get(p.id)!]?.quote;
+
+    /* ---------------- call đã bán ---------------- */
+    if (p.kind === 'call') {
+      const mark = markOf(optQuote);
+      const shares = p.contracts! * 100;
+      const creditTotal = p.credit! * shares;
+      const buyback = mark === null ? null : mark * shares;
+      // Giống put đã bán: đã nhận credit, mong hợp đồng chết.
+      const pl = buyback === null ? null : creditTotal - buyback;
+      const dte = daysBetween(now, p.expiration!);
+      // Cổ phiếu đang giữ có đủ bảo chứng cho số hợp đồng này không.
+      const covered = (sharesHeld.get(p.symbol) ?? 0) >= shares;
+      const nextEarnings =
+        (earnings[p.symbol] || []).find((d) => d >= now && d <= p.expiration!) ?? null;
+      return {
+        ...p,
+        earningsUnknown: !(p.symbol in earnings),
+        spot,
+        changePct: under?.netPercentChange ?? null,
+        mark,
+        delta: optQuote?.delta ?? null,
+        creditTotal,
+        buyback,
+        pl,
+        captured: mark === null ? null : (p.credit! - mark) / p.credit!,
+        dte,
+        covered,
+        /**
+         * Nếu bị gọi, bạn BÁN 100 cổ phiếu ở giá strike. Nên strike đóng vai
+         * trò ngược hẳn so với put: put sợ giá rơi xuống dưới, call sợ giá
+         * vọt lên trên.
+         */
+        itm: spot === null ? null : spot > p.strike!,
+        // Dương là giá còn ở dưới strike (còn chỗ để tăng trước khi bị gọi).
+        cushion: spot === null ? null : (p.strike! - spot) / p.strike!,
+        /**
+         * Bị gọi thì nhận về strike × 100 mỗi hợp đồng. Đây là số tiền THU
+         * VỀ, không phải tiền phải bỏ ra như put - nên cố ý KHÔNG cộng vào
+         * "tiền thế chấp" ở phần tổng kết.
+         */
+        callAwayValue: p.strike! * shares,
+        nextEarnings,
+      };
+    }
+
+    /* ---------------- put đã mua ---------------- */
+    if (p.kind === 'longPut') {
+      const mark = markOf(optQuote);
+      const shares = p.contracts! * 100;
+      // Đã TRẢ tiền, nên lời/lỗ tính ngược dấu so với vị thế đã bán: giá trị
+      // bây giờ trừ đi số đã bỏ ra, chứ không phải credit trừ giá mua lại.
+      const costTotal = p.debit! * shares;
+      const value = mark === null ? null : mark * shares;
+      const pl = value === null ? null : value - costTotal;
+      const dte = daysBetween(now, p.expiration!);
+      return {
+        ...p,
+        earningsUnknown: !(p.symbol in earnings),
+        spot,
+        changePct: under?.netPercentChange ?? null,
+        mark,
+        delta: optQuote?.delta ?? null,
+        costTotal,
+        value,
+        pl,
+        plPct: !costTotal ? null : (pl ?? 0) / costTotal,
+        dte,
+        // Cùng chiều với put đã bán, nhưng ở đây trong tiền là ĐIỀU TỐT -
+        // bảo hiểm đang có giá trị thật.
+        itm: spot === null ? null : spot < p.strike!,
+        // Giá còn phải rơi bao nhiêu nữa thì bảo hiểm mới bắt đầu ăn tiền.
+        cushion: spot === null ? null : (spot - p.strike!) / p.strike!,
+        nextEarnings:
+          (earnings[p.symbol] || []).find((d) => d >= now && d <= p.expiration!) ?? null,
       };
     }
 
@@ -241,7 +330,10 @@ export async function loadPortfolio() {
   });
 
   const putRows = rows.filter((r) => r.kind === 'put') as any[];
+  const callRows = rows.filter((r) => r.kind === 'call') as any[];
+  const longPutRows = rows.filter((r) => r.kind === 'longPut') as any[];
   const stockRows = rows.filter((r) => r.kind === 'stock') as any[];
+  const contractRows = [...putRows, ...callRows, ...longPutRows];
   const sum = (xs: (number | null)[]) =>
     xs.reduce<number>((a, b) => a + (b ?? 0), 0);
 
@@ -265,8 +357,19 @@ export async function loadPortfolio() {
   const summary = {
     putCount: putRows.length,
     stockCount: stockRows.length,
+    callCount: callRows.length,
+    longPutCount: longPutRows.length,
+    /**
+     * CHỈ put đã bán. Call đã bán cố ý không cộng vào đây: put thế chấp bằng
+     * TIỀN phải sẵn sàng bỏ ra, còn covered call thế chấp bằng chính cổ
+     * phiếu đang giữ - số đó đã nằm trong "Giá trị cổ phiếu" rồi, cộng thêm
+     * lần nữa là đếm trùng và thổi phồng phần trăm tài khoản đang bị khoá.
+     */
     collateral: sum(putRows.map((r) => r.collateral)),
-    creditTotal: sum(putRows.map((r) => r.creditTotal)),
+    /** Credit của CẢ put lẫn call đã bán - đều là tiền đã vào túi. */
+    creditTotal: sum([...putRows, ...callRows].map((r) => r.creditTotal)),
+    /** Nếu mọi call bị gọi, số tiền bán cổ phiếu thu về. */
+    callAwayValue: sum(callRows.map((r) => r.callAwayValue)),
     openPl: sum(rows.map((r: any) => r.pl)),
     // Lời/lỗ hôm nay, Schwab tự tính cho từng vị thế - null nếu không vị thế
     // nào trả về trường đó, để không hiện $0 giả cho một ngày thật sự có biến
@@ -275,14 +378,26 @@ export async function loadPortfolio() {
       ? sum(rows.map((r: any) => (typeof r.dayPl === 'number' ? r.dayPl : null)))
       : null,
     stockValue: sum(stockRows.map((r) => r.value)),
-    itmCount: putRows.filter((r) => r.itm).length,
+    /**
+     * Đếm cả put đã bán (giá rơi dưới strike, có thể phải MUA) lẫn call đã
+     * bán (giá vọt trên strike, có thể bị GỌI mất cổ phiếu) - hai chiều
+     * ngược nhau nhưng cùng là "sắp phải làm gì đó".
+     *
+     * Put đã MUA trong tiền thì KHÔNG tính: bảo hiểm đang có giá trị là
+     * chuyện tốt, báo động ở đó là báo nhầm.
+     */
+    itmCount: [...putRows, ...callRows].filter((r) => r.itm).length,
     // Đếm cả cổ phiếu lẫn put - trước đây chỉ tính put, nên một mã đang
     // giữ dạng cổ phiếu sắp earnings không hiện cảnh báo dù chỉ còn vài
     // ngày.
     earningsCount:
-      putRows.filter((r) => r.nextEarnings).length +
+      [...putRows, ...callRows, ...longPutRows].filter((r) => r.nextEarnings).length +
       stockRows.filter((r) => r.nextEarnings).length,
-    nearestDte: putRows.length ? Math.min(...putRows.map((r) => r.dte)) : null,
+    // Mọi hợp đồng, không riêng put đã bán - ngày đáo hạn gần nhất là ngày
+    // gần nhất bạn phải xử lý một cái gì đó.
+    nearestDte: contractRows.length
+      ? Math.min(...contractRows.map((r) => r.dte))
+      : null,
     // Put đang giữ mà bề mặt vol đang cảnh báo: backwardation (thị trường
     // định giá một sự kiện gần) hoặc skew bất thường cao (thị trường trả
     // giá cao bất thường cho bảo hiểm chiều giảm ở đúng mã đó).

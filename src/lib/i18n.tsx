@@ -512,6 +512,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `${n} days`,
   },
 
+  'pf.attnNote': {
+    vi: 'Ba con số: đang trong tiền (giá đã xuống dưới strike, có thể bị assign) · sắp earnings trước ngày đáo hạn · vol cảnh báo. "Vol cảnh báo" đếm số put mà thị trường quyền chọn đang định giá rủi ro bất thường ở chính mã đó - hoặc term structure đảo (đang định giá một sự kiện sắp xảy ra), hoặc put skew cao bất thường (có người trả giá cao khác thường để mua bảo hiểm chiều giảm). Số 0 nghĩa là không mã nào đang bị như vậy. Bấm vào để xem đúng mã nào.',
+    en: 'Three counts: in the money (price below your strike, assignment possible) · earnings due before expiry · vol warnings. "Vol warnings" counts puts where the options market is pricing unusual risk in that specific name - either term structure inverted (an event is being priced in) or put skew unusually high (someone is paying up for downside protection). Zero means none are. Tap to see which symbols.',
+  },
+  'pf.sizingIntro': {
+    vi: 'Bán 1 put là cam kết mua 100 cổ phiếu tại strike. Bốn giới hạn dưới đây trả lời cùng một câu hỏi: nếu bị assign, số tiền phải bỏ ra chiếm bao nhiêu phần trăm tài khoản. Theo mã (5%) - một mã sập không được phép làm hỏng tài khoản. Theo ngành (20%) - cả ngành cùng rớt là chuyện có thật. Tổng cash-secured (50%) - giữ lại một nửa để còn xoay xở. Cluster (30%) - đây là cái tinh tế nhất: bán put trên 10 mã công nghệ tương quan 0.9 với nhau thực chất là MỘT lệnh lớn, không phải mười lệnh nhỏ, và ba giới hạn trên không nhìn ra điều đó. Xanh là trong giới hạn, đỏ là đã vượt.',
+    en: 'Selling one put commits you to buying 100 shares at the strike. All four limits below answer the same question: if assigned, what share of the account does that cost? Per symbol (5%) - one blow-up must not wreck the account. Per sector (20%) - whole sectors do fall together. Total cash-secured (50%) - keep half in reserve. Cluster (30%) - the subtle one: ten puts on tech names correlated 0.9 are really ONE large position, not ten small ones, and the first three limits cannot see that. Green is within limits, red is over.',
+  },
   'pf.sizingHead': { vi: 'Quản lý quy mô vị thế', en: 'Position sizing' },
   'pf.sizingFailed': {
     vi: 'Chưa tính được cluster exposure. Nguyên văn lỗi:',
@@ -589,6 +597,20 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Checks every 15 minutes during market hours. Each alert per symbol is sent at most once a day, so the inbox never floods. Daily P/L is deliberately NOT alerted - something that pings constantly is something you learn to ignore. On iPhone, browser push only works after "Add to Home Screen"; Telegram needs no such step.',
   },
 
+  'pf.calls': { vi: 'Call đã bán', en: 'Calls sold' },
+  'pf.callsNote': {
+    vi: 'Ngược hẳn với put đã bán: put sợ giá RƠI xuống dưới strike (phải mua cổ phiếu), call sợ giá VỌT lên trên strike (bị gọi mất cổ phiếu ở giá strike). Nên cột "Cách strike" ở đây đo khoảng còn được tăng, không phải khoảng còn được giảm. Covered = cổ phiếu bạn đang giữ đủ bảo chứng, xấu nhất là bán mất ở giá strike. Naked = không đủ cổ phiếu, lỗ về lý thuyết không có giới hạn. Credit của call ĐƯỢC cộng vào "Credit đã nhận", nhưng cố ý KHÔNG cộng vào "Tiền thế chấp" - covered call khoá cổ phiếu chứ không khoá tiền, mà giá trị cổ phiếu đã nằm sẵn ở ô riêng rồi.',
+    en: 'The mirror image of a sold put: a put fears price FALLING below the strike (you must buy), a call fears price RISING above it (your shares get called away at the strike). So "To strike" here measures the room left to rise, not to fall. Covered = your shares fully back the contracts, worst case is selling them at the strike. Naked = they do not, and the theoretical loss is unbounded. Call credit IS counted in "Credit received" but deliberately NOT in "Cash secured" - a covered call ties up shares, not cash, and those shares are already counted in their own tile.',
+  },
+  'pf.longPuts': { vi: 'Put đã mua', en: 'Puts bought' },
+  'pf.longPutsNote': {
+    vi: 'Đây là bảo hiểm, không phải nguồn thu: bạn đã TRẢ tiền chứ không nhận. Nên lời/lỗ tính ngược với put đã bán - giá trị bây giờ trừ đi số đã bỏ ra. Vào trong tiền ở đây là chuyện TỐT (bảo hiểm đang có giá trị thật), nên không tô đỏ. Cột "Cách strike" cho biết giá còn phải rơi bao nhiêu nữa thì bảo hiểm mới bắt đầu ăn tiền.',
+    en: 'This is insurance, not income: you PAID for it rather than received. So P/L is the reverse of a sold put - what it is worth now minus what you paid. Being in the money here is GOOD (the insurance has real value), so it is not marked red. "To strike" shows how much further price must fall before the protection starts paying.',
+  },
+  'pf.covered': { vi: ' · covered', en: ' · covered' },
+  'pf.naked': { vi: ' · KHÔNG có cổ phiếu bảo chứng', en: ' · NOT covered by shares' },
+  'pf.colToStrike': { vi: 'Cách strike', en: 'To strike' },
+  'pf.colPaid': { vi: 'Đã trả', en: 'Paid' },
   'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
   'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
 
@@ -614,7 +636,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (n: number) => `${n} vị thế khác không hiện ở đây`,
     en: (n: number) => `${n} other position${n === 1 ? '' : 's'} not shown`,
   },
-  'pf.skipCall': { vi: 'quyền chọn mua, chưa theo dõi', en: 'call option, not tracked' },
+  'pf.skipLongCall': { vi: 'call đã mua, chưa theo dõi', en: 'bought call, not tracked' },
   'pf.skipLongPut': { vi: 'put đã mua, chưa theo dõi', en: 'bought put, not tracked' },
   'pf.skipShortStock': { vi: 'cổ phiếu bán khống, chưa theo dõi', en: 'short stock, not tracked' },
   'pf.skipMissingPrice': {
@@ -632,8 +654,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.skipOther': { vi: 'chưa theo dõi', en: 'not tracked' },
 
   'pf.note': {
-    vi: 'Đọc thẳng từ tài khoản Schwab của bạn (quyền Accounts and Trading), không nhập tay. Tiền mặt và sức mua cũng lấy trực tiếp từ Schwab — ô nào không hiện nghĩa là Schwab không trả về đúng trường đó cho loại tài khoản này, không phải tài khoản trống. Giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Chỉ theo dõi put đã bán và cổ phiếu đang giữ dài hạn; quyền chọn mua, put đã mua và cổ phiếu bán khống được gọi tên riêng bên dưới thay vì lặng lẽ biến mất.',
-    en: 'Read directly from your Schwab account (Accounts and Trading access), not typed in by hand. Cash and buying power come straight from Schwab too — a missing tile means Schwab did not return that field for this account type, not that the account is empty. The buy-back price, the profit, how much of the credit is captured, the distance to the strike — all recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Collateral is the cash-secured figure, strike × 100 × contracts. Only sold puts and long-held shares are tracked here; call options, bought puts and short stock are named below rather than silently disappearing.',
+    vi: 'Đọc thẳng từ tài khoản Schwab của bạn (quyền Accounts and Trading), không nhập tay. Tiền mặt và sức mua cũng lấy trực tiếp từ Schwab — ô nào không hiện nghĩa là Schwab không trả về đúng trường đó cho loại tài khoản này, không phải tài khoản trống. Giá mua lại, lời lỗ, phần credit đã ăn, khoảng cách tới strike — tính lại mỗi phút từ báo giá Schwab. ROC/năm còn lại là giá trị thời gian còn lại quy theo số ngày còn lại: giữ tới đáo hạn thì tiền thế chấp còn sinh lời bấy nhiêu một năm, và đó là con số để so với cơ hội mới bên tab screener trước khi quyết định đóng sớm. Hợp đồng đã vào trong tiền thì phần nội tại không được tính vào — đó là khoản lỗ đang mang, không phải lợi nhuận còn kiếm được. Tiền thế chấp tính theo kiểu cash-secured, tức strike × 100 × số hợp đồng. Theo dõi put đã bán, call đã bán, put đã mua và cổ phiếu đang giữ dài hạn - mỗi loại một bảng riêng vì công thức lời/lỗ và chiều rủi ro của chúng khác nhau. Call đã mua và cổ phiếu bán khống vẫn chưa theo dõi, nhưng được gọi tên riêng bên dưới thay vì lặng lẽ biến mất.',
+    en: 'Read directly from your Schwab account (Accounts and Trading access), not typed in by hand. Cash and buying power come straight from Schwab too — a missing tile means Schwab did not return that field for this account type, not that the account is empty. The buy-back price, the profit, how much of the credit is captured, the distance to the strike — all recomputed every minute from Schwab quotes. ROC p.a. left is the time value still in the contract, annualised over the days remaining: hold to expiry and that is what the collateral still earns, which is the number to weigh against a fresh opportunity in the screener before closing early. On a contract that has gone in the money the intrinsic part is excluded — that is a loss being carried, not a return still to come. Collateral is the cash-secured figure, strike × 100 × contracts. Sold puts, sold calls, bought puts and long-held shares are each tracked in their own table, because their P/L formulas and risk directions differ. Bought calls and short stock are still untracked, but are named below rather than silently disappearing.',
   },
 
   // ---- sector rotation (RRG) ----
