@@ -72,6 +72,56 @@ export async function flushSnapshots() {
   await fs.writeFile(SNAP, JSON.stringify(snapCache));
 }
 
+/* ---------------- put skew snapshots ----------------
+   Same bootstrapping problem as IV Rank above: Skew_zscore needs a rolling
+   mean/std of daily skew readings, which cannot exist on day one either.
+   One skew reading per symbol per day accumulates the same way
+   iv-history.json does; until ~60 readings exist the gate passes rather
+   than blocking on a z-score that cannot mean anything yet. */
+
+type SkewSnapshotFile = Record<string, { d: string; skew: number }[]>;
+const SKEW_SNAP = path.resolve('./.cache/skew-history.json');
+
+let skewSnapCache: SkewSnapshotFile | null = null;
+
+async function loadSkewSnapshots(): Promise<SkewSnapshotFile> {
+  if (skewSnapCache) return skewSnapCache;
+  try {
+    skewSnapCache = JSON.parse(await fs.readFile(SKEW_SNAP, 'utf8'));
+  } catch {
+    skewSnapCache = {};
+  }
+  return skewSnapCache!;
+}
+
+export async function recordSkew(symbol: string, skew: number) {
+  const snaps = await loadSkewSnapshots();
+  const today = new Date().toISOString().slice(0, 10);
+  const list = (snaps[symbol] ||= []);
+  if (list.some((s) => s.d === today)) return;
+  list.push({ d: today, skew });
+  if (list.length > 260) list.splice(0, list.length - 260); // ~1 trading year
+}
+
+export async function flushSkewSnapshots() {
+  if (!skewSnapCache) return;
+  await fs.mkdir(path.dirname(SKEW_SNAP), { recursive: true });
+  await fs.writeFile(SKEW_SNAP, JSON.stringify(skewSnapCache));
+}
+
+/** z-score of today's skew reading against its own trailing history. Null until enough days exist. */
+export async function skewZScore(symbol: string, skew: number): Promise<number | null> {
+  const snaps = await loadSkewSnapshots();
+  const list = snaps[symbol];
+  if (!list || list.length < 60) return null;
+  const vals = list.map((s) => s.skew);
+  const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
+  const std = Math.sqrt(variance);
+  if (std <= 0) return null;
+  return (skew - mean) / std;
+}
+
 export async function ivRank(symbol: string, iv: number): Promise<number | null> {
   const snaps = await loadSnapshots();
   const list = snaps[symbol];
@@ -125,11 +175,9 @@ type ChainContract = {
   expirationDate: string;
 };
 
-/** Flatten Schwab's putExpDateMap into a plain contract array. */
-export function flattenPuts(chain: any): ChainContract[] {
+function flattenMap(map: any): ChainContract[] {
   const out: ChainContract[] = [];
-  const map = chain?.putExpDateMap ?? {};
-  for (const expKey of Object.keys(map)) {
+  for (const expKey of Object.keys(map ?? {})) {
     // key looks like "2026-09-18:31"
     const expDate = expKey.split(':')[0];
     for (const strikeKey of Object.keys(map[expKey])) {
@@ -151,6 +199,90 @@ export function flattenPuts(chain: any): ChainContract[] {
     }
   }
   return out;
+}
+
+/** Flatten Schwab's putExpDateMap into a plain contract array. */
+export function flattenPuts(chain: any): ChainContract[] {
+  return flattenMap(chain?.putExpDateMap);
+}
+
+/** Flatten Schwab's callExpDateMap - needed for put skew (put IV - call IV). */
+export function flattenCalls(chain: any): ChainContract[] {
+  return flattenMap(chain?.callExpDateMap);
+}
+
+/* ---------------- term structure & put skew ----------------
+   Both read off the one wide chain fetch already made per survivor -
+   windowFrom/windowTo bracket 20-65 DTE for exactly this reason, so there
+   is no extra Schwab request beyond the fullChain() call the caller
+   already makes. Unlike VRP/IV-Rank, neither needs a full-year history to
+   produce a raw number; only the skew z-score needs that (see the skew
+   snapshot section above). */
+
+/** IV of the contract closest to the money, within the expiration nearest targetDte. */
+function atmIvNear(
+  contracts: ChainContract[],
+  spot: number,
+  targetDte: number
+): number | null {
+  const withIv = contracts.filter((c) => c.volatility > 0);
+  if (!withIv.length) return null;
+  const dtes = Array.from(new Set(withIv.map((c) => c.daysToExpiration)));
+  const nearestDte = dtes.reduce((best, d) =>
+    Math.abs(d - targetDte) < Math.abs(best - targetDte) ? d : best
+  );
+  const inExp = withIv.filter((c) => c.daysToExpiration === nearestDte);
+  const atm = inExp.reduce((best, c) =>
+    Math.abs(c.strikePrice - spot) < Math.abs(best.strikePrice - spot) ? c : best
+  );
+  return atm.volatility / 100;
+}
+
+/** IV of the contract nearest a target absolute delta, within the expiration nearest targetDte. */
+function ivNearDelta(
+  contracts: ChainContract[],
+  targetAbsDelta: number,
+  targetDte: number
+): number | null {
+  const withDelta = contracts.filter(
+    (c) => Math.abs(c.delta ?? 0) > 0 && c.volatility > 0
+  );
+  if (!withDelta.length) return null;
+  const dtes = Array.from(new Set(withDelta.map((c) => c.daysToExpiration)));
+  const nearestDte = dtes.reduce((best, d) =>
+    Math.abs(d - targetDte) < Math.abs(best - targetDte) ? d : best
+  );
+  const inExp = withDelta.filter((c) => c.daysToExpiration === nearestDte);
+  const nearest = inExp.reduce((best, c) =>
+    Math.abs(Math.abs(c.delta) - targetAbsDelta) <
+    Math.abs(Math.abs(best.delta) - targetAbsDelta)
+      ? c
+      : best
+  );
+  return nearest.volatility / 100;
+}
+
+export type TermSkew = {
+  /** IV_60d / IV_30d. Below 0.95 (backwardation) means the market is pricing a near-term event. */
+  tsSlope: number | null;
+  /** IV(25-delta put) - IV(25-delta call), both read near the 30d expiration. */
+  skew: number | null;
+};
+
+export function termStructureAndSkew(
+  puts: ChainContract[],
+  calls: ChainContract[],
+  spot: number
+): TermSkew {
+  const iv30 = atmIvNear(puts, spot, 30);
+  const iv60 = atmIvNear(puts, spot, 60);
+  const tsSlope = iv30 && iv30 > 0 && iv60 !== null ? iv60 / iv30 : null;
+
+  const putIv25 = ivNearDelta(puts, 0.25, 30);
+  const callIv25 = ivNearDelta(calls, 0.25, 30);
+  const skew = putIv25 !== null && callIv25 !== null ? putIv25 - callIv25 : null;
+
+  return { tsSlope, skew };
 }
 
 export type UnderlyingContext = {
@@ -181,9 +313,26 @@ function addDays(days: number) {
  */
 const OPEN_DTE_CEILING = 180;
 
-export const windowFrom = (f: Filters) => addDays(isOn(f, 'dte') ? f.minDte : 0);
-export const windowTo = (f: Filters) =>
-  addDays(isOn(f, 'dte') ? f.maxDte : OPEN_DTE_CEILING);
+/**
+ * Term structure and put skew need ATM readings near 30d and 60d
+ * regardless of what the user typed into the DTE filter, so the fetch
+ * window always brackets 20-65 days even if the user's own range sits
+ * entirely inside or outside it. Free to widen: Schwab still answers with
+ * one request, just a bigger payload, not an extra call.
+ */
+const TS_FLOOR = 20;
+const TS_CEIL = 65;
+
+export const windowFrom = (f: Filters) => {
+  const own = addDays(isOn(f, 'dte') ? f.minDte : 0);
+  const floor = addDays(TS_FLOOR);
+  return own < floor ? own : floor;
+};
+export const windowTo = (f: Filters) => {
+  const own = addDays(isOn(f, 'dte') ? f.maxDte : OPEN_DTE_CEILING);
+  const ceil = addDays(TS_CEIL);
+  return own > ceil ? own : ceil;
+};
 
 /**
  * Score blends the four things that decide whether a cash-secured put was a
@@ -219,13 +368,20 @@ export async function evaluate(
   u: UnderlyingContext,
   contracts: ChainContract[],
   f: Filters,
-  earnings: Record<string, string[]>
+  earnings: Record<string, string[]>,
+  termSkew: TermSkew
 ): Promise<Candidate | null> {
   // Depends on the underlying alone, so it settles before the contract loop
   // rather than being re-tested against every strike.
   const drawdownPct =
     u.high52 > 0 ? ((u.high52 - u.spot) / u.high52) * 100 : 0;
   if (isOn(f, 'drawdown') && drawdownPct < f.minDrawdownPct) return null;
+
+  // Also depends on the underlying alone (whole chain, not one strike), so
+  // it settles once here too. The caller already recorded today's skew
+  // reading before calling evaluate() - this only reads history back.
+  const skewZ =
+    termSkew.skew !== null ? await skewZScore(u.symbol, termSkew.skew) : null;
 
   let best: Candidate | null = null;
 
@@ -314,6 +470,20 @@ export async function evaluate(
         key: 'fallingKnife',
         label: 'Chưa rơi quá 20% trong 20 phiên',
         passed: u.chg20Pct === null || u.chg20Pct > -20,
+      },
+      {
+        key: 'termStructure',
+        label: `Term structure (IV60/IV30${
+          termSkew.tsSlope !== null ? ` = ${termSkew.tsSlope.toFixed(2)}` : ''
+        }) ≥ 0.95 - chưa backwardation`,
+        passed: termSkew.tsSlope === null || termSkew.tsSlope >= 0.95,
+      },
+      {
+        key: 'putSkew',
+        label: `Put skew z-score${
+          skewZ !== null ? ` = ${skewZ.toFixed(1)}` : ' (chưa đủ dữ liệu)'
+        } ≤ 2`,
+        passed: skewZ === null || skewZ <= 2,
       },
     ];
     if (f.hardGates && gates.some((g) => !g.passed)) continue;
