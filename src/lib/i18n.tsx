@@ -512,6 +512,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `${n} days`,
   },
 
+  'pf.attnNote': {
+    vi: 'Ba con số: đang trong tiền (giá đã xuống dưới strike, có thể bị assign) · sắp earnings trước ngày đáo hạn · vol cảnh báo. "Vol cảnh báo" đếm số put mà thị trường quyền chọn đang định giá rủi ro bất thường ở chính mã đó - hoặc term structure đảo (đang định giá một sự kiện sắp xảy ra), hoặc put skew cao bất thường (có người trả giá cao khác thường để mua bảo hiểm chiều giảm). Số 0 nghĩa là không mã nào đang bị như vậy. Bấm vào để xem đúng mã nào.',
+    en: 'Three counts: in the money (price below your strike, assignment possible) · earnings due before expiry · vol warnings. "Vol warnings" counts puts where the options market is pricing unusual risk in that specific name - either term structure inverted (an event is being priced in) or put skew unusually high (someone is paying up for downside protection). Zero means none are. Tap to see which symbols.',
+  },
+  'pf.sizingIntro': {
+    vi: 'Bán 1 put là cam kết mua 100 cổ phiếu tại strike. Bốn giới hạn dưới đây trả lời cùng một câu hỏi: nếu bị assign, số tiền phải bỏ ra chiếm bao nhiêu phần trăm tài khoản. Theo mã (5%) - một mã sập không được phép làm hỏng tài khoản. Theo ngành (20%) - cả ngành cùng rớt là chuyện có thật. Tổng cash-secured (50%) - giữ lại một nửa để còn xoay xở. Cluster (30%) - đây là cái tinh tế nhất: bán put trên 10 mã công nghệ tương quan 0.9 với nhau thực chất là MỘT lệnh lớn, không phải mười lệnh nhỏ, và ba giới hạn trên không nhìn ra điều đó. Xanh là trong giới hạn, đỏ là đã vượt.',
+    en: 'Selling one put commits you to buying 100 shares at the strike. All four limits below answer the same question: if assigned, what share of the account does that cost? Per symbol (5%) - one blow-up must not wreck the account. Per sector (20%) - whole sectors do fall together. Total cash-secured (50%) - keep half in reserve. Cluster (30%) - the subtle one: ten puts on tech names correlated 0.9 are really ONE large position, not ten small ones, and the first three limits cannot see that. Green is within limits, red is over.',
+  },
   'pf.sizingHead': { vi: 'Quản lý quy mô vị thế', en: 'Position sizing' },
   'pf.sizingFailed': {
     vi: 'Chưa tính được cluster exposure. Nguyên văn lỗi:',

@@ -405,6 +405,10 @@ export default function PortfolioPanel() {
           </dl>
         )}
 
+        {summary && (rows?.length ?? 0) > 0 && (
+          <p className="cap">{t('pf.attnNote')}</p>
+        )}
+
         {positionSizingError && (
           <p className="cap warnline">
             {t('pf.sizingFailed')} <code>{positionSizingError}</code>
@@ -414,6 +418,7 @@ export default function PortfolioPanel() {
         {positionSizing && (
           <>
             <h3 className="dsec">{t('pf.sizingHead')}</h3>
+            <p className="cap">{t('pf.sizingIntro')}</p>
             <dl className="stats">
               <div>
                 <dt>{t('pf.sizingTotal', positionSizing.limits.totalCollateralPct)}</dt>
