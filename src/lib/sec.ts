@@ -198,3 +198,68 @@ export async function ciksFor(
 export function __resetSec() {
   memo = null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Danh sách hồ sơ đã nộp                                              */
+/* ------------------------------------------------------------------ */
+
+export type Filing = {
+  accessionNumber: string;
+  form: string;
+  filingDate: string;
+  reportDate: string;
+  primaryDocument: string;
+};
+
+/**
+ * `filings.recent` KHÔNG phải danh sách các hồ sơ.
+ *
+ * Nó là một bó mảng SONG SONG - `form[3]` là loại của hồ sơ mà số hiệu
+ * nằm ở `accessionNumber[3]`, ngày nằm ở `filingDate[3]`. Đọc nhầm thành
+ * mảng các đối tượng là ra rỗng chứ không ra lỗi, nên chỗ này được ghép
+ * lại thành đối tượng ngay tại đây, một lần.
+ *
+ * Bên cạnh `recent` còn có `filings.files` chứa các hồ sơ cũ hơn đã bị
+ * đẩy sang file riêng. Không dùng tới: `recent` giữ khoảng một năm gần
+ * nhất, mà tín hiệu người nội bộ mua thì chỉ có nghĩa khi còn mới.
+ */
+export function parseRecentFilings(raw: any): Filing[] {
+  const r = raw?.filings?.recent;
+  const acc: string[] = r?.accessionNumber ?? [];
+  const form: string[] = r?.form ?? [];
+  if (!Array.isArray(acc) || !Array.isArray(form) || !acc.length) {
+    throw new SecError(
+      'Không đọc được filings.recent của SEC — có thể cấu trúc đã đổi. ' +
+        `Khoá thấy được: ${r && typeof r === 'object' ? Object.keys(r).join(', ') : '(không có filings.recent)'}`
+    );
+  }
+  const filingDate: string[] = r.filingDate ?? [];
+  const reportDate: string[] = r.reportDate ?? [];
+  const primaryDocument: string[] = r.primaryDocument ?? [];
+  return acc.map((accessionNumber, i) => ({
+    accessionNumber,
+    form: form[i] ?? '',
+    filingDate: filingDate[i] ?? '',
+    reportDate: reportDate[i] ?? '',
+    primaryDocument: primaryDocument[i] ?? '',
+  }));
+}
+
+/** Hồ sơ gần đây của một công ty. `cik` nhận cả dạng đệm 0 lẫn không. */
+export async function recentFilings(cik: string | number): Promise<Filing[]> {
+  const raw = await getJson(`https://data.sec.gov/submissions/CIK${padCik(cik)}.json`);
+  return parseRecentFilings(raw);
+}
+
+/** Lọc ra Form 4 nộp trong `days` ngày gần nhất. */
+export function form4sSince(filings: Filing[], days: number, now = Date.now()): Filing[] {
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
+  return filings.filter(
+    (f) =>
+      // Đúng "4", không phải "4/A" (bản sửa) - bản sửa cần xử lý riêng vì
+      // nó thay thế hồ sơ cũ chứ không cộng thêm vào.
+      f.form === '4' &&
+      f.filingDate &&
+      Date.parse(f.filingDate + 'T00:00:00Z') >= cutoff
+  );
+}
