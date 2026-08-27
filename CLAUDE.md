@@ -98,6 +98,61 @@ Four limits against account value: 5%/symbol, 20%/sector, 50% total cash-secured
 
 The spec's own cluster formula is underspecified — read literally it double-counts with no ceiling. The interpretation implemented here, and documented in the code: for every pair, `sqrt(collateral_a × collateral_b) × corr_ab`, summed over all pairs ÷ account value, so two fully-correlated equal positions contribute their combined size once. Correlation stays **signed**, so a hedge lowers the number instead of being ignored.
 
+### Insider buying from SEC (`src/lib/sec.ts`, `form4.ts`, `insiders.ts`)
+
+Form 4 is the filing an officer or director must submit within two business
+days of trading their own company's stock. Only transaction code **P** counts
+here — bought on the open market with their own money. Granted stock, exercised
+options (code M) and shares handed back for tax are compensation, not
+conviction. Purchases under a **10b5-1 plan** are excluded too: the flag is
+`<aff10b5One>` at document level, and a filing can be all-code-P and still be a
+plan adopted months earlier that says nothing about today.
+
+Four traps, each confirmed against real filings pulled from SEC rather than read
+off the docs — all four fail silently rather than loudly:
+
+- `filings.recent` is a bundle of **parallel arrays**, not a list of filings.
+  `form[3]` describes the filing whose number is `accessionNumber[3]`. Reading
+  it as a list of objects yields empty, not an error.
+- `primaryDocument` does **not** point at the XML. SEC gives
+  `xslF345X06/form4.xml`, where the prefix is its own HTML-rendered copy. The
+  raw file is the same name with the prefix stripped — and the name is not
+  fixed (`form4.xml` for one filer, `tm2618008-1_4seq1.xml` for another), so
+  strip the prefix, never hardcode the name.
+- The `Archives` path wants the CIK with leading zeros **removed** and the
+  accession number with dashes **removed** — both the opposite of what
+  `data.sec.gov` wants, which needs the CIK zero-padded to ten digits. Hence
+  `padCik()` as one named function, and a test that reproduces a known-good URL.
+- SEC writes booleans **two ways**. The same `<aff10b5One>` is `0` in one filing
+  and `true` in another; `<isDirector>` likewise. `=== 'true'` misreads half the
+  filings in the dangerous direction — a pre-scheduled plan counted as
+  conviction buying. Everything boolean goes through `secBool()`.
+
+Three cache layers matched to how often each thing changes: the ticker directory
+(a day), a company's filing list (a day), and an individual Form 4 — which
+**never changes once filed**, so it is fetched once and kept forever. That last
+one is why the cost falls over time. `INSIDER_PATH` is on `/var/data` for the
+same reason.
+
+Counts distinct **buyers**, not purchases (keyed on filer CIK, since names are
+not written consistently): one person buying five times is one person, five
+people buying once each is a much stronger signal.
+
+The empty-table problem is the sharpest instance of the degradation idiom in
+this repo. Four states must not look alike, because each needs a different fix:
+never asked / no Form 4 filer exists at all (ETFs) / SEC was asked and refused /
+SEC answered and nobody is buying. Only the last is good news. `unavailable`
+returns a **code**, not a sentence — it was hardcoded Vietnamese at first and
+went straight into the English UI, caught by rendering the page, not by a type.
+
+Worth knowing when reading results: Apple's last 15 filings contained no code-P
+purchase at all. For a mega-cap that is the normal state, not a gap.
+
+The daily sync rides the alert loop's timer but deliberately sits **outside**
+`runOnce()`: alerts stand down outside market hours and switch off with no
+channel configured, while Form 4s are filed at any hour. Gating filings on
+either condition would silently stop collecting them.
+
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 
 Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".

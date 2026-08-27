@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { collectAlerts, inMarketHours, tradingDay, type Alert } from './alerts';
 import { sendAlerts, telegramConfigured, webPushConfigured } from './notify';
+import { syncTracked } from './insiders';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -120,8 +121,16 @@ export function startAlertLoop() {
   if (timer) return;
   timer = setInterval(() => {
     void runOnce().catch(() => {});
+    void syncTracked().catch(() => {});
   }, INTERVAL_MS);
   // Không giữ tiến trình sống chỉ vì bộ đếm giờ này.
   timer.unref?.();
   void runOnce().catch(() => {});
+  // Đồng bộ Form 4 đi nhờ chính bộ đếm giờ này, nhưng KHÔNG đi chung với
+  // runOnce: cảnh báo thì nghỉ ngoài giờ giao dịch và tắt hẳn khi chưa
+  // cấu hình kênh nào, còn hồ sơ SEC thì nộp bất kể giờ nào (Form 4 hạn
+  // nộp trong 2 ngày làm việc, thường vào buổi tối). Bản thân syncTracked
+  // tự bỏ qua mã đã hỏi trong ngày nên gọi mỗi 15 phút vẫn chỉ ra mạng
+  // một lần một ngày.
+  void syncTracked().catch(() => {});
 }

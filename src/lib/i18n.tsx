@@ -31,6 +31,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tab.analyze': { vi: 'Analyze', en: 'Analyze' },
   'tab.heatmap': { vi: 'Heatmap', en: 'Heatmap' },
   'tab.portfolio': { vi: 'My Portfolio', en: 'My Portfolio' },
+  'tab.insider': { vi: 'Người nội bộ', en: 'Insiders' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
@@ -958,6 +959,88 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // ---- misc ----
   'common.saving': { vi: ' đang lưu…', en: ' saving…' },
   'phase.quotes': { vi: 'Đang lấy báo giá…', en: 'Fetching quotes…' },
+
+  /* ---- Người nội bộ (Form 4) ---- */
+  'ins.title': { vi: 'Người nội bộ đang mua', en: 'Insider buying' },
+  'ins.intro': {
+    vi: 'Sếp và thành viên hội đồng quản trị bắt buộc phải khai báo với SEC trong 2 ngày làm việc mỗi khi mua bán cổ phiếu công ty mình (mẫu Form 4). Bảng này chỉ đếm MỘT loại giao dịch: tự bỏ tiền túi mua ngoài thị trường (SEC ký hiệu là mã P). Cổ phiếu được thưởng, quyền chọn đem đi thực hiện, hay cổ phiếu nộp lại để đóng thuế đều KHÔNG tính — đó là lương, không phải niềm tin. Giao dịch nằm trong kế hoạch 10b5-1 đăng ký sẵn từ nhiều tháng trước cũng bị loại, vì nó chạy tự động và không nói lên sếp nghĩ gì hôm nay.',
+    en: 'Officers and directors must report to SEC within two business days whenever they trade their own company stock (Form 4). This table counts one kind of transaction only: buying on the open market with their own money (SEC code P). Granted stock, exercised options and shares handed back to cover tax are all excluded — that is compensation, not conviction. Purchases made under a 10b5-1 plan adopted months earlier are excluded too, because they run automatically and say nothing about what the filer thinks today.',
+  },
+  'ins.clusterNote': {
+    vi: (n: number) =>
+      `Đếm theo SỐ NGƯỜI khác nhau, không phải số lượt mua: một người mua năm lần vẫn là một người tin tưởng, còn năm người cùng mua thì mạnh hơn hẳn. Từ ${n} người trở lên được đánh dấu "cả nhóm cùng mua".`,
+    en: (n: number) =>
+      `Counted by distinct PEOPLE, not purchases: one person buying five times is still one person, while five people buying is a far stronger signal. ${n} or more gets flagged as a cluster buy.`,
+  },
+  'ins.lookback': {
+    vi: (n: number) => `Trong ${n} ngày gần nhất`,
+    en: (n: number) => `Last ${n} days`,
+  },
+  'ins.colSymbol': { vi: 'Mã', en: 'Symbol' },
+  'ins.colBuyers': { vi: 'Số người mua', en: 'Buyers' },
+  'ins.colValue': { vi: 'Tổng tiền bỏ ra', en: 'Total spent' },
+  'ins.colLast': { vi: 'Mua gần nhất', en: 'Last buy' },
+  'ins.colWho': { vi: 'Ai mua', en: 'Who' },
+  'ins.cluster': { vi: 'Cả nhóm cùng mua', en: 'Cluster buy' },
+  'ins.shares': {
+    vi: (n: number) => `${n.toLocaleString('vi-VN')} cp`,
+    en: (n: number) => `${n.toLocaleString('en-US')} sh`,
+  },
+  'ins.noPrice': { vi: 'SEC không ghi giá', en: 'SEC listed no price' },
+  'ins.viewFiling': { vi: 'Xem hồ sơ gốc ở SEC', en: 'View filing at SEC' },
+  'ins.none': {
+    vi: 'Không mã nào có người nội bộ mua trong kỳ.',
+    en: 'No insider buying in any tracked symbol this period.',
+  },
+  'ins.noneNote': {
+    vi: 'Đây thường là chuyện bình thường, nhất là với công ty lớn: sếp ở đó được cấp cổ phiếu rồi bán ra, hiếm khi tự bỏ tiền mua thêm. Bảng trống KHÔNG có nghĩa là tin xấu.',
+    en: 'This is usually the normal state, especially for large companies: executives there are granted stock and sell it, and rarely buy more with their own money. An empty table is not bad news.',
+  },
+  'ins.unavailableHead': { vi: 'Những mã chưa có dữ liệu', en: 'Symbols with no data yet' },
+  'ins.unavail.noFiler': {
+    vi: 'Mã này không có ai nộp Form 4 ở SEC — thường là ETF hoặc quỹ.',
+    en: 'Nobody files Form 4 for this symbol — usually an ETF or a fund.',
+  },
+  'ins.unavail.neverChecked': {
+    vi: 'Chưa hỏi SEC về mã này lần nào.',
+    en: 'This symbol has never been looked up at SEC.',
+  },
+  'ins.unavail.fetchFailed': {
+    vi: 'Có hỏi SEC nhưng không được, nên vẫn chưa biết gì.',
+    en: 'SEC was asked but refused, so nothing is known yet.',
+  },
+  'ins.unavailableNote': {
+    vi: 'Quan trọng: "đã hỏi SEC và không ai mua" khác hẳn "chưa hỏi được". Mã nào nằm dưới đây là app CHƯA biết gì về nó, đừng đọc thành sạch sẽ.',
+    en: 'Important: "asked SEC and nobody is buying" is not the same as "could not ask". Anything listed below is a symbol this app knows nothing about yet — do not read it as clean.',
+  },
+  'ins.lastRun': {
+    vi: (at: number) => `Đồng bộ lần cuối: ${new Date(at).toLocaleString('vi-VN')}`,
+    en: (at: number) => `Last synced: ${new Date(at).toLocaleString('en-US')}`,
+  },
+  'ins.neverRun': {
+    vi: 'Chưa đồng bộ với SEC lần nào. Vòng lặp nền chạy mỗi ngày một lần, hoặc bấm nút bên cạnh để chạy ngay.',
+    en: 'Never synced with SEC. The background loop runs once a day, or press the button to run it now.',
+  },
+  'ins.syncNow': { vi: 'Đồng bộ ngay', en: 'Sync now' },
+  'ins.syncing': { vi: 'Đang hỏi SEC…', en: 'Asking SEC…' },
+  'ins.syncDone': {
+    vi: (r: { checked: number; fetched: number }) =>
+      `Đã kiểm tra ${r.checked} mã, tải thêm ${r.fetched} hồ sơ mới.`,
+    en: (r: { checked: number; fetched: number }) =>
+      `Checked ${r.checked} symbols, downloaded ${r.fetched} new filings.`,
+  },
+  'ins.holdingsError': {
+    vi: 'Không đọc được danh mục đang giữ, nên bảng này chỉ gồm các mã trong watchlist. Mã đang giữ mà chưa thêm vào watchlist sẽ không được theo dõi.',
+    en: 'Could not read your holdings, so this table covers watchlist symbols only. A held symbol that was never added to the watchlist is not being tracked.',
+  },
+  'ins.errors': { vi: 'Lỗi khi hỏi SEC', en: 'Errors talking to SEC' },
+  'ins.scope': {
+    vi: (n: number) =>
+      `Theo dõi ${n} mã: watchlist cộng với những mã đang thật sự giữ. Mã không nằm trong hai nhóm đó thì không được hỏi, và cũng không thể cảnh báo.`,
+    en: (n: number) =>
+      `Tracking ${n} symbols: your watchlist plus what you actually hold. Anything outside those two is never asked about, and cannot be warned about either.`,
+  },
+
   'disclaimer': {
     vi: 'Công cụ sàng lọc, không phải khuyến nghị đầu tư. Bán put là cam kết mua 100 cổ phiếu tại giá strike — chỉ lọc những mã bạn thực sự muốn sở hữu. Dữ liệu quyền chọn có độ trễ theo quyền truy cập tài khoản Schwab của bạn.',
     en: 'A screening tool, not investment advice. Selling a put commits you to buying 100 shares at the strike — only screen tickers you would genuinely want to own. Option data carries whatever delay your Schwab account entitlement has.',
