@@ -44,6 +44,15 @@ services:
         value: /var/data/alert-state.json
       - key: PUSH_SUBS_PATH
         value: /var/data/push-subs.json
+      # Hồ sơ Form 4 đã đọc từ SEC. Một hồ sơ đã nộp thì không bao giờ đổi
+      # nữa, nên tải một lần rồi giữ mãi - để trong thư mục build thì mỗi
+      # lần deploy lại phải tải lại toàn bộ, vừa chậm vừa tốn hạn mức SEC.
+      - key: INSIDER_PATH
+        value: /var/data/insiders.json
+      # SEC yêu cầu mọi request tự khai danh tính, dạng "Tên email@tenmien".
+      # Bỏ trống thì vẫn chạy nhưng SEC có quyền trả 403.
+      - key: SEC_USER_AGENT
+        sync: false
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL

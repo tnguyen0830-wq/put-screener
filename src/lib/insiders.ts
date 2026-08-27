@@ -60,12 +60,15 @@ export type SymbolInsiders = {
    */
   lastError: string | null;
   /**
-   * Vì sao mã này không có dữ liệu. Rỗng nghĩa là ĐÃ hỏi và SEC trả lời
+   * Vì sao mã này không có dữ liệu. null nghĩa là ĐÃ hỏi và SEC trả lời
    * là không có ai mua - khác hẳn với chưa hỏi được. Đây là chỗ dễ đọc
    * nhầm nhất trong cả tính năng: một bảng trống trông y hệt nhau ở hai
    * trường hợp trái ngược.
+   *
+   * Trả về MÃ chứ không phải câu chữ, để màn hình tự dịch. Câu tiếng Việt
+   * cứng trong này từng lọt thẳng ra giao diện tiếng Anh.
    */
-  unavailable: string | null;
+  unavailable: 'never-checked' | 'no-filer' | 'fetch-failed' | null;
 };
 
 type Stored = {
@@ -78,7 +81,7 @@ type Stored = {
       /** Chỉ đặt khi hỏi ĐƯỢC. Thiếu nó nghĩa là chưa từng có dữ liệu. */
       checkedAt?: number;
       /** Câu trả lời dứt khoát: mã này vốn không có hồ sơ nào (ETF, quỹ). */
-      error?: string;
+      noFiler?: true;
       /** Lần thử gần nhất hỏng vì sao. Khác hẳn `error` ở trên. */
       lastError?: string;
     }
@@ -148,10 +151,7 @@ export async function syncInsiders(
   for (const s of missing) {
     // ETF và quỹ không có ai nộp Form 4. Đây là câu trả lời dứt khoát,
     // không phải lỗi, nên vẫn đánh dấu là đã kiểm tra.
-    store.symbols[s] = {
-      checkedAt: now,
-      error: 'Mã này không có hồ sơ người nội bộ ở SEC (thường là ETF hoặc quỹ)',
-    };
+    store.symbols[s] = { checkedAt: now, noFiler: true };
     checked++;
   }
 
@@ -259,16 +259,81 @@ export async function readInsiders(
         // Bốn trạng thái, và chúng KHÔNG được hiện giống nhau: chưa hỏi
         // bao giờ / mã vốn không có hồ sơ / hỏi hỏng chưa có gì / đã hỏi
         // xong và đúng là không ai mua (unavailable = null).
-        unavailable:
-          meta?.error ??
-          (meta?.checkedAt !== undefined
+        unavailable: meta?.noFiler
+          ? 'no-filer'
+          : meta?.checkedAt !== undefined
             ? null
             : meta?.lastError
-              ? `Hỏi SEC không được: ${meta.lastError}`
-              : 'Chưa hỏi SEC về mã này lần nào'),
+              ? 'fetch-failed'
+              : 'never-checked',
       };
     });
 }
 
 /** Chỉ dùng cho kiểm thử. */
 export const __store = STORE;
+
+/* ------------------------------------------------------------------ */
+/* Chạy nền: những mã app này vốn đã theo dõi                          */
+/* ------------------------------------------------------------------ */
+
+export type InsiderRun = {
+  at: number;
+  checked: number;
+  fetched: number;
+  symbols: number;
+  errors: string[];
+  /** Không lấy được danh sách mã đang giữ thì nói ra, đừng lặng lẽ bỏ sót. */
+  holdingsError: string | null;
+};
+
+let lastRun: InsiderRun | null = null;
+export const getInsiderLastRun = () => lastRun;
+
+/**
+ * Những mã cần hỏi SEC: watchlist cộng với những mã đang thật sự giữ.
+ *
+ * Mã đang giữ quan trọng hơn cả: đó là chỗ tiền đang nằm. Nhưng nó phải
+ * đi qua Schwab, mà phiên Schwab thì hết hạn sau 7 ngày - nên hỏng phần
+ * đó không được kéo sập cả tính năng. Watchlist đọc từ đĩa, luôn có.
+ */
+export async function trackedSymbols(): Promise<{
+  symbols: string[];
+  holdingsError: string | null;
+}> {
+  const { readWatchlist } = await import('./watchlist');
+  const list = await readWatchlist().catch(() => [] as string[]);
+  let holdingsError: string | null = null;
+  let held: string[] = [];
+  try {
+    const { loadPortfolio } = await import('./portfolio');
+    const pf = await loadPortfolio();
+    held = pf.rows.map((r: any) => r.symbol).filter(Boolean);
+  } catch (e: any) {
+    holdingsError = String(e?.message ?? e);
+  }
+  return {
+    symbols: [...new Set([...list, ...held].map((s) => s.toUpperCase()))],
+    holdingsError,
+  };
+}
+
+/**
+ * Một lượt đồng bộ. Gọi được nhiều lần thoải mái: `syncInsiders` tự bỏ
+ * qua mã đã hỏi trong ngày, nên chạy mỗi 15 phút cũng chỉ tốn mạng một
+ * lần mỗi ngày.
+ */
+export async function syncTracked(force = false): Promise<InsiderRun> {
+  const at = Date.now();
+  const { symbols, holdingsError } = await trackedSymbols();
+  const r = await syncInsiders(symbols, force ? { maxAgeMs: 0 } : {});
+  lastRun = {
+    at,
+    checked: r.checked,
+    fetched: r.fetched,
+    symbols: symbols.length,
+    errors: Object.entries(r.errors).map(([k, v]) => `${k}: ${v}`),
+    holdingsError,
+  };
+  return lastRun;
+}

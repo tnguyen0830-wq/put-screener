@@ -9,6 +9,7 @@ import WatchlistPanel from '@/components/WatchlistPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
 import PortfolioPanel from '@/components/PortfolioPanel';
+import InsiderPanel from '@/components/InsiderPanel';
 import SettingsMenu from '@/components/SettingsMenu';
 import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
@@ -42,7 +43,7 @@ type Status = {
   daysLeft?: number;
 };
 
-type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio';
+type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio' | 'insider';
 
 export default function Page() {
   const { t } = useLang();
@@ -250,6 +251,12 @@ export default function Page() {
           >
             {t('tab.portfolio')}
           </button>
+          <button
+            className={tab === 'insider' ? 'on' : undefined}
+            onClick={() => setTab('insider')}
+          >
+            {t('tab.insider')}
+          </button>
         </nav>
         <span className="spacer" />
         <SettingsMenu status={status} />
@@ -311,6 +318,10 @@ export default function Page() {
       ) : tab === 'portfolio' ? (
         <div className="shell solo">
           <PortfolioPanel />
+        </div>
+      ) : tab === 'insider' ? (
+        <div className="shell solo">
+          <InsiderPanel />
         </div>
       ) : (
         <div className="shell solo">
