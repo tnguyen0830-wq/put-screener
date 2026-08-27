@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 
 type Buy = {
@@ -79,6 +79,8 @@ export default function InsiderPanel() {
   const { t } = useLang();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Mã đang bung ra để xem ai mua, ngay dưới dòng của nó trong bảng. */
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -243,52 +245,74 @@ export default function InsiderPanel() {
               </tr>
             </thead>
             <tbody>
-              {withBuys.map((r) => (
-                <tr key={r.symbol}>
-                  <td>
-                    <b>{r.symbol}</b>
-                    {r.clusterBuy && (
-                      <span className="pfsub good">{t('ins.cluster')}</span>
+              {withBuys.map((r) => {
+                const open = expanded === r.symbol;
+                return (
+                  <Fragment key={r.symbol}>
+                    {/* Bấm vào dòng là thấy ngay ai mua + chức vụ, không
+                        cần cuộn xuống tìm một khối riêng - trước đây danh
+                        sách "ai mua" nằm tách hẳn ở dưới bảng, phải bấm
+                        thêm một lần và tự dò đúng mã. */}
+                    <tr
+                      className="ins-row"
+                      onClick={() => setExpanded(open ? null : r.symbol)}
+                      aria-expanded={open}
+                    >
+                      <td>
+                        <b>{r.symbol}</b>
+                        {r.clusterBuy && (
+                          <span className="pfsub good">{t('ins.cluster')}</span>
+                        )}
+                      </td>
+                      <td className={r.clusterBuy ? 'good' : undefined}>
+                        {r.buyerCount}
+                      </td>
+                      <td>
+                        {r.totalValue === null ? (
+                          <span className="pfsub">{t('ins.noPrice')}</span>
+                        ) : (
+                          usd(r.totalValue)
+                        )}
+                      </td>
+                      <td>{r.lastBuyDate}</td>
+                    </tr>
+                    {open && (
+                      <tr className="ins-expand-row">
+                        <td colSpan={4}>
+                          <p className="cap" style={{ margin: '0 0 4px' }}>
+                            {r.symbol} — {t('ins.colWho')} ({r.buys.length})
+                          </p>
+                          <ul className="pfskipped">
+                            {r.buys.map((b) => (
+                              <li key={b.accessionNumber}>
+                                <b>{b.ownerName}</b>
+                                {/* Chức vụ ngay cạnh tên - chính là phần
+                                    người dùng nói phải hiện "luôn", không
+                                    ẩn thêm một lớp bấm nữa. */}
+                                {role(b, t) ? ` — ${role(b, t)}` : ''} ·{' '}
+                                {b.filingDate} · {t('ins.shares', b.shares)}
+                                {b.value !== null
+                                  ? ` · ${usd(b.value)}`
+                                  : ` · ${t('ins.noPrice')}`}{' '}
+                                <a
+                                  href={b.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {t('ins.viewFiling')}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td className={r.clusterBuy ? 'good' : undefined}>
-                    {r.buyerCount}
-                  </td>
-                  <td>
-                    {r.totalValue === null ? (
-                      <span className="pfsub">{t('ins.noPrice')}</span>
-                    ) : (
-                      usd(r.totalValue)
-                    )}
-                  </td>
-                  <td>{r.lastBuyDate}</td>
-                </tr>
-              ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
-          </div>
-
-          <div className="panel-body">
-            {withBuys.map((r) => (
-              <details key={`who-${r.symbol}`} className="rrgtable">
-                <summary>
-                  {r.symbol} — {t('ins.colWho')} ({r.buys.length})
-                </summary>
-                <ul className="pfskipped">
-                  {r.buys.map((b) => (
-                    <li key={b.accessionNumber}>
-                      <b>{b.ownerName}</b>
-                      {role(b, t) ? ` — ${role(b, t)}` : ''} · {b.filingDate} ·{' '}
-                      {t('ins.shares', b.shares)}
-                      {b.value !== null ? ` · ${usd(b.value)}` : ` · ${t('ins.noPrice')}`}{' '}
-                      <a href={b.url} target="_blank" rel="noreferrer">
-                        {t('ins.viewFiling')}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
           </div>
         </>
       )}
