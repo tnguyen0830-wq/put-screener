@@ -4,6 +4,7 @@ import {
   CLUSTER_MIN_BUYERS,
   LOOKBACK_DAYS,
   getInsiderLastRun,
+  insidersSyncing,
   readInsiders,
   syncTracked,
   trackedSymbols,
@@ -38,19 +39,25 @@ export async function GET() {
     lookbackDays: LOOKBACK_DAYS,
     clusterMinBuyers: CLUSTER_MIN_BUYERS,
     lastRun: getInsiderLastRun(),
+    syncing: insidersSyncing(),
+    trackedCount: symbols.length,
     holdingsError,
   });
 }
 
-/** Nút "đồng bộ ngay". Bỏ qua hạn một ngày và hỏi lại SEC. */
+/**
+ * Nút "đồng bộ ngay".
+ *
+ * Trả lời NGAY, không chờ việc hỏi SEC chạy xong - `syncTracked` chạy
+ * tiếp trong nền. Từng chờ ở đây một lần: với watchlist/holdings thật,
+ * hỏi tuần tự từng mã có thể mất hơn thời hạn chờ của proxy Render, và
+ * trình duyệt nhận về trang lỗi HTML của proxy thay vì JSON của app.
+ * Trang gọi lại GET để xem `syncing` đã về false chưa.
+ */
 export async function POST(req: NextRequest) {
   const force = new URL(req.url).searchParams.get('force') === '1';
-  try {
-    return NextResponse.json({ run: await syncTracked(force) });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: String(e?.message ?? e) },
-      { status: 502 }
-    );
-  }
+  void syncTracked(force).catch(() => {
+    /* lỗi từng mã đã được ghi vào lastRun.errors; không có gì để trả thêm */
+  });
+  return NextResponse.json({ started: true, alreadyRunning: insidersSyncing() });
 }

@@ -48,6 +48,11 @@ type Payload = {
     errors: string[];
     holdingsError: string | null;
   } | null;
+  /** Đang có một lượt đồng bộ chạy trong nền hay không, ngay lúc này. */
+  syncing: boolean;
+  /** Watchlist + đang giữ, gộp lại - KHÔNG phải số mã có trong bảng.
+   *  0 nghĩa là chưa có gì để theo dõi, khác hẳn "đã hỏi, sạch thật". */
+  trackedCount: number;
   holdingsError: string | null;
 };
 
@@ -72,14 +77,16 @@ export default function InsiderPanel() {
   const { t } = useLang();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const r = await fetch('/api/insiders');
       const j = await r.json();
       if (j.error) setError(String(j.error));
-      else setData(j);
+      else {
+        setData(j);
+        setError(null);
+      }
     } catch (e: any) {
       setError(String(e?.message ?? e));
     }
@@ -89,19 +96,31 @@ export default function InsiderPanel() {
     void load();
   }, [load]);
 
+  /**
+   * Trong lúc máy chủ đang đồng bộ nền, tự hỏi lại vài giây một lần tới
+   * khi xong - không bắt người dùng phải tự bấm lại. Che cả trường hợp
+   * người dùng vừa mở tab đúng lúc vòng lặp nền (mỗi 15 phút) đang chạy,
+   * không riêng gì lúc bấm nút.
+   */
+  useEffect(() => {
+    if (!data?.syncing) return;
+    const id = setInterval(() => void load(), 3000);
+    return () => clearInterval(id);
+  }, [data?.syncing, load]);
+
   const sync = useCallback(async () => {
-    setSyncing(true);
     setError(null);
     try {
+      // KHÔNG chờ việc đồng bộ chạy xong ở đây - route chỉ khởi động rồi
+      // trả lời ngay. Chờ ở request/response từng làm proxy Render tự
+      // trả về trang lỗi của chính nó khi hỏi SEC mất quá lâu.
       const r = await fetch('/api/insiders?force=1', { method: 'POST' });
       const j = await r.json();
       if (j.error) setError(String(j.error));
-      await load();
     } catch (e: any) {
       setError(String(e?.message ?? e));
-    } finally {
-      setSyncing(false);
     }
+    await load();
   }, [load]);
 
   const withBuys = data?.rows.filter((r) => r.buys.length > 0) ?? [];
@@ -109,6 +128,9 @@ export default function InsiderPanel() {
   // "đã hỏi, không ai mua" và "chưa hỏi được" mà nằm cạnh nhau trong cùng
   // một bảng trống thì đọc y hệt nhau.
   const unknown = data?.rows.filter((r) => r.unavailable !== null) ?? [];
+  // Case rõ nhất trong cả tính năng: 0 mã để theo dõi (watchlist trống,
+  // Schwab chưa có gì) không được hiện giống "đã hỏi N mã, sạch thật".
+  const nothingTracked = data !== null && data.trackedCount === 0;
 
   return (
     <section className="panel">
@@ -121,8 +143,8 @@ export default function InsiderPanel() {
           {data?.lastRun
             ? t('ins.lastRun', data.lastRun.at)
             : t('ins.neverRun')}{' '}
-          <button onClick={sync} disabled={syncing}>
-            {syncing ? t('ins.syncing') : t('ins.syncNow')}
+          <button onClick={sync} disabled={!!data?.syncing}>
+            {data?.syncing ? t('ins.syncing') : t('ins.syncNow')}
           </button>
         </p>
 
@@ -156,6 +178,13 @@ export default function InsiderPanel() {
       {data === null && !error ? (
         <div className="panel-body">
           <p className="cap">…</p>
+        </div>
+      ) : nothingTracked ? (
+        <div className="panel-body">
+          <div className="empty">
+            <strong>{t('ins.noneTracked')}</strong>
+            <p className="cap">{t('ins.noneTrackedNote')}</p>
+          </div>
         </div>
       ) : withBuys.length === 0 ? (
         <div className="panel-body">

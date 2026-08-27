@@ -148,11 +148,18 @@ export async function syncInsiders(
     return { checked, fetched, errors };
   }
 
+  // Ghi ra đĩa sau MỖI mã, không phải một lần duy nhất ở cuối vòng lặp.
+  // Watchlist lớn khiến cả lượt chạy mất khá lâu (tuần tự, giới hạn 8
+  // request/giây); ghi một lần ở cuối nghĩa là Render restart giữa chừng
+  // (redeploy, hết bộ nhớ...) làm mất sạch mọi thứ đã tải được, kể cả khi
+  // 60 trong 62 mã đã xong. Tốn thêm vài lần ghi JSON nhỏ, đổi lấy việc
+  // không bao giờ mất trắng một lượt chạy dở.
   for (const s of missing) {
     // ETF và quỹ không có ai nộp Form 4. Đây là câu trả lời dứt khoát,
     // không phải lỗi, nên vẫn đánh dấu là đã kiểm tra.
     store.symbols[s] = { checkedAt: now, noFiler: true };
     checked++;
+    await write(store);
   }
 
   for (const [symbol, cik] of Object.entries(found)) {
@@ -198,9 +205,9 @@ export async function syncInsiders(
       // "chưa hỏi bao giờ" - hai chuyện đó sửa bằng hai cách khác nhau.
       store.symbols[symbol] = { ...(store.symbols[symbol] ?? {}), lastError: msg };
     }
+    await write(store);
   }
 
-  await write(store);
   return { checked, fetched, errors };
 }
 
@@ -291,6 +298,19 @@ let lastRun: InsiderRun | null = null;
 export const getInsiderLastRun = () => lastRun;
 
 /**
+ * Đang có một lượt đồng bộ chạy hay không.
+ *
+ * Nút "đồng bộ ngay" trên trang KHÔNG được chờ việc này chạy xong rồi mới
+ * trả JSON: với watchlist/holdings thật, hỏi SEC tuần tự từng mã (giới
+ * hạn 8 request/giây) có thể mất hơn thời hạn chờ của proxy Render, và
+ * proxy tự trả về trang lỗi HTML của chính nó - trình duyệt cố đọc trang
+ * đó thành JSON và báo "Unexpected token '<'". Đúng bài học đã có ở
+ * scan-job.ts: việc chạy lâu không được nằm trong vòng đời một request.
+ */
+let inFlight = false;
+export const insidersSyncing = () => inFlight;
+
+/**
  * Những mã cần hỏi SEC: watchlist cộng với những mã đang thật sự giữ.
  *
  * Mã đang giữ quan trọng hơn cả: đó là chỗ tiền đang nằm. Nhưng nó phải
@@ -324,16 +344,22 @@ export async function trackedSymbols(): Promise<{
  * lần mỗi ngày.
  */
 export async function syncTracked(force = false): Promise<InsiderRun> {
-  const at = Date.now();
-  const { symbols, holdingsError } = await trackedSymbols();
-  const r = await syncInsiders(symbols, force ? { maxAgeMs: 0 } : {});
-  lastRun = {
-    at,
-    checked: r.checked,
-    fetched: r.fetched,
-    symbols: symbols.length,
-    errors: Object.entries(r.errors).map(([k, v]) => `${k}: ${v}`),
-    holdingsError,
-  };
-  return lastRun;
+  if (inFlight) return lastRun ?? { at: Date.now(), checked: 0, fetched: 0, symbols: 0, errors: [], holdingsError: null };
+  inFlight = true;
+  try {
+    const at = Date.now();
+    const { symbols, holdingsError } = await trackedSymbols();
+    const r = await syncInsiders(symbols, force ? { maxAgeMs: 0 } : {});
+    lastRun = {
+      at,
+      checked: r.checked,
+      fetched: r.fetched,
+      symbols: symbols.length,
+      errors: Object.entries(r.errors).map(([k, v]) => `${k}: ${v}`),
+      holdingsError,
+    };
+    return lastRun;
+  } finally {
+    inFlight = false;
+  }
 }
