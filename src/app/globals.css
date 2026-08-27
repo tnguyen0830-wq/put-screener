@@ -1495,6 +1495,24 @@ table.results tbody tr.clickable {
   white-space: nowrap;
 }
 
+/* Dòng ai-mua bung ra ngay dưới dòng mã đã bấm (tab Insider Trade). Dòng
+   này chỉ có một ô trải hết cả bảng nên vô tình khớp luôn :first-child ở
+   trên - phải gỡ lại sticky/viền/nowrap của cột mã, nếu không tên người
+   mua và chức vụ bị ép trên một dòng không xuống được. */
+.pftable tr.ins-row {
+  cursor: pointer;
+}
+.pftable tr.ins-row:hover td {
+  background: var(--rule-soft);
+}
+.pftable tr.ins-expand-row td:first-child {
+  position: static;
+  border-right: none;
+  padding-right: 10px;
+  white-space: normal;
+  background: var(--rule-soft);
+}
+
 /* Dòng phụ dưới mỗi ô: giá hiện tại, số hợp đồng, số ngày còn lại. Nhỏ và xám
    để con số chính vẫn là thứ đọc trước. */
 .pfsub {
