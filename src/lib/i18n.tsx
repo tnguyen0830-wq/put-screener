@@ -996,6 +996,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Đây thường là chuyện bình thường, nhất là với công ty lớn: sếp ở đó được cấp cổ phiếu rồi bán ra, hiếm khi tự bỏ tiền mua thêm. Bảng trống KHÔNG có nghĩa là tin xấu.',
     en: 'This is usually the normal state, especially for large companies: executives there are granted stock and sell it, and rarely buy more with their own money. An empty table is not bad news.',
   },
+  'ins.noneTracked': {
+    vi: 'Chưa có mã nào để theo dõi.',
+    en: 'Nothing being tracked yet.',
+  },
+  'ins.noneTrackedNote': {
+    vi: 'Tab này chỉ hỏi SEC về mã trong watchlist và mã đang thật sự giữ ở Schwab - khác hẳn bảng trống vì "đã hỏi, sạch thật". Thêm mã vào watchlist ở tab Sell Put Screener, hoặc bấm Đồng bộ lại nếu vừa kết nối Schwab.',
+    en: 'This tab only asks SEC about watchlist symbols and what you actually hold at Schwab - not the same as an empty table because "asked, genuinely clean". Add symbols to your watchlist on the Sell Put Screener tab, or reconnect Schwab if you just did and press sync again.',
+  },
   'ins.unavailableHead': { vi: 'Những mã chưa có dữ liệu', en: 'Symbols with no data yet' },
   'ins.unavail.noFiler': {
     vi: 'Mã này không có ai nộp Form 4 ở SEC — thường là ETF hoặc quỹ.',
