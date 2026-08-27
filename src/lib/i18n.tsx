@@ -31,7 +31,9 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tab.analyze': { vi: 'Analyze', en: 'Analyze' },
   'tab.heatmap': { vi: 'Heatmap', en: 'Heatmap' },
   'tab.portfolio': { vi: 'My Portfolio', en: 'My Portfolio' },
-  'tab.insider': { vi: 'Người nội bộ', en: 'Insiders' },
+  // Cố ý giữ NGUYÊN VĂN "Insider Trade" ở cả hai ngôn ngữ - người dùng
+  // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
+  'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
