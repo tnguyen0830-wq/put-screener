@@ -42,8 +42,14 @@ tasks genuinely need the same file, they go one after the other, not in
 parallel. `src/lib/i18n.tsx` and `src/components/PortfolioPanel.tsx` are the two
 files nearly every change touches, so they collide most.
 
-Merging is the owner's call. This project's convention is that Claude waits for
-the owner to say "merge" and never merges on its own initiative.
+Merging used to wait on the owner explicitly saying "merge" for every PR. The
+owner changed that: Claude now merges its own PRs automatically once its own
+verification (typecheck, build, and whatever tests apply) is green — no more
+waiting for a "merge" reply per PR. This still means: verify before merging,
+never merge a PR with failing checks or unresolved review feedback, and still
+say plainly what was merged. A PR that touches something risky or ambiguous
+enough to want the owner's eyes first is still worth flagging before merging,
+using judgment - "auto-merge" is not "never ask anything."
 
 ## Architecture
 
