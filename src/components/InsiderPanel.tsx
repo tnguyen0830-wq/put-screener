@@ -50,10 +50,12 @@ type Payload = {
   } | null;
   /** Đang có một lượt đồng bộ chạy trong nền hay không, ngay lúc này. */
   syncing: boolean;
-  /** Watchlist + đang giữ, gộp lại - KHÔNG phải số mã có trong bảng.
-   *  0 nghĩa là chưa có gì để theo dõi, khác hẳn "đã hỏi, sạch thật". */
+  /** S&P 500 + watchlist + đang giữ, gộp lại - KHÔNG phải số mã có trong
+   *  bảng. 0 nghĩa là chưa có gì để theo dõi, khác hẳn "đã hỏi, sạch thật". */
   trackedCount: number;
   holdingsError: string | null;
+  /** Không đọc được data/sp500.json trên máy chủ - khác hẳn "S&P 500 sạch". */
+  sp500Error: string | null;
 };
 
 const usd = (n: number) =>
@@ -114,7 +116,12 @@ export default function InsiderPanel() {
       // KHÔNG chờ việc đồng bộ chạy xong ở đây - route chỉ khởi động rồi
       // trả lời ngay. Chờ ở request/response từng làm proxy Render tự
       // trả về trang lỗi của chính nó khi hỏi SEC mất quá lâu.
-      const r = await fetch('/api/insiders?force=1', { method: 'POST' });
+      //
+      // KHÔNG kèm ?force=1: mã lỗi (403 chẳng hạn) không được ghi
+      // `checkedAt` nên tự động bị hỏi lại ở lượt kế tiếp rồi - ép hỏi
+      // lại toàn bộ ~500 mã của S&P 500 mỗi lần bấm nút là phí, kể cả
+      // những mã hôm nay đã xong sạch sẽ.
+      const r = await fetch('/api/insiders', { method: 'POST' });
       const j = await r.json();
       if (j.error) setError(String(j.error));
     } catch (e: any) {
@@ -131,6 +138,23 @@ export default function InsiderPanel() {
   // Case rõ nhất trong cả tính năng: 0 mã để theo dõi (watchlist trống,
   // Schwab chưa có gì) không được hiện giống "đã hỏi N mã, sạch thật".
   const nothingTracked = data !== null && data.trackedCount === 0;
+
+  // Gộp theo LÝ DO thay vì liệt kê từng mã một: với rổ S&P 500 (~500 mã),
+  // một lượt quét nguội hoặc một lỗi hệ thống (như 403 thiếu User-Agent)
+  // có thể khiến hàng trăm mã cùng rơi vào một lý do - 400 dòng "chưa hỏi"
+  // là nhiễu, không phải tín hiệu. fetch-failed lên đầu vì đó là thứ cần
+  // hành động; no-filer gần như không xảy ra ở rổ S&P 500 thật (toàn công
+  // ty thật, không phải ETF) nên vẫn hiện đủ tên khi có.
+  const REASON_ORDER: NonNullable<Row['unavailable']>[] = [
+    'fetch-failed',
+    'never-checked',
+    'no-filer',
+  ];
+  const groups = REASON_ORDER.map((code) => ({
+    code,
+    rows: unknown.filter((r) => r.unavailable === code),
+  })).filter((g) => g.rows.length > 0);
+  const SHOW_MAX = 20;
 
   return (
     <section className="panel">
@@ -154,11 +178,17 @@ export default function InsiderPanel() {
             {t('ins.scope', data.lastRun.symbols)}
           </p>
         )}
+        <p className="cap">{t('ins.sp500Note')}</p>
 
         {error && <p className="cap warnline">{error}</p>}
         {data?.holdingsError && (
           <p className="cap warnline">
             {t('ins.holdingsError')} <code>{data.holdingsError}</code>
+          </p>
+        )}
+        {data?.sp500Error && (
+          <p className="cap warnline">
+            {t('ins.sp500Error')} <code>{data.sp500Error}</code>
           </p>
         )}
         {data?.lastRun?.errors.length ? (
@@ -263,20 +293,35 @@ export default function InsiderPanel() {
         </>
       )}
 
-      {unknown.length > 0 && (
+      {groups.length > 0 && (
         <div className="panel-body">
           <h3>{t('ins.unavailableHead')}</h3>
           <p className="cap warnline">{t('ins.unavailableNote')}</p>
-          <ul className="pfskipped">
-            {unknown.map((r) => (
-              <li key={`unk-${r.symbol}`}>
-                <b>{r.symbol}</b> — {t(REASON[r.unavailable!])}
-                {/* Lời của chính SEC, giữ nguyên văn: "403" và "không tìm
-                    thấy" là hai chuyện phải sửa bằng hai cách khác nhau. */}
-                {r.lastError && <span className="pfsub">{r.lastError}</span>}
-              </li>
-            ))}
-          </ul>
+          {groups.map(({ code, rows }) => {
+            const shown = rows.slice(0, SHOW_MAX);
+            const rest = rows.length - shown.length;
+            return (
+              <details key={code} className="rrgtable" open={code === 'fetch-failed'}>
+                <summary>
+                  {t(REASON[code])} ({rows.length})
+                </summary>
+                <ul className="pfskipped">
+                  {shown.map((r) => (
+                    <li key={`unk-${r.symbol}`}>
+                      <b>{r.symbol}</b>
+                      {/* Lời của chính SEC, giữ nguyên văn: "403" và "không
+                          tìm thấy" là hai chuyện phải sửa bằng hai cách
+                          khác nhau. */}
+                      {r.lastError && <span className="pfsub">{r.lastError}</span>}
+                    </li>
+                  ))}
+                  {rest > 0 && (
+                    <li className="pfsub">{t('ins.andMore', rest)}</li>
+                  )}
+                </ul>
+              </details>
+            );
+          })}
         </div>
       )}
     </section>

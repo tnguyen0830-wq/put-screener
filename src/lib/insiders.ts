@@ -6,17 +6,27 @@ import { archiveXmlUrl, openMarketBuys, parseForm4, type Form4 } from './form4';
 /**
  * Người nội bộ có đang tự bỏ tiền mua cổ phiếu công ty mình không.
  *
- * Chỉ theo dõi những mã app này đã quan tâm sẵn (watchlist + đang giữ),
- * không quét cả sàn: một lần đồng bộ tốn 1 request/mã cho danh sách hồ
- * sơ, cộng 1 request cho mỗi Form 4 CHƯA từng đọc.
+ * Theo dõi cả rổ S&P 500 (data/sp500.json, cùng file screener và heatmap
+ * đang dùng) cộng thêm watchlist và mã đang giữ - hai nhóm sau tồn tại
+ * riêng vì có thể có mã ngoài rổ (ví dụ KULR). Không giới hạn vào riêng
+ * watchlist như bản đầu: người dùng nói rõ muốn thấy tín hiệu insider ở
+ * MỌI mã trong S&P 500, không chỉ mã họ đã để ý sẵn - đúng cách screener
+ * cũng quét cả rổ chứ không chỉ watchlist.
+ *
+ * Một lần đồng bộ tốn 1 request/mã cho danh sách hồ sơ, cộng 1 request
+ * cho mỗi Form 4 CHƯA từng đọc. Với ~500 mã, lượt quét NGUỘI đầu tiên có
+ * thể mất hàng chục phút (tuần tự, giới hạn 8 request/giây tới SEC) -
+ * chạy được an toàn nhờ hai điều đã sửa trước đó: không chặn request
+ * (chạy trong nền), và ghi ra đĩa sau MỖI mã chứ không đợi xong cả lượt.
  *
  * Ba tầng nhớ, theo mức độ thay đổi của từng thứ:
  *   - Danh bạ mã -> CIK: gần như không đổi. Nằm ở lib/sec.ts, một ngày.
  *   - Danh sách hồ sơ của một công ty: đổi khi có người nộp. Một ngày.
  *   - Bản thân một Form 4: KHÔNG BAO GIỜ đổi. Tải đúng một lần, giữ mãi.
  *
- * Tầng thứ ba là lý do việc này rẻ dần theo thời gian: sau vài tuần, mỗi
- * ngày chỉ còn phải tải vài hồ sơ mới.
+ * Tầng thứ ba là lý do việc này rẻ dần theo thời gian: sau khi quét nguội
+ * xong hết rổ, mỗi ngày chỉ còn phải hỏi danh sách hồ sơ của ~500 mã
+ * (nhanh, một chiều) rồi tải vài hồ sơ MỚI thật sự xuất hiện.
  */
 
 const STORE = path.resolve(process.env.INSIDER_PATH || './.cache/insiders.json');
@@ -292,6 +302,8 @@ export type InsiderRun = {
   errors: string[];
   /** Không lấy được danh sách mã đang giữ thì nói ra, đừng lặng lẽ bỏ sót. */
   holdingsError: string | null;
+  /** Không đọc được data/sp500.json - lượt này co lại còn watchlist/giữ. */
+  sp500Error: string | null;
 };
 
 let lastRun: InsiderRun | null = null;
@@ -317,12 +329,39 @@ export const insidersSyncing = () => inFlight;
  * đi qua Schwab, mà phiên Schwab thì hết hạn sau 7 ngày - nên hỏng phần
  * đó không được kéo sập cả tính năng. Watchlist đọc từ đĩa, luôn có.
  */
+const SP500_PATH = path.resolve(process.cwd(), 'data/sp500.json');
+
+/**
+ * Rổ S&P 500 dùng chung với screener/heatmap/exposure - cùng một file,
+ * không tự tải danh sách riêng. Trả về [] kèm lỗi thật nếu đọc hỏng, thay
+ * vì để cả lượt đồng bộ vỡ vì thiếu mỗi một file tĩnh.
+ */
+async function sp500Symbols(): Promise<{ symbols: string[]; error: string | null }> {
+  try {
+    const raw = JSON.parse(await fs.readFile(SP500_PATH, 'utf8'));
+    const symbols = Array.isArray(raw)
+      ? raw.map((r: any) => String(r?.symbol ?? '').toUpperCase()).filter(Boolean)
+      : [];
+    if (!symbols.length) {
+      return { symbols: [], error: `${SP500_PATH} đọc được nhưng không có mã nào` };
+    }
+    return { symbols, error: null };
+  } catch (e: any) {
+    return { symbols: [], error: String(e?.message ?? e) };
+  }
+}
+
 export async function trackedSymbols(): Promise<{
   symbols: string[];
   holdingsError: string | null;
+  /** Không đọc được data/sp500.json thì nói ra - khác hẳn "rổ trống thật". */
+  sp500Error: string | null;
 }> {
+  const { symbols: sp500, error: sp500Error } = await sp500Symbols();
+
   const { readWatchlist } = await import('./watchlist');
   const list = await readWatchlist().catch(() => [] as string[]);
+
   let holdingsError: string | null = null;
   let held: string[] = [];
   try {
@@ -332,9 +371,11 @@ export async function trackedSymbols(): Promise<{
   } catch (e: any) {
     holdingsError = String(e?.message ?? e);
   }
+
   return {
-    symbols: [...new Set([...list, ...held].map((s) => s.toUpperCase()))],
+    symbols: [...new Set([...sp500, ...list, ...held].map((s) => s.toUpperCase()))],
     holdingsError,
+    sp500Error,
   };
 }
 
@@ -344,11 +385,23 @@ export async function trackedSymbols(): Promise<{
  * lần mỗi ngày.
  */
 export async function syncTracked(force = false): Promise<InsiderRun> {
-  if (inFlight) return lastRun ?? { at: Date.now(), checked: 0, fetched: 0, symbols: 0, errors: [], holdingsError: null };
+  if (inFlight) {
+    return (
+      lastRun ?? {
+        at: Date.now(),
+        checked: 0,
+        fetched: 0,
+        symbols: 0,
+        errors: [],
+        holdingsError: null,
+        sp500Error: null,
+      }
+    );
+  }
   inFlight = true;
   try {
     const at = Date.now();
-    const { symbols, holdingsError } = await trackedSymbols();
+    const { symbols, holdingsError, sp500Error } = await trackedSymbols();
     const r = await syncInsiders(symbols, force ? { maxAgeMs: 0 } : {});
     lastRun = {
       at,
@@ -357,6 +410,7 @@ export async function syncTracked(force = false): Promise<InsiderRun> {
       symbols: symbols.length,
       errors: Object.entries(r.errors).map(([k, v]) => `${k}: ${v}`),
       holdingsError,
+      sp500Error,
     };
     return lastRun;
   } finally {

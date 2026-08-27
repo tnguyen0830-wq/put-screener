@@ -24,7 +24,7 @@ export async function GET() {
   // tiên sau khi deploy để khởi động.
   startAlertLoop();
 
-  const { symbols, holdingsError } = await trackedSymbols();
+  const { symbols, holdingsError, sp500Error } = await trackedSymbols();
   const rows = await readInsiders(symbols);
 
   // Xếp mã có nhiều người mua nhất lên trước, rồi tới mua gần đây nhất.
@@ -42,6 +42,7 @@ export async function GET() {
     syncing: insidersSyncing(),
     trackedCount: symbols.length,
     holdingsError,
+    sp500Error,
   });
 }
 

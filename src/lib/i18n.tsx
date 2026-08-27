@@ -1044,9 +1044,21 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'ins.errors': { vi: 'Lỗi khi hỏi SEC', en: 'Errors talking to SEC' },
   'ins.scope': {
     vi: (n: number) =>
-      `Theo dõi ${n} mã: watchlist cộng với những mã đang thật sự giữ. Mã không nằm trong hai nhóm đó thì không được hỏi, và cũng không thể cảnh báo.`,
+      `Theo dõi ${n} mã: cả rổ S&P 500, cộng watchlist và những mã đang thật sự giữ (có thể nằm ngoài rổ). Mã không nằm trong ba nhóm đó thì không được hỏi, và cũng không thể cảnh báo.`,
     en: (n: number) =>
-      `Tracking ${n} symbols: your watchlist plus what you actually hold. Anything outside those two is never asked about, and cannot be warned about either.`,
+      `Tracking ${n} symbols: the whole S&P 500, plus your watchlist and what you actually hold (which may fall outside the index). Anything outside those three is never asked about, and cannot be warned about either.`,
+  },
+  'ins.sp500Note': {
+    vi: 'Rổ S&P 500 có khoảng 500 mã. Lượt quét NGUỘI đầu tiên (chưa có gì trong bộ nhớ) có thể mất hàng chục phút vì hỏi SEC tuần tự, giới hạn tốc độ để không bị chặn - cứ để app chạy, không cần ngồi canh. Từ ngày thứ hai trở đi chỉ còn vài mã mới thật sự phát sinh, rất nhanh.',
+    en: 'The S&P 500 has roughly 500 symbols. The first COLD scan (nothing cached yet) can take tens of minutes - SEC is asked one symbol at a time, rate-limited on purpose to avoid getting blocked. Let it run in the background; no need to watch it. From the second day on, only genuinely new filings need fetching, which is fast.',
+  },
+  'ins.sp500Error': {
+    vi: 'Không đọc được danh sách S&P 500 trên máy chủ - lượt này chỉ còn watchlist và mã đang giữ.',
+    en: 'Could not read the S&P 500 list on the server - this run fell back to your watchlist and holdings only.',
+  },
+  'ins.andMore': {
+    vi: (n: number) => `… và ${n} mã khác`,
+    en: (n: number) => `… and ${n} more`,
   },
 
   'disclaimer': {
