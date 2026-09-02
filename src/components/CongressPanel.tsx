@@ -116,9 +116,15 @@ export default function CongressPanel() {
 
         <p className="cap">
           {data?.lastRun ? t('cg.lastRun', data.lastRun.at) : t('cg.neverRun')}{' '}
-          <button onClick={sync} disabled={!!data?.syncing}>
-            {data?.syncing ? t('cg.syncing') : t('cg.syncNow')}
-          </button>
+          {/* Chỉ hiện nút khi ĐÃ BIẾT chắc data.configured === true - lúc
+              data còn null (đang tải lần đầu), !data.configured phía dưới
+              chưa kịp chặn vì nó đòi data !== null, nên nút sẽ lộ ra một
+              nhịp trước khi biết có cấu hình UW_API_KEY hay không. */}
+          {data?.configured === true && (
+            <button onClick={sync} disabled={!!data?.syncing}>
+              {data?.syncing ? t('cg.syncing') : t('cg.syncNow')}
+            </button>
+          )}
         </p>
 
         {error && <p className="cap warnline">{error}</p>}

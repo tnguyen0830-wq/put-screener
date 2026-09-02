@@ -4,6 +4,8 @@ import { collectAlerts, inMarketHours, tradingDay, type Alert } from './alerts';
 import { sendAlerts, telegramConfigured, webPushConfigured } from './notify';
 import { syncTracked } from './insiders';
 import { syncCongress } from './congress';
+import { syncOptionFlow } from './optionflow';
+import { syncDarkpool } from './darkpool';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -124,6 +126,8 @@ export function startAlertLoop() {
     void runOnce().catch(() => {});
     void syncTracked().catch(() => {});
     void syncCongress().catch(() => {});
+    void syncOptionFlow().catch(() => {});
+    void syncDarkpool().catch(() => {});
   }, INTERVAL_MS);
   // Không giữ tiến trình sống chỉ vì bộ đếm giờ này.
   timer.unref?.();
@@ -141,4 +145,10 @@ export function startAlertLoop() {
   // congress.ts), nên gọi mỗi 15 phút vẫn rẻ: phần lớn lượt chỉ tốn một
   // request để biết "chưa có gì mới".
   void syncCongress().catch(() => {});
+  // Options Flow và Dark Pool cùng chung lý do: tín hiệu thị trường
+  // quyền chọn/dark pool xuất hiện bất kể giờ nào tính năng cảnh báo
+  // đang bật hay tắt. Cả hai tự dùng watermark riêng (newer_than / mỗi
+  // mã một mốc) nên gọi mỗi 15 phút không tải lại dữ liệu cũ.
+  void syncOptionFlow().catch(() => {});
+  void syncDarkpool().catch(() => {});
 }

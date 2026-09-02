@@ -194,6 +194,46 @@ Same self-disabling posture as the rest of the paid/optional integrations —
 and more so than usual, since the key on hand is a 7-day trial, not a
 purchase, and can stop working at any moment regardless of what the code does.
 
+### Options flow and dark pool (`src/lib/optionflow.ts`, `darkpool.ts`)
+
+Two more Unusual Whales signals in the same Insider Trade tab, both answering
+"what is smart money doing right now" rather than "who is behind this trade" —
+Form 4 / Congress trading. Both are short-lived on purpose: 14 days, not the
+90 used elsewhere, because a notable option sweep or a large dark-pool print
+from last week says nothing about today.
+
+**Different sync shape from each other, confirmed against real API calls
+before either was built:**
+
+- Options flow uses `ticker_symbol`, a real comma-separated filter parameter
+  (`?ticker_symbol=AAPL,MSFT` returns only those two tickers — verified, not
+  assumed) — so tracked symbols are sent in batches of ~50 per request rather
+  than pulled as one global feed and filtered in-app the way Congress trading
+  is. `flow-alerts` also carries a real `id` (a UUID) per record, unlike
+  Congress trading where UW returns no transaction id at all and a composite
+  key has to be built from several fields.
+- Dark pool's `/recent` endpoint has **no** ticker filter at all (confirmed);
+  only `/api/darkpool/{ticker}` does, so this one calls once per tracked
+  symbol rather than batching. More requests, but the alternative — pulling
+  the market-wide `/recent` feed and filtering client-side — risks a print
+  scrolling out of the "recent" window between one 15-minute sync and the
+  next, for a feed that has no shortage of volume. Records carry a real
+  `tracking_id` for dedup, same as flow-alerts' `id`.
+
+Dark pool is additionally filtered to prints above `MIN_PREMIUM` ($1M) on
+both sides — passed as a query param to UW *and* re-checked against the
+response, since it was never confirmed the `/{ticker}` endpoint actually
+honors that filter server-side the way `/recent` does. Without a floor, one
+liquid stock alone would produce more prints per day than the feature is
+worth.
+
+Congress trading's `amounts` field stays a string because STOCK Act law only
+allows disclosing a range. These two are the opposite case: `total_premium`
+and `premium` are UW's own precise dollar figures, not a legally-mandated
+range, so they're parsed to numbers rather than kept as strings — treating
+them the same way as Congress data would be applying the wrong caution to
+the wrong field.
+
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 
 Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".

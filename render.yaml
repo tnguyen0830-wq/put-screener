@@ -59,9 +59,14 @@ services:
       - key: CONGRESS_PATH
         value: /var/data/congress.json
       # Trả phí, key hiện là bản dùng thử 7 ngày (không phải mua đứt) -
-      # tính năng Congress Trading tự tắt nếu biến này trống.
+      # tính năng Congress Trading / Options Flow / Dark Pool tự tắt nếu
+      # biến này trống.
       - key: UW_API_KEY
         sync: false
+      - key: OPTIONFLOW_PATH
+        value: /var/data/optionflow.json
+      - key: DARKPOOL_PATH
+        value: /var/data/darkpool.json
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL
