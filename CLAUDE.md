@@ -159,6 +159,41 @@ The daily sync rides the alert loop's timer but deliberately sits **outside**
 channel configured, while Form 4s are filed at any hour. Gating filings on
 either condition would silently stop collecting them.
 
+### Congress trading (`src/lib/unusualwhales.ts`, `congress.ts`)
+
+Members of Congress and their families must disclose stock trades within 30-45
+days under the STOCK Act. Amounts are only ever a **range** (`"$1,000,001 -
+$5,000,000"`), never an exact figure — that's the law, kept as a string
+verbatim rather than parsed into a number.
+
+Sourced from Unusual Whales (`UW_API_KEY`, a paid feature that self-disables
+without it, matching the Telegram/web-push pattern), not scraped from the
+government's own disclosure sites — those exist but aren't structured data.
+Two free alternatives (QuiverQuant, CapitolTrades) were checked first and
+rejected: both show the data on their own website for free but gate the
+*API* behind an Enterprise/contact-for-pricing tier with no self-serve key.
+
+**The one trap, confirmed against a real API call:** `/api/congress/congress-trader`
+defaults its `name` parameter to `"Nancy Pelosi"` when omitted — calling it
+without a name to get "all of Congress" silently returns just one politician's
+trades. The same shape of mistake as `osiSymbol()`'s old `right: 'P'` default.
+The endpoint actually used, `/api/congress/recent-trades`, has no such
+parameter at all.
+
+Pulled as one **global** feed (not per-symbol): Congress trades are rare
+enough that calling once per tracked symbol across ~500 names would cost
+far more than paging back through the shared recent-trades stream and
+filtering to tracked tickers in-app. Sync walks pages until it hits one
+that's entirely trades already on disk (caught up) or a fixed page cap
+(cost ceiling on a first cold run), assuming the feed sorts newest-first —
+undocumented but the only sane reading of an endpoint named "recent".
+
+Same tab as Insider Trade (Form 4), not a new one: both answer "who's
+buying," just from different populations (Congress vs. corporate officers).
+Same self-disabling posture as the rest of the paid/optional integrations —
+and more so than usual, since the key on hand is a 7-day trial, not a
+purchase, and can stop working at any moment regardless of what the code does.
+
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 
 Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".

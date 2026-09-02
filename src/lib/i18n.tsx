@@ -1063,6 +1063,49 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `… and ${n} more`,
   },
 
+
+  /* ---- Giao dịch Quốc hội (Unusual Whales) ---- */
+  'cg.title': { vi: 'Giao dịch Quốc hội', en: 'Congress Trading' },
+  'cg.intro': {
+    vi: 'Nghị sĩ và thành viên gia đình họ bắt buộc phải khai báo với Quốc hội trong 30-45 ngày mỗi khi mua bán cổ phiếu (Đạo luật STOCK Act). Số tiền chỉ được khai theo KHOẢNG (ví dụ "$1,000,001 - $5,000,000"), không phải số chính xác - đây là quy định của luật, không phải app này thiếu dữ liệu. Nguồn dữ liệu: Unusual Whales, tính năng trả phí - xem cảnh báo bên dưới nếu chưa cấu hình.',
+    en: 'Members of Congress and their family must disclose stock trades within 30-45 days (the STOCK Act). Amounts are only disclosed as RANGES (e.g. "$1,000,001 - $5,000,000"), never exact figures - that is the law, not a data gap in this app. Data source: Unusual Whales, a paid feature - see the note below if not configured.',
+  },
+  'cg.notConfigured': {
+    vi: 'Chưa cấu hình UW_API_KEY trên Render. Tính năng này cần khoá API trả phí của Unusual Whales.',
+    en: 'UW_API_KEY is not set on Render. This feature needs a paid Unusual Whales API key.',
+  },
+  'cg.lastRun': {
+    vi: (at: number) => `Đồng bộ lần cuối: ${new Date(at).toLocaleString('vi-VN')}`,
+    en: (at: number) => `Last synced: ${new Date(at).toLocaleString('en-US')}`,
+  },
+  'cg.neverRun': {
+    vi: 'Chưa đồng bộ lần nào. Vòng lặp nền chạy mỗi 15 phút, hoặc bấm nút bên cạnh để chạy ngay.',
+    en: 'Never synced. The background loop runs every 15 minutes, or press the button to run it now.',
+  },
+  'cg.syncNow': { vi: 'Đồng bộ ngay', en: 'Sync now' },
+  'cg.syncing': { vi: 'Đang tải…', en: 'Syncing…' },
+  'cg.holdingsError': {
+    vi: 'Không đọc được danh mục đang giữ, nên chỉ theo dõi được rổ S&P 500 và watchlist.',
+    en: 'Could not read your holdings, so only the S&P 500 and watchlist are tracked.',
+  },
+  'cg.lookback': {
+    vi: (n: number) => `Trong ${n} ngày gần nhất`,
+    en: (n: number) => `Last ${n} days`,
+  },
+  'cg.colTraders': { vi: 'Số nghị sĩ', en: 'Members' },
+  'cg.colLast': { vi: 'Gần nhất', en: 'Last' },
+  'cg.colWho': { vi: 'Ai giao dịch', en: 'Who' },
+  'cg.house': { vi: 'Hạ viện', en: 'House' },
+  'cg.senate': { vi: 'Thượng viện', en: 'Senate' },
+  'cg.none': {
+    vi: 'Không mã nào có nghị sĩ giao dịch trong kỳ.',
+    en: 'No Congress trading in any tracked symbol this period.',
+  },
+  'cg.noneNote': {
+    vi: 'Giao dịch của nghị sĩ hiếm hơn hẳn giao dịch của sếp công ty (tab Insider Trade) - phần lớn mã sẽ không có gì hầu hết thời gian. Bảng trống KHÔNG có nghĩa là tin xấu.',
+    en: 'Congress trades are far rarer than corporate insider trades (Insider Trade tab) - most symbols will show nothing most of the time. An empty table is not bad news.',
+  },
+
   'disclaimer': {
     vi: 'Công cụ sàng lọc, không phải khuyến nghị đầu tư. Bán put là cam kết mua 100 cổ phiếu tại giá strike — chỉ lọc những mã bạn thực sự muốn sở hữu. Dữ liệu quyền chọn có độ trễ theo quyền truy cập tài khoản Schwab của bạn.',
     en: 'A screening tool, not investment advice. Selling a put commits you to buying 100 shares at the strike — only screen tickers you would genuinely want to own. Option data carries whatever delay your Schwab account entitlement has.',
