@@ -11,6 +11,8 @@ import HeatmapPanel from '@/components/HeatmapPanel';
 import PortfolioPanel from '@/components/PortfolioPanel';
 import InsiderPanel from '@/components/InsiderPanel';
 import CongressPanel from '@/components/CongressPanel';
+import OptionFlowPanel from '@/components/OptionFlowPanel';
+import DarkpoolPanel from '@/components/DarkpoolPanel';
 import SettingsMenu from '@/components/SettingsMenu';
 import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
@@ -328,6 +330,12 @@ export default function Page() {
               phải sếp công ty. Đặt cùng tab thay vì thêm tab riêng vì cả
               hai đều trả lời đúng một câu hỏi, chỉ khác nguồn dữ liệu. */}
           <CongressPanel />
+          {/* Hai tín hiệu "tiền lớn đang làm gì ngay bây giờ" - khác hẳn
+              ba bảng trên (ai là NGƯỜI đứng sau giao dịch), đây là HOẠT
+              ĐỘNG THỊ TRƯỜNG bất thường. Vẫn chung tab vì cùng câu hỏi
+              lớn: có ai biết điều gì đó mà mình chưa biết không. */}
+          <OptionFlowPanel />
+          <DarkpoolPanel />
         </div>
       ) : (
         <div className="shell solo">

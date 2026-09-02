@@ -1106,6 +1106,42 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Congress trades are far rarer than corporate insider trades (Insider Trade tab) - most symbols will show nothing most of the time. An empty table is not bad news.',
   },
 
+
+  /* ---- Options Flow (Unusual Whales) ---- */
+  'of.title': { vi: 'Lệnh quyền chọn bất thường', en: 'Options Flow' },
+  'of.intro': {
+    vi: 'Lệnh quyền chọn khối lượng lớn/bất thường mà Unusual Whales tự lọc thành đáng chú ý (sweep, lệnh sàn, lặp lại nhiều lần) - không phải mọi lệnh quyền chọn thô. Tín hiệu ngắn hạn, chỉ giữ lại 14 ngày gần nhất vì một lệnh bất thường từ tuần trước không còn liên quan tới quyết định hôm nay.',
+    en: 'Large/unusual option orders that Unusual Whales itself already flags as notable (sweeps, floor trades, repeated hits) - not every raw option trade. A short-lived signal, kept for 14 days only since a notable order from last week has nothing to say about today.',
+  },
+  'of.colSweeps': { vi: 'Sweep', en: 'Sweeps' },
+  'of.put': { vi: 'Put', en: 'Put' },
+  'of.call': { vi: 'Call', en: 'Call' },
+  'of.sweep': { vi: 'Sweep', en: 'Sweep' },
+  'of.floor': { vi: 'Sàn', en: 'Floor' },
+  'of.oi': { vi: 'OI', en: 'OI' },
+  'of.none': { vi: 'Không mã nào có lệnh bất thường trong kỳ.', en: 'No unusual flow in any tracked symbol this period.' },
+  'of.noneNote': {
+    vi: 'Bình thường với phần lớn mã - lệnh quyền chọn bất thường chỉ xuất hiện khi có hoạt động thật sự khác lạ. Bảng trống KHÔNG có nghĩa là tin xấu.',
+    en: 'Normal for most symbols - unusual option flow only shows up when something genuinely out of the ordinary happens. An empty table is not bad news.',
+  },
+
+  /* ---- Dark Pool (Unusual Whales) ---- */
+  'dp.title': { vi: 'Dark Pool', en: 'Dark Pool' },
+  'dp.intro': {
+    vi: (min: number) =>
+      `Lệnh khớp ngoài sàn (dark pool) khối lượng lớn - chỉ giữ lệnh trên ${min.toLocaleString('vi-VN')}$ để tránh ngập trong hàng nghìn lệnh nhỏ lẻ mỗi ngày. Tín hiệu ngắn hạn, chỉ giữ 14 ngày gần nhất.`,
+    en: (min: number) =>
+      `Large off-exchange (dark pool) block prints - only kept above $${min.toLocaleString('en-US')} to avoid drowning in thousands of small daily prints. A short-lived signal, kept for 14 days only.`,
+  },
+  'dp.colTotal': { vi: 'Tổng premium', en: 'Total premium' },
+  'dp.shares': { vi: 'cp', en: 'sh' },
+  'dp.extHours': { vi: 'ngoài giờ', en: 'ext. hours' },
+  'dp.none': { vi: 'Không mã nào có lệnh dark pool lớn trong kỳ.', en: 'No large dark pool prints in any tracked symbol this period.' },
+  'dp.noneNote': {
+    vi: 'Bình thường với phần lớn mã, nhất là mã thanh khoản thấp - lệnh khối lớn ngoài sàn không xảy ra mỗi ngày. Bảng trống KHÔNG có nghĩa là tin xấu.',
+    en: 'Normal for most symbols, especially lower-liquidity ones - large off-exchange blocks don\'t happen every day. An empty table is not bad news.',
+  },
+
   'disclaimer': {
     vi: 'Công cụ sàng lọc, không phải khuyến nghị đầu tư. Bán put là cam kết mua 100 cổ phiếu tại giá strike — chỉ lọc những mã bạn thực sự muốn sở hữu. Dữ liệu quyền chọn có độ trễ theo quyền truy cập tài khoản Schwab của bạn.',
     en: 'A screening tool, not investment advice. Selling a put commits you to buying 100 shares at the strike — only screen tickers you would genuinely want to own. Option data carries whatever delay your Schwab account entitlement has.',
