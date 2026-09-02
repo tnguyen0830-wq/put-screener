@@ -53,6 +53,15 @@ services:
       # Bỏ trống thì vẫn chạy nhưng SEC có quyền trả 403.
       - key: SEC_USER_AGENT
         sync: false
+      # Giao dịch Quốc hội đã lọc theo mã đang theo dõi - UW không trả id
+      # giao dịch riêng nên khoá dựng thủ công (xem tradeKey trong
+      # lib/congress.ts), không nguy hiểm khi mất, chỉ tốn tải lại.
+      - key: CONGRESS_PATH
+        value: /var/data/congress.json
+      # Trả phí, key hiện là bản dùng thử 7 ngày (không phải mua đứt) -
+      # tính năng Congress Trading tự tắt nếu biến này trống.
+      - key: UW_API_KEY
+        sync: false
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL

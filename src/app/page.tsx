@@ -10,6 +10,7 @@ import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
 import PortfolioPanel from '@/components/PortfolioPanel';
 import InsiderPanel from '@/components/InsiderPanel';
+import CongressPanel from '@/components/CongressPanel';
 import SettingsMenu from '@/components/SettingsMenu';
 import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
@@ -322,6 +323,11 @@ export default function Page() {
       ) : tab === 'insider' ? (
         <div className="shell solo">
           <InsiderPanel />
+          {/* Cùng chung tinh thần "ai đang mua" với Insider Trade
+              (Form 4), nhưng dân số khác hẳn: nghị sĩ Quốc hội, không
+              phải sếp công ty. Đặt cùng tab thay vì thêm tab riêng vì cả
+              hai đều trả lời đúng một câu hỏi, chỉ khác nguồn dữ liệu. */}
+          <CongressPanel />
         </div>
       ) : (
         <div className="shell solo">

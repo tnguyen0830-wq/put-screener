@@ -3,6 +3,7 @@ import path from 'node:path';
 import { collectAlerts, inMarketHours, tradingDay, type Alert } from './alerts';
 import { sendAlerts, telegramConfigured, webPushConfigured } from './notify';
 import { syncTracked } from './insiders';
+import { syncCongress } from './congress';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -122,6 +123,7 @@ export function startAlertLoop() {
   timer = setInterval(() => {
     void runOnce().catch(() => {});
     void syncTracked().catch(() => {});
+    void syncCongress().catch(() => {});
   }, INTERVAL_MS);
   // Không giữ tiến trình sống chỉ vì bộ đếm giờ này.
   timer.unref?.();
@@ -133,4 +135,10 @@ export function startAlertLoop() {
   // tự bỏ qua mã đã hỏi trong ngày nên gọi mỗi 15 phút vẫn chỉ ra mạng
   // một lần một ngày.
   void syncTracked().catch(() => {});
+  // Giao dịch Quốc hội cũng đi nhờ bộ đếm giờ này, cùng lý do đứng ngoài
+  // runOnce ở trên. Khác Form 4 ở chỗ không có "một lần một ngày mỗi mã"
+  // - syncCongress() tự dừng sớm ngay khi gặp trang đã thấy hết (xem
+  // congress.ts), nên gọi mỗi 15 phút vẫn rẻ: phần lớn lượt chỉ tốn một
+  // request để biết "chưa có gì mới".
+  void syncCongress().catch(() => {});
 }
