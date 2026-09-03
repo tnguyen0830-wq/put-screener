@@ -47,10 +47,14 @@ type Status = {
 };
 
 type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio' | 'insider';
+/** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
+ *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
+type InsiderSub = 'form4' | 'congress' | 'flow' | 'darkpool';
 
 export default function Page() {
   const { t } = useLang();
   const [tab, setTab] = useState<Tab>('screener');
+  const [insiderSub, setInsiderSub] = useState<InsiderSub>('form4');
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULTS);
   const [rows, setRows] = useState<Candidate[]>([]);
@@ -324,18 +328,47 @@ export default function Page() {
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">
-          <InsiderPanel />
-          {/* Cùng chung tinh thần "ai đang mua" với Insider Trade
-              (Form 4), nhưng dân số khác hẳn: nghị sĩ Quốc hội, không
-              phải sếp công ty. Đặt cùng tab thay vì thêm tab riêng vì cả
-              hai đều trả lời đúng một câu hỏi, chỉ khác nguồn dữ liệu. */}
-          <CongressPanel />
-          {/* Hai tín hiệu "tiền lớn đang làm gì ngay bây giờ" - khác hẳn
-              ba bảng trên (ai là NGƯỜI đứng sau giao dịch), đây là HOẠT
-              ĐỘNG THỊ TRƯỜNG bất thường. Vẫn chung tab vì cùng câu hỏi
-              lớn: có ai biết điều gì đó mà mình chưa biết không. */}
-          <OptionFlowPanel />
-          <DarkpoolPanel />
+          {/* Bốn nguồn dữ liệu cùng trả lời "ai/cái gì đang mua", nhưng
+              xem RIÊNG TỪNG CÁI qua tab con thay vì xếp chồng - trước đó
+              cả bốn bảng nằm chung một cột phải cuộn rất dài mới thấy
+              hết. Tab con thay vì thêm 3 tab lớn ở thanh trên vì thanh
+              đó đã khá chật trên điện thoại (5 tab lớn hiện có). */}
+          <div className="segmented hmranges">
+            <button
+              className={insiderSub === 'form4' ? 'on' : undefined}
+              onClick={() => setInsiderSub('form4')}
+            >
+              {t('ins.subForm4')}
+            </button>
+            <button
+              className={insiderSub === 'congress' ? 'on' : undefined}
+              onClick={() => setInsiderSub('congress')}
+            >
+              {t('ins.subCongress')}
+            </button>
+            <button
+              className={insiderSub === 'flow' ? 'on' : undefined}
+              onClick={() => setInsiderSub('flow')}
+            >
+              {t('ins.subFlow')}
+            </button>
+            <button
+              className={insiderSub === 'darkpool' ? 'on' : undefined}
+              onClick={() => setInsiderSub('darkpool')}
+            >
+              {t('ins.subDarkpool')}
+            </button>
+          </div>
+
+          {insiderSub === 'form4' ? (
+            <InsiderPanel />
+          ) : insiderSub === 'congress' ? (
+            <CongressPanel />
+          ) : insiderSub === 'flow' ? (
+            <OptionFlowPanel />
+          ) : (
+            <DarkpoolPanel />
+          )}
         </div>
       ) : (
         <div className="shell solo">
