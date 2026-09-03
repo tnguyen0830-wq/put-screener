@@ -1146,6 +1146,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Lệnh quyền chọn khối lượng lớn/bất thường mà Unusual Whales tự lọc thành đáng chú ý (sweep, lệnh sàn, lặp lại nhiều lần) - không phải mọi lệnh quyền chọn thô. Tín hiệu ngắn hạn, chỉ giữ lại 14 ngày gần nhất vì một lệnh bất thường từ tuần trước không còn liên quan tới quyết định hôm nay.',
     en: 'Large/unusual option orders that Unusual Whales itself already flags as notable (sweeps, floor trades, repeated hits) - not every raw option trade. A short-lived signal, kept for 14 days only since a notable order from last week has nothing to say about today.',
   },
+  'of.closed': {
+    vi: 'Ngoài giờ giao dịch nên tạm dừng tự động đồng bộ - quyền chọn chỉ khớp lệnh trong giờ sàn mở cửa. Bấm "Đồng bộ ngay" vẫn hoạt động bình thường.',
+    en: 'Outside market hours, so automatic syncing pauses - options only trade while the exchange is open. "Sync now" still works normally.',
+  },
   'of.colSweeps': { vi: 'Sweep', en: 'Sweeps' },
   'of.put': { vi: 'Put', en: 'Put' },
   'of.call': { vi: 'Call', en: 'Call' },
@@ -1165,6 +1169,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `Lệnh khớp ngoài sàn (dark pool) khối lượng lớn - chỉ giữ lệnh trên ${min.toLocaleString('vi-VN')}$ để tránh ngập trong hàng nghìn lệnh nhỏ lẻ mỗi ngày. Tín hiệu ngắn hạn, chỉ giữ 14 ngày gần nhất.`,
     en: (min: number) =>
       `Large off-exchange (dark pool) block prints - only kept above $${min.toLocaleString('en-US')} to avoid drowning in thousands of small daily prints. A short-lived signal, kept for 14 days only.`,
+  },
+  'dp.closed': {
+    vi: 'Ngoài giờ giao dịch nên tạm dừng tự động đồng bộ - dark pool chỉ khớp lệnh trong giờ sàn mở cửa, đợi ngoài giờ chỉ tốn hạn mức request. Bấm "Đồng bộ ngay" vẫn hoạt động bình thường.',
+    en: "Outside market hours, so automatic syncing pauses - dark pool prints only happen while the exchange is open, checking off-hours only burns request quota. \"Sync now\" still works normally.",
   },
   'dp.colTotal': { vi: 'Tổng premium', en: 'Total premium' },
   'dp.colBuyVol': { vi: 'KL nghiêng mua', en: 'Est. buy vol' },

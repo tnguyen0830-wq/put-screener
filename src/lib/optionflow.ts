@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { uwConfigured, uwGet, UwError } from './unusualwhales';
 import { trackedSymbols } from './insiders';
+import { inMarketHours } from './alerts';
 
 /**
  * Lệnh quyền chọn khối lượng lớn/bất thường, qua Unusual Whales
@@ -19,6 +20,14 @@ import { trackedSymbols } from './insiders';
  *
  * Có `id` thật (UUID) trong mỗi bản ghi - không cần dựng khoá tổng hợp
  * như congress.ts phải làm (UW không trả id giao dịch cho Congress).
+ *
+ * Bỏ qua ngoài giờ giao dịch (trừ khi `force`, tức nút "Đồng bộ ngay"),
+ * cùng lý do và cùng cách với darkpool.ts: quyền chọn chỉ khớp lệnh
+ * trong giờ sàn mở cửa, tự động gọi lúc nửa đêm/cuối tuần không bỏ lỡ gì
+ * mà chỉ tốn hạn mức. Chi phí ở đây vốn đã rẻ hơn hẳn dark pool nhờ gộp
+ * lô 50 mã/request, nhưng vẫn nên chừa hạn mức - sự cố hết quota thật đã
+ * xảy ra vì darkpool.ts (xem chú thích ở đó), không nên lặp lại kiểu sai
+ * lầm "chắc còn thừa hạn mức" ở endpoint khác.
  */
 
 const STORE = path.resolve(process.env.OPTIONFLOW_PATH || './.cache/optionflow.json');
@@ -117,6 +126,7 @@ export type OptionFlowRun = {
   seen: number;
   saved: number;
   error: string | null;
+  skipped: 'market-closed' | null;
 };
 
 let lastRun: OptionFlowRun | null = null;
@@ -125,12 +135,24 @@ export const getOptionFlowLastRun = () => lastRun;
 let inFlight = false;
 export const optionFlowSyncing = () => inFlight;
 
-export async function syncOptionFlow(): Promise<OptionFlowRun> {
+/** `force: true` bỏ qua giờ giao dịch - dùng cho nút "Đồng bộ ngay". */
+export async function syncOptionFlow(force = false): Promise<OptionFlowRun> {
   if (inFlight) {
-    return lastRun ?? { at: Date.now(), chunks: 0, seen: 0, saved: 0, error: null };
+    return lastRun ?? { at: Date.now(), chunks: 0, seen: 0, saved: 0, error: null, skipped: null };
   }
   if (!uwConfigured()) {
-    lastRun = { at: Date.now(), chunks: 0, seen: 0, saved: 0, error: 'UW_API_KEY chưa được cấu hình' };
+    lastRun = {
+      at: Date.now(),
+      chunks: 0,
+      seen: 0,
+      saved: 0,
+      error: 'UW_API_KEY chưa được cấu hình',
+      skipped: null,
+    };
+    return lastRun;
+  }
+  if (!force && !inMarketHours()) {
+    lastRun = { at: Date.now(), chunks: 0, seen: 0, saved: 0, error: null, skipped: 'market-closed' };
     return lastRun;
   }
 
@@ -188,7 +210,7 @@ export async function syncOptionFlow(): Promise<OptionFlowRun> {
     inFlight = false;
   }
 
-  lastRun = { at, chunks: chunksRead, seen, saved, error };
+  lastRun = { at, chunks: chunksRead, seen, saved, error, skipped: null };
   return lastRun;
 }
 

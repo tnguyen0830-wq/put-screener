@@ -118,16 +118,27 @@ export async function runOnce(force = false): Promise<RunReport> {
 }
 
 let timer: NodeJS.Timeout | null = null;
+/** Đếm số lần bộ đếm giờ 15 phút đã bắn, chỉ để giãn nhịp riêng cho
+ *  syncDarkpool() (xem chú thích bên dưới) - không liên quan gì tới
+ *  trading day hay bất kỳ trạng thái nào khác. */
+let tick = 0;
 
 /** Khởi động vòng lặp đúng một lần cho cả tiến trình. */
 export function startAlertLoop() {
   if (timer) return;
   timer = setInterval(() => {
+    tick++;
     void runOnce().catch(() => {});
     void syncTracked().catch(() => {});
     void syncCongress().catch(() => {});
     void syncOptionFlow().catch(() => {});
-    void syncDarkpool().catch(() => {});
+    // Dark Pool tốn hẳn 1 request MỖI MÃ (không gộp lô được như Options
+    // Flow) - với rổ ~500+ mã, gọi ở đúng nhịp 15 phút như các mục còn
+    // lại từng đốt cả hạn mức 30.000 request/ngày của UW chỉ riêng
+    // endpoint này (sự cố thật, xem chú thích đầu darkpool.ts). Giãn ra
+    // còn 1 trong mỗi 4 tick (~60 phút) - syncDarkpool() tự nó cũng đã
+    // bỏ qua ngoài giờ giao dịch, hai lớp cộng lại mới đủ an toàn.
+    if (tick % 4 === 0) void syncDarkpool().catch(() => {});
   }, INTERVAL_MS);
   // Không giữ tiến trình sống chỉ vì bộ đếm giờ này.
   timer.unref?.();
@@ -143,12 +154,17 @@ export function startAlertLoop() {
   // runOnce ở trên. Khác Form 4 ở chỗ không có "một lần một ngày mỗi mã"
   // - syncCongress() tự dừng sớm ngay khi gặp trang đã thấy hết (xem
   // congress.ts), nên gọi mỗi 15 phút vẫn rẻ: phần lớn lượt chỉ tốn một
-  // request để biết "chưa có gì mới".
+  // request để biết "chưa có gì mới". KHÔNG bỏ qua ngoài giờ giao dịch -
+  // khác Options Flow/Dark Pool, đơn công bố của Quốc hội không gắn với
+  // phiên giao dịch nào cả.
   void syncCongress().catch(() => {});
-  // Options Flow và Dark Pool cùng chung lý do: tín hiệu thị trường
-  // quyền chọn/dark pool xuất hiện bất kể giờ nào tính năng cảnh báo
-  // đang bật hay tắt. Cả hai tự dùng watermark riêng (newer_than / mỗi
-  // mã một mốc) nên gọi mỗi 15 phút không tải lại dữ liệu cũ.
+  // Options Flow và Dark Pool: quyền chọn/lệnh khối lớn ngoài sàn chỉ
+  // thật sự khớp lệnh trong giờ sàn mở cửa (SỬA lại chú thích cũ ở đây -
+  // từng ghi nhầm là "bất kể giờ nào", đúng là lý do gây ra sự cố hết hạn
+  // mức UW). Cả hai tự bỏ qua khi ngoài giờ (xem chú thích trong từng
+  // file); dark pool còn bị giãn nhịp xuống ~60 phút ở bộ đếm giờ phía
+  // trên vì tốn 1 request/mã, Options Flow gọi mỗi 15 phút vẫn rẻ nhờ gộp
+  // lô 50 mã/request.
   void syncOptionFlow().catch(() => {});
   void syncDarkpool().catch(() => {});
 }

@@ -40,6 +40,9 @@ export async function GET() {
 }
 
 export async function POST(_req: NextRequest) {
-  void syncDarkpool().catch(() => {});
+  // force: true - nút "Đồng bộ ngay" là hành động chủ động của người
+  // dùng, luôn cho phép, bất kể giờ giao dịch (khác lượt tự động của
+  // alert-runner, xem chú thích trong darkpool.ts).
+  void syncDarkpool(true).catch(() => {});
   return NextResponse.json({ started: true, alreadyRunning: darkpoolSyncing() });
 }

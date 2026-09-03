@@ -2,19 +2,35 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { uwConfigured, uwGet, UwError } from './unusualwhales';
 import { trackedSymbols } from './insiders';
+import { inMarketHours } from './alerts';
 
 /**
  * Lệnh in ngoài sàn (dark pool) khối lượng lớn, qua Unusual Whales.
  *
  * Khác Options Flow: `/api/darkpool/recent` KHÔNG có tham số lọc theo
  * mã (xác nhận từ tài liệu thật), chỉ `/api/darkpool/{ticker}` mới có -
- * nên phải gọi RIÊNG TỪNG MÃ, không gộp lô được như Options Flow. Với
- * rổ ~500+ mã tốn nhiều request hơn (nhưng vẫn dưới xa hạn mức
- * 30.000/ngày) - đổi lấy việc không bỏ sót mã nào giữa hai lần đồng bộ.
- * Kéo luồng chung `/recent` rồi tự lọc từng có cân nhắc, nhưng khối
- * lượng in dark pool TOÀN THỊ TRƯỜNG đủ lớn để cửa sổ "gần đây" có thể
- * trôi qua hết trước lần đồng bộ kế tiếp (15 phút) - gọi riêng từng mã
- * mới chắc chắn không bỏ sót.
+ * nên phải gọi RIÊNG TỪNG MÃ, không gộp lô được như Options Flow. Kéo
+ * luồng chung `/recent` rồi tự lọc từng có cân nhắc, nhưng khối lượng in
+ * dark pool TOÀN THỊ TRƯỜNG đủ lớn để cửa sổ "gần đây" có thể trôi qua
+ * hết trước lần đồng bộ kế tiếp - gọi riêng từng mã mới chắc chắn không
+ * bỏ sót.
+ *
+ * CHI PHÍ THẬT (sự cố đã xảy ra, không phải giả định): rổ theo dõi có
+ * ~500+ mã, mỗi mã tốn đúng 1 request không gộp lô được. Ban đầu chạy
+ * theo đúng nhịp 15 phút của alert-runner, 24/7 không phân biệt giờ -
+ * 503 mã × 96 lượt/ngày ≈ 48.000 request/ngày, VƯỢT hẳn hạn mức
+ * 30.000/ngày của UW chỉ riêng endpoint này (xác nhận trực tiếp trên UW
+ * API Dashboard của người dùng: /api/darkpool/:ticker chiếm 91,9% hạn
+ * mức 30 ngày, và một ngày bị dùng hết sạch 30.000/30.000 lúc mới 5 giờ
+ * chiều). Dark pool chỉ khớp lệnh trong giờ sàn mở cửa - không có gì để
+ * bỏ lỡ lúc nửa đêm hay cuối tuần, nên hai việc dưới đây không đánh đổi
+ * độ mới của dữ liệu, chỉ cắt phần gọi thừa:
+ * 1) `syncDarkpool()` tự bỏ qua (không gọi UW) khi ngoài giờ giao dịch,
+ *    trừ khi gọi có `force: true` (nút "Đồng bộ ngay" của người dùng).
+ * 2) `alert-runner.ts` chỉ cho tick tự động gọi hàm này mỗi giờ (1 trong
+ *    4 lượt của bộ đếm 15 phút chung), không phải mọi lượt.
+ * Cùng nhau: 503 × ~10 giờ giao dịch/ngày ≈ 5.000 request/ngày - còn xa
+ * hạn mức, đủ chỗ cho Options Flow/Congress và các tính năng UW sau này.
  *
  * Số lượng in dark pool cho MỘT mã cũng có thể rất nhiều trong ngày -
  * chỉ giữ lại lệnh có premium đủ lớn (MIN_PREMIUM), giống cách chọn
@@ -175,6 +191,12 @@ export type DarkpoolRun = {
   seen: number;
   saved: number;
   errors: string[];
+  /** 'market-closed' khi lượt này bị bỏ qua vì ngoài giờ giao dịch (xem
+   *  chú thích ở đầu file) - giữ nguyên `lastRun` của lần chạy THẬT gần
+   *  nhất thì đúng hơn, nhưng phải tự ghi lại là ĐÃ bỏ qua, không được
+   *  im lặng - im lặng đọc thành "đã kiểm tra, không có gì mới", sai hẳn
+   *  với "chưa kiểm tra vì đang ngoài giờ". */
+  skipped: 'market-closed' | null;
 };
 
 let lastRun: DarkpoolRun | null = null;
@@ -183,9 +205,14 @@ export const getDarkpoolLastRun = () => lastRun;
 let inFlight = false;
 export const darkpoolSyncing = () => inFlight;
 
-export async function syncDarkpool(): Promise<DarkpoolRun> {
+/** `force: true` bỏ qua giờ giao dịch - dùng cho nút "Đồng bộ ngay" của
+ *  người dùng (một hành động chủ động thì luôn cho phép), KHÔNG dùng cho
+ *  lượt tự động của alert-runner. */
+export async function syncDarkpool(force = false): Promise<DarkpoolRun> {
   if (inFlight) {
-    return lastRun ?? { at: Date.now(), symbolsChecked: 0, seen: 0, saved: 0, errors: [] };
+    return (
+      lastRun ?? { at: Date.now(), symbolsChecked: 0, seen: 0, saved: 0, errors: [], skipped: null }
+    );
   }
   if (!uwConfigured()) {
     lastRun = {
@@ -194,6 +221,18 @@ export async function syncDarkpool(): Promise<DarkpoolRun> {
       seen: 0,
       saved: 0,
       errors: ['UW_API_KEY chưa được cấu hình'],
+      skipped: null,
+    };
+    return lastRun;
+  }
+  if (!force && !inMarketHours()) {
+    lastRun = {
+      at: Date.now(),
+      symbolsChecked: 0,
+      seen: 0,
+      saved: 0,
+      errors: [],
+      skipped: 'market-closed',
     };
     return lastRun;
   }
@@ -245,7 +284,7 @@ export async function syncDarkpool(): Promise<DarkpoolRun> {
     inFlight = false;
   }
 
-  lastRun = { at, symbolsChecked, seen, saved, errors };
+  lastRun = { at, symbolsChecked, seen, saved, errors, skipped: null };
   return lastRun;
 }
 
