@@ -98,10 +98,42 @@ type Stored = {
   watermarks: Record<string, string>;
 };
 
+/**
+ * Di trú kho cũ: lệnh đã lưu TRƯỚC KHI có `sideEstimate` sẽ mãi mãi
+ * thiếu trường đó nếu không xử lý gì thêm - `syncDarkpool()` chỉ hỏi UW
+ * cho `tracking_id` CHƯA từng thấy (tránh tốn hạn mức gọi lại cái đã
+ * có), nên lệnh cũ dù còn nằm trong 14 ngày hiển thị cũng không bao giờ
+ * được phân tích lại bằng code mới.
+ *
+ * Phát hiện qua sự CÓ MẶT của khoá `sideEstimate`, không phải giá trị
+ * của nó - giá trị `null` là hợp lệ (thiếu bid/ask thật), còn khoá
+ * không tồn tại mới là dấu hiệu "lưu từ code cũ".
+ *
+ * Xoá đúng những lệnh đó khỏi kho (để lần đồng bộ sau coi như "chưa
+ * từng thấy", hỏi lại UW) VÀ xoá watermark của những mã liên quan - nếu
+ * không, `newer_than` sẽ chặn UW trả lại đúng lệnh cũ đó vì nó "cũ hơn"
+ * mốc đã lưu. Chỉ tốn một lượt đồng bộ đầy đủ lại, một lần duy nhất.
+ */
+function migrateOldPrints(s: Stored): Stored {
+  const staleSymbols = new Set<string>();
+  for (const [key, p] of Object.entries(s.prints)) {
+    // Đọc dữ liệu JSON đã lưu từ đĩa như dữ liệu KHÔNG đáng tin theo type -
+    // bản ghi cũ hoàn toàn có thể thiếu trường mà kiểu DarkpoolPrint bây
+    // giờ khai là bắt buộc, nên `p` phải coi như `any` ở đây.
+    const raw = p as any;
+    if (!('sideEstimate' in raw)) {
+      staleSymbols.add(raw.ticker);
+      delete s.prints[key];
+    }
+  }
+  for (const symbol of staleSymbols) delete s.watermarks[symbol];
+  return s;
+}
+
 async function read(): Promise<Stored> {
   try {
     const j = JSON.parse(await fs.readFile(STORE, 'utf8'));
-    if (j && typeof j === 'object' && j.prints) return j;
+    if (j && typeof j === 'object' && j.prints) return migrateOldPrints(j);
   } catch {
     /* chưa đồng bộ lần nào */
   }
