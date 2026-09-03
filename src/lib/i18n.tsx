@@ -964,6 +964,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   /* ---- Người nội bộ (Form 4) ---- */
   'ins.title': { vi: 'Người nội bộ đang mua', en: 'Insider buying' },
+  'ins.subForm4': { vi: 'Người nội bộ', en: 'Insiders' },
+  'ins.subCongress': { vi: 'Quốc hội', en: 'Congress' },
+  'ins.subFlow': { vi: 'Quyền chọn', en: 'Options Flow' },
+  'ins.subDarkpool': { vi: 'Dark Pool', en: 'Dark Pool' },
   'ins.intro': {
     vi: 'Sếp và thành viên hội đồng quản trị bắt buộc phải khai báo với SEC trong 2 ngày làm việc mỗi khi mua bán cổ phiếu công ty mình (mẫu Form 4). Bảng này chỉ đếm MỘT loại giao dịch: tự bỏ tiền túi mua ngoài thị trường (SEC ký hiệu là mã P). Cổ phiếu được thưởng, quyền chọn đem đi thực hiện, hay cổ phiếu nộp lại để đóng thuế đều KHÔNG tính — đó là lương, không phải niềm tin. Giao dịch nằm trong kế hoạch 10b5-1 đăng ký sẵn từ nhiều tháng trước cũng bị loại, vì nó chạy tự động và không nói lên sếp nghĩ gì hôm nay.',
     en: 'Officers and directors must report to SEC within two business days whenever they trade their own company stock (Form 4). This table counts one kind of transaction only: buying on the open market with their own money (SEC code P). Granted stock, exercised options and shares handed back to cover tax are all excluded — that is compensation, not conviction. Purchases made under a 10b5-1 plan adopted months earlier are excluded too, because they run automatically and say nothing about what the filer thinks today.',
