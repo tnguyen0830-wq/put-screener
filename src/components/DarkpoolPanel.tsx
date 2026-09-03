@@ -23,6 +23,8 @@ type Row = {
   prints: Print[];
   totalPremium: number;
   lastPrintAt: string | null;
+  buyVolume: number;
+  sellVolume: number;
 };
 
 type Payload = {
@@ -109,6 +111,7 @@ export default function DarkpoolPanel() {
       <div className="panel-body">
         <p className="cap">{t('dp.intro', data?.minPremium ?? 1_000_000)}</p>
         <p className="cap">{t('dp.sideNote')}</p>
+        <p className="cap">{t('dp.volNote')}</p>
         <p className="cap">
           {data?.lastRun ? t('cg.lastRun', data.lastRun.at) : t('cg.neverRun')}{' '}
           {/* Chỉ hiện nút khi ĐÃ BIẾT chắc data.configured === true - xem
@@ -159,6 +162,8 @@ export default function DarkpoolPanel() {
               <tr>
                 <th>{t('ins.colSymbol')}</th>
                 <th>{t('dp.colTotal')}</th>
+                <th>{t('dp.colBuyVol')}</th>
+                <th>{t('dp.colSellVol')}</th>
                 <th>{t('cg.colLast')}</th>
               </tr>
             </thead>
@@ -176,11 +181,21 @@ export default function DarkpoolPanel() {
                         <b>{r.symbol}</b>
                       </td>
                       <td>{usd(r.totalPremium)}</td>
+                      {/* Theo yêu cầu của người dùng: mua = xanh, bán = đỏ,
+                          dù house rule ở nơi khác (ColorLegend.tsx) dành
+                          xanh/đỏ riêng cho hướng số liệu thật - đây là lựa
+                          chọn có chủ đích cho riêng ước lượng dark pool. */}
+                      <td className={r.buyVolume > 0 ? 'good' : undefined}>
+                        {r.buyVolume > 0 ? r.buyVolume.toLocaleString('en-US') : '—'}
+                      </td>
+                      <td className={r.sellVolume > 0 ? 'bad' : undefined}>
+                        {r.sellVolume > 0 ? r.sellVolume.toLocaleString('en-US') : '—'}
+                      </td>
                       <td>{r.lastPrintAt ? new Date(r.lastPrintAt).toLocaleDateString() : ''}</td>
                     </tr>
                     {open && (
                       <tr className="ins-expand-row">
-                        <td colSpan={3}>
+                        <td colSpan={5}>
                           <p className="cap" style={{ margin: '0 0 4px' }}>
                             {r.symbol} — {r.prints.length}
                           </p>
@@ -190,14 +205,21 @@ export default function DarkpoolPanel() {
                                 <b>{usd(p.premium)}</b> · {p.size?.toLocaleString('en-US')}{' '}
                                 {t('dp.shares')} @ {p.price}
                                 {p.extendedHours && <span className="pfsub"> {t('dp.extHours')}</span>}
-                                {/* Cố tình KHÔNG dùng class good/bad (xanh/đỏ)
-                                    cho ước lượng này - đây là suy đoán ai chủ
-                                    động khớp lệnh, không phải khuyến nghị nên
-                                    mua hay tránh, và house rule của app này
-                                    (xem ColorLegend.tsx) dành riêng xanh/đỏ
-                                    cho hướng đi con số thật. */}
+                                {/* Theo yêu cầu người dùng: mua = xanh, bán =
+                                    đỏ, dù đây là suy đoán (ước lượng), không
+                                    phải nhãn thật của UW - đã ghi rõ "(ước
+                                    lượng)" trong chính chữ hiển thị và trong
+                                    dp.sideNote phía trên bảng. */}
                                 {p.sideEstimate && (
-                                  <span className="pfsub">
+                                  <span
+                                    className={
+                                      p.sideEstimate === 'buy'
+                                        ? 'pfsub good'
+                                        : p.sideEstimate === 'sell'
+                                          ? 'pfsub bad'
+                                          : 'pfsub'
+                                    }
+                                  >
                                     {' '}
                                     {t(
                                       p.sideEstimate === 'buy'

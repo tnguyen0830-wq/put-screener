@@ -1147,6 +1147,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `Large off-exchange (dark pool) block prints - only kept above $${min.toLocaleString('en-US')} to avoid drowning in thousands of small daily prints. A short-lived signal, kept for 14 days only.`,
   },
   'dp.colTotal': { vi: 'Tổng premium', en: 'Total premium' },
+  'dp.colBuyVol': { vi: 'KL nghiêng mua', en: 'Est. buy vol' },
+  'dp.colSellVol': { vi: 'KL nghiêng bán', en: 'Est. sell vol' },
+  'dp.volNote': {
+    vi: 'Tổng cổ phiếu của các lệnh được suy đoán là nghiêng mua/bán (xem chú thích bên dưới) - không tính lệnh không rõ hướng. Vẫn là ước lượng, không phải số liệu chắc chắn.',
+    en: 'Total shares across prints estimated as leaning buy/sell (see note below) - unclear-direction prints are excluded. Still an estimate, not certain data.',
+  },
   'dp.shares': { vi: 'cổ phiếu', en: 'shares' },
   'dp.extHours': { vi: 'ngoài giờ', en: 'ext. hours' },
   'dp.sideNote': {

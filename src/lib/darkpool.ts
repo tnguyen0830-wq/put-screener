@@ -254,6 +254,11 @@ export type SymbolDarkpoolPrints = {
   prints: DarkpoolPrint[];
   totalPremium: number;
   lastPrintAt: string | null;
+  /** Tổng số cổ phiếu của các lệnh NGHIÊNG mua/bán (ước lượng, xem
+   *  estimateSide) - lệnh 'neutral' hoặc null (thiếu bid/ask) không
+   *  tính vào bên nào, vì không có cơ sở để xếp nó vào một phía. */
+  buyVolume: number;
+  sellVolume: number;
 };
 
 export async function readDarkpool(symbols: string[]): Promise<SymbolDarkpoolPrints[]> {
@@ -271,11 +276,19 @@ export async function readDarkpool(symbols: string[]): Promise<SymbolDarkpoolPri
 
   return [...bySymbol.entries()].map(([symbol, prints]) => {
     prints.sort((a, b) => b.executedAt.localeCompare(a.executedAt));
+    let buyVolume = 0;
+    let sellVolume = 0;
+    for (const p of prints) {
+      if (p.sideEstimate === 'buy') buyVolume += p.size ?? 0;
+      else if (p.sideEstimate === 'sell') sellVolume += p.size ?? 0;
+    }
     return {
       symbol,
       prints,
       totalPremium: prints.reduce((n, p) => n + (p.premium ?? 0), 0),
       lastPrintAt: prints[0]?.executedAt ?? null,
+      buyVolume,
+      sellVolume,
     };
   });
 }
