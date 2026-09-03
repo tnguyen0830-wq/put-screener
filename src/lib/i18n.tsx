@@ -35,6 +35,15 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
   'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
+
+  /* ---- Chú thích cho từng mã trên thanh giá cuộn đầu trang ---- */
+  'tape.spx': { vi: 'Chỉ số S&P 500', en: 'S&P 500 Index' },
+  'tape.ndx': { vi: 'Chỉ số Nasdaq 100', en: 'Nasdaq 100 Index' },
+  'tape.rut': { vi: 'Quỹ ETF Russell 2000 (cổ phiếu vốn hoá nhỏ)', en: 'Russell 2000 ETF (small-cap stocks)' },
+  'tape.vix': { vi: 'Chỉ số biến động CBOE - đo mức lo sợ của thị trường', en: 'CBOE Volatility Index - the market fear gauge' },
+  'tape.gold': { vi: 'Hợp đồng tương lai vàng', en: 'Gold futures' },
+  'tape.oil': { vi: 'Hợp đồng tương lai dầu thô WTI', en: 'WTI crude oil futures' },
+  'tape.btc': { vi: 'Hợp đồng tương lai Bitcoin', en: 'Bitcoin futures' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
     en: 'Tyler Investment Tool — back to home',
@@ -1122,7 +1131,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'of.call': { vi: 'Call', en: 'Call' },
   'of.sweep': { vi: 'Sweep', en: 'Sweep' },
   'of.floor': { vi: 'Sàn', en: 'Floor' },
-  'of.oi': { vi: 'OI', en: 'OI' },
+  'of.oi': { vi: 'Số hợp đồng mở (OI)', en: 'Open interest (OI)' },
   'of.none': { vi: 'Không mã nào có lệnh bất thường trong kỳ.', en: 'No unusual flow in any tracked symbol this period.' },
   'of.noneNote': {
     vi: 'Bình thường với phần lớn mã - lệnh quyền chọn bất thường chỉ xuất hiện khi có hoạt động thật sự khác lạ. Bảng trống KHÔNG có nghĩa là tin xấu.',
@@ -1138,7 +1147,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `Large off-exchange (dark pool) block prints - only kept above $${min.toLocaleString('en-US')} to avoid drowning in thousands of small daily prints. A short-lived signal, kept for 14 days only.`,
   },
   'dp.colTotal': { vi: 'Tổng premium', en: 'Total premium' },
-  'dp.shares': { vi: 'cp', en: 'sh' },
+  'dp.shares': { vi: 'cổ phiếu', en: 'shares' },
   'dp.extHours': { vi: 'ngoài giờ', en: 'ext. hours' },
   'dp.none': { vi: 'Không mã nào có lệnh dark pool lớn trong kỳ.', en: 'No large dark pool prints in any tracked symbol this period.' },
   'dp.noneNote': {

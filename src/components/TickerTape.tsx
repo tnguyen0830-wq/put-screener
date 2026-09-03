@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLang } from '@/lib/i18n';
 
 type Item = {
   key: string;
@@ -26,7 +27,28 @@ type Item = {
  * embed kept running. The screener cannot scan in that state either, and the
  * settings dot says so, so the bar is not where that news should break.
  */
+/** it.key -> khoá i18n giải nghĩa mã đó, dùng cho tooltip. */
+const NAME_KEY: Record<string, string> = {
+  spx: 'tape.spx',
+  ndx: 'tape.ndx',
+  rut: 'tape.rut',
+  vix: 'tape.vix',
+  gold: 'tape.gold',
+  oil: 'tape.oil',
+  btc: 'tape.btc',
+};
+
+/** Tên đầy đủ, cộng thêm hợp đồng thật nếu khác tên hiển thị (GC vs GCZ26).
+ *  undefined khi không có gì để nói, để không hiện tooltip rỗng. */
+function tooltipFor(it: Item, t: (k: string) => string): string | undefined {
+  const name = NAME_KEY[it.key] ? t(NAME_KEY[it.key]) : undefined;
+  const contract = it.contract && it.contract !== it.symbol ? it.contract : undefined;
+  const joined = [name, contract].filter(Boolean).join(' · ');
+  return joined || undefined;
+}
+
 export default function TickerTape() {
+  const { t } = useLang();
   const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
@@ -62,12 +84,11 @@ export default function TickerTape() {
     return (
       <span className="tapeitem" key={it.key}>
         {/* The symbol itself, not a translated name: SPX and CL read the same
-            in either language, and the bar has no room for both. The delivery
-            month rides in the tooltip, since GC is the name but GCZ26 is the
-            thing actually quoted. */}
-        <b title={it.contract && it.contract !== it.symbol ? it.contract : undefined}>
-          {it.symbol}
-        </b>
+            in either language, and the bar has no room for both. The full
+            name and the delivery month both ride in the tooltip instead -
+            GC is the name shown, GCZ26 is the thing actually quoted, and
+            "GC" alone means nothing to someone who has not traded futures. */}
+        <b title={tooltipFor(it, t)}>{it.symbol}</b>
         <span className="tapelast">
           {it.last.toLocaleString('en-US', {
             minimumFractionDigits: 2,
