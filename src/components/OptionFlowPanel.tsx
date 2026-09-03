@@ -31,7 +31,14 @@ type Payload = {
   configured: boolean;
   rows: Row[];
   lookbackDays: number;
-  lastRun: { at: number; chunks: number; seen: number; saved: number; error: string | null } | null;
+  lastRun: {
+    at: number;
+    chunks: number;
+    seen: number;
+    saved: number;
+    error: string | null;
+    skipped: 'market-closed' | null;
+  } | null;
   syncing: boolean;
   trackedCount: number;
   holdingsError: string | null;
@@ -113,6 +120,7 @@ export default function OptionFlowPanel() {
             </button>
           )}
         </p>
+        {data?.lastRun?.skipped === 'market-closed' && <p className="cap">{t('of.closed')}</p>}
         {error && <p className="cap warnline">{error}</p>}
         {data?.lastRun?.error && <p className="cap warnline">{data.lastRun.error}</p>}
       </div>

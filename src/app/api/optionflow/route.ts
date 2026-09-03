@@ -39,6 +39,8 @@ export async function GET() {
 }
 
 export async function POST(_req: NextRequest) {
-  void syncOptionFlow().catch(() => {});
+  // force: true - cùng lý do darkpool.ts: nút bấm chủ động của người
+  // dùng luôn cho phép, bất kể giờ giao dịch.
+  void syncOptionFlow(true).catch(() => {});
   return NextResponse.json({ started: true, alreadyRunning: optionFlowSyncing() });
 }

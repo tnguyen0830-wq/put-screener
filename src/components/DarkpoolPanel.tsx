@@ -38,6 +38,7 @@ type Payload = {
     seen: number;
     saved: number;
     errors: string[];
+    skipped: 'market-closed' | null;
   } | null;
   syncing: boolean;
   trackedCount: number;
@@ -122,6 +123,7 @@ export default function DarkpoolPanel() {
             </button>
           )}
         </p>
+        {data?.lastRun?.skipped === 'market-closed' && <p className="cap">{t('dp.closed')}</p>}
         {error && <p className="cap warnline">{error}</p>}
         {data?.lastRun?.errors.length ? (
           <details className="rrgtable">

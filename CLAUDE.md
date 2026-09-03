@@ -220,6 +220,23 @@ before either was built:**
   next, for a feed that has no shortage of volume. Records carry a real
   `tracking_id` for dedup, same as flow-alerts' `id`.
 
+**Real incident, not a hypothetical:** per-symbol calling plus the alert
+loop's 15-minute heartbeat, running 24/7 with no market-hours gate, meant
+dark pool alone made ~503 tracked symbols × 96 cycles/day ≈ 48,000 requests
+— blowing straight through UW's 30,000/day cap from this one endpoint,
+confirmed on the account's own UW API dashboard (`/api/darkpool/:ticker` at
+91.9% of 30-day usage, one day fully exhausted by 5pm ET). The original
+code comment claiming dark pool/options flow signals "appear regardless of
+hour" was simply wrong — both only occur while the exchange is open. Fixed
+two ways, stacked: `syncDarkpool()`/`syncOptionFlow()` both take a `force`
+parameter and skip entirely (recording `skipped: 'market-closed'` rather
+than silently doing nothing — same idiom as `alerts.ts`'s `inMarketHours()`
+skip) unless `force: true`, which only the "Sync now" button passes; and
+`alert-runner.ts` additionally throttles the *automatic* dark pool call to
+1 in every 4 ticks (~60 minutes) since it alone costs a full request per
+symbol with no batching, unlike options flow which stays on the full
+15-minute cadence because its 50-symbol batching keeps it cheap regardless.
+
 Dark pool is additionally filtered to prints above `MIN_PREMIUM` ($1M) on
 both sides — passed as a query param to UW *and* re-checked against the
 response, since it was never confirmed the `/{ticker}` endpoint actually
