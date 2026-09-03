@@ -3,6 +3,7 @@
 import { useLang } from '@/lib/i18n';
 import FearGreed from './FearGreed';
 import RrgChart from './RrgChart';
+import GexExposurePanel from './GexExposurePanel';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { squarify } from '@/lib/treemap';
@@ -363,6 +364,8 @@ export default function HeatmapPanel({
         <FearGreed />
 
         <RrgChart />
+
+        <GexExposurePanel />
       </div>
     </section>
   );

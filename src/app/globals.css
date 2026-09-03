@@ -1152,6 +1152,20 @@ table.results tbody tr.clickable {
   font-size: 13px;
 }
 
+/* Thanh trượt biên độ strike ở panel SPX Market Maker Exposure. */
+.gexmm-zoom {
+  display: block;
+  margin: 10px 0 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.gexmm-zoom input[type='range'] {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  accent-color: var(--ink);
+}
+
 /* ---------- watchlist ---------- */
 
 .leftcol {
