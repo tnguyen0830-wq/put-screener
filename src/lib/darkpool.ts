@@ -23,6 +23,19 @@ import { trackedSymbols } from './insiders';
  * nhận tham số đó như /recent - chưa xác nhận riêng) VÀ lọc lại phía
  * app bằng field `premium` đã có sẵn trong response - đúng dù UW có
  * nhận tham số đó hay lặng lẽ bỏ qua.
+ *
+ * KHÔNG CÓ hướng mua/bán thật. Xác nhận từ đúng bảng mô tả field đầy đủ
+ * của tài liệu API (17 field, không chỉ đọc một bản ghi mẫu có thể null
+ * mất field) - không có field nào tên side/aggressor_side/buy_sell/
+ * direction. Đúng bản chất của dark pool: một lệnh khớp giấu tên luôn có
+ * CẢ người mua lẫn người bán cùng lúc, không có "phe nào chủ động" theo
+ * nghĩa một sổ lệnh công khai. `sideEstimate` dưới đây là suy đoán tự
+ * làm (so giá khớp với NBBO bid/ask lúc khớp lệnh) - một kỹ thuật phổ
+ * biến trong ngành (gần giống "quote rule" phân loại giao dịch), NHƯNG
+ * chỉ là ước lượng. Giao diện phải luôn ghi rõ đây là ước lượng, và
+ * KHÔNG tô xanh/đỏ cho nó - trùng đúng cái bẫy ColorLegend.tsx đã nói:
+ * xanh/đỏ trong công cụ tài chính dễ bị đọc thành "nên mua/nên tránh",
+ * mà đây chỉ là suy đoán ai chủ động khớp lệnh, không phải khuyến nghị.
  */
 
 const STORE = path.resolve(process.env.DARKPOOL_PATH || './.cache/darkpool.json');
@@ -36,6 +49,11 @@ export const MIN_PREMIUM = 1_000_000;
 
 const PAGE_SIZE = 200;
 
+/** Suy đoán bên nào chủ động khớp lệnh, từ giá khớp so với NBBO bid/ask
+ *  lúc đó - KHÔNG phải nhãn thật của UW (không tồn tại). null khi thiếu
+ *  bid/ask để so (không suy đoán bừa khi không có dữ liệu). */
+export type SideEstimate = 'buy' | 'sell' | 'neutral' | null;
+
 export type DarkpoolPrint = {
   /** UW không có "id" cho dark pool (khác flow-alerts), nhưng có
    *  tracking_id - số nguyên lớn, đủ để làm khoá thật, không cần dựng
@@ -48,7 +66,30 @@ export type DarkpoolPrint = {
   executedAt: string;
   marketCenter: string | null;
   extendedHours: boolean;
+  /** Giá/khối lượng chào mua-bán tốt nhất lúc khớp lệnh - giữ lại để
+   *  người đọc kỹ có thể tự kiểm tra `sideEstimate`, không giấu số gốc
+   *  đằng sau một chữ suy luận. */
+  nbboBid: number | null;
+  nbboAsk: number | null;
+  sideEstimate: SideEstimate;
 };
+
+/**
+ * So giá khớp với điểm giữa bid/ask: trên điểm giữa nghiêng về bên mua
+ * chủ động (trả gần giá ask), dưới điểm giữa nghiêng về bên bán chủ
+ * động (bán gần giá bid). Đây là ước lượng phổ biến trong ngành khi
+ * không có nhãn thật (gần giống "quote rule"), không phải phép tính
+ * chính xác - hai lệnh mua/bán luôn tồn tại song song trong mọi lệnh
+ * khớp, kể cả lệnh này.
+ */
+export function estimateSide(price: number | null, bid: number | null, ask: number | null): SideEstimate {
+  if (price === null || bid === null || ask === null) return null;
+  if (ask <= bid) return null; // dữ liệu bid/ask vô lý (hỏng hoặc thị trường đóng cửa) - không suy đoán
+  const mid = (bid + ask) / 2;
+  if (price > mid) return 'buy';
+  if (price < mid) return 'sell';
+  return 'neutral';
+}
 
 type Stored = {
   prints: Record<string, DarkpoolPrint>;
@@ -78,15 +119,21 @@ function num(v: unknown): number | null {
 }
 
 function parsePrint(raw: any): DarkpoolPrint {
+  const price = num(raw.price);
+  const nbboBid = num(raw.nbbo_bid);
+  const nbboAsk = num(raw.nbbo_ask);
   return {
     trackingId: String(raw.tracking_id ?? ''),
     ticker: String(raw.ticker ?? '').toUpperCase(),
     size: num(raw.size),
-    price: num(raw.price),
+    price,
     premium: num(raw.premium),
     executedAt: String(raw.executed_at ?? ''),
     marketCenter: raw.market_center ?? null,
     extendedHours: raw.ext_hour_sold_codes === 'extended_hours_trade',
+    nbboBid,
+    nbboAsk,
+    sideEstimate: estimateSide(price, nbboBid, nbboAsk),
   };
 }
 
