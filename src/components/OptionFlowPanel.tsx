@@ -177,7 +177,7 @@ export default function OptionFlowPanel() {
                                 {a.hasSweep && <span className="pfsub good"> {t('of.sweep')}</span>}
                                 {a.hasFloor && <span className="pfsub"> {t('of.floor')}</span>}
                                 <span className="pfsub">
-                                  {usd(a.totalPremium)} · {t('of.oi')} {a.openInterest ?? '—'} ·{' '}
+                                  {usd(a.totalPremium)} · {t('of.oi')}: {a.openInterest ?? '—'} ·{' '}
                                   {new Date(a.createdAt).toLocaleString()}
                                 </span>
                               </li>
