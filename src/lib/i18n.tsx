@@ -1149,6 +1149,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dp.colTotal': { vi: 'Tổng premium', en: 'Total premium' },
   'dp.shares': { vi: 'cổ phiếu', en: 'shares' },
   'dp.extHours': { vi: 'ngoài giờ', en: 'ext. hours' },
+  'dp.sideNote': {
+    vi: 'Lệnh dark pool luôn có CẢ người mua lẫn người bán khớp cùng lúc - không có nhãn "mua" hay "bán" thật, kể cả từ chính Unusual Whales. "Nghiêng mua/bán" dưới mỗi lệnh là suy đoán tự tính (so giá khớp với giá chào mua-bán tốt nhất lúc đó), không phải dữ liệu chắc chắn hay khuyến nghị.',
+    en: 'A dark pool print always has BOTH a buyer and a seller matched at once - there is no real "buy" or "sell" label, not even from Unusual Whales itself. The "leaning buy/sell" note under each print is a self-computed estimate (comparing the print price to the best bid/ask at that moment), not certain data or a recommendation.',
+  },
+  'dp.sideBuy': { vi: 'nghiêng mua (ước lượng)', en: 'leaning buy (estimate)' },
+  'dp.sideSell': { vi: 'nghiêng bán (ước lượng)', en: 'leaning sell (estimate)' },
+  'dp.sideNeutral': { vi: 'không rõ hướng (ước lượng)', en: 'unclear (estimate)' },
   'dp.none': { vi: 'Không mã nào có lệnh dark pool lớn trong kỳ.', en: 'No large dark pool prints in any tracked symbol this period.' },
   'dp.noneNote': {
     vi: 'Bình thường với phần lớn mã, nhất là mã thanh khoản thấp - lệnh khối lớn ngoài sàn không xảy ra mỗi ngày. Bảng trống KHÔNG có nghĩa là tin xấu.',

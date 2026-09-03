@@ -11,6 +11,11 @@ type Print = {
   executedAt: string;
   marketCenter: string | null;
   extendedHours: boolean;
+  nbboBid: number | null;
+  nbboAsk: number | null;
+  /** Suy đoán từ giá khớp so với bid/ask - KHÔNG phải nhãn thật của UW
+   *  (không tồn tại). Xem chú thích đầy đủ trong lib/darkpool.ts. */
+  sideEstimate: 'buy' | 'sell' | 'neutral' | null;
 };
 
 type Row = {
@@ -103,6 +108,7 @@ export default function DarkpoolPanel() {
       <div className="panel-head">{t('dp.title')}</div>
       <div className="panel-body">
         <p className="cap">{t('dp.intro', data?.minPremium ?? 1_000_000)}</p>
+        <p className="cap">{t('dp.sideNote')}</p>
         <p className="cap">
           {data?.lastRun ? t('cg.lastRun', data.lastRun.at) : t('cg.neverRun')}{' '}
           {/* Chỉ hiện nút khi ĐÃ BIẾT chắc data.configured === true - xem
@@ -184,6 +190,24 @@ export default function DarkpoolPanel() {
                                 <b>{usd(p.premium)}</b> · {p.size?.toLocaleString('en-US')}{' '}
                                 {t('dp.shares')} @ {p.price}
                                 {p.extendedHours && <span className="pfsub"> {t('dp.extHours')}</span>}
+                                {/* Cố tình KHÔNG dùng class good/bad (xanh/đỏ)
+                                    cho ước lượng này - đây là suy đoán ai chủ
+                                    động khớp lệnh, không phải khuyến nghị nên
+                                    mua hay tránh, và house rule của app này
+                                    (xem ColorLegend.tsx) dành riêng xanh/đỏ
+                                    cho hướng đi con số thật. */}
+                                {p.sideEstimate && (
+                                  <span className="pfsub">
+                                    {' '}
+                                    {t(
+                                      p.sideEstimate === 'buy'
+                                        ? 'dp.sideBuy'
+                                        : p.sideEstimate === 'sell'
+                                          ? 'dp.sideSell'
+                                          : 'dp.sideNeutral'
+                                    )}
+                                  </span>
+                                )}
                                 <span className="pfsub">
                                   {new Date(p.executedAt).toLocaleString()}
                                 </span>
