@@ -352,6 +352,26 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Net GEX âm: dealer khuếch đại biến động, giảm size và nới stop.',
     en: 'Net GEX negative: dealers amplify volatility — size down and widen stops.',
   },
+  'gex.updatedAt': {
+    vi: (time: string) => `Cập nhật lúc ${time}`,
+    en: (time: string) => `Updated at ${time}`,
+  },
+
+  /* ---- SPX Market Maker Exposure (tab Heatmap) ---- */
+  'gexmm.title': {
+    vi: (sym: string) => `Gamma nhà tạo lập thị trường — ${sym}`,
+    en: (sym: string) => `Market Maker Exposure — ${sym}`,
+  },
+  'gexmm.note': {
+    vi: 'Tự tính từ chuỗi quyền chọn Schwab của chính bạn (giống biểu đồ GEX ở tab Phân tích), không phải dữ liệu CBOE trễ 15 phút. Tự làm mới mỗi 10 phút.',
+    en: "Self-computed from your own Schwab option chain (same method as the Analyze tab's GEX chart), not CBOE's 15-minute-delayed feed. Auto-refreshes every 10 minutes.",
+  },
+  'gexmm.customPlaceholder': { vi: 'Mã khác…', en: 'Other ticker…' },
+  'gexmm.go': { vi: 'Xem', en: 'Go' },
+  'gexmm.zoomLabel': {
+    vi: (n: number) => `Biên độ strike hiển thị: ±${n}%`,
+    en: (n: number) => `Strike range shown: ±${n}%`,
+  },
 
   // ---- detail drawer ----
   'dd.aria': { vi: (s: string) => `Chi tiết ${s}`, en: (s: string) => `${s} detail` },
