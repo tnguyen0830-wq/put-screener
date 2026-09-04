@@ -151,18 +151,22 @@ export default function FearGreed() {
 
   if (failed) {
     return (
-      <section className="fg">
-        <h3 className="dsec">{t('fg.title')}</h3>
-        <p className="hint hint-warn">{t('fg.failed')}</p>
+      <section className="panel">
+        <div className="panel-head">{t('fg.title')}</div>
+        <div className="panel-body">
+          <p className="hint hint-warn">{t('fg.failed')}</p>
+        </div>
       </section>
     );
   }
 
   if (!data) {
     return (
-      <section className="fg">
-        <h3 className="dsec">{t('fg.title')}</h3>
-        <p className="cap">{t('fg.loading')}</p>
+      <section className="panel">
+        <div className="panel-head">{t('fg.title')}</div>
+        <div className="panel-body">
+          <p className="cap">{t('fg.loading')}</p>
+        </div>
       </section>
     );
   }
@@ -180,8 +184,9 @@ export default function FearGreed() {
   ];
 
   return (
-    <section className="fg">
-      <h3 className="dsec">{t('fg.title')}</h3>
+    <section className="panel">
+      <div className="panel-head">{t('fg.title')}</div>
+      <div className="panel-body fg">
 
       <div className="fgtop">
         <div className="fgdial">
@@ -416,6 +421,7 @@ export default function FearGreed() {
       )}
 
       <p className="cap">{t('fg.note')}</p>
+      </div>
     </section>
   );
 }

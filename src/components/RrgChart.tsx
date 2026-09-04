@@ -91,17 +91,21 @@ export default function RrgChart() {
 
   if (error)
     return (
-      <>
-        <h3 className="dsec">{t('rrg.title')}</h3>
-        <p className="cap">{error}</p>
-      </>
+      <section className="panel">
+        <div className="panel-head">{t('rrg.title')}</div>
+        <div className="panel-body">
+          <p className="cap">{error}</p>
+        </div>
+      </section>
     );
   if (!data)
     return (
-      <>
-        <h3 className="dsec">{t('rrg.title')}</h3>
-        <p className="cap">{t('rrg.loading')}</p>
-      </>
+      <section className="panel">
+        <div className="panel-head">{t('rrg.title')}</div>
+        <div className="panel-body">
+          <p className="cap">{t('rrg.loading')}</p>
+        </div>
+      </section>
     );
 
   const { w: W, h: H, sector: FS, quad: FQ, tick: FT } = compact ? TALL : WIDE;
@@ -143,8 +147,9 @@ export default function RrgChart() {
   const hovered = data.points.find((p) => p.key === on) ?? null;
 
   return (
-    <>
-      <h3 className="dsec">{t('rrg.title')}</h3>
+    <section className="panel">
+      <div className="panel-head">{t('rrg.title')}</div>
+      <div className="panel-body">
 
       <div className="rrgwrap">
         <svg
@@ -308,6 +313,7 @@ export default function RrgChart() {
       </details>
 
       <p className="cap">{t('rrg.note')}</p>
-    </>
+      </div>
+    </section>
   );
 }

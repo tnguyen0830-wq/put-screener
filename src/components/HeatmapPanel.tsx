@@ -1,9 +1,6 @@
 'use client';
 
 import { useLang } from '@/lib/i18n';
-import FearGreed from './FearGreed';
-import RrgChart from './RrgChart';
-import GexExposurePanel from './GexExposurePanel';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { squarify } from '@/lib/treemap';
@@ -358,14 +355,6 @@ export default function HeatmapPanel({
         <p className="cap">
           {t('hm.note')}
         </p>
-
-        {/* The map itself always comes first in this tab; anything added later
-            belongs below this line, not above it. */}
-        <FearGreed />
-
-        <RrgChart />
-
-        <GexExposurePanel />
       </div>
     </section>
   );
