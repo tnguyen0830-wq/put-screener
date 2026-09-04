@@ -23,10 +23,16 @@ const addDays = (n: number) => {
  * dùng báo lỗi lần nữa, thử LẦN LƯỢT vài cách viết hợp lý - còn mã thường
  * (không có $) thì chỉ có đúng 1 lựa chọn nên không tốn thêm request nào.
  */
+const INDEX_ROOTS = new Set(['SPX', 'VIX', 'NDX', 'RUT', 'DJX', 'XSP', 'SPXW']);
+
 function indexSymbolCandidates(symbol: string): string[] {
-  if (!symbol.startsWith('$')) return [symbol];
-  const bare = symbol.slice(1);
-  return [symbol, `${symbol}.X`, bare];
+  const bare = symbol.startsWith('$') ? symbol.slice(1) : symbol;
+  // Nhận ra mã chỉ số kể cả khi người dùng gõ tay KHÔNG có "$" - chuyện đã
+  // xảy ra thật: gõ "SPX" vào ô tìm mã chỉ thử đúng một cách viết rồi báo
+  // lỗi, trong khi bấm nút preset ("$SPX") mới chạy đủ ba. Cùng một mã thì
+  // phải cùng một hành vi, bất kể gõ kiểu nào.
+  if (!INDEX_ROOTS.has(bare.toUpperCase())) return [symbol];
+  return [`$${bare}`, `$${bare}.X`, bare];
 }
 
 type Attempt = { symbol: string; error: string };
@@ -96,10 +102,17 @@ export async function GET(req: NextRequest) {
     // fetchChainWithFallback() và lỗi thật của từng cái - nếu cả 3 cách viết
     // đều sai thì thấy ngay cả 3, không phải đoán tiếp lần 4.
     const attempts: Attempt[] | undefined = e?.attempts;
+    // Gộp gọn: mỗi lần thử chỉ còn "KÝ_HIỆU→MÃ_LỖI", rồi kèm đúng MỘT lỗi
+    // thô đầy đủ ở cuối. Bản trước nối nguyên văn cả ba lỗi rồi cắt ở 500 ký
+    // tự - ba khối JSON gần giống hệt nhau nên phần bị cắt lại đúng là phần
+    // cần biết (ký hiệu thứ ba có chạy không).
+    const statusOf = (err: string) => err.match(/ (\d{3}):/)?.[1] ?? '?';
     const detail = reauth
       ? undefined
       : attempts
-        ? attempts.map((a) => `${a.symbol}: ${a.error}`).join(' | ').slice(0, 500)
+        ? `${attempts.map((a) => `${a.symbol}→${statusOf(a.error)}`).join(', ')} · ${
+            attempts[attempts.length - 1]?.error ?? ''
+          }`.slice(0, 400)
         : msg.slice(0, 300);
     return NextResponse.json(
       {

@@ -99,16 +99,22 @@ next session can pick one up rather than rediscovering it):
   days**, and **0 of 250** were trades from the last 7 days. Worth showing the
   real lag on screen, or the tab reads as a live signal when it is a
   historical record.
-- SPX-in-GEX: root cause confirmed via #86's error detail (Schwab /chains
-  400s on "$SPX" specifically, "Check Param Values", while $VIX/QQQ work
-  fine). #88 added a fallback trying "$SPX" → "$SPX.X" → bare "SPX" in
-  order and stopping at the first that works - deployed, but **not yet
-  confirmed against a live session** (this sandbox has no outbound network
-  to Schwab, so the actual correct symbol format is still a guess among
-  three, not a verified fact). Next session: ask the owner to check SPX in
-  GEX again. If it works now, remove this line. If it still fails, the
-  error's `detail` field will list all three attempted symbols and Schwab's
-  real response for each - a fourth guess would be uninformed without that.
+- SPX-in-GEX, still unsolved. Confirmed from production so far: Schwab
+  /chains 400s ("Check Param Values") on **both** "$SPX" (#86) and bare
+  "SPX" (#90's report), while "$VIX" and "QQQ" work fine through the same
+  code - so it is not the "$" prefix, and not a session problem. #88 added
+  a fallback ("$SPX" → "$SPX.X" → "SPX", first one that works wins); #90
+  made a bare index root take that same path (typing "SPX" by hand used to
+  try only one spelling) and compacted the error detail so all three
+  attempts fit on screen instead of being truncated. **Whether "$SPX.X"
+  works is still unknown** - nobody has seen a run where all three were
+  tried. Next: have the owner press the SPX preset and read the detail
+  line, which now reads like `$SPX→400, $SPX.X→400, SPX→400 · <raw>`. If
+  all three 400, stop guessing spellings: the remaining suspects are a
+  param that indices reject (`includeUnderlyingQuote=true` is the prime
+  candidate - `fullChain()` sends it unconditionally) or the account simply
+  not being entitled to index-option data, and both need a different probe
+  than another symbol variant.
 
 ### Recent work (snapshot, not live truth - see the rule above)
 
