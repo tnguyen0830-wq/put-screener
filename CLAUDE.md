@@ -99,20 +99,21 @@ next session can pick one up rather than rediscovering it):
   days**, and **0 of 250** were trades from the last 7 days. Worth showing the
   real lag on screen, or the tab reads as a live signal when it is a
   historical record.
-- SPX-in-GEX: Schwab is a dead end, confirmed from production. /chains 400s
-  ("Check Param Values") on **every** spelling tried - "$SPX" (#86), bare
-  "SPX" (#90), and "$SPX.X" - while "$VIX" and "QQQ" work fine through the
-  same code. So it is not the "$" prefix, not a session problem, and not a
-  spelling problem: the remaining suspects are a parameter indices reject
-  (`fullChain()` always sends `includeUnderlyingQuote=true`) or the account
-  simply not being entitled to index-option data. Neither is fixable from
-  the app, so #91 stopped chasing it and falls back to Unusual Whales'
-  `/api/stock/{ticker}/gex-levels` for any symbol Schwab refuses. That
-  fallback is levels-only by nature (no per-strike gamma, so no bar chart
-  and no AI Trade Briefing), and the UI says so on screen. Still worth
-  someone asking Schwab support which of the two suspects it actually is -
-  if index chains become available, the Schwab path takes over again on its
-  own with no code change, since UW is only ever tried after a 400.
+- SPX-in-GEX, latest state: Schwab is **not** a dead end after all. Chasing
+  symbol spellings (#86-#91) was chasing the wrong thing - once the real
+  error text was surfaced, SPX started returning `502 {"faultstring":"Body
+  buffer overflow","errorcode":"protocol.http.TooBigBody"}`, which means
+  Schwab accepted the symbol and its own gateway then refused the response
+  for being too large. SPX expires almost every trading day, so 60 days ×
+  every strike is tens of thousands of contracts; ordinary equities never
+  come close. #92 answers that by narrowing the request instead
+  (`fullChainAdaptive`: 60d/all → 21d/120 strikes → 7d/60 strikes, stopping
+  at the first that fits), keeping the UW levels fallback only for when even
+  the narrowest request is refused. Open question for whoever picks this up:
+  the earlier `400 "Check Param Values"` responses are still unexplained -
+  same symbol, different error, so something changed between then and now
+  (a Schwab-side fix, or the 400 was itself a symptom of size). Worth
+  watching whether 400s come back.
 
 ### Recent work (snapshot, not live truth - see the rule above)
 
@@ -121,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #92 Real cause of the SPX GEX failure found: Schwab's gateway refuses the response as too large (502 TooBigBody), not the symbol. Chain requests now narrow themselves (60d → 21d/120 strikes → 7d/60) until one fits, and the screen says when a narrowed window was used since the walls then only cover that window.
 - 2026-09-04 — #91 SPX in GEX now falls back to Unusual Whales' gex-levels when Schwab 400s. Schwab index chains look genuinely unavailable to this account (every spelling 400s), so this stops chasing symbol formats. Levels only - no bar chart, no AI briefing - and the screen says which source it is showing.
 - 2026-09-04 — #90 Made a bare index root ("SPX" typed by hand) take the same fallback path as "$SPX", and compacted the error detail so all attempted spellings fit on screen instead of being truncated.
 - 2026-09-04 — #88 SPX-in-GEX fix attempt: fall back through "$SPX" → "$SPX.X" → "SPX" on a 400, stop at the first that works. Logic verified by standalone test, but the actual correct Schwab symbol is still unconfirmed against a live session (see the known gap above) - don't assume this is done without checking.
@@ -136,7 +138,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #91. If you're reading this and a
+No PR is currently open and unmerged as of #92. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 

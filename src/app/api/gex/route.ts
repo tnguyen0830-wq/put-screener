@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fullChain } from '@/lib/schwab';
+import { fullChainAdaptive, type ChainWindow } from '@/lib/schwab';
 import { computeGex, type GexLevelsResponse } from '@/lib/gex';
 import { uwConfigured } from '@/lib/unusualwhales';
 import { uwGexLevels } from '@/lib/uwgex';
 
 export const dynamic = 'force-dynamic';
-
-const addDays = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
 
 /**
  * Xác nhận thật trên production (#86's error detail): Schwab /chains trả
@@ -40,16 +34,14 @@ function indexSymbolCandidates(symbol: string): string[] {
 type Attempt = { symbol: string; error: string };
 
 async function fetchChainWithFallback(
-  symbol: string,
-  fromDate: string,
-  toDate: string
-): Promise<{ chain: any; attempts: Attempt[] }> {
+  symbol: string
+): Promise<{ chain: any; window: ChainWindow; attempts: Attempt[] }> {
   const candidates = indexSymbolCandidates(symbol);
   const attempts: Attempt[] = [];
   for (const candidate of candidates) {
     try {
-      const chain = await fullChain(candidate, fromDate, toDate);
-      return { chain, attempts };
+      const { chain, window } = await fullChainAdaptive(candidate);
+      return { chain, window, attempts };
     } catch (e: any) {
       const msg = String(e?.message ?? e);
       attempts.push({ symbol: candidate, error: msg });
@@ -71,9 +63,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Gamma concentrates in near expirations, so a 60-day window captures the
-    // walls that actually matter without pulling LEAPS noise into the profile.
-    const { chain } = await fetchChainWithFallback(symbol, addDays(0), addDays(60));
+    // Cửa sổ ngày/strike do fullChainAdaptive() quyết định: bắt đầu rộng
+    // (60 ngày, mọi strike) rồi tự hẹp lại nếu Schwab từ chối vì phản hồi
+    // quá lớn - xem chú thích ở schwab.ts.
+    const { chain, window } = await fetchChainWithFallback(symbol);
     // Luôn truyền lại đúng ký hiệu người dùng đã chọn (không phải biến thể
     // nội bộ như "$SPX.X" lỡ chạy được) - GexProfile.symbol chỉ để hiển thị,
     // lộ ra biến thể nội bộ sẽ làm nhãn trên UI trông sai/lạ.
@@ -92,7 +85,7 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    return NextResponse.json(profile);
+    return NextResponse.json({ ...profile, chainWindow: window });
   } catch (e: any) {
     const msg = String(e?.message ?? e);
     const reauth = msg.includes('REAUTH_REQUIRED');
@@ -103,7 +96,11 @@ export async function GET(req: NextRequest) {
     // KHÔNG áp dụng cho lỗi phiên: REAUTH_REQUIRED phải hiện đúng là hết
     // phiên để người dùng bấm kết nối lại, chứ không âm thầm lấy số nơi
     // khác rồi che mất việc cả app đang mất kết nối Schwab.
-    if (!reauth && / 400:/.test(msg) && uwConfigured()) {
+    // Cả hai kiểu Schwab từ chối đều đáng quay sang UW: 400 (từ chối tham
+    // số) và 502 TooBigBody vẫn còn sau khi đã thu hẹp hết mức
+    // (fullChainAdaptive đã thử 60d → 21d/120 → 7d/60 rồi mới ném ra đây).
+    const schwabRefused = / 400:/.test(msg) || /TooBigBody|Body buffer overflow/i.test(msg);
+    if (!reauth && schwabRefused && uwConfigured()) {
       try {
         const levels = await uwGexLevels(symbol);
         const payload: GexLevelsResponse = {
