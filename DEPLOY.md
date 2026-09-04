@@ -305,11 +305,16 @@ EXPO_PUBLIC_BACKEND_URL=https://app.tylerinvestment.com
 EXPO_PUBLIC_BACKEND_TOKEN=<đúng giá trị MD_API_TOKEN ở bước 2>
 ```
 
-Xuất bản web tĩnh:
+Xuất bản web tĩnh — **bắt buộc có `--clear`**:
 
 ```bash
-npx expo export --platform web
+npx expo export --platform web --clear
 ```
+
+⚠️ Thiếu `--clear` là Metro dùng lại bản dịch cũ của `src/config/env.ts` trong cache, và
+bundle sẽ mang **giá trị `.env` cũ** dù `.env` đã sửa. Không có cảnh báo nào cả — dấu hiệu
+duy nhất là file bundle sinh ra trùng y hệt mã băm với lần build trước. Đã mắc lỗi này ngày
+2026-08-21: bundle vẫn trỏ về `192.168.1.52` sau khi `.env` đã đổi sang URL Render.
 
 **Luôn kiểm tra biến đã được nhúng vào bundle trước khi deploy:**
 
