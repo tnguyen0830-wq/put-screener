@@ -62,6 +62,30 @@ say plainly what was merged. A PR that touches something risky or ambiguous
 enough to want the owner's eyes first is still worth flagging before merging,
 using judgment - "auto-merge" is not "never ask anything."
 
+### In progress right now (update this at start, mid-task, and finish)
+
+The owner asked for this explicitly: write down what a session is doing at
+every stage, not just after merging - so asking either account "what's
+happening" gets a real answer even mid-task, without waiting for a PR.
+
+- **Starting a task** - before writing code, replace the line below with:
+  date, one-line task description, and the branch name.
+- **Still working / blocked / scope changed** - update that same line in
+  place (e.g. "blocked on X", "turned out bigger than expected, doing Y
+  first") rather than leaving a stale description sitting there.
+- **Finished and merged** - delete the line here and add the real entry to
+  "Recent work" below instead (with the PR number). Set this back to "Nothing
+  in progress."
+- **Abandoned without merging** - delete the line here and say why in one
+  sentence, so the next session (or the owner) knows it was a deliberate
+  stop, not a crash mid-task.
+
+This is still just a snapshot, same caveat as "Recent work" below - a
+session that forgets to update it makes it stale. `git log` / open PRs are
+still the only *live* truth; this is the cheap first check before that.
+
+Nothing in progress as of 2026-09-04.
+
 ### Recent work (snapshot, not live truth - see the rule above)
 
 Whichever session finishes a PR should append one line here, newest on top,

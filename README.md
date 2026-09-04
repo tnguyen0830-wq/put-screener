@@ -16,9 +16,11 @@ App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
 > và danh sách PR đang mở trên GitHub. `CLAUDE.md` (mục "Two Claude accounts
-> share this repo" → "Recent work") có một nhật ký ngắn ghi PR gần nhất, nhưng
-> đó chỉ là ảnh chụp nhanh do phiên nào đó nhớ ghi lại — không phải sự thật
-> sống, git mới là sự thật sống.
+> share this repo") có hai nhật ký ngắn: **"In progress right now"** (việc
+> đang làm dở, cập nhật ngay khi bắt đầu/giữa chừng/xong việc — không đợi có
+> PR mới ghi) và **"Recent work"** (PR nào vừa merge xong). Cả hai chỉ là ảnh
+> chụp nhanh do phiên nào đó nhớ ghi lại — không phải sự thật sống, git mới
+> là sự thật sống.
 
 ---
 
