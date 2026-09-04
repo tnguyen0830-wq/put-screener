@@ -35,12 +35,17 @@ export default function GexChart({
   const { t } = useLang();
   const [data, setData] = useState<GexProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Lý do thật Schwab trả về (từ /api/gex's `detail`) - xem chú thích ở
+   *  route đó. Hiện riêng, nhỏ hơn, để không lẫn với thông báo chính nhưng
+   *  vẫn nhìn thấy được thay vì phải xem log server mới biết vì sao. */
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
     setData(null);
     setError(null);
+    setErrorDetail(null);
     setUpdatedAt(null);
 
     const load = () => {
@@ -48,10 +53,13 @@ export default function GexChart({
         .then(async (r) => {
           const j = await r.json();
           if (!alive) return;
-          if (!r.ok) setError(j.error ?? t('gex.loadFailed'));
-          else {
+          if (!r.ok) {
+            setError(j.error ?? t('gex.loadFailed'));
+            setErrorDetail(j.detail ?? null);
+          } else {
             setData(j);
             setError(null);
+            setErrorDetail(null);
             setUpdatedAt(Date.now());
           }
         })
@@ -67,7 +75,13 @@ export default function GexChart({
     };
   }, [symbol, refreshMs]);
 
-  if (error) return <p className="cap">{error}</p>;
+  if (error)
+    return (
+      <>
+        <p className="cap">{error}</p>
+        {errorDetail && <p className="cap">{errorDetail}</p>}
+      </>
+    );
   if (!data) return <p className="cap">{t('gex.computing')}</p>;
 
   // Only the strikes near spot carry meaningful hedging flow.
