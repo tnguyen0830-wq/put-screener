@@ -10,6 +10,52 @@ const addDays = (n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+/**
+ * Xác nhận thật trên production (#86's error detail): Schwab /chains trả
+ * 400 "Check Param Values" cho đúng ký hiệu "$SPX", trong khi "$VIX" và
+ * "QQQ" chạy bình thường qua cùng một đoạn code - nên không phải lỗi chung
+ * cho mọi mã có tiền tố $, mà là Schwab từ chối riêng "$SPX" cho endpoint
+ * /chains (dù /quotes chấp nhận nó, TickerTape/volatility route đã dùng ổn).
+ *
+ * Chưa biết chắc Schwab muốn ký hiệu nào - "$SPX.X" (quy ước index option
+ * kiểu TD Ameritrade cũ) và "SPX" (root option trần trụi, không tiền tố)
+ * đều là khả năng hợp lý. Thay vì đoán đúng 1 lần rồi lại phải chờ người
+ * dùng báo lỗi lần nữa, thử LẦN LƯỢT vài cách viết hợp lý - còn mã thường
+ * (không có $) thì chỉ có đúng 1 lựa chọn nên không tốn thêm request nào.
+ */
+function indexSymbolCandidates(symbol: string): string[] {
+  if (!symbol.startsWith('$')) return [symbol];
+  const bare = symbol.slice(1);
+  return [symbol, `${symbol}.X`, bare];
+}
+
+type Attempt = { symbol: string; error: string };
+
+async function fetchChainWithFallback(
+  symbol: string,
+  fromDate: string,
+  toDate: string
+): Promise<{ chain: any; attempts: Attempt[] }> {
+  const candidates = indexSymbolCandidates(symbol);
+  const attempts: Attempt[] = [];
+  for (const candidate of candidates) {
+    try {
+      const chain = await fullChain(candidate, fromDate, toDate);
+      return { chain, attempts };
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      attempts.push({ symbol: candidate, error: msg });
+      // Chỉ đáng thử ký hiệu khác khi lỗi THẬT SỰ là "tham số sai" (400) -
+      // REAUTH_REQUIRED hay lỗi mạng sẽ lặp lại y hệt cho mọi ký hiệu, thử
+      // thêm chỉ tổ tốn request mà không đổi được gì.
+      if (!/ 400:/.test(msg)) throw e;
+    }
+  }
+  const last: any = new Error(attempts[attempts.length - 1]?.error ?? 'unknown');
+  last.attempts = attempts;
+  throw last;
+}
+
 export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get('symbol');
   if (!symbol) {
@@ -19,7 +65,10 @@ export async function GET(req: NextRequest) {
   try {
     // Gamma concentrates in near expirations, so a 60-day window captures the
     // walls that actually matter without pulling LEAPS noise into the profile.
-    const chain = await fullChain(symbol, addDays(0), addDays(60));
+    const { chain } = await fetchChainWithFallback(symbol, addDays(0), addDays(60));
+    // Luôn truyền lại đúng ký hiệu người dùng đã chọn (không phải biến thể
+    // nội bộ như "$SPX.X" lỡ chạy được) - GexProfile.symbol chỉ để hiển thị,
+    // lộ ra biến thể nội bộ sẽ làm nhãn trên UI trông sai/lạ.
     const profile = computeGex(chain, symbol);
     if (!profile) {
       // Cùng lý do thêm `detail` ở nhánh catch bên dưới: Schwab trả về
@@ -43,15 +92,19 @@ export async function GET(req: NextRequest) {
     // thật Schwab trả về - đúng cái bẫy self-diagnosing idiom của app này
     // muốn tránh (CRWD's earnings đã bị bỏ sót đúng kiểu này). schwab.ts's
     // get() đã ném ra `Schwab ${path} ${status}: ${body}` sẵn - chỉ cần
-    // không vứt nó đi. Cắt ngắn vì body lỗi của Schwab đôi khi là cả khối
-    // JSON dài. Phát hiện thật: symbol="$SPX" lỗi ở đây trong khi "$VIX"
-    // (cũng có tiền tố $) và "QQQ" chạy bình thường - không phải lỗi phiên
-    // (không phải REAUTH_REQUIRED), rất có thể Schwab từ chối đúng ký hiệu
-    // "$SPX" cho endpoint /chains dù chấp nhận nó cho /quotes.
+    // không vứt nó đi. `attempts` (khi có) liệt kê MỌI ký hiệu đã thử qua
+    // fetchChainWithFallback() và lỗi thật của từng cái - nếu cả 3 cách viết
+    // đều sai thì thấy ngay cả 3, không phải đoán tiếp lần 4.
+    const attempts: Attempt[] | undefined = e?.attempts;
+    const detail = reauth
+      ? undefined
+      : attempts
+        ? attempts.map((a) => `${a.symbol}: ${a.error}`).join(' | ').slice(0, 500)
+        : msg.slice(0, 300);
     return NextResponse.json(
       {
         error: reauth ? 'Phiên Schwab hết hạn' : 'Không lấy được chuỗi quyền chọn',
-        detail: reauth ? undefined : msg.slice(0, 300),
+        detail,
       },
       { status: reauth ? 401 : 500 }
     );

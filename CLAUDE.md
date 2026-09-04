@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-04.
+2026-09-04 — SPX-in-GEX root cause confirmed via #86's error detail: Schwab /chains 400s on "$SPX" specifically ("Check Param Values") while $VIX and QQQ work fine through the same code. Adding a symbol-format fallback (try $SPX, then $SPX.X, then bare SPX) scoped to /api/gex only, not touching fullChain()'s general contract. Branch: claude/gex-index-symbol-fallback.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
