@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-04 — SPX fails in GEX ("Không lấy được chuỗi quyền chọn") while QQQ/VIX work - confirmed by the owner, not a session issue (auth is fine for the other symbols). Fixing /api/gex to surface the real Schwab error detail instead of the generic message, so the actual cause (likely the $SPX symbol format specifically, not the $-prefix pattern in general since $VIX works) can be diagnosed from production rather than guessed. Branch: claude/gex-spx-error-detail.
+Nothing in progress as of 2026-09-04.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -99,6 +99,14 @@ next session can pick one up rather than rediscovering it):
   days**, and **0 of 250** were trades from the last 7 days. Worth showing the
   real lag on screen, or the tab reads as a live signal when it is a
   historical record.
+- SPX fails in the Heatmap GEX panel ("Không lấy được chuỗi quyền chọn")
+  while QQQ and `$VIX` both work - confirmed by the owner, not a session
+  issue. `/api/gex` now surfaces the real Schwab error text (`detail` field,
+  rendered by `GexChart.tsx`) instead of a generic message (#86), so the next
+  step is just: get the owner to look at the GEX tab for SPX again and report
+  back the actual error text now shown - the fix itself (almost certainly the
+  `$SPX` symbol format specifically, since `/quotes` accepts it but `/chains`
+  apparently doesn't) depends on knowing that text, not on more guessing.
 
 ### Recent work (snapshot, not live truth - see the rule above)
 
@@ -107,6 +115,8 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #86 /api/gex now surfaces the real Schwab error text instead of a generic message, after the owner reported SPX (but not QQQ/VIX) failing in GEX - doesn't fix the underlying symbol issue, makes it diagnosable from production instead of guessed at (logged as a known gap above, waiting on the owner to report back the real error text).
+- 2026-09-03 — #85 Documented UW_API_KEY in .env.example, fixed a stale reference in this file, logged the README Insider Trade gap and the Congress disclosure-lag gap (both above, still unclaimed).
 - 2026-09-04 — #83 Added the "In progress right now" log (this section's neighbor above) per owner's explicit request - status visible mid-task, not just after merge.
 - 2026-09-04 — #58 Fixed /api/md/session reading its own stored clock instead of actually testing the token (read healthy long after Schwab had revoked it), and a CSS specificity bug hiding the sign colour on the results table's annualised-return cell. Sat open since 2026-08-26; verified both bugs were still real on current main and the merge was clean before merging.
 - 2026-09-04 — #81 Split Heatmap into sub-tabs (price treemap / Fear & Greed / RRG / GEX), same pattern as Insider Trade's four-source split.
@@ -117,7 +127,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #83. If you're reading this and a
+No PR is currently open and unmerged as of #86. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
