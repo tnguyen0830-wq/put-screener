@@ -357,6 +357,38 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (time: string) => `Updated at ${time}`,
   },
 
+  /* ---- AI Trade Briefing (trong khung GEX) ---- */
+  'tb.title': { vi: 'Phân tích giao dịch AI', en: 'AI Trade Briefing' },
+  'tb.run': { vi: 'Phân tích AI', en: 'Run AI analysis' },
+  'tb.rerun': { vi: 'Phân tích lại', en: 'Run again' },
+  'tb.running': { vi: 'Đang tính toán…', en: 'Computing…' },
+  'tb.note': {
+    vi: 'Toàn bộ strike, giá, lãi/lỗ tối đa và điểm hoà vốn dưới đây tính từ giá thật trên chuỗi quyền chọn Schwab (không phải Claude tạo ra) - Claude chỉ viết phần diễn giải bên dưới. Chưa có mô hình biến động Heston (spot vol/long-run vol/half-life) và chưa có Calendar Spread - cả hai cần thêm hạ tầng riêng. Lỗ tối đa của lệnh bán put trần trụi tính đúng theo lý thuyết (hữu hạn, giá không xuống dưới 0), không dùng quy ước "Unlimited" lỏng lẻo.',
+    en: "Every strike, price, max gain/loss and breakeven below comes from real Schwab option chain prices (not written by Claude) - Claude only writes the narrative underneath. No Heston volatility model (spot vol/long-run vol/half-life) and no Calendar Spread yet - both need dedicated infrastructure. A naked short put's max loss is computed correctly per payoff theory (finite, since price can't go below 0), not the loose \"Unlimited\" convention.",
+  },
+  'tb.regime': { vi: 'Chế độ GEX', en: 'GEX regime' },
+  'tb.regimePositive': { vi: 'DƯƠNG — dealer hãm biến động', en: 'POSITIVE — dealers dampen moves' },
+  'tb.regimeNegative': { vi: 'ÂM — dealer khuếch đại biến động', en: 'NEGATIVE — dealers amplify moves' },
+  'tb.horizonShort': { vi: 'Ngắn hạn', en: 'Short term' },
+  'tb.horizonMedium': { vi: 'Trung hạn', en: 'Medium term' },
+  'tb.nextExp': {
+    vi: (v: any) => `Đáo hạn: ${v.exp}, còn ${v.dte} ngày`,
+    en: (v: any) => `Expiration: ${v.exp}, ${v.dte} DTE`,
+  },
+  'tb.expMove': { vi: 'Biên độ kỳ vọng', en: 'Expected move' },
+  'tb.termSkew': { vi: 'Term structure / Skew', en: 'Term structure / skew' },
+  'tb.cost': { vi: 'Chi phí', en: 'Cost' },
+  'tb.credit': { vi: 'Thu về', en: 'Credit' },
+  'tb.maxGain': { vi: 'Lãi tối đa', en: 'Max gain' },
+  'tb.maxLoss': { vi: 'Lỗ tối đa', en: 'Max loss' },
+  'tb.unlimited': { vi: 'Không giới hạn', en: 'Unlimited' },
+  'tb.breakeven': { vi: 'Hoà vốn', en: 'Breakeven' },
+  'tb.rr': { vi: 'R/R', en: 'R/R' },
+  'tb.noIdeas': {
+    vi: 'Không có strike niêm yết đủ gần các mốc mục tiêu trong kỳ hạn này.',
+    en: 'No listed strikes close enough to the target levels for this horizon.',
+  },
+
   /* ---- SPX Market Maker Exposure (tab Heatmap) ---- */
   'gexmm.title': {
     vi: (sym: string) => `Gamma nhà tạo lập thị trường — ${sym}`,

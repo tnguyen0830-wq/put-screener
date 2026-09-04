@@ -1550,6 +1550,18 @@ table.results tbody tr.clickable {
   padding: 3px 0;
 }
 
+/* Thẻ gợi ý giao dịch trong AI Trade Briefing (khung GEX) - mỗi lệnh một
+   khối tách biệt bằng viền mảnh, chữ cỡ thường (không thu nhỏ như
+   .pfskipped) vì đây là số liệu chính, không phải ghi chú phụ. */
+.tbideas li.tbidea {
+  padding: 8px 10px;
+  margin: 6px 0;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  color: var(--ink);
+}
+
 /* Ô "Cần để ý" trong khối .stats: dd bọc details/summary nên chữ tổng vẫn
    giữ cỡ/đậm/màu warn của .stats dd - chỉ list bên trong đổi nhỏ hơn, giống
    .pfskipped, và có con trỏ tay để biết bấm được. */
