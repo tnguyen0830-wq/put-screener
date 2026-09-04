@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-04.
+2026-09-04 — SPX fails in GEX ("Không lấy được chuỗi quyền chọn") while QQQ/VIX work - confirmed by the owner, not a session issue (auth is fine for the other symbols). Fixing /api/gex to surface the real Schwab error detail instead of the generic message, so the actual cause (likely the $SPX symbol format specifically, not the $-prefix pattern in general since $VIX works) can be diagnosed from production rather than guessed. Branch: claude/gex-spx-error-detail.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
