@@ -464,6 +464,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.loading': { vi: 'Đang tải bản đồ…', en: 'Loading the map…' },
   'hm.loadFailed': { vi: 'Không tải được bản đồ', en: 'Could not load the map' },
   'hm.title': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  'hm.subMap': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  'hm.subFearGreed': { vi: 'Fear & Greed', en: 'Fear & Greed' },
+  'hm.subRrg': { vi: 'RRG', en: 'RRG' },
+  'hm.subGex': { vi: 'GEX', en: 'GEX' },
   'hm.head': {
     vi: (v: any) => `Bản đồ S&P 500 · ${v.count} mã · ${v.source}`,
     en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,

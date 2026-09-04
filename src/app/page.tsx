@@ -8,6 +8,9 @@ import DetailDrawer from '@/components/DetailDrawer';
 import WatchlistPanel from '@/components/WatchlistPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import HeatmapPanel from '@/components/HeatmapPanel';
+import FearGreed from '@/components/FearGreed';
+import RrgChart from '@/components/RrgChart';
+import GexExposurePanel from '@/components/GexExposurePanel';
 import PortfolioPanel from '@/components/PortfolioPanel';
 import InsiderPanel from '@/components/InsiderPanel';
 import CongressPanel from '@/components/CongressPanel';
@@ -50,11 +53,16 @@ type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio' | 'insider';
 /** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
 type InsiderSub = 'form4' | 'congress' | 'flow' | 'darkpool';
+/** Bốn nội dung khác nhau trong tab Heatmap, cùng lý do tách tab con như
+ *  Insider Trade ở trên - trước đó cả bốn (bản đồ nhiệt, Fear & Greed, RRG,
+ *  GEX) xếp chồng trong một cột phải cuộn rất dài mới thấy hết. */
+type HeatmapSub = 'map' | 'feargreed' | 'rrg' | 'gex';
 
 export default function Page() {
   const { t } = useLang();
   const [tab, setTab] = useState<Tab>('screener');
   const [insiderSub, setInsiderSub] = useState<InsiderSub>('form4');
+  const [heatmapSub, setHeatmapSub] = useState<HeatmapSub>('map');
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULTS);
   const [rows, setRows] = useState<Candidate[]>([]);
@@ -372,12 +380,51 @@ export default function Page() {
         </div>
       ) : (
         <div className="shell solo">
-          <HeatmapPanel
-            onSelectSymbol={(sym) => {
-              setFocusSymbol(sym);
-              setTab('analyze');
-            }}
-          />
+          {/* Bốn nội dung khác nhau trong tab này (bản đồ nhiệt, Fear & Greed,
+              RRG, GEX), xem RIÊNG TỪNG CÁI qua tab con - cùng khuôn mẫu tab
+              Insider Trade ở trên, cùng lý do (trước đó xếp chồng một cột
+              phải cuộn rất dài mới thấy hết cả bốn). */}
+          <div className="segmented hmranges">
+            <button
+              className={heatmapSub === 'map' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('map')}
+            >
+              {t('hm.subMap')}
+            </button>
+            <button
+              className={heatmapSub === 'feargreed' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('feargreed')}
+            >
+              {t('hm.subFearGreed')}
+            </button>
+            <button
+              className={heatmapSub === 'rrg' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('rrg')}
+            >
+              {t('hm.subRrg')}
+            </button>
+            <button
+              className={heatmapSub === 'gex' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('gex')}
+            >
+              {t('hm.subGex')}
+            </button>
+          </div>
+
+          {heatmapSub === 'map' ? (
+            <HeatmapPanel
+              onSelectSymbol={(sym) => {
+                setFocusSymbol(sym);
+                setTab('analyze');
+              }}
+            />
+          ) : heatmapSub === 'feargreed' ? (
+            <FearGreed />
+          ) : heatmapSub === 'rrg' ? (
+            <RrgChart />
+          ) : (
+            <GexExposurePanel />
+          )}
         </div>
       )}
 

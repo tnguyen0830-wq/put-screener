@@ -39,8 +39,9 @@ export default function GexExposurePanel() {
   const [zoomPct, setZoomPct] = useState(0.25);
 
   return (
-    <>
-      <h3 className="dsec">{t('gexmm.title', displaySymbol(symbol))}</h3>
+    <section className="panel">
+      <div className="panel-head">{t('gexmm.title', displaySymbol(symbol))}</div>
+      <div className="panel-body">
       <p className="cap">{t('gexmm.note')}</p>
 
       <div className="segmented hmranges">
@@ -85,6 +86,7 @@ export default function GexExposurePanel() {
       </label>
 
       <GexChart symbol={symbol} refreshMs={REFRESH_MS} zoomPct={zoomPct} />
-    </>
+      </div>
+    </section>
   );
 }
