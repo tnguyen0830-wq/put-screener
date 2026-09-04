@@ -3,14 +3,22 @@
 Quét toàn bộ rổ S&P 500 và trả về những hợp đồng **cash-secured put** đáp ứng
 tiêu chí của bạn, lấy dữ liệu trực tiếp từ tài khoản Charles Schwab.
 
-App có bốn tab, đi theo đúng vòng đời của một lệnh bán put:
+App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 
 | Tab | Trả lời câu hỏi |
 |---|---|
 | **Sell Put Screener** | Bán con gì, strike nào, kỳ nào |
 | **Analyze** | Con này thực sự đang thế nào |
-| **Heatmap** | Cả thị trường đang thế nào |
+| **Heatmap** | Cả thị trường đang thế nào (kèm GEX của SPX/mã bất kỳ) |
 | **My Portfolio** | Cái đang cầm có gì cần để ý |
+| **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
+
+> **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
+> của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
+> và danh sách PR đang mở trên GitHub. `CLAUDE.md` (mục "Two Claude accounts
+> share this repo" → "Recent work") có một nhật ký ngắn ghi PR gần nhất, nhưng
+> đó chỉ là ảnh chụp nhanh do phiên nào đó nhớ ghi lại — không phải sự thật
+> sống, git mới là sự thật sống.
 
 ---
 

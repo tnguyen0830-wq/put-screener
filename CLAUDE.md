@@ -34,6 +34,17 @@ just changed the files you were about to rewrite. Check open PRs too - work in
 review is work that exists, and rewriting the same file from `main` will collide
 with it at merge time.
 
+**"What are you working on?" is a live-state question, not a memory question.**
+A session's own memory of "I'm on PR #58" goes stale the moment the *other*
+account merges anything - and the owner asks this exact question specifically
+to route work between the two accounts, so a stale answer sends them to fix a
+bug that's already merged, or skip a PR that's still genuinely open. Before
+answering it, always run `git fetch origin main && git log --oneline
+origin/main -15` and list open PRs - never answer from session memory alone.
+The "Recent work" log below is a cheap cross-check, not a substitute for this:
+it is written by whichever session happens to remember to update it, so it can
+also be stale - `git log`/open PRs are the actual source of truth.
+
 **Say which files a PR touches, in the PR body.** That is the cheapest way for
 the other account to notice an overlap before it becomes a conflict.
 
@@ -50,6 +61,23 @@ never merge a PR with failing checks or unresolved review feedback, and still
 say plainly what was merged. A PR that touches something risky or ambiguous
 enough to want the owner's eyes first is still worth flagging before merging,
 using judgment - "auto-merge" is not "never ask anything."
+
+### Recent work (snapshot, not live truth - see the rule above)
+
+Whichever session finishes a PR should append one line here, newest on top,
+before signing off - not a full changelog, just enough that the *other*
+account skimming this file sees roughly where things stand without a live git
+check. Trim entries once they are clearly old news (a dozen or so is plenty).
+
+- 2026-09-04 — #79 AI Trade Briefing in the GEX frame (Analyze/DetailDrawer/Heatmap): real strikes/greeks/max-gain-loss from the live chain, Claude narrates only. Heston vol model and Calendar spreads explicitly NOT built (flagged in the code/PR, not silently skipped) - real follow-up work if wanted.
+- 2026-09-04 — #78 Fixed Dark Pool sync burning through UW's 30k/day quota (was hitting the daily cap every day). Market-hours gating + slower auto cadence.
+- 2026-09-04 — #77 SPX Market Maker Exposure panel (Heatmap tab), self-computed from Schwab, no paid feed.
+- 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
+- 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
+
+No PR is currently open and unmerged as of #79. If you're reading this and a
+PR number below the highest merged one here is still open, something stalled
+- check it before starting new work.
 
 ## Architecture
 
