@@ -28,6 +28,11 @@ export type GexProfile = {
   callWall: number | null;
   /** Where cumulative net GEX flips sign. Above it dealers dampen moves. */
   zeroGamma: number | null;
+  /** Strike carrying the most gamma of either sign combined - the single
+   *  price the most hedging flow is anchored to. Different from the walls
+   *  (each one-sided) and from zero gamma (a crossing, not a strike): a
+   *  strike can be the biggest overall while being neither wall. */
+  absGamma: number | null;
   totalGex: number;
 };
 
@@ -136,8 +141,10 @@ export function computeGex(chain: any, symbol: string): GexProfile | null {
   // Walls: the heaviest single strike on each side.
   let putWall: number | null = null;
   let callWall: number | null = null;
+  let absGamma: number | null = null;
   let maxPut = 0;
   let maxCall = 0;
+  let maxAbs = 0;
   for (const s of strikes) {
     if (Math.abs(s.putGex) > maxPut) {
       maxPut = Math.abs(s.putGex);
@@ -146,6 +153,11 @@ export function computeGex(chain: any, symbol: string): GexProfile | null {
     if (s.callGex > maxCall) {
       maxCall = s.callGex;
       callWall = s.strike;
+    }
+    const both = Math.abs(s.callGex) + Math.abs(s.putGex);
+    if (both > maxAbs) {
+      maxAbs = both;
+      absGamma = s.strike;
     }
   }
 
@@ -173,6 +185,7 @@ export function computeGex(chain: any, symbol: string): GexProfile | null {
     putWall,
     callWall,
     zeroGamma,
+    absGamma,
     totalGex: strikes.reduce((a, s) => a + s.netGex, 0),
   };
 }

@@ -324,6 +324,18 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'gex.putWall': { vi: 'Put wall', en: 'Put wall' },
   'gex.callWall': { vi: 'Call wall', en: 'Call wall' },
   'gex.yourStrike': { vi: 'Strike của bạn', en: 'Your strike' },
+  'gex.absGamma': { vi: 'Gamma tuyệt đối', en: 'Abs gamma' },
+  'gex.currentPrice': {
+    vi: (p: string) => `Giá hiện tại ${p}`,
+    en: (p: string) => `Current price ${p}`,
+  },
+  'gex.calls': { vi: 'Call', en: 'Calls' },
+  'gex.puts': { vi: 'Put', en: 'Puts' },
+  'gex.tipStrike': { vi: 'Strike', en: 'Strike' },
+  'gex.axisLabel': {
+    vi: 'Gamma exposure (triệu $ / 1% biến động)',
+    en: 'Gamma exposure ($M per 1% move)',
+  },
   'gex.zeroGamma': { vi: 'Zero gamma', en: 'Zero gamma' },
   'gex.netGex': { vi: 'Net GEX', en: 'Net GEX' },
   'gex.noStrike': {

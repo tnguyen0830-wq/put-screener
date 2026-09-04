@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #93 GEX chart redrawn to the layout the owner asked for (their screenshot of tapchiphowall's chart): labelled $M axis, red calls up / blue puts down on one shared scale, key-levels box, current-price line, ticker watermark, per-strike hover tooltip. New GexProfile.absGamma (biggest strike counting both signs). Touches i18n.tsx and globals.css - both shared files.
 - 2026-09-04 — #92 Real cause of the SPX GEX failure found: Schwab's gateway refuses the response as too large (502 TooBigBody), not the symbol. Chain requests now narrow themselves (60d → 21d/120 strikes → 7d/60) until one fits, and the screen says when a narrowed window was used since the walls then only cover that window.
 - 2026-09-04 — #91 SPX in GEX now falls back to Unusual Whales' gex-levels when Schwab 400s. Schwab index chains look genuinely unavailable to this account (every spelling 400s), so this stops chasing symbol formats. Levels only - no bar chart, no AI briefing - and the screen says which source it is showing.
 - 2026-09-04 — #90 Made a bare index root ("SPX" typed by hand) take the same fallback path as "$SPX", and compacted the error detail so all attempted spellings fit on screen instead of being truncated.
@@ -138,7 +139,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #92. If you're reading this and a
+No PR is currently open and unmerged as of #93. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -381,6 +382,15 @@ Self-computed from option-chain gamma × open interest, not a paid data feed —
 `GexExposurePanel.tsx` (tab Heatmap) is a second consumer of the same `GexChart.tsx` used by Analyze — a ticker-switchable "Market Maker Exposure" view (SPX default, plus QQQ/IWM/VIX presets and free-text search), modeled on tapchiphowall.com/options-gamma's default "Absolute Gamma" view but self-computed from the account owner's own Schwab chain rather than CBOE's 15-minute-delayed feed. `GexChart` grew two props for it: `refreshMs` (auto-refetch on an interval **without** clearing the currently shown chart first — a stale-but-present chart beats a "computing…" flash every 10 minutes, same principle as `TickerTape`) and `zoomPct` (how far past spot the strike axis extends, driven by a slider so the user can widen or narrow it). The reference site's own "GEX Heatmap for All US Tickers" turned out not to exist when checked directly — their heatmap is the ordinary price-change treemap, GEX is single-symbol only there too — so this app's version stayed single-symbol as well rather than inventing a market-wide scan the reference never had.
 
 `$SPX`/`$VIX` as the index symbols passed to `/api/gex` follow the convention already used for quotes elsewhere (`TickerTape`, `/api/md/volatility`) — **unconfirmed against the `/chains` endpoint specifically**, since this sandbox has no outbound network to Schwab. If wrong, the existing error surfacing (`/api/gex`'s `REAUTH_REQUIRED`-vs-generic-failure split, rendered as-is by `GexChart`) will show the real failure rather than a wrong chart, so it's a one-line fix once verified against a live session rather than a silent wrong number.
+
+**Chart layout follows the user's own reference screenshot** (tapchiphowall.com's GEX chart), redrawn in `GexChart.tsx`: a labelled value axis in $M with round ticks, red call bars up / blue put bars down **on one shared scale** (splitting the plot height in half would silently magnify the smaller side), a key-levels box and legend in the top-right corner, dashed lines for put wall / call wall / abs gamma plus the current price and the user's own strike, the ticker as a faint watermark, and a hover/tap tooltip per strike.
+
+Two things about that chart that are easy to get wrong:
+
+- **The strike axis is categorical, not a linear price scale.** Listed strikes thin out away from spot, so a linear axis leaves large gaps. Bars sit at evenly spaced slots and any *price* (spot, a wall, your strike) is interpolated between the two strikes bracketing it (`xOfStrike()`). A level outside the zoom window draws **nothing** rather than being clamped to the edge — a line pinned to the border looks exactly like a real reading.
+- **Red/blue here is classification (call vs put), not the green/red sign rule** documented in `ColorLegend.tsx`. That rule governs the sign of a number; these are two categories. Hence separate `--gexcall` / `--gexput` / `--gexabs` custom properties rather than reusing `--risk`/`--credit` — and, per the theming rule below, they are defined in **all three** blocks of `globals.css`.
+
+`GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
 
 ### AI Trade Briefing (`src/lib/tradebrief.ts`, `TradeBriefingPanel.tsx`)
 
