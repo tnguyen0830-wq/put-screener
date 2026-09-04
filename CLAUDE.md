@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-04 — SPX-in-GEX root cause confirmed via #86's error detail: Schwab /chains 400s on "$SPX" specifically ("Check Param Values") while $VIX and QQQ work fine through the same code. Adding a symbol-format fallback (try $SPX, then $SPX.X, then bare SPX) scoped to /api/gex only, not touching fullChain()'s general contract. Branch: claude/gex-index-symbol-fallback.
+Nothing in progress as of 2026-09-04.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -99,14 +99,16 @@ next session can pick one up rather than rediscovering it):
   days**, and **0 of 250** were trades from the last 7 days. Worth showing the
   real lag on screen, or the tab reads as a live signal when it is a
   historical record.
-- SPX fails in the Heatmap GEX panel ("Không lấy được chuỗi quyền chọn")
-  while QQQ and `$VIX` both work - confirmed by the owner, not a session
-  issue. `/api/gex` now surfaces the real Schwab error text (`detail` field,
-  rendered by `GexChart.tsx`) instead of a generic message (#86), so the next
-  step is just: get the owner to look at the GEX tab for SPX again and report
-  back the actual error text now shown - the fix itself (almost certainly the
-  `$SPX` symbol format specifically, since `/quotes` accepts it but `/chains`
-  apparently doesn't) depends on knowing that text, not on more guessing.
+- SPX-in-GEX: root cause confirmed via #86's error detail (Schwab /chains
+  400s on "$SPX" specifically, "Check Param Values", while $VIX/QQQ work
+  fine). #88 added a fallback trying "$SPX" → "$SPX.X" → bare "SPX" in
+  order and stopping at the first that works - deployed, but **not yet
+  confirmed against a live session** (this sandbox has no outbound network
+  to Schwab, so the actual correct symbol format is still a guess among
+  three, not a verified fact). Next session: ask the owner to check SPX in
+  GEX again. If it works now, remove this line. If it still fails, the
+  error's `detail` field will list all three attempted symbols and Schwab's
+  real response for each - a fourth guess would be uninformed without that.
 
 ### Recent work (snapshot, not live truth - see the rule above)
 
@@ -115,6 +117,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #88 SPX-in-GEX fix attempt: fall back through "$SPX" → "$SPX.X" → "SPX" on a 400, stop at the first that works. Logic verified by standalone test, but the actual correct Schwab symbol is still unconfirmed against a live session (see the known gap above) - don't assume this is done without checking.
 - 2026-09-04 — #86 /api/gex now surfaces the real Schwab error text instead of a generic message, after the owner reported SPX (but not QQQ/VIX) failing in GEX - doesn't fix the underlying symbol issue, makes it diagnosable from production instead of guessed at (logged as a known gap above, waiting on the owner to report back the real error text).
 - 2026-09-03 — #85 Documented UW_API_KEY in .env.example, fixed a stale reference in this file, logged the README Insider Trade gap and the Congress disclosure-lag gap (both above, still unclaimed).
 - 2026-09-04 — #83 Added the "In progress right now" log (this section's neighbor above) per owner's explicit request - status visible mid-task, not just after merge.
@@ -127,7 +130,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #86. If you're reading this and a
+No PR is currently open and unmerged as of #88. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
