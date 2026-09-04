@@ -99,22 +99,20 @@ next session can pick one up rather than rediscovering it):
   days**, and **0 of 250** were trades from the last 7 days. Worth showing the
   real lag on screen, or the tab reads as a live signal when it is a
   historical record.
-- SPX-in-GEX, still unsolved. Confirmed from production so far: Schwab
-  /chains 400s ("Check Param Values") on **both** "$SPX" (#86) and bare
-  "SPX" (#90's report), while "$VIX" and "QQQ" work fine through the same
-  code - so it is not the "$" prefix, and not a session problem. #88 added
-  a fallback ("$SPX" → "$SPX.X" → "SPX", first one that works wins); #90
-  made a bare index root take that same path (typing "SPX" by hand used to
-  try only one spelling) and compacted the error detail so all three
-  attempts fit on screen instead of being truncated. **Whether "$SPX.X"
-  works is still unknown** - nobody has seen a run where all three were
-  tried. Next: have the owner press the SPX preset and read the detail
-  line, which now reads like `$SPX→400, $SPX.X→400, SPX→400 · <raw>`. If
-  all three 400, stop guessing spellings: the remaining suspects are a
-  param that indices reject (`includeUnderlyingQuote=true` is the prime
-  candidate - `fullChain()` sends it unconditionally) or the account simply
-  not being entitled to index-option data, and both need a different probe
-  than another symbol variant.
+- SPX-in-GEX: Schwab is a dead end, confirmed from production. /chains 400s
+  ("Check Param Values") on **every** spelling tried - "$SPX" (#86), bare
+  "SPX" (#90), and "$SPX.X" - while "$VIX" and "QQQ" work fine through the
+  same code. So it is not the "$" prefix, not a session problem, and not a
+  spelling problem: the remaining suspects are a parameter indices reject
+  (`fullChain()` always sends `includeUnderlyingQuote=true`) or the account
+  simply not being entitled to index-option data. Neither is fixable from
+  the app, so #91 stopped chasing it and falls back to Unusual Whales'
+  `/api/stock/{ticker}/gex-levels` for any symbol Schwab refuses. That
+  fallback is levels-only by nature (no per-strike gamma, so no bar chart
+  and no AI Trade Briefing), and the UI says so on screen. Still worth
+  someone asking Schwab support which of the two suspects it actually is -
+  if index chains become available, the Schwab path takes over again on its
+  own with no code change, since UW is only ever tried after a 400.
 
 ### Recent work (snapshot, not live truth - see the rule above)
 
@@ -123,6 +121,8 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #91 SPX in GEX now falls back to Unusual Whales' gex-levels when Schwab 400s. Schwab index chains look genuinely unavailable to this account (every spelling 400s), so this stops chasing symbol formats. Levels only - no bar chart, no AI briefing - and the screen says which source it is showing.
+- 2026-09-04 — #90 Made a bare index root ("SPX" typed by hand) take the same fallback path as "$SPX", and compacted the error detail so all attempted spellings fit on screen instead of being truncated.
 - 2026-09-04 — #88 SPX-in-GEX fix attempt: fall back through "$SPX" → "$SPX.X" → "SPX" on a 400, stop at the first that works. Logic verified by standalone test, but the actual correct Schwab symbol is still unconfirmed against a live session (see the known gap above) - don't assume this is done without checking.
 - 2026-09-04 — #86 /api/gex now surfaces the real Schwab error text instead of a generic message, after the owner reported SPX (but not QQQ/VIX) failing in GEX - doesn't fix the underlying symbol issue, makes it diagnosable from production instead of guessed at (logged as a known gap above, waiting on the owner to report back the real error text).
 - 2026-09-03 — #85 Documented UW_API_KEY in .env.example, fixed a stale reference in this file, logged the README Insider Trade gap and the Congress disclosure-lag gap (both above, still unclaimed).
@@ -136,7 +136,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #88. If you're reading this and a
+No PR is currently open and unmerged as of #91. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 

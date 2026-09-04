@@ -3,8 +3,14 @@
 import { useLang } from '@/lib/i18n';
 
 import { useEffect, useState } from 'react';
-import type { GexProfile } from '@/lib/gex';
+import type { GexLevelsResponse, GexProfile } from '@/lib/gex';
 import TradeBriefingPanel from './TradeBriefingPanel';
+
+/** GexProfile không có trường phân biệt, nên dùng hàm bảo vệ kiểu tường
+ *  minh: TypeScript mới thu hẹp được CẢ nhánh ngược lại (phần vẽ biểu đồ
+ *  bên dưới chỉ chạy với dữ liệu Schwab đầy đủ). */
+const isUwLevels = (d: GexProfile | GexLevelsResponse): d is GexLevelsResponse =>
+  (d as GexLevelsResponse).source === 'uw';
 
 const money = (n: number) => {
   const a = Math.abs(n);
@@ -33,7 +39,7 @@ export default function GexChart({
   zoomPct?: number;
 }) {
   const { t } = useLang();
-  const [data, setData] = useState<GexProfile | null>(null);
+  const [data, setData] = useState<GexProfile | GexLevelsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Lý do thật Schwab trả về (từ /api/gex's `detail`) - xem chú thích ở
    *  route đó. Hiện riêng, nhỏ hơn, để không lẫn với thông báo chính nhưng
@@ -83,6 +89,61 @@ export default function GexChart({
       </>
     );
   if (!data) return <p className="cap">{t('gex.computing')}</p>;
+
+  // Nguồn UW: chỉ có các mức chính, không có gamma theo từng strike nên
+  // không vẽ được biểu đồ cột. Nói thẳng nguồn ngay trên màn hình - một
+  // con số "put wall" của UW và một con số app tự tính từ chuỗi Schwab là
+  // hai thứ khác nhau, để lẫn vào nhau thì người đọc không biết mình đang
+  // xem cái nào. Cũng không hiện AI Trade Briefing ở đây: nó dựng kèo từ
+  // strike/giá thật của chuỗi Schwab, mà chuỗi đó chính là thứ không lấy
+  // được - một nút bấm chắc chắn lỗi thì thà không hiện.
+  if (isUwLevels(data)) {
+    const L = data.levels;
+    return (
+      <>
+        <dl className="stats gexstats">
+          <div>
+            <dt>{t('gex.putWall')}</dt>
+            <dd className="num-key">{L.putWall?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.callWall')}</dt>
+            <dd>{L.callWall?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.zeroGamma')}</dt>
+            <dd>{L.gammaFlip?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.gammaMagnet')}</dt>
+            <dd>{L.gammaMagnet?.toFixed(2) ?? '—'}</dd>
+          </div>
+        </dl>
+
+        {L.nearbyFlips.length > 0 && (
+          <p className="cap">
+            {t('gex.nearbyFlips')}: {L.nearbyFlips.map((n) => n.toFixed(2)).join(' · ')}
+          </p>
+        )}
+
+        <p className="cap">{t('gex.uwSource', { basis: L.basis ?? '—', date: L.date ?? '—' })}</p>
+
+        {/* Không đọc được mức nào: hiện đúng các khoá UW thật sự trả về,
+            thay vì bốn dấu gạch không giải thích được. */}
+        {L.rawKeys && (
+          <p className="cap">
+            {t('gex.uwUnreadable')}: {L.rawKeys.join(', ') || '(rỗng)'}
+          </p>
+        )}
+
+        {data.schwabDetail && <p className="cap">{t('gex.uwWhy', data.schwabDetail)}</p>}
+
+        {refreshMs && updatedAt && (
+          <p className="cap">{t('gex.updatedAt', new Date(updatedAt).toLocaleTimeString())}</p>
+        )}
+      </>
+    );
+  }
 
   // Only the strikes near spot carry meaningful hedging flow.
   const lo = data.spot * (1 - zoomPct);

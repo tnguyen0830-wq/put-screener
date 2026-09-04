@@ -352,6 +352,22 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Net GEX âm: dealer khuếch đại biến động, giảm size và nới stop.',
     en: 'Net GEX negative: dealers amplify volatility — size down and widen stops.',
   },
+  'gex.gammaMagnet': { vi: 'Gamma magnet', en: 'Gamma magnet' },
+  'gex.nearbyFlips': { vi: 'Các mốc lật gần', en: 'Nearby flips' },
+  'gex.uwSource': {
+    vi: (v: any) =>
+      `Số này do Unusual Whales tính (cơ sở: ${v.basis}, ngày ${v.date}), KHÔNG phải app tự tính từ chuỗi quyền chọn Schwab như các mã khác - hai cách tính có thể ra số khác nhau. UW chỉ trả về các mức chính nên không vẽ được biểu đồ cột theo từng strike, và phần Phân tích giao dịch AI cũng không chạy được ở đây vì nó cần giá từng hợp đồng thật.`,
+    en: (v: any) =>
+      `These numbers come from Unusual Whales (basis: ${v.basis}, date ${v.date}), NOT self-computed from the Schwab option chain like every other symbol - the two methods can disagree. UW only returns the key levels, so there is no per-strike bar chart here, and the AI Trade Briefing can't run either since it needs real per-contract prices.`,
+  },
+  'gex.uwWhy': {
+    vi: (why: string) => `Phải dùng UW vì Schwab từ chối chuỗi quyền chọn của mã này: ${why}`,
+    en: (why: string) => `Falling back to UW because Schwab refused this symbol's option chain: ${why}`,
+  },
+  'gex.uwUnreadable': {
+    vi: 'Không đọc được mức nào từ UW. Các trường họ thật sự trả về',
+    en: 'Could not read any level from UW. The fields they actually returned',
+  },
   'gex.updatedAt': {
     vi: (time: string) => `Cập nhật lúc ${time}`,
     en: (time: string) => `Updated at ${time}`,

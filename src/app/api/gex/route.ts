@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fullChain } from '@/lib/schwab';
-import { computeGex } from '@/lib/gex';
+import { computeGex, type GexLevelsResponse } from '@/lib/gex';
+import { uwConfigured } from '@/lib/unusualwhales';
+import { uwGexLevels } from '@/lib/uwgex';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +96,37 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     const msg = String(e?.message ?? e);
     const reauth = msg.includes('REAUTH_REQUIRED');
+
+    // Schwab đã thử hết mọi cách viết mà vẫn 400 - với SPX thì đây là kết
+    // cục đã xác nhận trên production (#86/#88/#90), không phải chuyện đoán
+    // nữa. Quay sang lấy các mức của Unusual Whales thay vì để bảng trống.
+    // KHÔNG áp dụng cho lỗi phiên: REAUTH_REQUIRED phải hiện đúng là hết
+    // phiên để người dùng bấm kết nối lại, chứ không âm thầm lấy số nơi
+    // khác rồi che mất việc cả app đang mất kết nối Schwab.
+    if (!reauth && / 400:/.test(msg) && uwConfigured()) {
+      try {
+        const levels = await uwGexLevels(symbol);
+        const payload: GexLevelsResponse = {
+          source: 'uw',
+          symbol,
+          levels,
+          schwabDetail: msg.slice(0, 200),
+        };
+        return NextResponse.json(payload);
+      } catch (uwErr: any) {
+        // UW cũng hỏng: nói ra CẢ HAI lý do. Chỉ báo mỗi lỗi UW sẽ khiến
+        // người đọc tưởng Schwab vẫn ổn, mà thật ra Schwab hỏng trước.
+        const uwMsg = String(uwErr?.message ?? uwErr);
+        const uwBody = uwErr?.body ? ` — ${String(uwErr.body).slice(0, 150)}` : '';
+        return NextResponse.json(
+          {
+            error: 'Không lấy được chuỗi quyền chọn',
+            detail: `Schwab: ${msg.slice(0, 150)} · UW: ${uwMsg}${uwBody}`,
+          },
+          { status: 502 }
+        );
+      }
+    }
     // Chuỗi chung chung "Không lấy được chuỗi quyền chọn" từng nuốt mất lý do
     // thật Schwab trả về - đúng cái bẫy self-diagnosing idiom của app này
     // muốn tránh (CRWD's earnings đã bị bỏ sót đúng kiểu này). schwab.ts's

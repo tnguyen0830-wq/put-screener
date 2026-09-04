@@ -31,6 +31,34 @@ export type GexProfile = {
   totalGex: number;
 };
 
+/**
+ * Khi Schwab không trả được chuỗi cho một mã (SPX, xem uwgex.ts), route
+ * /api/gex quay sang lấy các mức của Unusual Whales. Kiểu trả về khác hẳn
+ * GexProfile - CỐ TÌNH khác, không nhét bừa vào cùng một hình dạng: UW chỉ
+ * cho các mức chính, không có gamma theo từng strike, nên không vẽ được
+ * biểu đồ cột. Giao diện phải phân biệt được hai nguồn để nói thẳng con số
+ * đang xem là app tự tính hay do UW cung cấp.
+ */
+export type GexLevelsResponse = {
+  source: 'uw';
+  symbol: string;
+  levels: {
+    ticker: string;
+    callWall: number | null;
+    putWall: number | null;
+    gammaFlip: number | null;
+    gammaMagnet: number | null;
+    nearbyFlips: number[];
+    basis: string | null;
+    date: string | null;
+    time: string | null;
+    rawKeys?: string[];
+  };
+  /** Lỗi thật của Schwab đã khiến phải quay sang UW - giữ lại để không ai
+   *  tưởng dùng UW ở đây là lựa chọn thiết kế. */
+  schwabDetail?: string;
+};
+
 type RawContract = {
   strikePrice: number;
   gamma: number;
