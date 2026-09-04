@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dailyHistory, fullChain } from '@/lib/schwab';
+import { dailyHistory, fullChainAdaptive } from '@/lib/schwab';
 import { computeGex } from '@/lib/gex';
 import { flattenCalls, flattenPuts, skewZScore, termStructureAndSkew, type ChainContract } from '@/lib/screener';
 import { realizedVol } from '@/lib/indicators';
@@ -14,12 +14,6 @@ import { curateIdeas, expectedMove, nearestDte, type Regime } from '@/lib/tradeb
  */
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
-
-const addDays = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
 
 function atmIv(contracts: ChainContract[], dte: number, spot: number): number | null {
   const inExp = contracts.filter((c) => c.daysToExpiration === dte && c.volatility > 0);
@@ -71,11 +65,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [chain, hist] = await Promise.all([
-      fullChain(symbol, addDays(0), addDays(60)),
+    const [chainRes, hist] = await Promise.all([
+      fullChainAdaptive(symbol),
       dailyHistory(symbol, 1).catch(() => null),
     ]);
 
+    const chain = chainRes.chain;
     const profile = computeGex(chain, symbol);
     if (!profile) {
       return NextResponse.json(

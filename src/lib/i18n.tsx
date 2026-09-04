@@ -352,6 +352,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Net GEX âm: dealer khuếch đại biến động, giảm size và nới stop.',
     en: 'Net GEX negative: dealers amplify volatility — size down and widen stops.',
   },
+  'gex.narrowed': {
+    vi: (v: any) =>
+      `Chỉ tính trên ${v.days} ngày đáo hạn gần nhất và ${v.strikes} strike mỗi bên quanh giá - Schwab từ chối trả cả chuỗi cho mã này vì phản hồi quá lớn (mã có kỳ đáo hạn gần như mỗi ngày thì chuỗi đầy đủ lên tới hàng chục nghìn hợp đồng). Các mức tường là lớn nhất TRONG phạm vi đó, không phải của toàn bộ chuỗi.`,
+    en: (v: any) =>
+      `Computed over just the next ${v.days} days of expirations and ${v.strikes} strikes each side of spot - Schwab refuses the full chain for this symbol because the response is too large (a symbol expiring almost daily runs to tens of thousands of contracts). The walls are the largest WITHIN that window, not across the whole chain.`,
+  },
   'gex.gammaMagnet': { vi: 'Gamma magnet', en: 'Gamma magnet' },
   'gex.nearbyFlips': { vi: 'Các mốc lật gần', en: 'Nearby flips' },
   'gex.uwSource': {

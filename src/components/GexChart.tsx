@@ -3,13 +3,15 @@
 import { useLang } from '@/lib/i18n';
 
 import { useEffect, useState } from 'react';
-import type { GexLevelsResponse, GexProfile } from '@/lib/gex';
+import type { GexChainWindow, GexLevelsResponse, GexProfile } from '@/lib/gex';
 import TradeBriefingPanel from './TradeBriefingPanel';
 
 /** GexProfile không có trường phân biệt, nên dùng hàm bảo vệ kiểu tường
  *  minh: TypeScript mới thu hẹp được CẢ nhánh ngược lại (phần vẽ biểu đồ
  *  bên dưới chỉ chạy với dữ liệu Schwab đầy đủ). */
-const isUwLevels = (d: GexProfile | GexLevelsResponse): d is GexLevelsResponse =>
+type SchwabGex = GexProfile & { chainWindow?: GexChainWindow };
+
+const isUwLevels = (d: SchwabGex | GexLevelsResponse): d is GexLevelsResponse =>
   (d as GexLevelsResponse).source === 'uw';
 
 const money = (n: number) => {
@@ -39,7 +41,7 @@ export default function GexChart({
   zoomPct?: number;
 }) {
   const { t } = useLang();
-  const [data, setData] = useState<GexProfile | GexLevelsResponse | null>(null);
+  const [data, setData] = useState<SchwabGex | GexLevelsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Lý do thật Schwab trả về (từ /api/gex's `detail`) - xem chú thích ở
    *  route đó. Hiện riêng, nhỏ hơn, để không lẫn với thông báo chính nhưng
@@ -258,6 +260,17 @@ export default function GexChart({
           này. Không có nó, biểu đồ cũ 10 phút trước trông giống hệt biểu đồ
           vừa mới tải — im lặng đọc thành "vẫn ổn", đúng cái bẫy self-diagnosing
           idiom của app này muốn tránh. */}
+      {/* Cửa sổ đã bị thu hẹp: nói ra. Wall tính trên 7 ngày/60 strike là
+          wall lớn nhất TRONG phạm vi đó, không phải của cả chuỗi. */}
+      {data.chainWindow && data.chainWindow.days < 60 && (
+        <p className="cap">
+          {t('gex.narrowed', {
+            days: data.chainWindow.days,
+            strikes: data.chainWindow.strikeCount ?? 0,
+          })}
+        </p>
+      )}
+
       {refreshMs && updatedAt && (
         <p className="cap">
           {t('gex.updatedAt', new Date(updatedAt).toLocaleTimeString())}

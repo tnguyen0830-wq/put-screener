@@ -39,6 +39,12 @@ export type GexProfile = {
  * biểu đồ cột. Giao diện phải phân biệt được hai nguồn để nói thẳng con số
  * đang xem là app tự tính hay do UW cung cấp.
  */
+/** Cửa sổ dữ liệu thật đã xin được từ Schwab. Kèm theo profile để giao
+ *  diện nói rõ khi phải thu hẹp - một wall tính trên 7 ngày/60 strike KHÔNG
+ *  phải cùng một con số với wall tính trên 60 ngày/mọi strike, và hai cái
+ *  đó mà trông giống hệt nhau thì người đọc không có cách nào biết. */
+export type GexChainWindow = { days: number; strikeCount?: number };
+
 export type GexLevelsResponse = {
   source: 'uw';
   symbol: string;

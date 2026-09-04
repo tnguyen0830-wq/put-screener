@@ -280,8 +280,17 @@ export async function putChain(symbol: string, fromDate: string, toDate: string)
   });
 }
 
-/** Full chain (calls + puts, all strikes) for a local GEX calculation. */
-export async function fullChain(symbol: string, fromDate: string, toDate: string) {
+/** Full chain (calls + puts, all strikes) for a local GEX calculation.
+ *
+ *  `strikeCount` giới hạn số strike mỗi bên quanh giá hiện tại. Bỏ trống =
+ *  lấy hết, đúng như trước; chỉ `fullChainAdaptive()` bên dưới truyền vào
+ *  khi buộc phải thu hẹp. */
+export async function fullChain(
+  symbol: string,
+  fromDate: string,
+  toDate: string,
+  opts: { strikeCount?: number } = {}
+) {
   return get('/chains', {
     symbol,
     contractType: 'ALL',
@@ -290,7 +299,61 @@ export async function fullChain(symbol: string, fromDate: string, toDate: string
     fromDate,
     toDate,
     includeUnderlyingQuote: 'true',
+    ...(opts.strikeCount ? { strikeCount: String(opts.strikeCount) } : {}),
   });
+}
+
+export type ChainWindow = { days: number; strikeCount?: number };
+
+/**
+ * Thu hẹp dần cửa sổ dữ liệu khi cổng API của Schwab từ chối vì phản hồi
+ * quá lớn.
+ *
+ * Lỗi thật gặp trên production với SPX:
+ *   Schwab /chains 502: {"fault":{"faultstring":"Body buffer overflow",
+ *   "detail":{"errorcode":"protocol.http.TooBigBody"}}}
+ * Đây KHÔNG phải lỗi ký hiệu (từng nghi vậy suốt #86-#91): Schwab nhận mã,
+ * dựng xong phản hồi, rồi chính cổng của họ chặn vì quá to. SPX có kỳ đáo
+ * hạn gần như mỗi ngày giao dịch, nên xin 60 ngày × mọi strike là hàng
+ * chục nghìn hợp đồng - mã thường không bao giờ chạm ngưỡng đó.
+ *
+ * Hẹp lại không làm hỏng ý nghĩa của GEX: gamma tập trung quanh giá hiện
+ * tại và ở các kỳ gần, mà biểu đồ vốn đã cắt về ±25% quanh giá. Nhưng nó
+ * CÓ đổi con số (wall là wall lớn nhất trong phạm vi đã xin), nên hàm trả
+ * về luôn cửa sổ thật đã dùng để giao diện nói rõ thay vì im lặng.
+ */
+export const GEX_WINDOWS: ChainWindow[] = [
+  { days: 60 },
+  { days: 21, strikeCount: 120 },
+  { days: 7, strikeCount: 60 },
+];
+
+const chainDay = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+export async function fullChainAdaptive(
+  symbol: string,
+  windows: ChainWindow[] = GEX_WINDOWS
+): Promise<{ chain: any; window: ChainWindow }> {
+  let last: unknown;
+  for (const w of windows) {
+    try {
+      const chain = await fullChain(symbol, chainDay(0), chainDay(w.days), {
+        strikeCount: w.strikeCount,
+      });
+      return { chain, window: w };
+    } catch (e: any) {
+      last = e;
+      // Chỉ hẹp lại khi lỗi ĐÚNG LÀ "phản hồi quá lớn". Ký hiệu sai, hết
+      // phiên hay lỗi mạng thì xin ít dữ liệu hơn cũng không cứu được -
+      // ném ra ngay để tầng trên xử lý đúng loại lỗi của nó.
+      if (!/TooBigBody|Body buffer overflow/i.test(String(e?.message ?? e))) throw e;
+    }
+  }
+  throw last;
 }
 
 export async function dailyHistory(symbol: string, years = 1) {
