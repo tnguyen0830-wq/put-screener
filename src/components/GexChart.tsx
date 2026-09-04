@@ -4,6 +4,7 @@ import { useLang } from '@/lib/i18n';
 
 import { useEffect, useState } from 'react';
 import type { GexProfile } from '@/lib/gex';
+import TradeBriefingPanel from './TradeBriefingPanel';
 
 const money = (n: number) => {
   const a = Math.abs(n);
@@ -187,6 +188,10 @@ export default function GexChart({
           {t('gex.updatedAt', new Date(updatedAt).toLocaleTimeString())}
         </p>
       )}
+
+      {/* Một component dùng chung cho cả 3 nơi GexChart xuất hiện (Analyze,
+          DetailDrawer, panel SPX ở Heatmap) - đúng yêu cầu "mọi nơi có GEX". */}
+      <TradeBriefingPanel symbol={symbol} />
     </>
   );
 }

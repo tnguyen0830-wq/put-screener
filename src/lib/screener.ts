@@ -161,13 +161,21 @@ export async function loadEarnings(): Promise<Record<string, string[]>> {
 
 /* ---------------- contract selection ---------------- */
 
-type ChainContract = {
+export type ChainContract = {
   symbol: string;
   strikePrice: number;
   bid: number;
   ask: number;
   mark: number;
   delta: number;
+  /** theta/vega: chỉ tradebrief.ts dùng (dựng chân kèo cho gợi ý giao dịch) -
+   *  không mã nào khác trong screener.ts đọc hai field này, thêm vào đây
+   *  thay vì tự dựng bộ flatten riêng vì Schwab trả chung một cụm greeks
+   *  trên mỗi hợp đồng (đã xác nhận delta/gamma đọc được từ đúng field này
+   *  ở screener.ts/gex.ts), nên theta/vega gần như chắc chắn cùng chỗ -
+   *  đọc bằng `?? null`, không giả định có sẵn. */
+  theta: number | null;
+  vega: number | null;
   volatility: number; // percent, e.g. 28.4
   openInterest: number;
   totalVolume: number;
@@ -189,6 +197,8 @@ function flattenMap(map: any): ChainContract[] {
           ask: c.ask,
           mark: c.mark,
           delta: c.delta,
+          theta: typeof c.theta === 'number' ? c.theta : null,
+          vega: typeof c.vega === 'number' ? c.vega : null,
           volatility: c.volatility,
           openInterest: c.openInterest,
           totalVolume: c.totalVolume,
