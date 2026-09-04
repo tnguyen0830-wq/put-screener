@@ -93,6 +93,8 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-04 — #83 Added the "In progress right now" log (this section's neighbor above) per owner's explicit request - status visible mid-task, not just after merge.
+- 2026-09-04 — #58 Fixed /api/md/session reading its own stored clock instead of actually testing the token (read healthy long after Schwab had revoked it), and a CSS specificity bug hiding the sign colour on the results table's annualised-return cell. Sat open since 2026-08-26; verified both bugs were still real on current main and the merge was clean before merging.
 - 2026-09-04 — #81 Split Heatmap into sub-tabs (price treemap / Fear & Greed / RRG / GEX), same pattern as Insider Trade's four-source split.
 - 2026-09-04 — #80 Wrote down the "check git log, not memory" rule for status questions (this section) + the Recent work log itself, after one account answered from stale memory.
 - 2026-09-04 — #79 AI Trade Briefing in the GEX frame (Analyze/DetailDrawer/Heatmap): real strikes/greeks/max-gain-loss from the live chain, Claude narrates only. Heston vol model and Calendar spreads explicitly NOT built (flagged in the code/PR, not silently skipped) - real follow-up work if wanted.
@@ -101,7 +103,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #81. If you're reading this and a
+No PR is currently open and unmerged as of #83. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
