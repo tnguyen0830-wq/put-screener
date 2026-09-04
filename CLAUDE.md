@@ -86,6 +86,20 @@ still the only *live* truth; this is the cheap first check before that.
 
 Nothing in progress as of 2026-09-04.
 
+**Known gaps nobody has claimed** (not in-progress work - listed here so the
+next session can pick one up rather than rediscovering it):
+
+- README has an Insider Trade row in the tab table but **no section of its
+  own**, unlike every other tab. So code-P-only filtering, the 10b5-1
+  exclusion, and "UW is paid and self-disables without a key" are documented
+  in this file for Claude but nowhere for the person using the app.
+- Congress disclosure lag is described here and in the UI as the legal
+  **"30-45 days"**. That is the statutory ceiling, not observed reality:
+  sampling 250 recently-disclosed records gives a Senate **median of 116
+  days**, and **0 of 250** were trades from the last 7 days. Worth showing the
+  real lag on screen, or the tab reads as a live signal when it is a
+  historical record.
+
 ### Recent work (snapshot, not live truth - see the rule above)
 
 Whichever session finishes a PR should append one line here, newest on top,
@@ -109,7 +123,7 @@ PR number below the highest merged one here is still open, something stalled
 
 ## Architecture
 
-This is a single-user Next.js 14 App Router tool with five tabs (`src/app/page.tsx`): **Sell Put Screener**, **Analyze**, **Heatmap**, **My Portfolio**, plus a login gate. Everything reads from Charles Schwab's API using the app owner's own OAuth session — there is no multi-tenant concept anywhere in the code.
+This is a single-user Next.js 14 App Router tool with five tabs (`src/app/page.tsx`): **Sell Put Screener**, **Analyze**, **Heatmap**, **My Portfolio**, **Insider Trade**, plus a login gate. Everything reads from Charles Schwab's API using the app owner's own OAuth session — there is no multi-tenant concept anywhere in the code.
 
 ### Schwab client (`src/lib/schwab.ts`)
 
