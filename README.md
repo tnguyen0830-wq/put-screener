@@ -183,8 +183,30 @@ qua toàn bộ kỳ đáo hạn trong 60 ngày. Call cộng dương, put cộng 
 - **Zero gamma** — nơi GEX luỹ kế đổi dấu. Trên mức này dealer làm dịu biến
   động; dưới mức này họ khuếch đại.
 
-Biểu đồ đánh dấu sẵn strike của bạn cạnh put wall, kèm một dòng kết luận thẳng:
-strike đang nằm trên hay dưới wall.
+### Cách đọc biểu đồ
+
+Bố cục dựng theo đúng biểu đồ GEX của Tạp Chí Phố Wall (trang tham chiếu ở cuối
+mục này), nhưng số liệu là app tự tính từ chuỗi Schwab của chính tài khoản bạn:
+
+- **Cột đỏ lên trên = call, cột xanh dương xuống dưới = put.** Đây là màu PHÂN
+  LOẠI (call vs put), không phải luật xanh-lá/đỏ theo dấu con số dùng ở chỗ
+  khác trong app. Hai nửa chung một thang, nên cột call và cột put so được
+  trực tiếp với nhau.
+- **Trục dọc có nhãn theo triệu đô mỗi 1% biến động** — biết cột lớn hơn *bao
+  nhiêu*, không chỉ biết cột nào lớn hơn.
+- **Trục ngang là các strike có thật, xếp đều nhau**, không phải thang giá
+  tuyến tính: strike thưa dần khi ra xa giá, để thang tuyến tính sẽ toàn
+  khoảng trống. Các vạch mức (wall, giá hiện tại, strike của bạn) được nội suy
+  vào đúng vị trí giữa hai strike kề nó.
+- **Vạch đứt**: put wall (xanh dương), call wall (đỏ), gamma tuyệt đối (cam) —
+  strike ôm nhiều gamma nhất tính cả hai chiều, có thể không trùng wall nào.
+  Kèm vạch giá hiện tại và vạch strike của bạn (nếu đang xem một hợp đồng cụ
+  thể). Mức nào rơi ngoài khoảng đang hiện thì **không vẽ**, chứ không ép vào
+  mép — một vạch sai chỗ trông y hệt một vạch thật.
+- Rê chuột (hoặc chạm) vào một cột để xem số call/put của đúng strike đó.
+
+Dưới biểu đồ vẫn là một dòng kết luận thẳng: strike của bạn đang nằm trên hay
+dưới put wall.
 
 Route `/api/gex?symbol=X` chỉ chạy khi bạn mở panel, tốn đúng 1 request, nên
 không làm chậm lần quét toàn rổ.

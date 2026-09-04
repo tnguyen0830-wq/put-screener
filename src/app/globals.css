@@ -32,6 +32,13 @@
   --fg-line: #2b4fe0;
   /* Ô trung tính trên bản đồ nhiệt; đủ tối để chữ trắng còn đọc được. */
   --heat-flat: #767f8b;
+  /* Màu PHÂN LOẠI của biểu đồ GEX: đỏ = call, xanh dương = put, cam = strike
+     ôm nhiều gamma nhất. Đây là quy ước chung của mọi biểu đồ GEX (và của
+     trang tham chiếu), không phải luật xanh-lá/đỏ theo dấu con số ở
+     ColorLegend.tsx — nên cố tình KHÔNG dùng lại --credit/--risk. */
+  --gexcall: #d13c31;
+  --gexput: #1f6fd0;
+  --gexabs: #b06a08;
 
   --shadow-1: 0 1px 2px rgba(15, 20, 25, 0.06), 0 1px 3px rgba(15, 20, 25, 0.04);
   --shadow-2: 0 2px 6px rgba(15, 20, 25, 0.08), 0 8px 24px rgba(15, 20, 25, 0.06);
@@ -76,6 +83,9 @@
   --stamp-tint: #16203a;
   --fg-line: #5b7fe8;
   --heat-flat: #59616c;
+  --gexcall: #ff6b60;
+  --gexput: #5aa9ff;
+  --gexabs: #f0a24a;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -110,6 +120,9 @@
   --stamp-tint: #16203a;
   --fg-line: #5b7fe8;
     --heat-flat: #59616c;
+  --gexcall: #ff6b60;
+  --gexput: #5aa9ff;
+  --gexabs: #f0a24a;
 
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
