@@ -22,16 +22,21 @@ export type GexProfile = {
   spot: number;
   expirations: string[];
   strikes: StrikeGex[];
-  /** Strike with the largest put gamma — usually behaves as support. */
+  /** Strike whose NET gamma (call + put) is the most negative — the heaviest
+   *  put-dominated strike, usually behaves as support. Null when no strike is
+   *  net negative at all. */
   putWall: number | null;
-  /** Strike with the largest call gamma — usually behaves as resistance. */
+  /** Strike whose NET gamma is the most positive — the heaviest call-dominated
+   *  strike, usually behaves as resistance. Null when no strike is net
+   *  positive at all. */
   callWall: number | null;
   /** Where cumulative net GEX flips sign. Above it dealers dampen moves. */
   zeroGamma: number | null;
   /** Strike carrying the most gamma of either sign combined - the single
    *  price the most hedging flow is anchored to. Different from the walls
-   *  (each one-sided) and from zero gamma (a crossing, not a strike): a
-   *  strike can be the biggest overall while being neither wall. */
+   *  (each net, so each one-signed) and from zero gamma (a crossing, not a
+   *  strike): a strike can be the biggest overall while being neither wall,
+   *  and the ATM strike is often huge on both sides yet nets out small. */
   absGamma: number | null;
   totalGex: number;
 };
@@ -138,20 +143,31 @@ export function computeGex(chain: any, symbol: string): GexProfile | null {
   for (const s of strikes) s.netGex = s.callGex + s.putGex;
   if (!strikes.length) return null;
 
-  // Walls: the heaviest single strike on each side.
+  /* Tường tính trên gamma RÒNG của từng strike (call + put), không phải trên
+     một chiều. Đổi từ "max call gamma / max put gamma" sang cách này sau khi
+     đối chiếu TSLA với tapchiphowall (xem CLAUDE.md): cột call cao nhất của
+     họ nằm ở 355 nhưng call wall họ ghi là 400, nên "tường" của họ không thể
+     là max một chiều. Ba quy tắc ròng dưới đây tái tạo đúng cả ba nhãn của
+     họ trên cùng một biểu đồ (put wall 355, call wall 400, abs gamma 355).
+
+     Cách cũ có một hệ quả tệ nhìn thấy ngay trên màn hình: strike ATM thường
+     lớn nhất ở CẢ hai chiều, nên put wall = call wall = gamma tuyệt đối =
+     đúng một strike ngay tại giá - ba vạch chồng lên nhau, không chỉ ra được
+     hỗ trợ dưới hay kháng cự trên. Gamma ròng tách được hai bên vì một strike
+     chỉ có thể ròng dương HOẶC ròng âm. */
   let putWall: number | null = null;
   let callWall: number | null = null;
   let absGamma: number | null = null;
-  let maxPut = 0;
-  let maxCall = 0;
+  let mostNegative = 0;
+  let mostPositive = 0;
   let maxAbs = 0;
   for (const s of strikes) {
-    if (Math.abs(s.putGex) > maxPut) {
-      maxPut = Math.abs(s.putGex);
+    if (s.netGex < mostNegative) {
+      mostNegative = s.netGex;
       putWall = s.strike;
     }
-    if (s.callGex > maxCall) {
-      maxCall = s.callGex;
+    if (s.netGex > mostPositive) {
+      mostPositive = s.netGex;
       callWall = s.strike;
     }
     const both = Math.abs(s.callGex) + Math.abs(s.putGex);
@@ -160,6 +176,10 @@ export function computeGex(chain: any, symbol: string): GexProfile | null {
       absGamma = s.strike;
     }
   }
+  /* Không có strike nào ròng dương (hoặc ròng âm) thì KHÔNG có tường bên đó -
+     trả null để màn hình hiện "—". Chọn đại strike ít âm nhất làm call wall
+     sẽ vẽ ra một vạch kháng cự không tồn tại, đúng kiểu "chưa tính được"
+     trông giống "đây là số thật" mà app này tránh. */
 
   // Zero gamma: walk cumulative net exposure upward and find the sign change.
   let cum = 0;

@@ -340,9 +340,9 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'gex.netGex': { vi: 'Net GEX', en: 'Net GEX' },
   'gex.noStrike': {
     vi: (w: string) =>
-      `Put wall ${w} là mốc gamma put lớn nhất — vùng dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ.`,
+      `Put wall ${w} là strike có gamma ròng âm nhất (put trội hơn call) — vùng dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ.`,
     en: (w: string) =>
-      `Put wall ${w} is the largest put-gamma strike — where dealers must buy to hedge, so it often behaves like support.`,
+      `Put wall ${w} is the most net-negative strike (puts outweigh calls) — where dealers must buy to hedge, so it often behaves like support.`,
   },
   'gex.below': {
     vi: (k: string) =>

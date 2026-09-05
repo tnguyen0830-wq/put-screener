@@ -176,10 +176,24 @@ Công thức: với mỗi strike, cộng dồn `gamma × open interest × spot²
 qua toàn bộ kỳ đáo hạn trong 60 ngày. Call cộng dương, put cộng âm — theo giả
 định dealer long call / short put mà mọi biểu đồ GEX công khai đều dùng.
 
-- **Put wall** — strike có gamma put lớn nhất. Dealer phải mua vào để hedge ở
-  đây, nên thường hành xử như hỗ trợ. Bán put ở hoặc dưới put wall thì cấu trúc
-  quyền chọn đứng về phía bạn.
-- **Call wall** — đối xứng, thường là kháng cự.
+- **Put wall** — strike có **gamma ròng** (call + put) **âm nhất**, tức put trội
+  hơn call nhiều nhất. Dealer phải mua vào để hedge ở đây, nên thường hành xử
+  như hỗ trợ. Bán put ở hoặc dưới put wall thì cấu trúc quyền chọn đứng về phía
+  bạn.
+- **Call wall** — đối xứng: strike có gamma ròng **dương nhất**, thường là
+  kháng cự.
+
+  Hai mức này tính trên gamma **ròng**, không phải trên một chiều (kiểu "strike
+  có gamma call lớn nhất"). Lý do rất cụ thể: strike sát giá thường lớn nhất ở
+  *cả hai* chiều, nên cách một chiều đẩy put wall, call wall và gamma tuyệt đối
+  dồn vào **cùng một strike ngay tại giá** — ba vạch chồng lên nhau, không chỉ
+  ra được hỗ trợ dưới hay kháng cự trên. Gamma ròng tách được hai bên vì một
+  strike chỉ có thể ròng dương *hoặc* ròng âm. Cách này cũng khớp với Tạp Chí
+  Phố Wall khi đối chiếu trên cùng một mã (xem cuối mục).
+
+  Chuỗi không có strike nào ròng dương thì **không có call wall** và ô đó hiện
+  `—`, chứ không chọn đại strike ít âm nhất — một vạch kháng cự không tồn tại
+  trông y hệt một vạch thật.
 - **Zero gamma** — nơi GEX luỹ kế đổi dấu. Trên mức này dealer làm dịu biến
   động; dưới mức này họ khuếch đại.
 
@@ -210,6 +224,13 @@ dưới put wall.
 
 Route `/api/gex?symbol=X` chỉ chạy khi bạn mở panel, tốn đúng 1 request, nên
 không làm chậm lần quét toàn rổ.
+
+**Đối chiếu với Tạp Chí Phố Wall (TSLA, 2026-09-05):** put wall 355, gamma
+tuyệt đối 355 và giá hiện tại khớp **tuyệt đối** giữa hai bên, từ hai nguồn dữ
+liệu khác nhau (Schwab vs CBOE). Call wall ban đầu lệch 355 vs 400 — nguyên
+nhân là định nghĩa, không phải dữ liệu, và đã sửa bằng cách chuyển sang gamma
+ròng ở trên. Độ lớn thì vẫn khác nhau vì đơn vị: app quy về **mỗi 1% biến
+động**, nơi khác có thể quy về mỗi $1 — chênh nhau đúng bằng `giá/100`.
 
 **Cảnh báo về mô hình:** GEX công khai suy ra từ open interest chứ không phải
 sổ vị thế thật của dealer. Spread, covered call, sản phẩm cấu trúc đều làm lệch
