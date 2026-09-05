@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-05 — #95 GEX calls Schwab and UW in parallel every request: comparison table of the four mappable levels on screen, UW covers immediately when Schwab fails (not just on 400/502), and both readings are saved to /var/data (gexhistory.ts, 15-min throttle, 30-day prune) so the last one shows when both sources die. Session expiry still returns 401 and is never papered over. Touches i18n.tsx and globals.css.
 - 2026-09-05 — #94 GEX put/call wall now computed from NET gamma per strike, not a one-sided max. Found by comparing TSLA against tapchiphowall: put wall/abs gamma/spot matched exactly, call wall didn't (355 vs 400) - their own tallest call bar is at 355 too, so it was a definition gap, not data. Also fixes the old rule collapsing all three levels onto the ATM strike. Touches i18n.tsx.
 - 2026-09-04 — #93 GEX chart redrawn to the layout the owner asked for (their screenshot of tapchiphowall's chart): labelled $M axis, red calls up / blue puts down on one shared scale, key-levels box, current-price line, ticker watermark, per-strike hover tooltip. New GexProfile.absGamma (biggest strike counting both signs). Touches i18n.tsx and globals.css - both shared files.
 - 2026-09-04 — #92 Real cause of the SPX GEX failure found: Schwab's gateway refuses the response as too large (502 TooBigBody), not the symbol. Chain requests now narrow themselves (60d → 21d/120 strikes → 7d/60) until one fits, and the screen says when a narrowed window was used since the walls then only cover that window.
@@ -140,7 +141,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #94. If you're reading this and a
+No PR is currently open and unmerged as of #95. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -398,6 +399,19 @@ The old one-sided rule had a visible failure mode, not just a definitional one: 
 A chain with no net-positive strike has **no call wall**: `callWall` is null and the screen prints `—` rather than picking the least-negative strike, which would draw a resistance line that does not exist.
 
 `GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
+
+**`/api/gex` calls Schwab and UW in parallel on every request** (`Promise.allSettled`), rather than reaching for UW only after Schwab returns a 400/502. Two reasons, both from the owner: a permanent on-screen comparison (one manual comparison against tapchiphowall is what caught the call-wall definition bug in #94 — leaving it on screen means the next divergence surfaces itself), and UW covering *immediately* when Schwab fails for any reason, not just the two error codes previously matched. The UW quota cost is small and bounded — `/api/gex` only runs when a GEX screen is open, and the Heatmap panel refreshes every 10 minutes, so the worst case is ~144 requests/day against 30,000. That is nothing like dark pool, which blew the cap by calling per-symbol from the background loop.
+
+Four response shapes, deliberately distinct so the UI cannot render a degraded state as a healthy one:
+
+- Schwab OK → `GexProfile` + `uw` (levels, or null) + `uwDetail` (why UW failed). A failed UW call replaces the comparison table with its real error, rather than silently dropping the table.
+- Schwab fails, UW OK → `GexLevelsResponse` (`source: 'uw'`) — levels only, no bar chart, no AI briefing, both of which need a live chain.
+- Both fail → `GexCacheResponse` (`source: 'cache'`) carrying the newest saved reading and its timestamp, behind a red banner. **Session expiry is exempt**: `REAUTH_REQUIRED` always returns 401 and is never papered over by UW or by cache, because the user needs to reconnect, not to see a GEX table that looks fine.
+- Both fail with no history → the error, with both sources' real messages.
+
+`src/lib/gexhistory.ts` keeps the readings: one file on `/var/data` (`GEX_HISTORY_PATH`), at most one record per symbol per **15 minutes** (the Heatmap panel's 10-minute refresh would otherwise write ~144 records/symbol/day for no new information), pruned to **30 days**. Failed reads *are* recorded with a null side — a run of nulls is the evidence that a source is down, not noise. Every function swallows its own errors: a broken history file must never take `/api/gex` down with it, since history is the extra, not the point.
+
+The stale banner uses its own `.gexstale` class, **not `.cap.bad`**. `.bad` and `.cap` have equal specificity and `.cap` is defined later, so `.cap.bad` renders grey — the same specificity trap that swallowed the sign colour in #58, and worse here: a "do not trade off this" warning that looks like an ordinary caption is a warning nobody reads.
 
 ### AI Trade Briefing (`src/lib/tradebrief.ts`, `TradeBriefingPanel.tsx`)
 

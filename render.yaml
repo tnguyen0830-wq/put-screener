@@ -67,6 +67,12 @@ services:
         value: /var/data/optionflow.json
       - key: DARKPOOL_PATH
         value: /var/data/darkpool.json
+      # Lịch sử mức GEX của cả hai nguồn (app tự tính từ Schwab + Unusual
+      # Whales). Trên đĩa bền chứ không phải ./.cache vì đây là thứ DUY NHẤT
+      # còn lại khi cả hai API cùng hỏng - mà .cache thì mỗi lần deploy là
+      # mất sạch. Tự cắt còn 30 ngày, xem gexhistory.ts.
+      - key: GEX_HISTORY_PATH
+        value: /var/data/gex-history.json
       # Must exactly match the callback registered in the Schwab developer
       # portal, and must be https. Set to https://<your-service>.onrender.com/api/auth/callback
       - key: SCHWAB_CALLBACK_URL

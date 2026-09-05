@@ -55,24 +55,61 @@ export type GexProfile = {
  *  đó mà trông giống hệt nhau thì người đọc không có cách nào biết. */
 export type GexChainWindow = { days: number; strikeCount?: number };
 
+/** Các mức UW trả về. Cùng hình dạng với UwGexLevels ở uwgex.ts - khai báo
+ *  lại ở đây để gex.ts (thuần tính toán, không gọi mạng) và các component
+ *  không phải kéo theo cả module gọi API của UW. */
+export type GexUwLevels = {
+  ticker: string;
+  callWall: number | null;
+  putWall: number | null;
+  gammaFlip: number | null;
+  gammaMagnet: number | null;
+  nearbyFlips: number[];
+  basis: string | null;
+  date: string | null;
+  time: string | null;
+  rawKeys?: string[];
+};
+
 export type GexLevelsResponse = {
   source: 'uw';
   symbol: string;
-  levels: {
-    ticker: string;
-    callWall: number | null;
-    putWall: number | null;
-    gammaFlip: number | null;
-    gammaMagnet: number | null;
-    nearbyFlips: number[];
-    basis: string | null;
-    date: string | null;
-    time: string | null;
-    rawKeys?: string[];
-  };
+  levels: GexUwLevels;
   /** Lỗi thật của Schwab đã khiến phải quay sang UW - giữ lại để không ai
    *  tưởng dùng UW ở đây là lựa chọn thiết kế. */
   schwabDetail?: string;
+};
+
+/**
+ * Cả hai nguồn cùng chết. Trả về bản đọc gần nhất đã lưu trên đĩa thay vì
+ * một màn hình trống - nhưng LUÔN kèm `at` và một cờ nguồn riêng, vì một
+ * bảng số cũ 3 tiếng trông y hệt một bảng số vừa lấy về. Đây là đúng cái
+ * bẫy "im lặng đọc thành mọi thứ vẫn ổn" mà app này tránh, nên số cũ phải
+ * tự khai là số cũ.
+ */
+export type GexCacheResponse = {
+  source: 'cache';
+  symbol: string;
+  /** ISO time của lần đọc đã lưu. */
+  at: string;
+  spot: number | null;
+  schwab: GexSnapshotLevels | null;
+  uw: GexUwLevels | null;
+  /** Vì sao phải dùng số cũ: lỗi thật của cả hai nguồn, không gộp làm một. */
+  schwabDetail?: string;
+  uwDetail?: string;
+};
+
+/** Phần mức của một bản đọc Schwab, đủ để so sánh và để hiện lại khi cả hai
+ *  nguồn chết. Không lưu `strikes` - hàng trăm dòng mỗi lần đọc sẽ làm file
+ *  lịch sử phình ra rất nhanh, mà biểu đồ cột thì cũ rồi cũng không nên vẽ
+ *  lại như số sống. */
+export type GexSnapshotLevels = {
+  putWall: number | null;
+  callWall: number | null;
+  zeroGamma: number | null;
+  absGamma: number | null;
+  totalGex: number;
 };
 
 type RawContract = {

@@ -337,6 +337,29 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Gamma exposure ($M per 1% move)',
   },
   'gex.zeroGamma': { vi: 'Zero gamma', en: 'Zero gamma' },
+  'gex.srcSchwab': { vi: 'App (Schwab)', en: 'App (Schwab)' },
+  'gex.srcUw': { vi: 'Unusual Whales', en: 'Unusual Whales' },
+  'gex.diff': { vi: 'Lệch', en: 'Diff' },
+  'gex.compareNote': {
+    vi: (v: any) =>
+      `Số bên trái app tự tính từ chuỗi quyền chọn Schwab; bên phải là của Unusual Whales (cơ sở "${v.basis}", ngày ${v.date}). Hai mô hình khác nhau trên hai nguồn dữ liệu khác nhau — lệch nhau là bình thường, không bên nào là chuẩn.`,
+    en: (v: any) =>
+      `Left column is self-computed from the Schwab option chain; right is Unusual Whales' own (basis "${v.basis}", ${v.date}). Two models on two different data feeds — a gap is expected, neither side is the reference.`,
+  },
+  'gex.uwFailed': {
+    vi: (d: string) => `Không lấy được mức của Unusual Whales để đối chiếu: ${d}`,
+    en: (d: string) => `Could not fetch Unusual Whales levels to compare against: ${d}`,
+  },
+  'gex.stale': {
+    vi: (at: string) =>
+      `SỐ CŨ — cả Schwab lẫn Unusual Whales đều không trả lời, đây là bản đọc lúc ${at}. Đừng giao dịch theo bảng này.`,
+    en: (at: string) =>
+      `STALE — both Schwab and Unusual Whales failed; this is the reading saved at ${at}. Do not trade off it.`,
+  },
+  'gex.bothDown': {
+    vi: 'Không có biểu đồ cột và không có phân tích AI vì cả hai đều cần chuỗi quyền chọn sống.',
+    en: 'No bar chart and no AI briefing here — both need a live option chain.',
+  },
   'gex.netGex': { vi: 'Net GEX', en: 'Net GEX' },
   'gex.noStrike': {
     vi: (w: string) =>

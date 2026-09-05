@@ -3,22 +3,128 @@
 import { useLang } from '@/lib/i18n';
 
 import { useEffect, useState } from 'react';
-import type { GexChainWindow, GexLevelsResponse, GexProfile } from '@/lib/gex';
+import type {
+  GexCacheResponse,
+  GexChainWindow,
+  GexLevelsResponse,
+  GexProfile,
+  GexUwLevels,
+} from '@/lib/gex';
 import TradeBriefingPanel from './TradeBriefingPanel';
 
 /** GexProfile không có trường phân biệt, nên dùng hàm bảo vệ kiểu tường
  *  minh: TypeScript mới thu hẹp được CẢ nhánh ngược lại (phần vẽ biểu đồ
  *  bên dưới chỉ chạy với dữ liệu Schwab đầy đủ). */
-type SchwabGex = GexProfile & { chainWindow?: GexChainWindow };
+type SchwabGex = GexProfile & {
+  chainWindow?: GexChainWindow;
+  /** Mức của UW lấy song song ở cùng lượt gọi, để đối chiếu. null = UW chưa
+   *  cấu hình hoặc lượt gọi đó hỏng (khi đó `uwDetail` nói vì sao). */
+  uw?: GexUwLevels | null;
+  uwDetail?: string;
+};
 
-const isUwLevels = (d: SchwabGex | GexLevelsResponse): d is GexLevelsResponse =>
+type GexResponse = SchwabGex | GexLevelsResponse | GexCacheResponse;
+
+const isUwLevels = (d: GexResponse): d is GexLevelsResponse =>
   (d as GexLevelsResponse).source === 'uw';
+
+const isCached = (d: GexResponse): d is GexCacheResponse =>
+  (d as GexCacheResponse).source === 'cache';
 
 const money = (n: number) => {
   const a = Math.abs(n);
   if (a >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
   if (a >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
   return `${(n / 1e3).toFixed(0)}K`;
+};
+
+/**
+ * Bảng đối chiếu Schwab (app tự tính) với Unusual Whales, bốn mức ánh xạ
+ * được sang nhau. Có mặt thường trực chứ không phải nút bấm: một lần so tay
+ * giữa app và một trang GEX khác chính là thứ đã tìm ra lỗi định nghĩa call
+ * wall (#94) - nếu nó nằm sẵn trên màn hình thì lần lệch sau sẽ tự lộ ra.
+ *
+ * Hai bên tính theo hai mô hình khác nhau trên hai chuỗi dữ liệu khác nhau,
+ * nên LỆCH LÀ BÌNH THƯỜNG - bảng này chỉ ra con số, cố tình không tô màu
+ * xanh/đỏ và không phán "đúng/sai": ở đây không có bên nào là chuẩn.
+ */
+function GexCompare({
+  schwab,
+  uw,
+  uwDetail,
+  t,
+}: {
+  schwab: GexSnapshotLike | null;
+  uw: GexUwLevels | null;
+  uwDetail?: string;
+  t: (k: string, v?: any) => string;
+}) {
+  // UW chưa cấu hình và cũng không có lỗi -> không có gì để so, không hiện
+  // bảng rỗng. Nhưng nếu CÓ lỗi thì phải nói, đừng để bảng biến mất im lặng.
+  if (!uw) {
+    return uwDetail ? <p className="cap">{t('gex.uwFailed', uwDetail)}</p> : null;
+  }
+
+  const rows: { label: string; a: number | null; b: number | null }[] = [
+    { label: t('gex.putWall'), a: schwab?.putWall ?? null, b: uw.putWall },
+    { label: t('gex.callWall'), a: schwab?.callWall ?? null, b: uw.callWall },
+    { label: t('gex.zeroGamma'), a: schwab?.zeroGamma ?? null, b: uw.gammaFlip },
+    { label: t('gex.absGamma'), a: schwab?.absGamma ?? null, b: uw.gammaMagnet },
+  ];
+
+  return (
+    <div className="gexcompare">
+      <table>
+        <thead>
+          <tr>
+            <th />
+            <th>{t('gex.srcSchwab')}</th>
+            <th>{t('gex.srcUw')}</th>
+            <th>{t('gex.diff')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            // Chỉ tính lệch khi có ĐỦ hai số. Thiếu một bên thì để trống -
+            // coi null thành 0 rồi trừ sẽ đẻ ra một con số chênh lệch bịa.
+            const both = r.a !== null && r.b !== null;
+            const d = both ? r.b! - r.a! : null;
+            const pct = both && r.a !== 0 ? (d! / r.a!) * 100 : null;
+            return (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                <td>{r.a?.toFixed(2) ?? '—'}</td>
+                <td>{r.b?.toFixed(2) ?? '—'}</td>
+                <td>
+                  {d === null
+                    ? '—'
+                    : `${d > 0 ? '+' : ''}${d.toFixed(2)}${
+                        pct === null ? '' : ` (${pct > 0 ? '+' : ''}${pct.toFixed(1)}%)`
+                      }`}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="cap">
+        {t('gex.compareNote', { basis: uw.basis ?? '—', date: uw.date ?? '—' })}
+      </p>
+      {uw.rawKeys && (
+        <p className="cap">
+          {t('gex.uwUnreadable')}: {uw.rawKeys.join(', ') || '(rỗng)'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Chỉ cần bốn mức để so - nhận cả GexProfile lẫn bản đọc cũ trên đĩa. */
+type GexSnapshotLike = {
+  putWall: number | null;
+  callWall: number | null;
+  zeroGamma: number | null;
+  absGamma: number | null;
 };
 
 export default function GexChart({
@@ -41,7 +147,7 @@ export default function GexChart({
   zoomPct?: number;
 }) {
   const { t } = useLang();
-  const [data, setData] = useState<SchwabGex | GexLevelsResponse | null>(null);
+  const [data, setData] = useState<GexResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Lý do thật Schwab trả về (từ /api/gex's `detail`) - xem chú thích ở
    *  route đó. Hiện riêng, nhỏ hơn, để không lẫn với thông báo chính nhưng
@@ -146,6 +252,41 @@ export default function GexChart({
         {refreshMs && updatedAt && (
           <p className="cap">{t('gex.updatedAt', new Date(updatedAt).toLocaleTimeString())}</p>
         )}
+      </>
+    );
+  }
+
+  /* Cả Schwab lẫn UW đều hỏng, đang hiện bản đọc cũ lấy từ đĩa. Phải nói
+     ra thật to: một bảng số cũ ba tiếng trông y hệt một bảng vừa lấy về, và
+     im lặng thì đọc thành "mọi thứ vẫn ổn". Không vẽ biểu đồ cột (không lưu
+     `strikes`) và không hiện AI Trade Briefing - nó dựng kèo từ chuỗi quyền
+     chọn sống, mà chuỗi đó chính là thứ không lấy được. */
+  if (isCached(data)) {
+    return (
+      <>
+        <p className="gexstale">{t('gex.stale', new Date(data.at).toLocaleString())}</p>
+        <dl className="stats gexstats">
+          <div>
+            <dt>{t('gex.putWall')}</dt>
+            <dd className="num-key">{data.schwab?.putWall?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.callWall')}</dt>
+            <dd>{data.schwab?.callWall?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.zeroGamma')}</dt>
+            <dd>{data.schwab?.zeroGamma?.toFixed(2) ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>{t('gex.absGamma')}</dt>
+            <dd>{data.schwab?.absGamma?.toFixed(2) ?? '—'}</dd>
+          </div>
+        </dl>
+        <GexCompare schwab={data.schwab} uw={data.uw} uwDetail={undefined} t={t} />
+        <p className="cap">{t('gex.bothDown')}</p>
+        {data.schwabDetail && <p className="cap">Schwab: {data.schwabDetail}</p>}
+        {data.uwDetail && <p className="cap">UW: {data.uwDetail}</p>}
       </>
     );
   }
@@ -495,6 +636,8 @@ export default function GexChart({
           </dd>
         </div>
       </dl>
+
+      <GexCompare schwab={data} uw={data.uw ?? null} uwDetail={data.uwDetail} t={t} />
 
       <p className="cap">
         {strike === undefined
