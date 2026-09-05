@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-05.
+2026-09-05 — GEX now calls Schwab and Unusual Whales in parallel: a comparison table on screen, UW as an immediate backup, and both readings saved to /var/data so the last one survives when both sources die. Branch: claude/gex-dual-source.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -398,6 +398,19 @@ The old one-sided rule had a visible failure mode, not just a definitional one: 
 A chain with no net-positive strike has **no call wall**: `callWall` is null and the screen prints `—` rather than picking the least-negative strike, which would draw a resistance line that does not exist.
 
 `GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
+
+**`/api/gex` calls Schwab and UW in parallel on every request** (`Promise.allSettled`), rather than reaching for UW only after Schwab returns a 400/502. Two reasons, both from the owner: a permanent on-screen comparison (one manual comparison against tapchiphowall is what caught the call-wall definition bug in #94 — leaving it on screen means the next divergence surfaces itself), and UW covering *immediately* when Schwab fails for any reason, not just the two error codes previously matched. The UW quota cost is small and bounded — `/api/gex` only runs when a GEX screen is open, and the Heatmap panel refreshes every 10 minutes, so the worst case is ~144 requests/day against 30,000. That is nothing like dark pool, which blew the cap by calling per-symbol from the background loop.
+
+Four response shapes, deliberately distinct so the UI cannot render a degraded state as a healthy one:
+
+- Schwab OK → `GexProfile` + `uw` (levels, or null) + `uwDetail` (why UW failed). A failed UW call replaces the comparison table with its real error, rather than silently dropping the table.
+- Schwab fails, UW OK → `GexLevelsResponse` (`source: 'uw'`) — levels only, no bar chart, no AI briefing, both of which need a live chain.
+- Both fail → `GexCacheResponse` (`source: 'cache'`) carrying the newest saved reading and its timestamp, behind a red banner. **Session expiry is exempt**: `REAUTH_REQUIRED` always returns 401 and is never papered over by UW or by cache, because the user needs to reconnect, not to see a GEX table that looks fine.
+- Both fail with no history → the error, with both sources' real messages.
+
+`src/lib/gexhistory.ts` keeps the readings: one file on `/var/data` (`GEX_HISTORY_PATH`), at most one record per symbol per **15 minutes** (the Heatmap panel's 10-minute refresh would otherwise write ~144 records/symbol/day for no new information), pruned to **30 days**. Failed reads *are* recorded with a null side — a run of nulls is the evidence that a source is down, not noise. Every function swallows its own errors: a broken history file must never take `/api/gex` down with it, since history is the extra, not the point.
+
+The stale banner uses its own `.gexstale` class, **not `.cap.bad`**. `.bad` and `.cap` have equal specificity and `.cap` is defined later, so `.cap.bad` renders grey — the same specificity trap that swallowed the sign colour in #58, and worse here: a "do not trade off this" warning that looks like an ordinary caption is a warning nobody reads.
 
 ### AI Trade Briefing (`src/lib/tradebrief.ts`, `TradeBriefingPanel.tsx`)
 

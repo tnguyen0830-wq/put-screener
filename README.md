@@ -232,6 +232,42 @@ nhân là định nghĩa, không phải dữ liệu, và đã sửa bằng cách
 ròng ở trên. Độ lớn thì vẫn khác nhau vì đơn vị: app quy về **mỗi 1% biến
 động**, nơi khác có thể quy về mỗi $1 — chênh nhau đúng bằng `giá/100`.
 
+### Hai nguồn cùng lúc: app tự tính (Schwab) và Unusual Whales
+
+Mỗi lần mở màn hình có GEX, app gọi **cả hai** nguồn song song:
+
+- **App (Schwab)** — nguồn chính, tự tính từ chuỗi quyền chọn. Đây là thứ vẽ ra
+  biểu đồ cột và nuôi phần phân tích AI.
+- **Unusual Whales** — các mức của họ (`gex-levels`), hiện ở bảng đối chiếu
+  ngay dưới biểu đồ, ánh xạ bốn mức: put wall, call wall, zero gamma ↔ gamma
+  flip, gamma tuyệt đối ↔ gamma magnet, kèm mức lệch tuyệt đối và phần trăm.
+
+Bảng này **không tô xanh/đỏ và không phán đúng/sai** — hai bên tính theo hai mô
+hình khác nhau trên hai nguồn dữ liệu khác nhau, nên lệch là bình thường và ở
+đây không có bên nào là chuẩn. Nó nằm thường trực trên màn hình vì đúng một lần
+đối chiếu tay đã tìm ra lỗi định nghĩa call wall; để sẵn thì lần lệch sau tự lộ.
+
+**Ba mức xuống cấp, ba cách hiển thị khác nhau** — cố tình không cho chúng
+trông giống nhau:
+
+1. Schwab chạy → biểu đồ đầy đủ + bảng đối chiếu. UW hỏng thì thay bảng bằng
+   đúng lý do hỏng, không im lặng bỏ bảng đi.
+2. Schwab hỏng, UW chạy → chỉ còn các mức của UW, **không có biểu đồ cột và
+   không có phân tích AI** (cả hai cần chuỗi quyền chọn sống), màn hình nói rõ
+   đang xem số của ai và vì sao.
+3. Cả hai cùng hỏng → hiện **bản đọc gần nhất lưu trên đĩa**, kèm một băng đỏ
+   ghi giờ đọc và "đừng giao dịch theo bảng này". Chưa có lịch sử thì báo lỗi
+   thật của cả hai bên.
+
+Riêng **hết phiên Schwab** thì luôn báo đúng là hết phiên, kể cả khi UW vẫn trả
+số — lấy số nơi khác lúc đó sẽ che mất việc cả app đang mất kết nối.
+
+Lịch sử ghi tối đa **15 phút một lần cho mỗi mã** và giữ **30 ngày**
+(`GEX_HISTORY_PATH`, mặc định `./.cache/gex-history.json`, trên Render trỏ vào
+đĩa bền). Chi phí quota UW nhỏ: `/api/gex` chỉ chạy khi bạn mở màn hình có GEX,
+panel Heatmap tự làm mới 10 phút/lần — xấu nhất khoảng 144 request/ngày trên
+hạn mức 30.000.
+
 **Cảnh báo về mô hình:** GEX công khai suy ra từ open interest chứ không phải
 sổ vị thế thật của dealer. Spread, covered call, sản phẩm cấu trúc đều làm lệch
 con số. Mỗi nhà cung cấp lại dùng giả định khác nhau nên số sẽ không khớp nhau.

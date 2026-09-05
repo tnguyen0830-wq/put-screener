@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fullChainAdaptive, type ChainWindow } from '@/lib/schwab';
-import { computeGex, type GexLevelsResponse } from '@/lib/gex';
+import {
+  computeGex,
+  type GexCacheResponse,
+  type GexLevelsResponse,
+  type GexUwLevels,
+} from '@/lib/gex';
 import { uwConfigured } from '@/lib/unusualwhales';
 import { uwGexLevels } from '@/lib/uwgex';
+import { lastGexSnapshot, recordGexSnapshot } from '@/lib/gexhistory';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,21 +68,44 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Thiếu tham số symbol' }, { status: 400 });
   }
 
-  try {
-    // Cửa sổ ngày/strike do fullChainAdaptive() quyết định: bắt đầu rộng
-    // (60 ngày, mọi strike) rồi tự hẹp lại nếu Schwab từ chối vì phản hồi
-    // quá lớn - xem chú thích ở schwab.ts.
-    const { chain, window } = await fetchChainWithFallback(symbol);
+  /* Gọi CẢ HAI nguồn song song, mỗi lần xem GEX.
+     Trước đây UW chỉ được gọi khi Schwab đã hỏng, nên không bao giờ có hai
+     con số cùng lúc để đối chiếu - mà đối chiếu tay giữa app và một trang
+     GEX khác chính là thứ đã tìm ra lỗi định nghĩa call wall (#94). Gọi
+     song song vừa cho phép so sánh liên tục, vừa để UW đỡ được NGAY khi
+     Schwab hỏng thay vì phải chờ đúng mã lỗi 400/502.
+
+     Chi phí quota UW chấp nhận được: /api/gex chỉ chạy khi người dùng mở
+     màn hình có GEX, panel Heatmap tự làm mới 10 phút/lần - kịch bản xấu
+     nhất (mở cả ngày) khoảng 144 request, so với hạn mức 30.000/ngày. Khác
+     hẳn dark pool, thứ từng đốt hết quota vì gọi mỗi mã trong vòng lặp nền
+     (xem darkpool.ts). */
+  const [schwabRes, uwRes] = await Promise.allSettled([
+    fetchChainWithFallback(symbol),
+    uwConfigured() ? uwGexLevels(symbol) : Promise.resolve(null),
+  ]);
+
+  const uwLevels: GexUwLevels | null =
+    uwRes.status === 'fulfilled' ? uwRes.value : null;
+  const uwDetail =
+    uwRes.status === 'rejected'
+      ? `${String(uwRes.reason?.message ?? uwRes.reason)}${
+          uwRes.reason?.body ? ` — ${String(uwRes.reason.body).slice(0, 150)}` : ''
+        }`.slice(0, 200)
+      : undefined;
+
+  if (schwabRes.status === 'fulfilled') {
+    const { chain, window } = schwabRes.value;
     // Luôn truyền lại đúng ký hiệu người dùng đã chọn (không phải biến thể
     // nội bộ như "$SPX.X" lỡ chạy được) - GexProfile.symbol chỉ để hiển thị,
     // lộ ra biến thể nội bộ sẽ làm nhãn trên UI trông sai/lạ.
     const profile = computeGex(chain, symbol);
     if (!profile) {
-      // Cùng lý do thêm `detail` ở nhánh catch bên dưới: Schwab trả về
-      // (không văng lỗi) nhưng computeGex() không tính ra gì - có thể thiếu
-      // spot, thiếu callExpDateMap/putExpDateMap, hoặc chuỗi rỗng thật. Ghi
-      // lại đúng các khoá cấp cao nhất của response thay vì chỉ nói "không
-      // đủ dữ liệu" - cùng idiom với insiders.ts's rawKeys.
+      // Cùng lý do thêm `detail` ở nhánh lỗi bên dưới: Schwab trả về (không
+      // văng lỗi) nhưng computeGex() không tính ra gì - có thể thiếu spot,
+      // thiếu callExpDateMap/putExpDateMap, hoặc chuỗi rỗng thật. Ghi lại
+      // đúng các khoá cấp cao nhất của response thay vì chỉ nói "không đủ dữ
+      // liệu" - cùng idiom với insiders.ts's rawKeys.
       return NextResponse.json(
         {
           error: 'Chuỗi quyền chọn không đủ dữ liệu gamma',
@@ -85,71 +114,97 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    return NextResponse.json({ ...profile, chainWindow: window });
-  } catch (e: any) {
-    const msg = String(e?.message ?? e);
-    const reauth = msg.includes('REAUTH_REQUIRED');
 
-    // Schwab đã thử hết mọi cách viết mà vẫn 400 - với SPX thì đây là kết
-    // cục đã xác nhận trên production (#86/#88/#90), không phải chuyện đoán
-    // nữa. Quay sang lấy các mức của Unusual Whales thay vì để bảng trống.
-    // KHÔNG áp dụng cho lỗi phiên: REAUTH_REQUIRED phải hiện đúng là hết
-    // phiên để người dùng bấm kết nối lại, chứ không âm thầm lấy số nơi
-    // khác rồi che mất việc cả app đang mất kết nối Schwab.
-    // Cả hai kiểu Schwab từ chối đều đáng quay sang UW: 400 (từ chối tham
-    // số) và 502 TooBigBody vẫn còn sau khi đã thu hẹp hết mức
-    // (fullChainAdaptive đã thử 60d → 21d/120 → 7d/60 rồi mới ném ra đây).
-    const schwabRefused = / 400:/.test(msg) || /TooBigBody|Body buffer overflow/i.test(msg);
-    if (!reauth && schwabRefused && uwConfigured()) {
-      try {
-        const levels = await uwGexLevels(symbol);
-        const payload: GexLevelsResponse = {
-          source: 'uw',
-          symbol,
-          levels,
-          schwabDetail: msg.slice(0, 200),
-        };
-        return NextResponse.json(payload);
-      } catch (uwErr: any) {
-        // UW cũng hỏng: nói ra CẢ HAI lý do. Chỉ báo mỗi lỗi UW sẽ khiến
-        // người đọc tưởng Schwab vẫn ổn, mà thật ra Schwab hỏng trước.
-        const uwMsg = String(uwErr?.message ?? uwErr);
-        const uwBody = uwErr?.body ? ` — ${String(uwErr.body).slice(0, 150)}` : '';
-        return NextResponse.json(
-          {
-            error: 'Không lấy được chuỗi quyền chọn',
-            detail: `Schwab: ${msg.slice(0, 150)} · UW: ${uwMsg}${uwBody}`,
-          },
-          { status: 502 }
-        );
-      }
-    }
-    // Chuỗi chung chung "Không lấy được chuỗi quyền chọn" từng nuốt mất lý do
-    // thật Schwab trả về - đúng cái bẫy self-diagnosing idiom của app này
-    // muốn tránh (CRWD's earnings đã bị bỏ sót đúng kiểu này). schwab.ts's
-    // get() đã ném ra `Schwab ${path} ${status}: ${body}` sẵn - chỉ cần
-    // không vứt nó đi. `attempts` (khi có) liệt kê MỌI ký hiệu đã thử qua
-    // fetchChainWithFallback() và lỗi thật của từng cái - nếu cả 3 cách viết
-    // đều sai thì thấy ngay cả 3, không phải đoán tiếp lần 4.
-    const attempts: Attempt[] | undefined = e?.attempts;
-    // Gộp gọn: mỗi lần thử chỉ còn "KÝ_HIỆU→MÃ_LỖI", rồi kèm đúng MỘT lỗi
-    // thô đầy đủ ở cuối. Bản trước nối nguyên văn cả ba lỗi rồi cắt ở 500 ký
-    // tự - ba khối JSON gần giống hệt nhau nên phần bị cắt lại đúng là phần
-    // cần biết (ký hiệu thứ ba có chạy không).
-    const statusOf = (err: string) => err.match(/ (\d{3}):/)?.[1] ?? '?';
-    const detail = reauth
-      ? undefined
-      : attempts
-        ? `${attempts.map((a) => `${a.symbol}→${statusOf(a.error)}`).join(', ')} · ${
-            attempts[attempts.length - 1]?.error ?? ''
-          }`.slice(0, 400)
-        : msg.slice(0, 300);
-    return NextResponse.json(
-      {
-        error: reauth ? 'Phiên Schwab hết hạn' : 'Không lấy được chuỗi quyền chọn',
-        detail,
+    await recordGexSnapshot(symbol, {
+      at: new Date().toISOString(),
+      spot: profile.spot,
+      schwab: {
+        putWall: profile.putWall,
+        callWall: profile.callWall,
+        zeroGamma: profile.zeroGamma,
+        absGamma: profile.absGamma,
+        totalGex: profile.totalGex,
       },
-      { status: reauth ? 401 : 500 }
-    );
+      uw: uwLevels,
+    });
+
+    return NextResponse.json({
+      ...profile,
+      chainWindow: window,
+      uw: uwLevels,
+      uwDetail,
+    });
   }
+
+  const err: any = schwabRes.reason;
+  const msg = String(err?.message ?? err);
+  const reauth = msg.includes('REAUTH_REQUIRED');
+
+  /* Hết phiên Schwab thì PHẢI hiện đúng là hết phiên, kể cả khi UW vẫn trả
+     số. Lặng lẽ hiện số của UW sẽ che mất việc cả app đang mất kết nối
+     Schwab - người dùng cần bấm kết nối lại, không cần một bảng GEX trông
+     vẫn bình thường. */
+  if (reauth) {
+    return NextResponse.json({ error: 'Phiên Schwab hết hạn' }, { status: 401 });
+  }
+
+  if (uwLevels) {
+    await recordGexSnapshot(symbol, {
+      at: new Date().toISOString(),
+      spot: null,
+      schwab: null,
+      uw: uwLevels,
+    });
+    const payload: GexLevelsResponse = {
+      source: 'uw',
+      symbol,
+      levels: uwLevels,
+      schwabDetail: msg.slice(0, 200),
+    };
+    return NextResponse.json(payload);
+  }
+
+  /* Cả hai nguồn cùng chết. Bản đọc gần nhất trên đĩa còn hơn màn hình
+     trống - nhưng trả về dưới một `source` riêng kèm giờ đọc, để giao diện
+     buộc phải nói ra rằng đây là số cũ. */
+  const cached = await lastGexSnapshot(symbol);
+  if (cached) {
+    const payload: GexCacheResponse = {
+      source: 'cache',
+      symbol,
+      at: cached.at,
+      spot: cached.spot,
+      schwab: cached.schwab,
+      uw: cached.uw,
+      schwabDetail: detailOf(msg, err?.attempts),
+      uwDetail,
+    };
+    return NextResponse.json(payload);
+  }
+
+  /* Chuỗi chung chung "Không lấy được chuỗi quyền chọn" từng nuốt mất lý do
+     thật Schwab trả về - đúng cái bẫy self-diagnosing idiom của app này muốn
+     tránh (CRWD's earnings đã bị bỏ sót đúng kiểu này). schwab.ts's get() đã
+     ném ra `Schwab ${path} ${status}: ${body}` sẵn - chỉ cần không vứt nó đi. */
+  return NextResponse.json(
+    {
+      error: 'Không lấy được chuỗi quyền chọn',
+      detail: `Schwab: ${detailOf(msg, err?.attempts)}${uwDetail ? ` · UW: ${uwDetail}` : ''}`,
+    },
+    { status: 500 }
+  );
+}
+
+/** `attempts` (khi có) liệt kê MỌI ký hiệu đã thử qua fetchChainWithFallback()
+ *  và lỗi thật của từng cái - nếu cả 3 cách viết đều sai thì thấy ngay cả 3,
+ *  không phải đoán tiếp lần 4. Gộp gọn: mỗi lần thử chỉ còn "KÝ_HIỆU→MÃ_LỖI",
+ *  rồi kèm đúng MỘT lỗi thô đầy đủ ở cuối. Bản trước nối nguyên văn cả ba lỗi
+ *  rồi cắt ở 500 ký tự - ba khối JSON gần giống hệt nhau nên phần bị cắt lại
+ *  đúng là phần cần biết (ký hiệu thứ ba có chạy không). */
+function detailOf(msg: string, attempts?: Attempt[]): string {
+  if (!attempts) return msg.slice(0, 300);
+  const statusOf = (err: string) => err.match(/ (\d{3}):/)?.[1] ?? '?';
+  return `${attempts.map((a) => `${a.symbol}→${statusOf(a.error)}`).join(', ')} · ${
+    attempts[attempts.length - 1]?.error ?? ''
+  }`.slice(0, 400);
 }
