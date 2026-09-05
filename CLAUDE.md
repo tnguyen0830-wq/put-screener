@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-04.
+2026-09-05 — Switching GEX put/call wall from one-sided max to NET gamma per strike, after comparing TSLA against tapchiphowall. Branch: claude/gex-net-walls.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -389,6 +389,12 @@ Two things about that chart that are easy to get wrong:
 
 - **The strike axis is categorical, not a linear price scale.** Listed strikes thin out away from spot, so a linear axis leaves large gaps. Bars sit at evenly spaced slots and any *price* (spot, a wall, your strike) is interpolated between the two strikes bracketing it (`xOfStrike()`). A level outside the zoom window draws **nothing** rather than being clamped to the edge — a line pinned to the border looks exactly like a real reading.
 - **Red/blue here is classification (call vs put), not the green/red sign rule** documented in `ColorLegend.tsx`. That rule governs the sign of a number; these are two categories. Hence separate `--gexcall` / `--gexput` / `--gexabs` custom properties rather than reusing `--risk`/`--credit` — and, per the theming rule below, they are defined in **all three** blocks of `globals.css`.
+
+**The walls are computed on NET gamma per strike (call + put), not on a one-sided max.** This changed after comparing TSLA against tapchiphowall on real screens (2026-09-05): put wall (355), abs gamma (355) and spot matched exactly from two different data sources — but their call wall read 400 while the tallest call bar *on their own chart* was at 355. So their "wall" cannot be a one-sided max. Net gamma reproduces all three of their labels at once: most-negative net → put wall 355, most-positive net → call wall 400, largest |call|+|put| → abs gamma 355.
+
+The old one-sided rule had a visible failure mode, not just a definitional one: the ATM strike is usually the biggest on *both* sides, so put wall, call wall and abs gamma all collapsed onto one strike sitting at spot — three lines drawn on top of each other, naming neither support below nor resistance above. A strike can only be net positive *or* net negative, so net gamma always separates the two sides.
+
+A chain with no net-positive strike has **no call wall**: `callWall` is null and the screen prints `—` rather than picking the least-negative strike, which would draw a resistance line that does not exist.
 
 `GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
 
