@@ -84,7 +84,9 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06. **SPX is settled:** all three spellings measured on production return gamma=0 and openInterest=0 on all 3600 contracts - the account has no index-option market data, so no code change can compute SPX GEX. UW is the source for SPX and the screen says so. See the GEX section for the full reading and for the one untried idea (SPY chain ×10 as an SPX proxy).
+Nothing in progress as of 2026-09-06.
+
+**SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #108 **Overturns #103.** SPX is a Schwab **API defect**, not a missing entitlement. The owner's thinkorswim, same account, 26 min after the API reading, shows real open interest on the same contracts (8 SEP 26: 7800C = 5,671, 7650P = 3,653) where the API returns 0 on all 3600. OI is exchange data, not computed locally, so the account HAS the data. Reported to traderapi@schwab.com. The measurements in #103 were right; the interpretation was not - it was inferred from one surface and never cross-checked against a second. Docs only.
 - 2026-09-06 — #107 Second uwprobe reading closes it: spot-exposures is a TIME SERIES (564 buckets, exactly 1 price each, looksLikePriceCurve=false), not a gamma-vs-price curve. So no UW endpoint can draw an SPX chart either - SPX stays 4 numbers unless Schwab opens index-option data. Logged what UW's unused endpoints CAN do (251-day + intraday time series of chain-wide greeks - a "is dealer gamma rising or falling" chart the app lacks) and that only the _oi basis is populated for SPX. Kept /api/uwprobe rather than deleting it - it paid for itself three times in one day.
 - 2026-09-06 — #106 First uwprobe reading from production: NO UW endpoint has gamma per strike (greek-exposure is 251 rows by date, spot-exposures 564 by time, gex-levels is 4 levels) - so the SPX bar chart can't come from UW either. Probe's own heuristic misfired though: 'price' was in STRIKE_HINTS, and at spot-exposures that's the spot price. Fixed, plus curveShape groups by the bucket key (start_time, not per-row time) to tell a gamma-vs-price curve from a time series. Also learned: UW's _oi basis is comparable to ours, gex-levels runs on 'vol', and UW's unit is per-1%-move - same as ours.
 - 2026-09-06 — #105 Added /api/uwprobe: measures the SHAPE of UW's greek-exposure / spot-exposures / gex-levels (keys, array-or-not, field TYPES, one capped sample, and looksPerStrike) without dumping payloads or the API key. Scaffolding, not a feature - UW is unreachable from the dev sandbox, and this repo has been burned by coding from UW docs before. Run once in production, code against what it measured, then delete.
@@ -427,7 +430,30 @@ That also exposed a gap in the index-symbol fallback: it only advanced to the ne
 
 Whether another spelling carries real open interest is still unproven — but "we never asked" is now off the table.
 
-**SPX is CLOSED, and the answer is not a code fix (measured 2026-09-06).** With the detail line finally readable (#102), production shows all three spellings were tried and all three behave identically:
+**SPX is NOT an entitlement limit — that conclusion was wrong, disproven 2026-09-06 by the owner's own thinkorswim screen.** Read this before acting on anything below it.
+
+thinkorswim, logged into **the same brokerage account, 26 minutes after** the API reading below (16:49 vs 17:15 ET, same day), shows **real open interest on the same contracts**:
+
+| SPX 8 SEP 26 | thinkorswim OI | Trader API `openInterest` |
+|---|---|---|
+| 7800 Call | 5,671 | 0 |
+| 7650 Put | 3,653 | 0 |
+| 7675 Put | 2,841 | 0 |
+| 7750 Call | 2,653 | 0 |
+| 7750 Put | 2,146 | 0 |
+
+Open interest is **exchange-reported data, not derived locally** by a platform — so if thinkorswim is serving it to this account, the account has the data and `/marketdata/v1/chains` is simply not returning it. That makes this a Schwab API defect for `assetMainType=INDEX`, not something the owner needs to buy.
+
+Two lessons worth keeping, because both are the same shape of error:
+
+- **"The account lacks the data" was inferred, never measured.** Every reading came from one surface (the API). The moment a *second* surface was checked, the inference collapsed. When an external system explains a gap, check whether another window onto the same system agrees before writing the explanation down as settled.
+- **Greeks would have been the wrong evidence.** thinkorswim computes greeks client-side, so gamma appearing there proves nothing about the feed. Only open interest — which cannot be computed — could settle it. Picking the field that *can't* be derived is what made the test decisive.
+
+Status: reported to `traderapi@schwab.com` as a defect (see the questions in that email: known defect / API-specific entitlement / silent-failure flag). Until Schwab answers, the UW fallback and the SPY×10 idea below both still stand as workarounds — but the door is open again, not closed.
+
+---
+
+The measurement below is still accurate and worth keeping; only its *interpretation* was wrong. With the detail line finally readable (#102), production shows all three spellings were tried and all three behave identically:
 
 ```
 đã thử: $SPX, $SPX.X, SPX · 28 kỳ · 3600 hợp đồng ·
@@ -435,11 +461,11 @@ loại: gamma thiếu 0, gamma=-999 38, OI=0 3600, strike thiếu 0 ·
 mẫu: {"gamma":0,"gammaType":"number","openInterest":0,"oiType":"number","strikePrice":7420}
 ```
 
-Schwab returns a full contract skeleton — right strikes, right expirations, `status=SUCCESS`, `assetMainType=INDEX` — with **both `gamma` and `openInterest` at 0** on every contract. GEX is `gamma × OI`; two zeros cannot produce one. This account receives no market data for index options, only the contract listing. Nothing in this repo can fix that: it is a Schwab entitlement question for the owner to take up with Schwab.
+Schwab returns a full contract skeleton — right strikes, right expirations, `status=SUCCESS`, `assetMainType=INDEX` — with **both `gamma` and `openInterest` at 0** on every contract. GEX is `gamma × OI`; two zeros cannot produce one, so nothing in this repo can compute SPX GEX *while the API answers this way*. What that does **not** mean — see the correction at the top of this block — is that the account lacks the data: it has it, and thinkorswim proves it.
 
 So the symbol-spelling hunt of #86–#91 is now definitively closed — it was never the symbol. `usableContractCount()` (#100) is still worth keeping: it is what proved all three spellings behave the same, instead of leaving it a guess.
 
-SPY and QQQ (ETF options) compute normally, so the split is exactly index-vs-ETF entitlement. UW remains the source for SPX and the screen says so. **A cheap alternative nobody has built:** SPY tracks SPX at roughly 1/10, and SPY options are fully served by this account — a SPY chain with strikes ×10 would give a real bar chart and AI briefing at SPX-equivalent levels, which the UW levels can never provide. Not built; it is an approximation and would need to say so on screen. SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
+SPY and QQQ (ETF options) compute normally, so the split is exactly index-vs-ETF — but on the API surface only, and it is a defect boundary rather than an entitlement boundary. UW remains the source for SPX and the screen says so. **A cheap alternative nobody has built:** SPY tracks SPX at roughly 1/10, and SPY options are fully served by this account — a SPY chain with strikes ×10 would give a real bar chart and AI briefing at SPX-equivalent levels, which the UW levels can never provide. Not built; it is an approximation and would need to say so on screen. SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
 
 **Schwab can return HTTP 200 with `status: "FAILED"`** — a valid symbol it will not serve a chain for. From the app's side that is indistinguishable from a successful empty chain, but the fixes are opposite (data entitlement vs. how a field is read), so `chainStatusFailed()` splits them into two different messages instead of one.
 
