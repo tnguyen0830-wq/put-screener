@@ -408,8 +408,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `These numbers come from Unusual Whales (basis: ${v.basis}, date ${v.date}), NOT self-computed from the Schwab option chain like every other symbol - the two methods can disagree. UW only returns the key levels, so there is no per-strike bar chart here, and the AI Trade Briefing can't run either since it needs real per-contract prices.`,
   },
   'gex.uwWhy': {
-    vi: (why: string) => `Phải dùng UW vì Schwab từ chối chuỗi quyền chọn của mã này: ${why}`,
-    en: (why: string) => `Falling back to UW because Schwab refused this symbol's option chain: ${why}`,
+    // "Từ chối" là sai khi Schwab trả status=SUCCESS kèm cả nghìn hợp đồng
+    // mà openInterest = 0 - nó không từ chối, nó gửi một chuỗi rỗng ruột.
+    // Hai chuyện đó sửa khác nhau nên câu chữ phải để cho phần chi tiết nói,
+    // đừng khẳng định sai ngay ở câu đầu.
+    vi: (why: string) =>
+      `Phải dùng UW vì chuỗi quyền chọn Schwab không dùng được cho mã này: ${why}`,
+    en: (why: string) =>
+      `Falling back to UW because Schwab's option chain is unusable for this symbol: ${why}`,
   },
   'gex.uwUnreadable': {
     vi: 'Không đọc được mức nào từ UW. Các trường họ thật sự trả về',

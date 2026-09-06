@@ -3,6 +3,7 @@ import { fullChainAdaptive, type ChainWindow } from '@/lib/schwab';
 import {
   chainStatusFailed,
   computeGex,
+  usableContractCount,
   gexDiagnosis,
   type GexCacheResponse,
   type GexLevelsResponse,
@@ -46,10 +47,26 @@ async function fetchChainWithFallback(
 ): Promise<{ chain: any; window: ChainWindow; attempts: Attempt[] }> {
   const candidates = indexSymbolCandidates(symbol);
   const attempts: Attempt[] = [];
+  /* Chuỗi CÓ về nhưng rỗng ruột vẫn được giữ lại: nếu không cách viết nào
+     cho dữ liệu thật thì vẫn trả cái này ra, để phần chẩn đoán nói được
+     Schwab thực sự gửi gì thay vì chỉ báo "không cách viết nào chạy". */
+  let empty: { chain: any; window: ChainWindow } | null = null;
   for (const candidate of candidates) {
     try {
       const { chain, window } = await fullChainAdaptive(candidate);
-      return { chain, window, attempts };
+      /* 200 KHÔNG có nghĩa là có dữ liệu. Với $SPX, Schwab trả status=SUCCESS
+         kèm 3600 hợp đồng qua 28 kỳ mà openInterest = 0 ở tất cả - đúng hình
+         dạng một chuỗi đầy đủ, chỉ là rỗng ruột. Bản trước `return` ngay khi
+         không văng lỗi, nên dừng luôn ở "$SPX" và KHÔNG BAO GIỜ thử "$SPX.X"
+         hay "SPX" - hai cách viết vốn được thêm vào chính vì lý do này. Một
+         chuỗi không dùng được cũng đáng thử cách viết tiếp theo y như một
+         lỗi 400. */
+      if (usableContractCount(chain) > 0) return { chain, window, attempts };
+      if (!empty) empty = { chain, window };
+      attempts.push({
+        symbol: candidate,
+        error: 'Schwab 200: chuỗi không có hợp đồng nào còn open interest',
+      });
     } catch (e: any) {
       const msg = String(e?.message ?? e);
       attempts.push({ symbol: candidate, error: msg });
@@ -59,6 +76,10 @@ async function fetchChainWithFallback(
       if (!/ 400:/.test(msg)) throw e;
     }
   }
+  // Có chuỗi rỗng ruột thì trả nó ra chứ không ném lỗi: nhánh !profile sẽ
+  // chạy gexDiagnosis() trên chính chuỗi đó và in ra con số thật (bao nhiêu
+  // kỳ, bao nhiêu hợp đồng, bị loại vì gì) - thông tin đó mất hẳn nếu ném.
+  if (empty) return { ...empty, attempts };
   const last: any = new Error(attempts[attempts.length - 1]?.error ?? 'unknown');
   last.attempts = attempts;
   throw last;
@@ -129,11 +150,16 @@ export async function GET(req: NextRequest) {
       /* Chuỗi vô dụng cũng là "Schwab không dùng được" - phải xuống cấp y hệt
          lúc Schwab văng lỗi, chứ không trả thẳng lỗi và vứt đi mức UW vừa lấy
          được. Đây chính là chỗ SPX bị mất đường sống ở #96. */
-      return schwabUnusable(symbol, why, uwLevels, uwDetail, {
+      const tried = schwabRes.value.attempts.length
+        ? ` · đã thử: ${schwabRes.value.attempts.map((a) => a.symbol).join(', ')}`
+        : '';
+      return schwabUnusable(symbol, why + tried, uwLevels, uwDetail, {
         error: failedStatus
           ? `Schwab từ chối chuỗi quyền chọn (status ${failedStatus})`
           : 'Chuỗi quyền chọn không đủ dữ liệu gamma',
-        detail: why,
+        // Danh sách ký hiệu đã thử phải có ở CẢ nhánh báo lỗi, không chỉ nhánh
+        // rơi sang UW: đây đúng là lúc người đọc cần biết đã thử những gì.
+        detail: why + tried,
         status: 404,
       });
     }

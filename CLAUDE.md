@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06. **Open question:** why Schwab returns an unusable chain for SPX (index) while SPY/QQQ (ETF) are fine. #99 means SPX at least shows UW levels again instead of an error; the diagnostics from #97/#98 should name the underlying cause on the owner's next look.
+Nothing in progress as of 2026-09-06. **Open question:** Schwab sends SPX 3600 contracts with openInterest=0 on every one (measured, see the GEX section). #100 makes the symbol fallback try the other index spellings in that case; if none of them carry open interest either, the account most likely lacks index-option OI data and UW stays the source for SPX.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -411,6 +411,12 @@ A chain with no net-positive strike has **no call wall**: `callWall` is null and
 **A regression worth remembering: #96 fixed SPX's error and thereby broke SPX's display.** The owner reported "SPX used to work" — and it did, by falling through Schwab's 502 to the UW levels. #96 stopped Schwab throwing (it now returns a chain, just an unusable one), which moved SPX off the "Schwab threw" branch and onto the "Schwab succeeded" branch — where `!profile` returned a bare 404 and **discarded the UW levels already fetched in parallel**. Fixing the error made the screen worse.
 
 The lesson is structural, not about SPX: "Schwab threw" and "Schwab returned something useless" are the same thing to a user, so they must share one degradation ladder. `schwabUnusable()` is that ladder — UW levels → the saved reading on disk → an error — and both branches now call it. Two parallel ladders is what let them drift apart in the first place.
+
+**SPX's real cause, measured from production (2026-09-06):** Schwab returns `status=SUCCESS`, `numberOfContracts=3600`, **28 expirations and 3600 contracts** — a complete-looking chain — with `openInterest: 0` on **all 3600** (and gamma `0`, plus 38 at the `-999` sentinel). Not a parse failure: the fields are typed `number` and their value genuinely is zero. GEX is `gamma × OI`, so a chain with no open interest cannot produce one no matter what the app does.
+
+That also exposed a gap in the index-symbol fallback: it only advanced to the next spelling on a **400**. Once `$SPX` started returning 200-with-hollow-data, the loop stopped there and **never tried `$SPX.X` or `SPX`** — the two spellings that exist for exactly this reason. A chain with zero usable contracts now advances to the next candidate just like a 400 does (`usableContractCount()`), and the attempted spellings are printed in the detail on both the UW-fallback and the error path.
+
+Whether another spelling carries real open interest is still unproven — but "we never asked" is now off the table.
 
 **The SPX-vs-SPY split is the live open question.** SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
 

@@ -189,6 +189,29 @@ export type GexDiagnosis = {
 /** Schwab trả HTTP 200 kèm `status: "FAILED"` khi mã hợp lệ nhưng không phục
  *  vụ được chuỗi - phía app trông y hệt một lượt thành công có chuỗi rỗng.
  *  Hai chuyện này sửa khác nhau hoàn toàn nên phải tách ra. */
+/**
+ * Đếm số hợp đồng THẬT SỰ dùng được (có gamma hợp lệ và open interest > 0).
+ *
+ * Dùng để phân biệt "Schwab trả về một chuỗi" với "Schwab trả về một chuỗi
+ * có dữ liệu". Với $SPX, Schwab trả 200 kèm 3600 hợp đồng qua 28 kỳ mà
+ * openInterest = 0 ở TẤT CẢ - đúng hình dạng một chuỗi đầy đủ, đúng kiểu số,
+ * chỉ là rỗng ruột. Không đếm thì lượt gọi đó trông y hệt một lượt thành
+ * công.
+ */
+export function usableContractCount(chain: any): number {
+  let n = 0;
+  for (const map of [chain?.callExpDateMap, chain?.putExpDateMap]) {
+    for (const expKey of Object.keys(map ?? {})) {
+      for (const strikeKey of Object.keys(map[expKey] ?? {})) {
+        for (const c of map[expKey][strikeKey] ?? []) {
+          if (gammaOf(c) !== null && num(c?.openInterest)) n++;
+        }
+      }
+    }
+  }
+  return n;
+}
+
 export function chainStatusFailed(chain: any): string | null {
   const st = chain?.status;
   if (typeof st === 'string' && st.toUpperCase() !== 'SUCCESS') return st;
