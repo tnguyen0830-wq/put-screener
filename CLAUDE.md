@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06. **Open question:** why Schwab returns an unusable chain for SPX (index) while SPY/QQQ (ETF) are fine. #99 means SPX at least shows UW levels again instead of an error; the diagnostics from #97/#98 should name the underlying cause on the owner's next look.
+Nothing in progress as of 2026-09-06. **Open question:** Schwab sends SPX 3600 contracts with openInterest=0 on every one (measured, see the GEX section). #100 makes the symbol fallback try the other index spellings in that case; if none of them carry open interest either, the account most likely lacks index-option OI data and UW stays the source for SPX.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #100 SPX cause MEASURED from production: Schwab sends 3600 contracts over 28 expirations with openInterest=0 on every one (gamma 0 too, 38 at -999). Not a parse bug - GEX = gamma x OI, so a chain with no OI can't produce one. Also fixed: the index-symbol fallback only advanced on a 400, so a 200-with-hollow-data stopped at "$SPX" and never tried "$SPX.X"/"SPX". Wording fixed too - it claimed Schwab "refused" while status was SUCCESS.
 - 2026-09-06 — #99 REGRESSION FIX (mine): #96 stopped Schwab throwing for SPX, which moved it onto the "Schwab succeeded" branch - and that branch returned a bare 404 while discarding the UW levels already fetched in parallel. So fixing the error made SPX go from showing UW numbers to showing an error. Both branches now share one degradation ladder (schwabUnusable): UW → disk → error. Test pins it by failing against the pre-fix route.
 - 2026-09-06 — #98 SPY/QQQ work, SPX still doesn't - so it's index vs ETF, not response size. Diagnosis now also reports Schwab's own status/numberOfContracts/isIndex/isDelayed/isChainTruncated/assetMainType (an EMPTY chain leaves every drop counter at 0, so those fields are the only thing that speaks), and a 200-with-status-FAILED is now a separate error from "chain arrived but unusable". Does NOT claim to fix SPX - waiting on the owner's next error line.
 - 2026-09-06 — #97 SPX got past the 502 but still computed nothing: Number.isFinite() does not coerce strings, so string-typed greeks drop the whole chain silently; Schwab's -999 "greek unavailable" sentinel was also being summed as real gamma. All numeric reads now tolerant, and the error reports contracts dropped per reason plus a real contract with its field TYPES (the only thing that tells "missing" from "string"). String-gamma as the real SPX cause is NOT confirmed - no network here.
@@ -145,7 +146,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #99. If you're reading this and a
+No PR is currently open and unmerged as of #100. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -411,6 +412,12 @@ A chain with no net-positive strike has **no call wall**: `callWall` is null and
 **A regression worth remembering: #96 fixed SPX's error and thereby broke SPX's display.** The owner reported "SPX used to work" — and it did, by falling through Schwab's 502 to the UW levels. #96 stopped Schwab throwing (it now returns a chain, just an unusable one), which moved SPX off the "Schwab threw" branch and onto the "Schwab succeeded" branch — where `!profile` returned a bare 404 and **discarded the UW levels already fetched in parallel**. Fixing the error made the screen worse.
 
 The lesson is structural, not about SPX: "Schwab threw" and "Schwab returned something useless" are the same thing to a user, so they must share one degradation ladder. `schwabUnusable()` is that ladder — UW levels → the saved reading on disk → an error — and both branches now call it. Two parallel ladders is what let them drift apart in the first place.
+
+**SPX's real cause, measured from production (2026-09-06):** Schwab returns `status=SUCCESS`, `numberOfContracts=3600`, **28 expirations and 3600 contracts** — a complete-looking chain — with `openInterest: 0` on **all 3600** (and gamma `0`, plus 38 at the `-999` sentinel). Not a parse failure: the fields are typed `number` and their value genuinely is zero. GEX is `gamma × OI`, so a chain with no open interest cannot produce one no matter what the app does.
+
+That also exposed a gap in the index-symbol fallback: it only advanced to the next spelling on a **400**. Once `$SPX` started returning 200-with-hollow-data, the loop stopped there and **never tried `$SPX.X` or `SPX`** — the two spellings that exist for exactly this reason. A chain with zero usable contracts now advances to the next candidate just like a 400 does (`usableContractCount()`), and the attempted spellings are printed in the detail on both the UW-fallback and the error path.
+
+Whether another spelling carries real open interest is still unproven — but "we never asked" is now off the table.
 
 **The SPX-vs-SPY split is the live open question.** SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
 
