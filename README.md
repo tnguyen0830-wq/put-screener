@@ -249,13 +249,20 @@ bạn chờ hàng chục giây), và màn hình nói rõ đã ghép bao nhiêu k
 trên 12 kỳ đó, không phải cả chuỗi — không nói ra thì hai con số trông y hệt
 nhau.
 
-**Riêng SPX: Schwab không phục vụ được, và đây không phải lỗi app.** Đo trên
+**Riêng SPX: cả hai nguồn đều không dựng được biểu đồ, và đây không phải lỗi app.** Đo trên
 production ngày 2026-09-06, cả ba cách viết ký hiệu (`$SPX`, `$SPX.X`, `SPX`)
 đều trả về 3600 hợp đồng qua 28 kỳ với **`gamma = 0` và `openInterest = 0` ở
 mọi hợp đồng** — tức là Schwab gửi danh sách hợp đồng nhưng không kèm dữ liệu
 thị trường. GEX là `gamma × OI`, hai số 0 thì không ra được gì. Tài khoản này
 không có quyền dữ liệu quyền chọn **chỉ số**; quyền chọn ETF (SPY, QQQ) thì đầy
 đủ. Vì vậy SPX luôn hiển thị số của Unusual Whales, và màn hình nói rõ điều đó.
+
+Phía Unusual Whales cũng đã đo (2026-09-06): không endpoint nào của gói hiện tại
+có gamma **theo từng strike**. `greek-exposure` là chuỗi 251 ngày theo `date`,
+`spot-exposures` là 564 mốc thời gian mỗi mốc đúng một mức giá (tức chuỗi thời
+gian, không phải đường cong theo giá), còn `gex-levels` chỉ có 4 mức tổng hợp.
+Nên **SPX sẽ chỉ có 4 con số** chừng nào Schwab chưa mở dữ liệu quyền chọn chỉ
+số — không phải chuyện code sửa được.
 
 ### Hai nguồn cùng lúc: app tự tính (Schwab) và Unusual Whales
 
