@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06. **SPX is settled:** all three spellings measured on production return gamma=0 and openInterest=0 on all 3600 contracts - the account has no index-option market data, so no code change can compute SPX GEX. UW is the source for SPX and the screen says so. See the GEX section for the full reading and for the one untried idea (SPY chain ×10 as an SPX proxy).
+2026-09-06 — Waiting on one production reading: open `/api/uwprobe?symbol=SPX` and report what it says. It measures whether UW's `greek-exposure` or `spot-exposures` return gamma PER STRIKE; if either does, SPX gets a real bar chart and AI briefing from a source already paid for. Branch: claude/uw-endpoint-probe. **SPX is settled:** all three spellings measured on production return gamma=0 and openInterest=0 on all 3600 contracts - the account has no index-option market data, so no code change can compute SPX GEX. UW is the source for SPX and the screen says so. See the GEX section for the full reading and for the one untried idea (SPY chain ×10 as an SPX proxy).
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #105 Added /api/uwprobe: measures the SHAPE of UW's greek-exposure / spot-exposures / gex-levels (keys, array-or-not, field TYPES, one capped sample, and looksPerStrike) without dumping payloads or the API key. Scaffolding, not a feature - UW is unreachable from the dev sandbox, and this repo has been burned by coding from UW docs before. Run once in production, code against what it measured, then delete.
 - 2026-09-06 — #103 SPX CLOSED (docs only). Production, all three spellings tried: gamma=0 AND openInterest=0 on all 3600 contracts, status=SUCCESS, assetMainType=INDEX. The account has no index-option market data - GEX = gamma x OI, so no code change can compute it. #86-#91 (spellings), #92/#96 (size), #97/#98 (field types) were all the wrong tree. UW stays the source for SPX. Logged one untried idea: SPY chain x10 as an SPX proxy.
 - 2026-09-06 — #102 The "đã thử" list added in #100 never actually appeared: the detail string is 353 chars, the cut was at 300, and the raw ~120-char sample sat in front of the list. Same trap as #90. Fields now ordered by information value (spellings tried first, raw sample last), one shared cap (600), and a clipped string ends in "…" so a cut can't read as "Schwab only sent this much".
 - 2026-09-06 — #101 App-wide session bug: a Schwab 401 that survived the forced-refresh retry threw "Schwab <path> 401: ...", which does NOT contain REAUTH_REQUIRED - the string every route uses to detect a dead session. So it slipped past all of them; /api/gex read it as "Schwab unusable" and showed UW levels while the whole app had lost its Schwab connection. Now throws REAUTH_REQUIRED (original status/body kept after the marker). Test fails against the pre-fix code with 200 + UW levels, reproducing the owner's screenshot.
@@ -149,7 +150,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #103. If you're reading this and a
+No PR is currently open and unmerged as of #105. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -449,6 +450,8 @@ SPY and QQQ (ETF options) compute normally, so the split is exactly index-vs-ETF
 Two deliberate limits. There is a **request ceiling** (12 expirations): SPX expires almost every trading day, so 60 days is 40+ expirations and fetching all of them would leave the user waiting tens of seconds on a screen they just opened — gamma concentrates in the near expirations anyway. And a single expiration that fails is **skipped rather than fatal**; only an empty result throws. The count actually retrieved comes back in `window.expirations` and the screen says so (`gex.sliced`), because a wall computed over 12 expirations must not look like a wall over the whole chain.
 
 Slicing only ever engages on `TooBigBody`. A 401, a bad symbol or a network error still throws straight out — asking for less data does not fix those, and retrying 13 more times would just multiply the failure. When slicing also fails for the same size reason, the **original** narrowest-rung error is what surfaces, since that one describes the actual problem.
+
+**`/api/uwprobe` is a shape probe, not a feature.** This sandbox has no outbound network, so UW can never be called from development — and reading the docs then coding to them has been wrong repeatedly here (`congress-trader`'s silent `name` default, `gex-levels`' all-string values). The route calls `greek-exposure`, `spot-exposures` and `gex-levels` once each and reports only the *shape*: top-level keys, whether the payload is an array, record keys, field **types**, and one capped sample — never the full payload (an option chain is thousands of rows) and never the API key. Its one real output is `looksPerStrike`: `gex-levels` gives four aggregate levels and so can never drive a bar chart, but if `greek-exposure` carries gamma per strike then SPX gets the chart and the AI briefing from a source already paid for. Run it once in production, code against what it measured, then it can go.
 
 **`/api/gex` calls Schwab and UW in parallel on every request** (`Promise.allSettled`), rather than reaching for UW only after Schwab returns a 400/502. Two reasons, both from the owner: a permanent on-screen comparison (one manual comparison against tapchiphowall is what caught the call-wall definition bug in #94 — leaving it on screen means the next divergence surfaces itself), and UW covering *immediately* when Schwab fails for any reason, not just the two error codes previously matched. The UW quota cost is small and bounded — `/api/gex` only runs when a GEX screen is open, and the Heatmap panel refreshes every 10 minutes, so the worst case is ~144 requests/day against 30,000. That is nothing like dark pool, which blew the cap by calling per-symbol from the background loop.
 
