@@ -30,9 +30,14 @@ const ENDPOINTS = (t: string) => [
   { name: 'gex-levels', path: `/api/stock/${encodeURIComponent(t)}/gex-levels` },
 ];
 
-/** Tên trường hay dùng cho strike, để trả lời thẳng câu hỏi "có theo strike
- *  không" thay vì bắt người đọc tự soi danh sách khoá. */
-const STRIKE_HINTS = ['strike', 'strike_price', 'price'];
+/** Tên trường hay dùng cho strike.
+ *
+ *  CỐ TÌNH KHÔNG có 'price' trong này. Bản đầu có, và nó báo nhầm:
+ *  `spot-exposures` trả về trường `price` là GIÁ SPOT tại thời điểm đó, không
+ *  phải strike - đúng như tên endpoint. Probe khi ấy kêu looksPerStrike=true
+ *  cho một endpoint hoàn toàn không theo strike. Một cái nhãn sai còn tệ hơn
+ *  không có nhãn, vì nó khiến người đọc tin vào kết luận sai. */
+const STRIKE_HINTS = ['strike'];
 const GAMMA_HINTS = ['gamma', 'call_gamma', 'put_gamma', 'gamma_exposure', 'charm', 'vanna'];
 
 function describe(payload: any) {
@@ -53,15 +58,62 @@ function describe(payload: any) {
     ? new Set(rows.map((r) => r?.[strikeKeys[0]])).size
     : 0;
 
+  /* Một endpoint có `price` + một trường thời gian có thể là HAI thứ khác
+     hẳn nhau, và chỉ đếm tổng số giá thì không phân biệt được:
+
+       (a) đường cong theo giá TẠI MỘT thời điểm - nhiều `price` cùng chung
+           một mốc thời gian. Vẽ được bản đồ gamma theo mức giá.
+       (b) chuỗi thời gian của giá spot - mỗi mốc thời gian đúng một `price`.
+           Không vẽ được gì theo giá.
+
+     Phân biệt bằng cách nhóm theo mốc thời gian rồi đếm số giá TRONG một
+     nhóm. Đây chính là câu hỏi còn treo sau lần đo đầu với spot-exposures
+     (564 dòng, 11 giá: 51 mốc × 11 giá, hay 564 mốc?). */
+  /* Thứ tự ƯU TIÊN, không phải thứ tự xuất hiện trong bản ghi. `start_time`
+     là mốc GOM NHÓM, còn `time` là dấu thời gian riêng của từng dòng - gom
+     theo `time` thì mỗi nhóm đúng một dòng và phép đo thành vô nghĩa. Bản
+     đầu lấy theo thứ tự khoá trong bản ghi, mà production trả về `time`
+     đứng trước `start_time`, nên rơi đúng vào cái bẫy đó. */
+  const TIME_PREFERENCE = ['start_time', 'date', 'timestamp', 'time'];
+  const timeKeys = TIME_PREFERENCE.filter((p) =>
+    recordKeys.some((k) => k.toLowerCase() === p)
+  ).map((p) => recordKeys.find((k) => k.toLowerCase() === p)!);
+  const priceKeys = recordKeys.filter((k) => k.toLowerCase() === 'price');
+  let curveShape: Record<string, unknown> | null = null;
+  if (timeKeys.length && priceKeys.length && rows.length) {
+    const tk = timeKeys[0];
+    const pk = priceKeys[0];
+    const buckets = new Map<string, Set<unknown>>();
+    for (const r of rows) {
+      const t = String(r?.[tk]);
+      if (!buckets.has(t)) buckets.set(t, new Set());
+      buckets.get(t)!.add(r?.[pk]);
+    }
+    const sizes = [...buckets.values()].map((v) => v.size);
+    curveShape = {
+      groupedBy: tk,
+      timestamps: buckets.size,
+      pricesPerTimestampMax: Math.max(...sizes),
+      pricesPerTimestampMin: Math.min(...sizes),
+      // Đây là câu trả lời: nhiều giá trong CÙNG một mốc thời gian nghĩa là
+      // có một đường cong theo giá, vẽ được.
+      looksLikePriceCurve: Math.max(...sizes) > 1,
+    };
+  }
+
   return {
     topLevelKeys,
     dataIsArray: isArray,
     rowCount: isArray ? rows.length : null,
     recordKeys,
-    // Trả lời thẳng câu hỏi duy nhất đáng hỏi.
+    // Trả lời thẳng câu hỏi duy nhất đáng hỏi. Chỉ tính trường có chữ
+    // "strike" trong tên - xem chú thích ở STRIKE_HINTS về lần báo nhầm.
     looksPerStrike: strikeKeys.length > 0 && distinctStrikes > 1,
     strikeKeys,
     distinctStrikes,
+    /** Chỉ có khi payload vừa có thời gian vừa có `price` - phân biệt đường
+     *  cong theo giá với chuỗi thời gian. null = không áp dụng. */
+    curveShape,
     gammaKeys: has(GAMMA_HINTS),
     /** Một bản ghi thật kèm KIỂU của từng trường - chỉ có kiểu mới phân biệt
      *  "không gửi" với "gửi dưới dạng chuỗi", đúng bài học từ #97. */
@@ -90,8 +142,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ticker,
     note:
-      'Chỉ dò hình dạng, không phải tính năng. looksPerStrike = true nghĩa là ' +
-      'endpoint đó có gamma theo từng strike, tức là vẽ được biểu đồ cột cho SPX.',
+      'Chỉ dò hình dạng, không phải tính năng. looksPerStrike = có gamma theo ' +
+      'từng STRIKE (vẽ được biểu đồ cột). curveShape.looksLikePriceCurve = có ' +
+      'nhiều mức GIÁ trong cùng một mốc thời gian (vẽ được đường cong theo giá, ' +
+      'khác với chỉ là chuỗi thời gian của giá spot).',
     endpoints: ENDPOINTS(ticker).map((e, i) => {
       const r = results[i];
       if (r.status === 'fulfilled') return { ...r.value, ok: true };
