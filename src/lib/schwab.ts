@@ -235,7 +235,24 @@ async function request(
     return request(base, pathname, params, true);
   }
   if (!res.ok) {
-    throw new Error(`Schwab ${pathname} ${res.status}: ${await res.text()}`);
+    const body = await res.text();
+    /* 401 SỐNG SÓT qua cả lượt làm mới ép buộc ở trên = phiên đã chết thật.
+       Phải ném ra đúng REAUTH_REQUIRED, vì đó là chuỗi mà MỌI route trong app
+       dùng để nhận ra "hết phiên, mời bấm kết nối lại" (portfolio.ts, analyze,
+       heatmap, gex, tape, rrg, scan-job, toàn bộ /api/md/*).
+
+       Trước đây chỗ này ném ra `Schwab /chains 401: ...` - không chứa chuỗi
+       đó, nên lọt qua hết mọi lần kiểm tra và mỗi route lại xử lý sai theo
+       kiểu riêng. Ở /api/gex thì hậu quả nặng nhất: 401 bị coi như "Schwab
+       không dùng được" nên rơi xuống lấy mức của Unusual Whales, và màn hình
+       hiện số bình thường trong khi cả app đang mất kết nối Schwab - đúng cái
+       việc mà chú thích ở /api/gex nói là TUYỆT ĐỐI không được làm.
+
+       Giữ nguyên văn lỗi gốc phía sau để vẫn chẩn đoán được. */
+    if (res.status === 401) {
+      throw new Error(`REAUTH_REQUIRED — Schwab ${pathname} 401: ${body}`);
+    }
+    throw new Error(`Schwab ${pathname} ${res.status}: ${body}`);
   }
   return res.json();
 }
