@@ -303,7 +303,15 @@ export async function fullChain(
   });
 }
 
-export type ChainWindow = { days: number; strikeCount?: number };
+export type ChainWindow = {
+  days: number;
+  strikeCount?: number;
+  /** Chỉ có ở chế độ ghép: số kỳ đáo hạn ĐÃ thực sự lấy được. Wall tính
+   *  trên ngần ấy kỳ, không phải trên cả cửa sổ - giao diện phải nói ra. */
+  expirations?: number;
+  /** Đã phải ghép từ nhiều lượt gọi, mỗi lượt một kỳ đáo hạn. */
+  sliced?: boolean;
+};
 
 /**
  * Thu hẹp dần cửa sổ dữ liệu khi cổng API của Schwab từ chối vì phản hồi
@@ -334,6 +342,105 @@ const chainDay = (n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+const tooBig = (e: unknown) =>
+  /TooBigBody|Body buffer overflow/i.test(String((e as any)?.message ?? e));
+
+/** Khoá kỳ đáo hạn Schwab trả về là "2026-10-16:41" - phần trước dấu hai
+ *  chấm là ngày, phần sau là số ngày còn lại. */
+const expDate = (key: string) => key.split(':')[0];
+
+function expirationsOf(chain: any): string[] {
+  return [
+    ...new Set([
+      ...Object.keys(chain?.callExpDateMap ?? {}),
+      ...Object.keys(chain?.putExpDateMap ?? {}),
+    ].map(expDate)),
+  ].sort();
+}
+
+/** Gộp phản hồi của nhiều lượt gọi thành một đối tượng chuỗi duy nhất, đúng
+ *  hình dạng computeGex() đang đọc. Không hợp nhất ở mức strike: hai lượt
+ *  gọi khác kỳ đáo hạn thì khoá cấp một đã khác nhau, không đụng nhau. */
+function mergeChains(parts: any[]): any {
+  const out: any = { callExpDateMap: {}, putExpDateMap: {} };
+  for (const p of parts) {
+    if (out.underlyingPrice == null) {
+      out.underlyingPrice = p?.underlyingPrice ?? p?.underlying?.last ?? p?.underlying?.mark;
+    }
+    if (!out.underlying && p?.underlying) out.underlying = p.underlying;
+    for (const side of ['callExpDateMap', 'putExpDateMap'] as const) {
+      for (const [k, v] of Object.entries(p?.[side] ?? {})) out[side][k] = v;
+    }
+  }
+  return out;
+}
+
+/**
+ * Phương án cuối cho những mã mà MỌI cửa sổ hẹp vẫn bị cổng Schwab từ chối
+ * vì phản hồi quá lớn - trên thực tế là SPX.
+ *
+ * Ý tưởng: đơn vị nhỏ nhất mà /chains còn nhận là MỘT kỳ đáo hạn. Xin từng
+ * kỳ một rồi ghép lại thì kích thước mỗi phản hồi bị chặn cứng, bất kể cả
+ * chuỗi to đến đâu. Đây là điểm khác căn bản so với fullChainAdaptive: ở đó
+ * vẫn là một lượt gọi và chỉ hy vọng nó đủ nhỏ.
+ *
+ * Danh sách kỳ đáo hạn lấy bằng một lượt "thăm dò" strikeCount=1 - mỗi kỳ
+ * đúng một strike nên phản hồi rất nhỏ, mà vẫn liệt kê đủ các kỳ.
+ *
+ * Có TRẦN SỐ LƯỢT GỌI, và đó là lựa chọn có ý thức: SPX có kỳ đáo hạn gần
+ * như mỗi ngày giao dịch, 60 ngày là hơn 40 kỳ - lấy hết sẽ để người dùng
+ * ngồi chờ hàng chục giây cho một màn hình họ vừa mới mở. Lấy các kỳ GẦN
+ * nhất trước, vì gamma tập trung ở đó, rồi dừng ở trần. Số kỳ thực sự lấy
+ * được trả về trong `window.expirations` để màn hình nói rõ wall này tính
+ * trên bao nhiêu kỳ - im lặng thì một wall trên 12 kỳ trông y hệt một wall
+ * trên cả chuỗi.
+ */
+export async function fullChainSliced(
+  symbol: string,
+  opts: { days?: number; strikeCount?: number; maxRequests?: number } = {}
+): Promise<{ chain: any; window: ChainWindow }> {
+  const days = opts.days ?? 60;
+  const strikeCount = opts.strikeCount ?? 120;
+  const maxRequests = opts.maxRequests ?? 12;
+
+  // Thăm dò: 1 strike mỗi kỳ. Nếu ngay cả cái này cũng quá to thì rút ngắn
+  // cửa sổ thăm dò chứ không bỏ cuộc - chỉ cần biết TÊN các kỳ.
+  let probe: any = null;
+  let probeErr: unknown;
+  for (const d of [days, 21, 7]) {
+    try {
+      probe = await fullChain(symbol, chainDay(0), chainDay(d), { strikeCount: 1 });
+      break;
+    } catch (e) {
+      probeErr = e;
+      if (!tooBig(e)) throw e;
+    }
+  }
+  if (!probe) throw probeErr;
+
+  const exps = expirationsOf(probe);
+  if (!exps.length) throw probeErr ?? new Error('Schwab /chains: không có kỳ đáo hạn nào');
+
+  const parts: any[] = [];
+  let last: unknown;
+  for (const exp of exps.slice(0, maxRequests)) {
+    try {
+      parts.push(await fullChain(symbol, exp, exp, { strikeCount }));
+    } catch (e) {
+      last = e;
+      // Một kỳ hỏng không nên giết cả lượt xem: bỏ qua và đi tiếp. Chỉ khi
+      // KHÔNG kỳ nào lấy được mới ném ra.
+      if (!tooBig(e)) throw e;
+    }
+  }
+  if (!parts.length) throw last ?? probeErr;
+
+  return {
+    chain: mergeChains(parts),
+    window: { days, strikeCount, expirations: parts.length, sliced: true },
+  };
+}
+
 export async function fullChainAdaptive(
   symbol: string,
   windows: ChainWindow[] = GEX_WINDOWS
@@ -350,10 +457,18 @@ export async function fullChainAdaptive(
       // Chỉ hẹp lại khi lỗi ĐÚNG LÀ "phản hồi quá lớn". Ký hiệu sai, hết
       // phiên hay lỗi mạng thì xin ít dữ liệu hơn cũng không cứu được -
       // ném ra ngay để tầng trên xử lý đúng loại lỗi của nó.
-      if (!/TooBigBody|Body buffer overflow/i.test(String(e?.message ?? e))) throw e;
+      if (!tooBig(e)) throw e;
     }
   }
-  throw last;
+  // Hẹp hết cỡ vẫn quá to (SPX): chuyển sang ghép từng kỳ đáo hạn - đơn vị
+  // nhỏ nhất mà /chains còn nhận.
+  try {
+    return await fullChainSliced(symbol);
+  } catch (e) {
+    // Giữ lỗi GỐC của lượt hẹp nhất khi cách ghép cũng hỏng vì cùng lý do:
+    // nó mới là lỗi mô tả đúng vấn đề, còn lỗi của lượt ghép chỉ là hệ quả.
+    throw tooBig(e) ? last : e;
+  }
 }
 
 export async function dailyHistory(symbol: string, years = 1) {

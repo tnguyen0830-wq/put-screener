@@ -53,7 +53,14 @@ export type GexProfile = {
  *  diện nói rõ khi phải thu hẹp - một wall tính trên 7 ngày/60 strike KHÔNG
  *  phải cùng một con số với wall tính trên 60 ngày/mọi strike, và hai cái
  *  đó mà trông giống hệt nhau thì người đọc không có cách nào biết. */
-export type GexChainWindow = { days: number; strikeCount?: number };
+export type GexChainWindow = {
+  days: number;
+  strikeCount?: number;
+  /** Số kỳ đáo hạn thực sự lấy được ở chế độ ghép. */
+  expirations?: number;
+  /** Phải xin từng kỳ đáo hạn rồi ghép lại (SPX) - xem fullChainSliced(). */
+  sliced?: boolean;
+};
 
 /** Các mức UW trả về. Cùng hình dạng với UwGexLevels ở uwgex.ts - khai báo
  *  lại ở đây để gex.ts (thuần tính toán, không gọi mạng) và các component

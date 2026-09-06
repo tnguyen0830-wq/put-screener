@@ -655,15 +655,26 @@ export default function GexChart({
           này. Không có nó, biểu đồ cũ 10 phút trước trông giống hệt biểu đồ
           vừa mới tải — im lặng đọc thành "vẫn ổn", đúng cái bẫy self-diagnosing
           idiom của app này muốn tránh. */}
-      {/* Cửa sổ đã bị thu hẹp: nói ra. Wall tính trên 7 ngày/60 strike là
-          wall lớn nhất TRONG phạm vi đó, không phải của cả chuỗi. */}
-      {data.chainWindow && data.chainWindow.days < 60 && (
+      {/* Cửa sổ đã bị thu hẹp hoặc phải ghép từng kỳ: nói ra. Wall tính trên
+          7 ngày/60 strike - hay trên 12 kỳ đáo hạn gần nhất - là wall lớn
+          nhất TRONG phạm vi đó, không phải của cả chuỗi. */}
+      {data.chainWindow?.sliced ? (
         <p className="cap">
-          {t('gex.narrowed', {
-            days: data.chainWindow.days,
+          {t('gex.sliced', {
+            expirations: data.chainWindow.expirations ?? 0,
             strikes: data.chainWindow.strikeCount ?? 0,
           })}
         </p>
+      ) : (
+        data.chainWindow &&
+        data.chainWindow.days < 60 && (
+          <p className="cap">
+            {t('gex.narrowed', {
+              days: data.chainWindow.days,
+              strikes: data.chainWindow.strikeCount ?? 0,
+            })}
+          </p>
+        )
       )}
 
       {refreshMs && updatedAt && (

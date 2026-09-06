@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-05.
+Nothing in progress as of 2026-09-06.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #96 SPX on the Schwab side: when all three narrowed windows still get 502 TooBigBody, the chain is now stitched one expiration at a time (probe with strikeCount=1, then 12 nearest expirations merged). Keeps the bar chart and AI briefing, which the UW fallback can never provide. Screen says how many expirations the walls actually cover. Touches i18n.tsx.
 - 2026-09-05 — #95 GEX calls Schwab and UW in parallel every request: comparison table of the four mappable levels on screen, UW covers immediately when Schwab fails (not just on 400/502), and both readings are saved to /var/data (gexhistory.ts, 15-min throttle, 30-day prune) so the last one shows when both sources die. Session expiry still returns 401 and is never papered over. Touches i18n.tsx and globals.css.
 - 2026-09-05 — #94 GEX put/call wall now computed from NET gamma per strike, not a one-sided max. Found by comparing TSLA against tapchiphowall: put wall/abs gamma/spot matched exactly, call wall didn't (355 vs 400) - their own tallest call bar is at 355 too, so it was a definition gap, not data. Also fixes the old rule collapsing all three levels onto the ATM strike. Touches i18n.tsx.
 - 2026-09-04 — #93 GEX chart redrawn to the layout the owner asked for (their screenshot of tapchiphowall's chart): labelled $M axis, red calls up / blue puts down on one shared scale, key-levels box, current-price line, ticker watermark, per-strike hover tooltip. New GexProfile.absGamma (biggest strike counting both signs). Touches i18n.tsx and globals.css - both shared files.
@@ -141,7 +142,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #95. If you're reading this and a
+No PR is currently open and unmerged as of #96. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -399,6 +400,12 @@ The old one-sided rule had a visible failure mode, not just a definitional one: 
 A chain with no net-positive strike has **no call wall**: `callWall` is null and the screen prints `—` rather than picking the least-negative strike, which would draw a resistance line that does not exist.
 
 `GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
+
+**SPX needed a fourth rung below the narrowing ladder.** `fullChainAdaptive` tries 60d/all → 21d/120 → 7d/60, and for SPX all three could still come back `502 TooBigBody`. `fullChainSliced()` is the fallback: the smallest unit `/chains` still accepts is **one expiration**, so it discovers the expiration list with a cheap `strikeCount=1` probe and then requests expirations one at a time (nearest first, `strikeCount` capped), merging the `callExpDateMap`/`putExpDateMap` into one chain object that `computeGex()` reads unchanged. Each response is then bounded no matter how large the full chain is.
+
+Two deliberate limits. There is a **request ceiling** (12 expirations): SPX expires almost every trading day, so 60 days is 40+ expirations and fetching all of them would leave the user waiting tens of seconds on a screen they just opened — gamma concentrates in the near expirations anyway. And a single expiration that fails is **skipped rather than fatal**; only an empty result throws. The count actually retrieved comes back in `window.expirations` and the screen says so (`gex.sliced`), because a wall computed over 12 expirations must not look like a wall over the whole chain.
+
+Slicing only ever engages on `TooBigBody`. A 401, a bad symbol or a network error still throws straight out — asking for less data does not fix those, and retrying 13 more times would just multiply the failure. When slicing also fails for the same size reason, the **original** narrowest-rung error is what surfaces, since that one describes the actual problem.
 
 **`/api/gex` calls Schwab and UW in parallel on every request** (`Promise.allSettled`), rather than reaching for UW only after Schwab returns a 400/502. Two reasons, both from the owner: a permanent on-screen comparison (one manual comparison against tapchiphowall is what caught the call-wall definition bug in #94 — leaving it on screen means the next divergence surfaces itself), and UW covering *immediately* when Schwab fails for any reason, not just the two error codes previously matched. The UW quota cost is small and bounded — `/api/gex` only runs when a GEX screen is open, and the Heatmap panel refreshes every 10 minutes, so the worst case is ~144 requests/day against 30,000. That is nothing like dark pool, which blew the cap by calling per-symbol from the background loop.
 

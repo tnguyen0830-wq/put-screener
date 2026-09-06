@@ -393,6 +393,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (v: any) =>
       `Computed over just the next ${v.days} days of expirations and ${v.strikes} strikes each side of spot - Schwab refuses the full chain for this symbol because the response is too large (a symbol expiring almost daily runs to tens of thousands of contracts). The walls are the largest WITHIN that window, not across the whole chain.`,
   },
+  'gex.sliced': {
+    vi: (v: any) =>
+      `Ghép từ ${v.expirations} kỳ đáo hạn GẦN NHẤT, mỗi kỳ ${v.strikes} strike quanh giá - Schwab từ chối trả nhiều kỳ trong một lượt cho mã này, nên app xin từng kỳ một rồi ghép lại. Các mức tường là lớn nhất TRONG ${v.expirations} kỳ đó, không phải của toàn bộ chuỗi; các kỳ xa hơn không được tính.`,
+    en: (v: any) =>
+      `Stitched from the ${v.expirations} NEAREST expirations, ${v.strikes} strikes each around spot - Schwab refuses to return several expirations at once for this symbol, so the app requests them one at a time and merges. The walls are the largest WITHIN those ${v.expirations} expirations; anything further out is not counted.`,
+  },
   'gex.gammaMagnet': { vi: 'Gamma magnet', en: 'Gamma magnet' },
   'gex.nearbyFlips': { vi: 'Các mốc lật gần', en: 'Nearby flips' },
   'gex.uwSource': {
