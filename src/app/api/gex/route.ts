@@ -120,20 +120,22 @@ export async function GET(req: NextRequest) {
         `status=${d.status ?? '?'}, numberOfContracts=${d.numberOfContracts ?? '?'}, ` +
         `isIndex=${d.isIndex ?? '?'}, isDelayed=${d.isDelayed ?? '?'}, ` +
         `truncated=${d.isChainTruncated ?? '?'}, assetMainType=${d.assetMainType ?? '?'}`;
-      return NextResponse.json(
-        {
-          error: failedStatus
-            ? `Schwab từ chối chuỗi quyền chọn (status ${failedStatus})`
-            : 'Chuỗi quyền chọn không đủ dữ liệu gamma',
-          detail:
-            `${meta} · spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ` +
-            `${d.contracts} hợp đồng · loại: gamma thiếu ${d.droppedNoGamma}, ` +
-            `gamma=-999 ${d.droppedSentinelGamma}, OI=0 ${d.droppedNoOi}, ` +
-            `strike thiếu ${d.droppedNoStrike}` +
-            (d.sample ? ` · mẫu: ${d.sample}` : ''),
-        },
-        { status: 404 }
-      );
+      const why =
+        `${meta} · spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ` +
+        `${d.contracts} hợp đồng · loại: gamma thiếu ${d.droppedNoGamma}, ` +
+        `gamma=-999 ${d.droppedSentinelGamma}, OI=0 ${d.droppedNoOi}, ` +
+        `strike thiếu ${d.droppedNoStrike}` +
+        (d.sample ? ` · mẫu: ${d.sample}` : '');
+      /* Chuỗi vô dụng cũng là "Schwab không dùng được" - phải xuống cấp y hệt
+         lúc Schwab văng lỗi, chứ không trả thẳng lỗi và vứt đi mức UW vừa lấy
+         được. Đây chính là chỗ SPX bị mất đường sống ở #96. */
+      return schwabUnusable(symbol, why, uwLevels, uwDetail, {
+        error: failedStatus
+          ? `Schwab từ chối chuỗi quyền chọn (status ${failedStatus})`
+          : 'Chuỗi quyền chọn không đủ dữ liệu gamma',
+        detail: why,
+        status: 404,
+      });
     }
 
     await recordGexSnapshot(symbol, {
@@ -169,6 +171,33 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Phiên Schwab hết hạn' }, { status: 401 });
   }
 
+  return schwabUnusable(symbol, detailOf(msg, err?.attempts), uwLevels, uwDetail, {
+    error: 'Không lấy được chuỗi quyền chọn',
+    detail: `Schwab: ${detailOf(msg, err?.attempts)}${uwDetail ? ` · UW: ${uwDetail}` : ''}`,
+    status: 500,
+  });
+}
+
+/**
+ * Schwab không dùng được, vì BẤT KỲ lý do gì - văng lỗi, hay trả về một
+ * chuỗi mà computeGex() không dựng được gì. Cùng một bậc thang xuống cấp:
+ * mức của UW (nếu đang có trong tay) → bản đọc cũ trên đĩa → báo lỗi.
+ *
+ * Gom về một chỗ là để sửa đúng lỗi đã gây ra ở #95/#96: nhánh "Schwab trả
+ * về nhưng chuỗi vô dụng" lúc đó VỨT ĐI mức UW vừa lấy song song rồi trả
+ * thẳng 404. Trước đó SPX đi đường Schwab-văng-lỗi nên vẫn được UW đỡ và
+ * người dùng vẫn xem được; #96 làm Schwab thôi văng lỗi (giờ nó trả về một
+ * chuỗi rỗng/vô dụng), thế là SPX rơi sang đúng cái nhánh không có UW đỡ và
+ * biến thành màn hình lỗi. Một bậc thang duy nhất thì không thể lệch nhau
+ * kiểu đó nữa.
+ */
+async function schwabUnusable(
+  symbol: string,
+  schwabDetail: string,
+  uwLevels: GexUwLevels | null,
+  uwDetail: string | undefined,
+  fallbackError: { error: string; detail: string; status: number }
+) {
   if (uwLevels) {
     await recordGexSnapshot(symbol, {
       at: new Date().toISOString(),
@@ -180,7 +209,7 @@ export async function GET(req: NextRequest) {
       source: 'uw',
       symbol,
       levels: uwLevels,
-      schwabDetail: msg.slice(0, 200),
+      schwabDetail: schwabDetail.slice(0, 300),
     };
     return NextResponse.json(payload);
   }
@@ -197,23 +226,17 @@ export async function GET(req: NextRequest) {
       spot: cached.spot,
       schwab: cached.schwab,
       uw: cached.uw,
-      schwabDetail: detailOf(msg, err?.attempts),
+      schwabDetail,
       uwDetail,
     };
     return NextResponse.json(payload);
   }
 
-  /* Chuỗi chung chung "Không lấy được chuỗi quyền chọn" từng nuốt mất lý do
-     thật Schwab trả về - đúng cái bẫy self-diagnosing idiom của app này muốn
-     tránh (CRWD's earnings đã bị bỏ sót đúng kiểu này). schwab.ts's get() đã
-     ném ra `Schwab ${path} ${status}: ${body}` sẵn - chỉ cần không vứt nó đi. */
   return NextResponse.json(
-    {
-      error: 'Không lấy được chuỗi quyền chọn',
-      detail: `Schwab: ${detailOf(msg, err?.attempts)}${uwDetail ? ` · UW: ${uwDetail}` : ''}`,
-    },
-    { status: 500 }
+    { error: fallbackError.error, detail: fallbackError.detail },
+    { status: fallbackError.status }
   );
+
 }
 
 /** `attempts` (khi có) liệt kê MỌI ký hiệu đã thử qua fetchChainWithFallback()
