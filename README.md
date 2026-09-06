@@ -232,6 +232,23 @@ nhân là định nghĩa, không phải dữ liệu, và đã sửa bằng cách
 ròng ở trên. Độ lớn thì vẫn khác nhau vì đơn vị: app quy về **mỗi 1% biến
 động**, nơi khác có thể quy về mỗi $1 — chênh nhau đúng bằng `giá/100`.
 
+### Khi Schwab từ chối trả cả chuỗi (SPX)
+
+Cổng API của Schwab chặn phản hồi quá lớn (`502 Body buffer overflow`). SPX có
+kỳ đáo hạn gần như **mỗi ngày giao dịch**, nên xin 60 ngày × mọi strike là hàng
+chục nghìn hợp đồng — mã thường không bao giờ chạm ngưỡng đó.
+
+App thu hẹp dần: 60 ngày → 21 ngày/120 strike → 7 ngày/60 strike. Nếu **cả ba**
+vẫn bị từ chối, nó chuyển sang **xin từng kỳ đáo hạn một rồi ghép lại** — đơn vị
+nhỏ nhất mà `/chains` còn nhận, nên kích thước mỗi phản hồi bị chặn cứng bất kể
+chuỗi to đến đâu. Cách này giữ được **biểu đồ cột và phân tích AI**, thứ mà
+phương án UW không bao giờ có.
+
+Đổi lại: chỉ lấy **12 kỳ gần nhất** (SPX 60 ngày là hơn 40 kỳ — lấy hết sẽ bắt
+bạn chờ hàng chục giây), và màn hình nói rõ đã ghép bao nhiêu kỳ. Tường tính
+trên 12 kỳ đó, không phải cả chuỗi — không nói ra thì hai con số trông y hệt
+nhau.
+
 ### Hai nguồn cùng lúc: app tự tính (Schwab) và Unusual Whales
 
 Mỗi lần mở màn hình có GEX, app gọi **cả hai** nguồn song song:
