@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06.
+2026-09-06 — SPX gets past 502 now but computeGex() finds no usable contracts. Tolerant numeric parsing + a real diagnosis of why every contract was dropped. Branch: claude/gex-spx-diagnose.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -400,6 +400,12 @@ The old one-sided rule had a visible failure mode, not just a definitional one: 
 A chain with no net-positive strike has **no call wall**: `callWall` is null and the screen prints `—` rather than picking the least-negative strike, which would draw a resistance line that does not exist.
 
 `GexProfile.absGamma` is the strike carrying the most gamma of either sign combined. It is deliberately a third number next to the walls: each wall is one-sided and zero gamma is a crossing rather than a strike, so a strike can be the biggest overall while being neither wall.
+
+**`Number.isFinite()` does not coerce strings, and that is a silent whole-chain killer.** `Number.isFinite('0.0012')` is `false` — it is true only for values already of type number. The contract filter used it directly on `c.gamma`, so if Schwab returns greeks as strings for a symbol, *every* contract is dropped and the screen says "chain has no gamma data" while Schwab in fact returned a complete chain. This is exactly what SPX showed once it got past the 502: top-level keys included `callExpDateMap` and `underlyingPrice`, and still nothing computed. Everything numeric read off a Schwab contract now goes through `num()`, which accepts a number or a numeric string and rejects empty strings (`Number('')` is `0`, so an empty field would otherwise become a real-looking zero).
+
+**Schwab uses `-999.0` as "greek not available"**, inherited from TD Ameritrade — not null, not absent. That value is finite, so it passes every naive check and would be summed as if it were real gamma, producing a wildly wrong GEX that still looks like a number. `gammaOf()` drops it explicitly.
+
+**`gexDiagnosis()` exists because listing top-level keys was not enough.** It reports the expiration and contract counts, the number of contracts dropped **per reason** (missing gamma / `-999` gamma / zero OI / missing strike), and one real contract verbatim with the **type** of each field. The type is the whole point: it is the only thing that separates "Schwab did not send gamma" from "Schwab sent gamma as a string", and the first version of this error could not tell those apart.
 
 **SPX needed a fourth rung below the narrowing ladder.** `fullChainAdaptive` tries 60d/all → 21d/120 → 7d/60, and for SPX all three could still come back `502 TooBigBody`. `fullChainSliced()` is the fallback: the smallest unit `/chains` still accepts is **one expiration**, so it discovers the expiration list with a cheap `strikeCount=1` probe and then requests expirations one at a time (nearest first, `strikeCount` capped), merging the `callExpDateMap`/`putExpDateMap` into one chain object that `computeGex()` reads unchanged. Each response is then bounded no matter how large the full chain is.
 

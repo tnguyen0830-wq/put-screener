@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fullChainAdaptive, type ChainWindow } from '@/lib/schwab';
 import {
   computeGex,
+  gexDiagnosis,
   type GexCacheResponse,
   type GexLevelsResponse,
   type GexUwLevels,
@@ -101,15 +102,23 @@ export async function GET(req: NextRequest) {
     // lộ ra biến thể nội bộ sẽ làm nhãn trên UI trông sai/lạ.
     const profile = computeGex(chain, symbol);
     if (!profile) {
-      // Cùng lý do thêm `detail` ở nhánh lỗi bên dưới: Schwab trả về (không
-      // văng lỗi) nhưng computeGex() không tính ra gì - có thể thiếu spot,
-      // thiếu callExpDateMap/putExpDateMap, hoặc chuỗi rỗng thật. Ghi lại
-      // đúng các khoá cấp cao nhất của response thay vì chỉ nói "không đủ dữ
-      // liệu" - cùng idiom với insiders.ts's rawKeys.
+      /* Schwab trả về (không văng lỗi) nhưng computeGex() không dựng được gì.
+         Liệt kê khoá cấp cao nhất là CHƯA ĐỦ - đã gặp đúng chuyện này với
+         SPX: khoá có đủ cả callExpDateMap lẫn underlyingPrice mà vẫn không
+         ra hợp đồng nào, và danh sách khoá không nói được vì sao. Đếm rõ số
+         hợp đồng bị loại theo TỪNG lý do, kèm nguyên văn một hợp đồng thật
+         và KIỂU dữ liệu của từng trường - chỉ có kiểu mới phân biệt được
+         "Schwab không gửi gamma" với "Schwab gửi gamma dưới dạng chuỗi". */
+      const d = gexDiagnosis(chain);
       return NextResponse.json(
         {
           error: 'Chuỗi quyền chọn không đủ dữ liệu gamma',
-          detail: `topLevelKeys: ${Object.keys(chain ?? {}).join(', ') || '(rỗng)'}`,
+          detail:
+            `spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ${d.contracts} hợp đồng · ` +
+            `loại: gamma thiếu ${d.droppedNoGamma}, gamma=-999 ${d.droppedSentinelGamma}, ` +
+            `OI=0 ${d.droppedNoOi}, strike thiếu ${d.droppedNoStrike}` +
+            (d.sample ? ` · mẫu: ${d.sample}` : '') +
+            ` · keys: ${Object.keys(chain ?? {}).join(', ') || '(rỗng)'}`,
         },
         { status: 404 }
       );

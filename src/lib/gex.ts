@@ -125,18 +125,70 @@ type RawContract = {
   openInterest: number;
 };
 
+/**
+ * Đọc một số từ Schwab một cách khoan dung: chấp nhận cả số lẫn chuỗi số.
+ *
+ * Vì sao cần: `Number.isFinite('0.05')` là **false** - nó chỉ đúng với kiểu
+ * number, không tự ép chuỗi. Nên nếu Schwab trả greeks dưới dạng chuỗi cho
+ * một loại hợp đồng nào đó (đã thấy chuyện này ở UW's gex-levels, mọi giá
+ * trị đều là chuỗi), bộ lọc cũ sẽ loại sạch MỌI hợp đồng mà không báo gì -
+ * đúng triệu chứng SPX: Schwab trả về đầy đủ, app bảo "không đủ dữ liệu
+ * gamma".
+ */
+function num(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    // Chuỗi rỗng phải thành null chứ KHÔNG phải 0: Number('') === 0.
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** Schwab (kế thừa từ TD Ameritrade) dùng -999.0 làm cờ "không tính được"
+ *  cho greeks, chứ không phải null. Để nguyên thì một hợp đồng không có
+ *  gamma sẽ được cộng vào như gamma = -999 - ra một con số GEX sai hoàn
+ *  toàn mà trông vẫn như số thật. */
+const SENTINEL = -999;
+
+function gammaOf(c: any): number | null {
+  const g = num(c?.gamma);
+  if (g === null || g === SENTINEL) return null;
+  return g;
+}
+
+/** Vì sao một chuỗi trả về đầy đủ mà vẫn không tính được gì. Chỉ dựng khi
+ *  computeGex() thất bại - xem gexDiagnostics(). */
+export type GexDiagnosis = {
+  expirations: number;
+  contracts: number;
+  /** Số hợp đồng bị loại, tách theo lý do - mỗi lý do sửa một kiểu khác nhau. */
+  droppedNoGamma: number;
+  droppedSentinelGamma: number;
+  droppedNoOi: number;
+  droppedNoStrike: number;
+  spot: number | null;
+  /** Nguyên văn một hợp đồng thật kèm KIỂU dữ liệu của từng trường - thứ
+   *  duy nhất phân biệt được "Schwab không gửi gamma" với "Schwab gửi gamma
+   *  dưới dạng chuỗi". */
+  sample?: string;
+};
+
 function collect(map: any): { exp: string; contracts: RawContract[] }[] {
   const out: { exp: string; contracts: RawContract[] }[] = [];
   for (const expKey of Object.keys(map ?? {})) {
     const contracts: RawContract[] = [];
     for (const strikeKey of Object.keys(map[expKey])) {
       for (const c of map[expKey][strikeKey]) {
-        if (!Number.isFinite(c.gamma) || !c.openInterest) continue;
-        contracts.push({
-          strikePrice: c.strikePrice,
-          gamma: c.gamma,
-          openInterest: c.openInterest,
-        });
+        const gamma = gammaOf(c);
+        const oi = num(c?.openInterest);
+        // strikePrice cũng đi qua num(): khoá của map là chuỗi ("6000.0"),
+        // nên trường bên trong cũng có thể là chuỗi ở một số phản hồi.
+        const strike = num(c?.strikePrice) ?? num(strikeKey);
+        if (gamma === null || !oi || strike === null) continue;
+        contracts.push({ strikePrice: strike, gamma, openInterest: oi });
       }
     }
     out.push({ exp: expKey.split(':')[0], contracts });
@@ -144,9 +196,54 @@ function collect(map: any): { exp: string; contracts: RawContract[] }[] {
   return out;
 }
 
+/**
+ * Chẩn đoán khi Schwab trả về một chuỗi trông đầy đủ nhưng computeGex()
+ * không dựng được gì. Liệt kê các khoá cấp cao nhất là chưa đủ - nó chỉ nói
+ * "có callExpDateMap", không nói vì sao mọi hợp đồng bên trong đều bị loại.
+ * Đây đúng là idiom tự chẩn đoán của repo này, đẩy sâu thêm một tầng.
+ */
+export function gexDiagnosis(chain: any): GexDiagnosis {
+  const d: GexDiagnosis = {
+    expirations: 0,
+    contracts: 0,
+    droppedNoGamma: 0,
+    droppedSentinelGamma: 0,
+    droppedNoOi: 0,
+    droppedNoStrike: 0,
+    spot: num(chain?.underlyingPrice ?? chain?.underlying?.last ?? chain?.underlying?.mark),
+  };
+  for (const map of [chain?.callExpDateMap, chain?.putExpDateMap]) {
+    for (const expKey of Object.keys(map ?? {})) {
+      d.expirations++;
+      for (const strikeKey of Object.keys(map[expKey] ?? {})) {
+        for (const c of map[expKey][strikeKey] ?? []) {
+          d.contracts++;
+          if (!d.sample) {
+            d.sample = JSON.stringify({
+              gamma: c?.gamma,
+              gammaType: typeof c?.gamma,
+              openInterest: c?.openInterest,
+              oiType: typeof c?.openInterest,
+              strikePrice: c?.strikePrice,
+              strikeType: typeof c?.strikePrice,
+            });
+          }
+          const rawG = num(c?.gamma);
+          if (rawG === SENTINEL) d.droppedSentinelGamma++;
+          else if (rawG === null) d.droppedNoGamma++;
+          if (!num(c?.openInterest)) d.droppedNoOi++;
+          if (num(c?.strikePrice) === null && num(strikeKey) === null) d.droppedNoStrike++;
+        }
+      }
+    }
+  }
+  return d;
+}
+
 export function computeGex(chain: any, symbol: string): GexProfile | null {
-  const spot =
-    chain?.underlyingPrice ?? chain?.underlying?.last ?? chain?.underlying?.mark;
+  const spot = num(
+    chain?.underlyingPrice ?? chain?.underlying?.last ?? chain?.underlying?.mark
+  );
   if (!spot) return null;
 
   // One contract covers 100 shares; the 0.01 scales the answer to a 1% move.
