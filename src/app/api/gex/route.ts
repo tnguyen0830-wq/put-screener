@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fullChainAdaptive, type ChainWindow } from '@/lib/schwab';
 import {
+  chainStatusFailed,
   computeGex,
   gexDiagnosis,
   type GexCacheResponse,
@@ -110,15 +111,26 @@ export async function GET(req: NextRequest) {
          và KIỂU dữ liệu của từng trường - chỉ có kiểu mới phân biệt được
          "Schwab không gửi gamma" với "Schwab gửi gamma dưới dạng chuỗi". */
       const d = gexDiagnosis(chain);
+      /* Schwab nói thẳng là hỏng (HTTP 200 nhưng status != SUCCESS) thì đó là
+         một LOẠI lỗi khác hẳn "chuỗi có mà không tính được", và cách sửa cũng
+         khác: một bên là quyền dữ liệu/mã, bên kia là cách app đọc trường.
+         Gộp chung thành một câu là tự làm mù mình. */
+      const failedStatus = chainStatusFailed(chain);
+      const meta =
+        `status=${d.status ?? '?'}, numberOfContracts=${d.numberOfContracts ?? '?'}, ` +
+        `isIndex=${d.isIndex ?? '?'}, isDelayed=${d.isDelayed ?? '?'}, ` +
+        `truncated=${d.isChainTruncated ?? '?'}, assetMainType=${d.assetMainType ?? '?'}`;
       return NextResponse.json(
         {
-          error: 'Chuỗi quyền chọn không đủ dữ liệu gamma',
+          error: failedStatus
+            ? `Schwab từ chối chuỗi quyền chọn (status ${failedStatus})`
+            : 'Chuỗi quyền chọn không đủ dữ liệu gamma',
           detail:
-            `spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ${d.contracts} hợp đồng · ` +
-            `loại: gamma thiếu ${d.droppedNoGamma}, gamma=-999 ${d.droppedSentinelGamma}, ` +
-            `OI=0 ${d.droppedNoOi}, strike thiếu ${d.droppedNoStrike}` +
-            (d.sample ? ` · mẫu: ${d.sample}` : '') +
-            ` · keys: ${Object.keys(chain ?? {}).join(', ') || '(rỗng)'}`,
+            `${meta} · spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ` +
+            `${d.contracts} hợp đồng · loại: gamma thiếu ${d.droppedNoGamma}, ` +
+            `gamma=-999 ${d.droppedSentinelGamma}, OI=0 ${d.droppedNoOi}, ` +
+            `strike thiếu ${d.droppedNoStrike}` +
+            (d.sample ? ` · mẫu: ${d.sample}` : ''),
         },
         { status: 404 }
       );

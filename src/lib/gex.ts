@@ -174,7 +174,26 @@ export type GexDiagnosis = {
    *  duy nhất phân biệt được "Schwab không gửi gamma" với "Schwab gửi gamma
    *  dưới dạng chuỗi". */
   sample?: string;
+  /* Mấy trường cấp cao của chính Schwab. Cần vì khi chuỗi về RỖNG thì mọi bộ
+     đếm "bị loại" ở trên đều bằng 0 và thông báo không nói được gì - trong
+     khi `status` và `numberOfContracts` trả lời ngay. Đây cũng là chỗ phân
+     biệt index (SPX) với ETF (SPY/QQQ), đúng ranh giới đang hỏng. */
+  status?: string;
+  numberOfContracts?: number | null;
+  isIndex?: boolean;
+  isDelayed?: boolean;
+  isChainTruncated?: boolean;
+  assetMainType?: string;
 };
+
+/** Schwab trả HTTP 200 kèm `status: "FAILED"` khi mã hợp lệ nhưng không phục
+ *  vụ được chuỗi - phía app trông y hệt một lượt thành công có chuỗi rỗng.
+ *  Hai chuyện này sửa khác nhau hoàn toàn nên phải tách ra. */
+export function chainStatusFailed(chain: any): string | null {
+  const st = chain?.status;
+  if (typeof st === 'string' && st.toUpperCase() !== 'SUCCESS') return st;
+  return null;
+}
 
 function collect(map: any): { exp: string; contracts: RawContract[] }[] {
   const out: { exp: string; contracts: RawContract[] }[] = [];
@@ -211,6 +230,13 @@ export function gexDiagnosis(chain: any): GexDiagnosis {
     droppedNoOi: 0,
     droppedNoStrike: 0,
     spot: num(chain?.underlyingPrice ?? chain?.underlying?.last ?? chain?.underlying?.mark),
+    status: typeof chain?.status === 'string' ? chain.status : undefined,
+    numberOfContracts: num(chain?.numberOfContracts),
+    isIndex: chain?.isIndex,
+    isDelayed: chain?.isDelayed,
+    isChainTruncated: chain?.isChainTruncated,
+    assetMainType:
+      typeof chain?.assetMainType === 'string' ? chain.assetMainType : undefined,
   };
   for (const map of [chain?.callExpDateMap, chain?.putExpDateMap]) {
     for (const expKey of Object.keys(map ?? {})) {
