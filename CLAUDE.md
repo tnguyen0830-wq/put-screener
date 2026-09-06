@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06.
+Nothing in progress as of 2026-09-06. **Open question:** SPX still yields no GEX while SPY/QQQ work - index vs ETF options. #98 adds the diagnostics that should name the cause; waiting on the owner's next error line.
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #98 SPY/QQQ work, SPX still doesn't - so it's index vs ETF, not response size. Diagnosis now also reports Schwab's own status/numberOfContracts/isIndex/isDelayed/isChainTruncated/assetMainType (an EMPTY chain leaves every drop counter at 0, so those fields are the only thing that speaks), and a 200-with-status-FAILED is now a separate error from "chain arrived but unusable". Does NOT claim to fix SPX - waiting on the owner's next error line.
 - 2026-09-06 — #97 SPX got past the 502 but still computed nothing: Number.isFinite() does not coerce strings, so string-typed greeks drop the whole chain silently; Schwab's -999 "greek unavailable" sentinel was also being summed as real gamma. All numeric reads now tolerant, and the error reports contracts dropped per reason plus a real contract with its field TYPES (the only thing that tells "missing" from "string"). String-gamma as the real SPX cause is NOT confirmed - no network here.
 - 2026-09-06 — #96 SPX on the Schwab side: when all three narrowed windows still get 502 TooBigBody, the chain is now stitched one expiration at a time (probe with strikeCount=1, then 12 nearest expirations merged). Keeps the bar chart and AI briefing, which the UW fallback can never provide. Screen says how many expirations the walls actually cover. Touches i18n.tsx.
 - 2026-09-05 — #95 GEX calls Schwab and UW in parallel every request: comparison table of the four mappable levels on screen, UW covers immediately when Schwab fails (not just on 400/502), and both readings are saved to /var/data (gexhistory.ts, 15-min throttle, 30-day prune) so the last one shows when both sources die. Session expiry still returns 401 and is never papered over. Touches i18n.tsx and globals.css.
@@ -143,7 +144,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #97. If you're reading this and a
+No PR is currently open and unmerged as of #98. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -405,6 +406,10 @@ A chain with no net-positive strike has **no call wall**: `callWall` is null and
 **`Number.isFinite()` does not coerce strings, and that is a silent whole-chain killer.** `Number.isFinite('0.0012')` is `false` — it is true only for values already of type number. The contract filter used it directly on `c.gamma`, so if Schwab returns greeks as strings for a symbol, *every* contract is dropped and the screen says "chain has no gamma data" while Schwab in fact returned a complete chain. This is exactly what SPX showed once it got past the 502: top-level keys included `callExpDateMap` and `underlyingPrice`, and still nothing computed. Everything numeric read off a Schwab contract now goes through `num()`, which accepts a number or a numeric string and rejects empty strings (`Number('')` is `0`, so an empty field would otherwise become a real-looking zero).
 
 **Schwab uses `-999.0` as "greek not available"**, inherited from TD Ameritrade — not null, not absent. That value is finite, so it passes every naive check and would be summed as if it were real gamma, producing a wildly wrong GEX that still looks like a number. `gammaOf()` drops it explicitly.
+
+**The SPX-vs-SPY split is the live open question.** SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
+
+**Schwab can return HTTP 200 with `status: "FAILED"`** — a valid symbol it will not serve a chain for. From the app's side that is indistinguishable from a successful empty chain, but the fixes are opposite (data entitlement vs. how a field is read), so `chainStatusFailed()` splits them into two different messages instead of one.
 
 **`gexDiagnosis()` exists because listing top-level keys was not enough.** It reports the expiration and contract counts, the number of contracts dropped **per reason** (missing gamma / `-999` gamma / zero OI / missing strike), and one real contract verbatim with the **type** of each field. The type is the whole point: it is the only thing that separates "Schwab did not send gamma" from "Schwab sent gamma as a string", and the first version of this error could not tell those apart.
 
