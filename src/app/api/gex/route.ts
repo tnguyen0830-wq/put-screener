@@ -137,29 +137,38 @@ export async function GET(req: NextRequest) {
          khác: một bên là quyền dữ liệu/mã, bên kia là cách app đọc trường.
          Gộp chung thành một câu là tự làm mù mình. */
       const failedStatus = chainStatusFailed(chain);
-      const meta =
-        `status=${d.status ?? '?'}, numberOfContracts=${d.numberOfContracts ?? '?'}, ` +
-        `isIndex=${d.isIndex ?? '?'}, isDelayed=${d.isDelayed ?? '?'}, ` +
-        `truncated=${d.isChainTruncated ?? '?'}, assetMainType=${d.assetMainType ?? '?'}`;
+      /* THỨ TỰ Ở ĐÂY LÀ CÓ CHỦ Ý. Chuỗi này bị cắt bớt khi hiển thị, nên
+         phần nào đứng sau là phần bị mất. Bản trước xếp "mẫu" (dài ~120 ký
+         tự) TRƯỚC "đã thử", và mức cắt 300 rơi đúng vào giữa khối JSON mẫu -
+         nên danh sách ký hiệu đã thử KHÔNG BAO GIỜ hiện ra, dù #100 đã thêm
+         nó vào (xác nhận trên ảnh chụp production: chuỗi đứt ở
+         `"strikePrice":74`). Đúng loại lỗi đã mắc ở #90: chỗ cắt lấy mất
+         đúng phần cần đọc.
+
+         Xếp theo giá trị thông tin giảm dần: ký hiệu đã thử (ngắn, quan
+         trọng nhất) → số đếm và lý do loại → cờ cấp cao của Schwab → mẫu
+         nguyên văn (dài nhất, ít cần nhất một khi đã có số đếm). */
+      const tried = schwabRes.value.attempts.length
+        ? `đã thử: ${schwabRes.value.attempts.map((a) => a.symbol).join(', ')} · `
+        : '';
       const why =
-        `${meta} · spot=${d.spot ?? 'thiếu'} · ${d.expirations} kỳ · ` +
-        `${d.contracts} hợp đồng · loại: gamma thiếu ${d.droppedNoGamma}, ` +
-        `gamma=-999 ${d.droppedSentinelGamma}, OI=0 ${d.droppedNoOi}, ` +
-        `strike thiếu ${d.droppedNoStrike}` +
+        tried +
+        `${d.expirations} kỳ · ${d.contracts} hợp đồng · ` +
+        `loại: gamma thiếu ${d.droppedNoGamma}, gamma=-999 ${d.droppedSentinelGamma}, ` +
+        `OI=0 ${d.droppedNoOi}, strike thiếu ${d.droppedNoStrike} · ` +
+        `spot=${d.spot ?? 'thiếu'} · status=${d.status ?? '?'}, ` +
+        `numberOfContracts=${d.numberOfContracts ?? '?'}, isIndex=${d.isIndex ?? '?'}, ` +
+        `isDelayed=${d.isDelayed ?? '?'}, truncated=${d.isChainTruncated ?? '?'}, ` +
+        `assetMainType=${d.assetMainType ?? '?'}` +
         (d.sample ? ` · mẫu: ${d.sample}` : '');
       /* Chuỗi vô dụng cũng là "Schwab không dùng được" - phải xuống cấp y hệt
          lúc Schwab văng lỗi, chứ không trả thẳng lỗi và vứt đi mức UW vừa lấy
          được. Đây chính là chỗ SPX bị mất đường sống ở #96. */
-      const tried = schwabRes.value.attempts.length
-        ? ` · đã thử: ${schwabRes.value.attempts.map((a) => a.symbol).join(', ')}`
-        : '';
-      return schwabUnusable(symbol, why + tried, uwLevels, uwDetail, {
+      return schwabUnusable(symbol, why, uwLevels, uwDetail, {
         error: failedStatus
           ? `Schwab từ chối chuỗi quyền chọn (status ${failedStatus})`
           : 'Chuỗi quyền chọn không đủ dữ liệu gamma',
-        // Danh sách ký hiệu đã thử phải có ở CẢ nhánh báo lỗi, không chỉ nhánh
-        // rơi sang UW: đây đúng là lúc người đọc cần biết đã thử những gì.
-        detail: why + tried,
+        detail: why,
         status: 404,
       });
     }
@@ -217,6 +226,13 @@ export async function GET(req: NextRequest) {
  * biến thành màn hình lỗi. Một bậc thang duy nhất thì không thể lệch nhau
  * kiểu đó nữa.
  */
+/** Cắt bớt cho vừa màn hình, nhưng ĐỂ LẠI dấu "…": một chuỗi đứt ngang mà
+ *  không có dấu gì thì đọc thành "Schwab chỉ gửi tới đó", trong khi thật ra
+ *  là app tự cắt. Giới hạn nới rộng vì đây là phần chẩn đoán - thứ duy nhất
+ *  nói được vì sao không tính ra GEX. */
+const DETAIL_MAX = 600;
+const clip = (s: string) => (s.length > DETAIL_MAX ? `${s.slice(0, DETAIL_MAX)}…` : s);
+
 async function schwabUnusable(
   symbol: string,
   schwabDetail: string,
@@ -235,7 +251,7 @@ async function schwabUnusable(
       source: 'uw',
       symbol,
       levels: uwLevels,
-      schwabDetail: schwabDetail.slice(0, 300),
+      schwabDetail: clip(schwabDetail),
     };
     return NextResponse.json(payload);
   }
