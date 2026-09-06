@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06. **Open question:** Schwab sends SPX 3600 contracts with openInterest=0 on every one (measured, see the GEX section). #100 makes the symbol fallback try the other index spellings in that case; if none of them carry open interest either, the account most likely lacks index-option OI data and UW stays the source for SPX.
+Nothing in progress as of 2026-09-06. **SPX is settled:** all three spellings measured on production return gamma=0 and openInterest=0 on all 3600 contracts - the account has no index-option market data, so no code change can compute SPX GEX. UW is the source for SPX and the screen says so. See the GEX section for the full reading and for the one untried idea (SPY chain ×10 as an SPX proxy).
 
 **Known gaps nobody has claimed** (not in-progress work - listed here so the
 next session can pick one up rather than rediscovering it):
@@ -122,6 +122,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-06 — #103 SPX CLOSED (docs only). Production, all three spellings tried: gamma=0 AND openInterest=0 on all 3600 contracts, status=SUCCESS, assetMainType=INDEX. The account has no index-option market data - GEX = gamma x OI, so no code change can compute it. #86-#91 (spellings), #92/#96 (size), #97/#98 (field types) were all the wrong tree. UW stays the source for SPX. Logged one untried idea: SPY chain x10 as an SPX proxy.
 - 2026-09-06 — #102 The "đã thử" list added in #100 never actually appeared: the detail string is 353 chars, the cut was at 300, and the raw ~120-char sample sat in front of the list. Same trap as #90. Fields now ordered by information value (spellings tried first, raw sample last), one shared cap (600), and a clipped string ends in "…" so a cut can't read as "Schwab only sent this much".
 - 2026-09-06 — #101 App-wide session bug: a Schwab 401 that survived the forced-refresh retry threw "Schwab <path> 401: ...", which does NOT contain REAUTH_REQUIRED - the string every route uses to detect a dead session. So it slipped past all of them; /api/gex read it as "Schwab unusable" and showed UW levels while the whole app had lost its Schwab connection. Now throws REAUTH_REQUIRED (original status/body kept after the marker). Test fails against the pre-fix code with 200 + UW levels, reproducing the owner's screenshot.
 - 2026-09-06 — #100 SPX cause MEASURED from production: Schwab sends 3600 contracts over 28 expirations with openInterest=0 on every one (gamma 0 too, 38 at -999). Not a parse bug - GEX = gamma x OI, so a chain with no OI can't produce one. Also fixed: the index-symbol fallback only advanced on a 400, so a 200-with-hollow-data stopped at "$SPX" and never tried "$SPX.X"/"SPX". Wording fixed too - it claimed Schwab "refused" while status was SUCCESS.
@@ -148,7 +149,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #102. If you're reading this and a
+No PR is currently open and unmerged as of #103. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -423,7 +424,19 @@ That also exposed a gap in the index-symbol fallback: it only advanced to the ne
 
 Whether another spelling carries real open interest is still unproven — but "we never asked" is now off the table.
 
-**The SPX-vs-SPY split is the live open question.** SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
+**SPX is CLOSED, and the answer is not a code fix (measured 2026-09-06).** With the detail line finally readable (#102), production shows all three spellings were tried and all three behave identically:
+
+```
+đã thử: $SPX, $SPX.X, SPX · 28 kỳ · 3600 hợp đồng ·
+loại: gamma thiếu 0, gamma=-999 38, OI=0 3600, strike thiếu 0 ·
+mẫu: {"gamma":0,"gammaType":"number","openInterest":0,"oiType":"number","strikePrice":7420}
+```
+
+Schwab returns a full contract skeleton — right strikes, right expirations, `status=SUCCESS`, `assetMainType=INDEX` — with **both `gamma` and `openInterest` at 0** on every contract. GEX is `gamma × OI`; two zeros cannot produce one. This account receives no market data for index options, only the contract listing. Nothing in this repo can fix that: it is a Schwab entitlement question for the owner to take up with Schwab.
+
+So the symbol-spelling hunt of #86–#91 is now definitively closed — it was never the symbol. `usableContractCount()` (#100) is still worth keeping: it is what proved all three spellings behave the same, instead of leaving it a guess.
+
+SPY and QQQ (ETF options) compute normally, so the split is exactly index-vs-ETF entitlement. UW remains the source for SPX and the screen says so. **A cheap alternative nobody has built:** SPY tracks SPX at roughly 1/10, and SPY options are fully served by this account — a SPY chain with strikes ×10 would give a real bar chart and AI briefing at SPX-equivalent levels, which the UW levels can never provide. Not built; it is an approximation and would need to say so on screen. SPY and QQQ (ETF options) compute fine; SPX (an index option) does not, with the chain coming back present but yielding nothing. When the maps come back *empty*, every "dropped" counter reads 0 and the diagnosis says nothing — so it also reports Schwab's own top-level fields (`status`, `numberOfContracts`, `isIndex`, `isDelayed`, `isChainTruncated`, `assetMainType`), which are what actually separate an index from an ETF and an entitlement problem from a parsing one.
 
 **Schwab can return HTTP 200 with `status: "FAILED"`** — a valid symbol it will not serve a chain for. From the app's side that is indistinguishable from a successful empty chain, but the fixes are opposite (data entitlement vs. how a field is read), so `chainStatusFailed()` splits them into two different messages instead of one.
 
