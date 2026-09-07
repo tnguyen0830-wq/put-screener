@@ -30,6 +30,9 @@ export type GexSnapshot = {
    *  qua: một chuỗi null liên tiếp chính là bằng chứng một nguồn đang chết,
    *  và đó là thông tin, không phải rác. */
   schwab: GexSnapshotLevels | null;
+  /** Bản đọc qua feed CBOE (lib/cboe.ts) - cùng công thức với `schwab`,
+   *  khác nguồn. Tuỳ chọn vì bản ghi cũ trên đĩa không có trường này. */
+  cboe?: GexSnapshotLevels | null;
   uw: GexUwLevels | null;
 };
 

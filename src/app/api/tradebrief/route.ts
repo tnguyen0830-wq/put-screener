@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dailyHistory, fullChainAdaptive } from '@/lib/schwab';
-import { computeGex } from '@/lib/gex';
+import { dailyHistory } from '@/lib/schwab';
+import { GexChainError, loadGexChain } from '@/lib/gexchain';
 import { flattenCalls, flattenPuts, skewZScore, termStructureAndSkew, type ChainContract } from '@/lib/screener';
 import { realizedVol } from '@/lib/indicators';
 import { curateIdeas, expectedMove, nearestDte, type Regime } from '@/lib/tradebrief';
@@ -65,19 +65,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    /* Cùng bậc thang Schwab → CBOE với /api/gex (lib/gexchain.ts). Trước
+       đây route này gọi thẳng Schwab, nên SPX có biểu đồ (qua CBOE) mà nút
+       phân tích AI vẫn 404 - hai màn hình nói hai chuyện về cùng một mã. */
     const [chainRes, hist] = await Promise.all([
-      fullChainAdaptive(symbol),
+      loadGexChain(symbol),
       dailyHistory(symbol, 1).catch(() => null),
     ]);
 
-    const chain = chainRes.chain;
-    const profile = computeGex(chain, symbol);
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'Chuỗi quyền chọn không đủ dữ liệu gamma' },
-        { status: 404 }
-      );
-    }
+    const { chain, profile } = chainRes;
 
     const puts = flattenPuts(chain);
     const calls = flattenCalls(chain);
@@ -121,8 +117,23 @@ export async function GET(req: NextRequest) {
       skewZ,
       shortTerm,
       mediumTerm,
+      /* Nguồn chuỗi, để panel nói rõ khi kèo dựng từ giá CBOE trễ 15 phút
+         chứ không phải giá Schwab - bid/ask có thể đã dịch. */
+      chainSource: chainRes.source,
+      chainAsOf: chainRes.cboeAsOf ?? null,
     });
   } catch (e: any) {
+    if (e instanceof GexChainError) {
+      return NextResponse.json(
+        e.reauth
+          ? { error: 'Phiên Schwab hết hạn' }
+          : {
+              error: e.message,
+              detail: `Schwab: ${e.schwabDetail.slice(0, 300)} · CBOE: ${e.cboeDetail.slice(0, 300)}`,
+            },
+        { status: e.reauth ? 401 : e.failedStatus ? 404 : 500 }
+      );
+    }
     const reauth = String(e.message).includes('REAUTH_REQUIRED');
     return NextResponse.json(
       { error: reauth ? 'Phiên Schwab hết hạn' : 'Không lấy được chuỗi quyền chọn' },

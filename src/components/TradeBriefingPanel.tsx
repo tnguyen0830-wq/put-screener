@@ -41,6 +41,10 @@ type Brief = {
   skewZ: number | null;
   shortTerm: Horizon;
   mediumTerm: Horizon;
+  /** 'cboe' khi chuỗi lấy từ feed CBOE trễ 15 phút (lib/cboe.ts) thay vì
+   *  Schwab. Thiếu (bản cũ) hay 'schwab' = chuỗi Schwab. */
+  chainSource?: 'schwab' | 'cboe';
+  chainAsOf?: string | null;
 };
 
 const money = (n: number | null) =>
@@ -225,6 +229,9 @@ export default function TradeBriefingPanel({ symbol }: { symbol: string }) {
 
       {brief && (
         <>
+          {brief.chainSource === 'cboe' && (
+            <p className="hint hint-warn">{t('tb.cboeNote', brief.chainAsOf ?? '—')}</p>
+          )}
           <p className="cap">
             {brief.symbol} — {brief.date} — spot {brief.spot.toFixed(2)} —{' '}
             {t('tb.regime')}: {brief.regime === 'POSITIVE' ? t('tb.regimePositive') : t('tb.regimeNegative')}
