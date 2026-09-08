@@ -650,7 +650,11 @@ select {
 
 /* ---------- per-criterion on/off ---------- */
 
-/* Same look as a plain field label, plus the checkbox that arms it. */
+/* Same look as a plain field label, plus the checkbox that arms it.
+   Text colour matches the checkbox's own accent-color (--stamp) rather than
+   --muted - the owner's ask: a checkbox row should read as one blue unit,
+   label included, not a grey label next to a blue box. Contrast checked on
+   --card in both themes: 5.70:1 dark, 4.87:1 light - both clear 4.5:1. */
 .field > .field-toggle {
   display: flex;
   align-items: center;
@@ -659,7 +663,7 @@ select {
   font-size: 10.5px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--stamp);
   margin-bottom: 5px;
   cursor: pointer;
   user-select: none;
@@ -693,12 +697,23 @@ select {
   color: var(--warn);
 }
 
+/* Same reasoning as .field-toggle above: label text takes the checkbox's own
+   accent colour so the row reads as one blue unit. Unlike .field-toggle's
+   checkbox, this one had no accent-color set - it rendered whatever blue the
+   browser/OS defaults to, which is close to --stamp but not the same value,
+   so the label and the box could drift apart across browsers. Pinned here so
+   both are always the exact same blue. */
 .check {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 9px;
   font-size: 13px;
+  color: var(--stamp);
+}
+
+.check input[type='checkbox'] {
+  accent-color: var(--stamp);
 }
 
 .run {
