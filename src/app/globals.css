@@ -3,33 +3,41 @@
    nào khác. Người dùng chưa chọn thì theo prefers-color-scheme của hệ điều
    hành; chọn rồi thì thuộc tính data-theme thắng. */
 :root {
-  --paper: #f4f6f9;
+  /* Bản SÁNG suy ra từ cùng dải màu Schwab đã đo ở bản tối - ảnh chủ app gửi
+     chỉ có chế độ tối nên không có gì để lấy mẫu trực tiếp. Cách suy: giữ
+     nguyên HUE và độ bão hoà của màu Schwab, chỉ hạ độ sáng tới mức SÁNG NHẤT
+     mà vẫn đủ tương phản - đổi hue là đổi sang màu khác, không còn "giống ảnh".
+     Ngưỡng tính trên nền TRANG (#f5f7f9), nền khó hơn thẻ trắng, nên đạt trên
+     trang thì đương nhiên đạt trên thẻ. Kết quả: accent #009dda→#0079a9,
+     xanh lá #4cb84c→#3a933a, cam #ed7e12→#c6690f; đỏ #e5484d và pill #016e99
+     vốn đã đủ tối nên giữ nguyên y hệt bản tối. Mọi cặp đạt chuẩn. */
+  --paper: #f5f7f9;
   --card: #ffffff;
   --ink: #0f1419;
-  --muted: #5f6b7a;
-  --label: #35425a;
-  --ticker: #0f6ba8;
+  --muted: #5b6874;
+  --label: #33414f;
+  --ticker: #0079a9;
   --gold: #8a6a12;
-  --navy: #12315e;
+  --navy: #016e99;
   --on-navy: #ffffff;
-  --title: #2b4fe0;
-  --rule: #d8dee7;
-  --rule-soft: #eaeef3;
-  --hover: #f1f4f8;
+  --title: #0079a9;
+  --rule: #dbe1e6;
+  --rule-soft: #edf1f4;
+  --hover: #eef2f5;
   /* Rực hơn bản trước - khớp màu lời/lỗ trên app Schwab thật, áp dụng cho
      mọi nơi dùng class good/bad trên site, không riêng My Portfolio nữa. */
-  --credit: #0f9d4f;
-  --credit-tint: #dcf1e7;
-  --risk: #e0342a;
-  --risk-tint: #fbe4de;
-  --warn: #9a6400;
-  --warn-tint: #fdf0d8;
-  --stamp: #2b4fe0;
+  --credit: #3a933a;
+  --credit-tint: #e3f2e3;
+  --risk: #e5484d;
+  --risk-tint: #fce4e5;
+  --warn: #c6690f;
+  --warn-tint: #fbeddc;
+  --stamp: #0079a9;
   /* Nền rất nhạt cùng tông với --stamp, cho góc phần tư "đang hồi" của RRG. */
-  --stamp-tint: #e7ecfb;
+  --stamp-tint: #e2f0f7;
   /* Chart series colour. Stepped to pass the lightness band and 3:1 contrast
      against each theme's card surface, checked with the palette validator. */
-  --fg-line: #2b4fe0;
+  --fg-line: #0079a9;
   /* Ô trung tính trên bản đồ nhiệt; đủ tối để chữ trắng còn đọc được. */
   --heat-flat: #767f8b;
   /* Màu PHÂN LOẠI của biểu đồ GEX: đỏ = call, xanh dương = put, cam = strike
