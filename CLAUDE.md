@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-08 — #112 Analyze tab's company-profile card (sector/industry/country from Finviz, description from FMP - all English-only sources) now auto-translates to Vietnamese via Claude, cached on disk per symbol (`lib/profiletranslate.ts`) so it costs one API call ever per symbol, not per page view. Cache checked before the API-key check so an existing translation survives a key rotation. Falls back to English on any failure. Owner report: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh".
 - 2026-09-08 — #111 Analyze tab's "Ask Claude" now reads EVERY indicator in one pass: technical + implied vol + fundamentals + the GEX profile from the page's own chart (`GexChart.onData` → `AnalysisPanel` → `AiRead`; falls back to one `/api/gex` fetch, and the prompt says NOT AVAILABLE and why when there is none). Prompt lives in new `lib/airead.ts` (standalone-testable). Fixed on the way: `macd.histogram` vs `macd.hist` (histogram was always n/a), and %B/bid/ask/volume/sector never sent. Owner's ask: "gom technical và gex tất cả chỉ số".
 - 2026-09-08 — #110 UI now remembers the open tab, both sub-tabs, the GEX ticker and zoom in localStorage (new `lib/remember.ts`, validated allow-lists, read after hydration), and `GexChart` keeps the last good reading per symbol in memory so coming back to the tab shows the chart at once (a failed refresh keeps it and warns). SPY added to the Heatmap GEX presets. Owner's ask: "SPX bị mất mỗi lần thoát ra".
 - 2026-09-07 — #109 SPX has its bar chart and AI briefing back, via **CBOE's public 15-min-delayed chain** (`cdn.cboe.com/.../_SPX.json`, the feed tapchiphowall reads - no key, no quota). New `lib/cboe.ts` converts it to the Schwab chain shape; new `lib/gexchain.ts` owns the Schwab→CBOE rungs and is shared by /api/gex AND /api/tradebrief. Ladder is now Schwab → CBOE → UW → disk → error. CBOE's JSON shape is UNVERIFIED from the sandbox: a mismatch prints the real keys on screen - if the owner reports that line, fix the field names, don't guess. Touches i18n.tsx.
@@ -158,7 +159,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #111. If you're reading this and a
+No PR is currently open and unmerged as of #112. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
