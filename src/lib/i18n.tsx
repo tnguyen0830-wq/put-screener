@@ -436,6 +436,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không đọc được mức nào từ UW. Các trường họ thật sự trả về',
     en: 'Could not read any level from UW. The fields they actually returned',
   },
+  'gex.refreshFailed': {
+    vi: (v: any) => `Đang hiện bản đọc lúc ${v.at} - lần tải lại vừa rồi lỗi: ${v.error}`,
+    en: (v: any) => `Showing the reading from ${v.at} - the latest refresh failed: ${v.error}`,
+  },
   'gex.updatedAt': {
     vi: (time: string) => `Cập nhật lúc ${time}`,
     en: (time: string) => `Updated at ${time}`,
