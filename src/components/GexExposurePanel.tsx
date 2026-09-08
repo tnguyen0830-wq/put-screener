@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { readRemembered, remember } from '@/lib/remember';
 import GexChart from './GexChart';
 
 /**
@@ -10,25 +11,26 @@ import GexChart from './GexChart';
  * chọn mã, biểu đồ gamma theo strike, put wall / call wall / zero gamma,
  * thanh trượt thu hẹp biên độ strike hiển thị.
  *
- * KHÁC trang tham khảo ở nguồn dữ liệu: họ lấy CBOE trễ 15 phút; ở đây tự
- * tính từ chuỗi quyền chọn Schwab của chính bạn (giống hệt GexChart đã dùng
- * ở tab Analyze) nên là số live, không trễ theo lịch cố định — refetch mỗi
- * 10 phút chỉ để đỡ tốn request, không phải vì dữ liệu Schwab bị trễ.
+ * Nguồn dữ liệu: chuỗi quyền chọn Schwab của chính bạn (giống hệt GexChart
+ * đã dùng ở tab Analyze), là số live. Mã nào Schwab trả chuỗi rỗng ruột
+ * (SPX và các chỉ số - lỗi API phía Schwab, xem lib/cboe.ts) thì /api/gex
+ * tự chuyển sang feed công khai trễ 15 phút của CBOE và màn hình nói rõ.
+ * Refetch mỗi 10 phút chỉ để đỡ tốn request.
  *
  * KHÔNG có phần "GEX Heatmap for All US Tickers" của trang tham khảo — thực
  * ra trang đó cũng không có mục này (đã xác minh trực tiếp), "Bản Đồ Nhiệt"
  * của họ là treemap giá thường, còn GEX chỉ xem được từng mã một như ở đây.
  */
 
-/** Ký hiệu $ khớp cách app này đã gọi Schwab cho các mã chỉ số ở nơi khác
- *  (TickerTape, /api/md/volatility) — CHƯA xác nhận trực tiếp với endpoint
- *  /chains vì sandbox không có mạng ra ngoài. Nếu Schwab từ chối ký hiệu
- *  này, /api/gex trả lỗi rõ ràng (surfaced by GexChart) thay vì âm thầm sai
- *  số — đúng nguyên tắc tự chẩn đoán của app này.
- */
-const PRESETS = ['$SPX', 'QQQ', 'IWM', '$VIX'] as const;
+/** Ký hiệu $ khớp cách app này gọi Schwab cho các mã chỉ số ở nơi khác
+ *  (TickerTape, /api/md/volatility). SPY đứng cạnh SPX có chủ ý: cùng một
+ *  thị trường nhìn từ hai chuỗi khác nhau - SPX qua CBOE (trễ 15 phút),
+ *  SPY qua Schwab (live) - nên đối chiếu được ngay khi một bên có vấn đề. */
+const PRESETS = ['$SPX', 'SPY', 'QQQ', 'IWM', '$VIX'] as const;
 
 const REFRESH_MS = 10 * 60 * 1000;
+
+const DEFAULT_ZOOM = 0.25;
 
 const displaySymbol = (s: string) => s.replace(/^\$/, '');
 
@@ -36,7 +38,24 @@ export default function GexExposurePanel() {
   const { t } = useLang();
   const [symbol, setSymbol] = useState<string>(PRESETS[0]);
   const [customInput, setCustomInput] = useState('');
-  const [zoomPct, setZoomPct] = useState(0.25);
+  const [zoomPct, setZoomPct] = useState(DEFAULT_ZOOM);
+
+  /* Nhớ mã và biên độ đang xem. Không nhớ thì mỗi lần mở lại app là về
+     SPX ±25% - với người chỉ xem SPX thì không sao, nhưng ai đang theo một
+     mã khác thì phải gõ lại mỗi lần. Đọc SAU hydrate (lib/remember.ts). */
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    const s = readRemembered('gexmm.symbol');
+    if (s && /^[$A-Z.]{1,12}$/.test(s)) setSymbol(s);
+    const z = Number(readRemembered('gexmm.zoom'));
+    if (Number.isFinite(z) && z >= 0.1 && z <= 1) setZoomPct(z);
+    setRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!restored) return;
+    remember('gexmm.symbol', symbol);
+    remember('gexmm.zoom', String(zoomPct));
+  }, [restored, symbol, zoomPct]);
 
   return (
     <section className="panel">
@@ -85,7 +104,11 @@ export default function GexExposurePanel() {
         />
       </label>
 
-      <GexChart symbol={symbol} refreshMs={REFRESH_MS} zoomPct={zoomPct} />
+      {/* Chỉ dựng biểu đồ SAU khi đã đọc mã đã nhớ. Dựng ngay với mặc định
+          "$SPX" rồi đổi sang mã đã nhớ ở nhịp sau là một lượt /api/gex vô
+          ích cho $SPX và một khung "đang tính…" chớp qua mỗi lần quay lại
+          tab - đúng cái chớp mà phần nhớ này sinh ra để bỏ. */}
+      {restored && <GexChart symbol={symbol} refreshMs={REFRESH_MS} zoomPct={zoomPct} />}
       </div>
     </section>
   );

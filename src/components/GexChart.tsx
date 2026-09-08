@@ -32,6 +32,12 @@ type SchwabGex = GexProfile & {
 
 type GexResponse = SchwabGex | GexLevelsResponse | GexCacheResponse;
 
+/** Bản đọc gần nhất theo mã, sống cùng trang (module-level, không phải
+ *  state của component) để rời tab rồi quay lại vẫn có ngay biểu đồ cũ
+ *  trong lúc chờ tải lại. Mất khi tải lại trang - khi đó /api/gex vẫn có
+ *  bậc "đĩa" của riêng nó. */
+const lastGood = new Map<string, { data: GexResponse; at: number }>();
+
 const isUwLevels = (d: GexResponse): d is GexLevelsResponse =>
   (d as GexLevelsResponse).source === 'uw';
 
@@ -176,10 +182,17 @@ export default function GexChart({
 
   useEffect(() => {
     let alive = true;
-    setData(null);
+    /* Có bản đọc gần nhất của mã này trong bộ nhớ (từ lần xem trước, kể cả
+       ở tab khác) thì hiện NGAY rồi mới tải lại nền - thay vì xoá về "đang
+       tính…" và bắt chờ vài giây mỗi lần quay lại tab. Chủ app gọi cái chờ
+       đó là "SPX bị mất". Tải lại vẫn chạy, nên số cũ chỉ đứng trên màn hình
+       đến khi số mới về; `updatedAt` giữ giờ của bản cũ để dòng "Cập nhật
+       lúc" không nói dối. */
+    const cached = lastGood.get(symbol);
+    setData(cached?.data ?? null);
+    setUpdatedAt(cached?.at ?? null);
     setError(null);
     setErrorDetail(null);
-    setUpdatedAt(null);
     setHover(null);
 
     const load = () => {
@@ -191,10 +204,12 @@ export default function GexChart({
             setError(j.error ?? t('gex.loadFailed'));
             setErrorDetail(j.detail ?? null);
           } else {
+            const at = Date.now();
+            lastGood.set(symbol, { data: j, at });
             setData(j);
             setError(null);
             setErrorDetail(null);
-            setUpdatedAt(Date.now());
+            setUpdatedAt(at);
           }
         })
         .catch(() => alive && setError(t('gex.loadFailed')));
@@ -209,7 +224,10 @@ export default function GexChart({
     };
   }, [symbol, refreshMs]);
 
-  if (error)
+  /* Lỗi mà KHÔNG có gì để hiện thì hiện lỗi. Lỗi mà đang có bản đọc cũ
+     (từ bộ nhớ) thì giữ biểu đồ và nói rõ lần tải lại vừa hỏng - một biểu
+     đồ 10 phút tuổi kèm dòng cảnh báo hơn hẳn một màn hình chỉ có lỗi. */
+  if (error && !data)
     return (
       <>
         <p className="cap">{error}</p>
@@ -217,6 +235,14 @@ export default function GexChart({
       </>
     );
   if (!data) return <p className="cap">{t('gex.computing')}</p>;
+  const refreshFailed = error ? (
+    <p className="hint hint-warn">
+      {t('gex.refreshFailed', {
+        at: updatedAt ? new Date(updatedAt).toLocaleTimeString() : '—',
+        error: `${error}${errorDetail ? ` — ${errorDetail}` : ''}`,
+      })}
+    </p>
+  ) : null;
 
   // Nguồn UW: chỉ có các mức chính, không có gamma theo từng strike nên
   // không vẽ được biểu đồ cột. Nói thẳng nguồn ngay trên màn hình - một
@@ -229,6 +255,7 @@ export default function GexChart({
     const L = data.levels;
     return (
       <>
+        {refreshFailed}
         <dl className="stats gexstats">
           <div>
             <dt>{t('gex.putWall')}</dt>
@@ -289,6 +316,7 @@ export default function GexChart({
     return (
       <>
         <p className="gexstale">{t('gex.stale', new Date(data.at).toLocaleString())}</p>
+        {refreshFailed}
         <dl className="stats gexstats">
           <div>
             <dt>{t('gex.putWall')}</dt>
@@ -405,6 +433,7 @@ export default function GexChart({
 
   return (
     <>
+      {refreshFailed}
       <svg
         width="100%"
         viewBox={`0 0 ${W} ${H}`}

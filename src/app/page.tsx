@@ -18,6 +18,7 @@ import OptionFlowPanel from '@/components/OptionFlowPanel';
 import DarkpoolPanel from '@/components/DarkpoolPanel';
 import SettingsMenu from '@/components/SettingsMenu';
 import { useLang } from '@/lib/i18n';
+import { readRememberedOneOf, remember } from '@/lib/remember';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
 import { DEFAULT_OFF, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
@@ -49,20 +50,44 @@ type Status = {
   daysLeft?: number;
 };
 
-type Tab = 'screener' | 'analyze' | 'heatmap' | 'portfolio' | 'insider';
+const TABS = ['screener', 'analyze', 'heatmap', 'portfolio', 'insider'] as const;
+type Tab = (typeof TABS)[number];
 /** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
-type InsiderSub = 'form4' | 'congress' | 'flow' | 'darkpool';
+const INSIDER_SUBS = ['form4', 'congress', 'flow', 'darkpool'] as const;
+type InsiderSub = (typeof INSIDER_SUBS)[number];
 /** Bốn nội dung khác nhau trong tab Heatmap, cùng lý do tách tab con như
  *  Insider Trade ở trên - trước đó cả bốn (bản đồ nhiệt, Fear & Greed, RRG,
  *  GEX) xếp chồng trong một cột phải cuộn rất dài mới thấy hết. */
-type HeatmapSub = 'map' | 'feargreed' | 'rrg' | 'gex';
+const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex'] as const;
+type HeatmapSub = (typeof HEATMAP_SUBS)[number];
 
 export default function Page() {
   const { t } = useLang();
   const [tab, setTab] = useState<Tab>('screener');
   const [insiderSub, setInsiderSub] = useState<InsiderSub>('form4');
   const [heatmapSub, setHeatmapSub] = useState<HeatmapSub>('map');
+  /* Nhớ tab và tab con đang mở giữa hai lần mở app. Chủ app xem GEX SPX
+     trên điện thoại, thoát ra mở lại là về Sell Put Screener và phải bấm
+     lại hai lần - "SPX bị mất". Đọc SAU khi hydrate (xem lib/remember.ts),
+     và cờ `restored` để không ghi đè giá trị đã nhớ bằng mặc định ở lượt
+     render đầu tiên. */
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    const savedTab = readRememberedOneOf<Tab>('tab', TABS);
+    const savedHm = readRememberedOneOf<HeatmapSub>('heatmapSub', HEATMAP_SUBS);
+    const savedIn = readRememberedOneOf<InsiderSub>('insiderSub', INSIDER_SUBS);
+    if (savedTab) setTab(savedTab);
+    if (savedHm) setHeatmapSub(savedHm);
+    if (savedIn) setInsiderSub(savedIn);
+    setRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!restored) return;
+    remember('tab', tab);
+    remember('heatmapSub', heatmapSub);
+    remember('insiderSub', insiderSub);
+  }, [restored, tab, heatmapSub, insiderSub]);
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULTS);
   const [rows, setRows] = useState<Candidate[]>([]);

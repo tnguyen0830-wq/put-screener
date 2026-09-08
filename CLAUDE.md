@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-07.
+2026-09-08 — Heatmap GEX panel: remember tab / sub-tab / ticker / zoom across reloads and keep the last chart on screen when coming back (owner: "SPX bị mất mỗi lần thoát ra"), plus a SPY preset. Branch `claude/read-claude-reader-md-bmj1lu`. Touches page.tsx, GexExposurePanel.tsx, GexChart.tsx.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
