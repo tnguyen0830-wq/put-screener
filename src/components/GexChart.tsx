@@ -2,7 +2,7 @@
 
 import { useLang } from '@/lib/i18n';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   GexCacheResponse,
   GexChainWindow,
@@ -155,6 +155,7 @@ export default function GexChart({
   strike,
   refreshMs,
   zoomPct = 0.25,
+  onData,
 }: {
   symbol: string;
   /** Strike của người dùng, nếu có. Tab phân tích mã xem GEX mà chưa chọn
@@ -168,8 +169,17 @@ export default function GexChart({
   /** Biên độ strike hiển thị quanh giá hiện tại, phần trăm dạng thập phân
    *  (0.25 = ±25%). Mặc định giữ nguyên hành vi cũ. */
   zoomPct?: number;
+  /** Báo lên cha mỗi khi có bản đọc mới (hoặc null khi lỗi mà không có gì
+   *  để hiện). Tab Analyze dùng nó để đưa GEX vào phần "Claude đọc chỉ số"
+   *  mà không phải gọi /api/gex lần thứ hai cho cùng một mã. */
+  onData?: (d: GexResponse | null) => void;
 }) {
   const { t } = useLang();
+  // Ref để effect tải dữ liệu không phụ thuộc vào identity của callback -
+  // cha truyền một arrow function mới mỗi render, đưa vào deps là tải lại
+  // liên tục.
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
   const [data, setData] = useState<GexResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Lý do thật Schwab trả về (từ /api/gex's `detail`) - xem chú thích ở
@@ -191,6 +201,7 @@ export default function GexChart({
     const cached = lastGood.get(symbol);
     setData(cached?.data ?? null);
     setUpdatedAt(cached?.at ?? null);
+    onDataRef.current?.(cached?.data ?? null);
     setError(null);
     setErrorDetail(null);
     setHover(null);
@@ -203,6 +214,7 @@ export default function GexChart({
           if (!r.ok) {
             setError(j.error ?? t('gex.loadFailed'));
             setErrorDetail(j.detail ?? null);
+            if (!lastGood.get(symbol)) onDataRef.current?.(null);
           } else {
             const at = Date.now();
             lastGood.set(symbol, { data: j, at });
@@ -210,9 +222,14 @@ export default function GexChart({
             setError(null);
             setErrorDetail(null);
             setUpdatedAt(at);
+            onDataRef.current?.(j);
           }
         })
-        .catch(() => alive && setError(t('gex.loadFailed')));
+        .catch(() => {
+          if (!alive) return;
+          setError(t('gex.loadFailed'));
+          if (!lastGood.get(symbol)) onDataRef.current?.(null);
+        });
     };
 
     load();

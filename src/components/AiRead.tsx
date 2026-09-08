@@ -13,8 +13,17 @@ import { useLang } from '@/lib/i18n';
  * The whole analysis object goes up because the route picks its own fields
  * from it; sending a pre-trimmed version here would put the prompt's shape in
  * two places.
+ *
+ * GEX rides along too (`gex`): the owner wants one reading that covers
+ * technical, fundamental AND the gamma structure, not a technical reading in
+ * one place and a GEX chart further down that Claude never sees. The panel
+ * hands over whatever the GexChart at the bottom of the page has already
+ * fetched; if the chart has not answered yet when the button is pressed, this
+ * component fetches /api/gex itself once rather than sending nothing - the
+ * route tells Claude explicitly when GEX is missing and why, so a silent gap
+ * would read as "no gamma structure worth mentioning".
  */
-export default function AiRead({ analysis }: { analysis: any }) {
+export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) {
   const { t, lang } = useLang();
   const [text, setText] = useState('');
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'error'>(
@@ -32,10 +41,26 @@ export default function AiRead({ analysis }: { analysis: any }) {
     setState('running');
 
     try {
+      let gexData = gex ?? null;
+      let gexError: string | null = null;
+      if (!gexData && analysis?.symbol) {
+        try {
+          const g = await fetch(`/api/gex?symbol=${encodeURIComponent(analysis.symbol)}`, {
+            signal: ctrl.signal,
+          });
+          const j = await g.json();
+          if (g.ok) gexData = j;
+          else gexError = `${j?.error ?? g.status}${j?.detail ? ` — ${String(j.detail).slice(0, 200)}` : ''}`;
+        } catch (e: any) {
+          if (e?.name === 'AbortError') return;
+          gexError = String(e?.message ?? e);
+        }
+      }
+
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, lang }),
+        body: JSON.stringify({ analysis, gex: gexData, gexError, lang }),
         signal: ctrl.signal,
       });
 

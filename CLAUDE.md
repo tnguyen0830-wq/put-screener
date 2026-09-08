@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-08.
+2026-09-08 — Analyze tab "Ask Claude": feed GEX (walls, zero gamma, net GEX, source) and every technical field into the prompt alongside the existing indicators. Branch `claude/read-claude-reader-md-bmj1lu`. Touches api/ai/route.ts, AiRead.tsx, AnalysisPanel.tsx, GexChart.tsx, i18n.tsx.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -516,6 +516,14 @@ Five response shapes, deliberately distinct so the UI cannot render a degraded s
 `src/lib/gexhistory.ts` keeps the readings: one file on `/var/data` (`GEX_HISTORY_PATH`), at most one record per symbol per **15 minutes** (the Heatmap panel's 10-minute refresh would otherwise write ~144 records/symbol/day for no new information), pruned to **30 days**. Failed reads *are* recorded with a null side — a run of nulls is the evidence that a source is down, not noise. Every function swallows its own errors: a broken history file must never take `/api/gex` down with it, since history is the extra, not the point.
 
 The stale banner uses its own `.gexstale` class, **not `.cap.bad`**. `.bad` and `.cap` have equal specificity and `.cap` is defined later, so `.cap.bad` renders grey — the same specificity trap that swallowed the sign colour in #58, and worse here: a "do not trade off this" warning that looks like an ordinary caption is a warning nobody reads.
+
+### Ask Claude in Analyze (`src/lib/airead.ts`, `/api/ai`, `AiRead.tsx`)
+
+One reading of **every** indicator on the Analyze page — technical, implied vol, fundamentals **and the GEX profile** — on a button, streamed. The owner's ask was "gom technical và gex tất cả chỉ số": before this the technical read and the GEX chart sat on the same page and Claude never saw the chart.
+
+`lib/airead.ts` owns the prompt (`facts()`, `gexFacts()`, `system()`), outside the route because Next route files may only export handlers and the table needs a standalone test. `facts()` takes the analysis object the page is displaying plus the `/api/gex` payload the page's own `GexChart` already fetched — `GexChart` grew an `onData` prop, `AnalysisPanel` holds the value and hands it to `AiRead`, so no second chain request. If the chart has not answered when the button is pressed, `AiRead` fetches `/api/gex` once itself; if that fails too it sends `gexError`, and the prompt says **NOT AVAILABLE and why** rather than leaving a gap — to Claude an absent section reads as "no gamma structure worth mentioning", which is a wrong conclusion, not a missing one. `gexFacts()` handles all four `/api/gex` shapes (Schwab / CBOE profile, UW levels-only, disk cache) and labels stale or levels-only readings as such.
+
+Two things fixed on the way, both silent before: the prompt read `macd.histogram` while the analyze route emits `macd.hist`, so the histogram was always `n/a`; and Bollinger %B, bid/ask/volume, sector/industry and dividend amount were computed but never sent. Keep the field list in `facts()` in step with the `Analysis` type in `AnalysisPanel.tsx` — there is no type linking them.
 
 ### AI Trade Briefing (`src/lib/tradebrief.ts`, `TradeBriefingPanel.tsx`)
 

@@ -1084,13 +1084,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- AI read ----
-  'ai.title': { vi: 'Claude đọc chỉ số', en: 'Claude reads the indicators' },
+  'ai.title': { vi: 'Claude đọc toàn bộ chỉ số', en: 'Claude reads all the indicators' },
   'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },
   'ai.rerun': { vi: 'Phân tích lại', en: 'Run again' },
   'ai.running': { vi: 'Đang đọc…', en: 'Reading…' },
   'ai.idle': {
-    vi: 'Claude đọc các chỉ số ngay bên dưới và nói chúng hợp nhau hay mâu thuẫn ở đâu. Mỗi lần bấm tốn khoảng 3 cent tiền API, nên nó chỉ chạy khi bạn bấm.',
-    en: 'Claude reads the indicators below and says where they agree and where they contradict each other. Each run costs a few cents of API credit, so it only runs when you ask.',
+    vi: 'Claude đọc TẤT CẢ chỉ số trên trang này trong một lượt - kỹ thuật (SMA, RSI, MACD, ATR, Bollinger, HV), biến động ngụ ý, cơ bản, và cấu trúc gamma (put wall, call wall, zero gamma, net GEX từ biểu đồ cuối trang) - rồi nói chúng hợp nhau hay mâu thuẫn ở đâu. Mỗi lần bấm tốn khoảng 3 cent tiền API, nên nó chỉ chạy khi bạn bấm.',
+    en: 'Claude reads ALL the indicators on this page in one pass - technical (SMA, RSI, MACD, ATR, Bollinger, HV), implied vol, fundamentals, and the gamma structure (put wall, call wall, zero gamma, net GEX from the chart at the bottom) - and says where they agree and where they contradict each other. Each run costs a few cents of API credit, so it only runs when you ask.',
   },
   'ai.caveat': {
     vi: 'Claude chỉ đọc đúng những con số hiện trên trang này, không có tin tức hay dữ liệu ngoài. Đây là cách diễn giải chỉ số, không phải khuyến nghị mua bán — quyết định vẫn là của bạn.',
