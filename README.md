@@ -249,20 +249,31 @@ bạn chờ hàng chục giây), và màn hình nói rõ đã ghép bao nhiêu k
 trên 12 kỳ đó, không phải cả chuỗi — không nói ra thì hai con số trông y hệt
 nhau.
 
-**Riêng SPX: cả hai nguồn đều không dựng được biểu đồ, và đây không phải lỗi app.** Đo trên
+**Riêng SPX: Schwab gửi chuỗi rỗng ruột, nên app lấy chuỗi từ CBOE.** Đo trên
 production ngày 2026-09-06, cả ba cách viết ký hiệu (`$SPX`, `$SPX.X`, `SPX`)
-đều trả về 3600 hợp đồng qua 28 kỳ với **`gamma = 0` và `openInterest = 0` ở
-mọi hợp đồng** — tức là Schwab gửi danh sách hợp đồng nhưng không kèm dữ liệu
-thị trường. GEX là `gamma × OI`, hai số 0 thì không ra được gì. Tài khoản này
-không có quyền dữ liệu quyền chọn **chỉ số**; quyền chọn ETF (SPY, QQQ) thì đầy
-đủ. Vì vậy SPX luôn hiển thị số của Unusual Whales, và màn hình nói rõ điều đó.
+đều trả về hàng nghìn hợp đồng với **`gamma = 0` và `openInterest = 0` ở mọi
+hợp đồng** — Schwab gửi danh sách hợp đồng nhưng không kèm dữ liệu thị trường.
+Đây là **lỗi API phía Schwab** cho quyền chọn chỉ số, không phải thiếu quyền
+dữ liệu: thinkorswim cùng tài khoản hiển thị open interest thật trên đúng các
+hợp đồng đó (đã báo `traderapi@schwab.com`). GEX là `gamma × OI`, hai số 0 thì
+không ra được gì, nên chừng nào Schwab chưa sửa thì chuỗi SPX phải đến từ nơi
+khác.
+
+Nơi khác đó là **CBOE** — sàn niêm yết SPX — qua feed công khai trễ 15 phút
+(`cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json`), không cần key,
+không có quota. Đây cũng chính là nguồn mà Tạp Chí Phố Wall đọc, nên khi đối
+chiếu SPX với họ là so cùng một chuỗi. App chuyển file đó sang đúng hình dạng
+chuỗi Schwab rồi tính bằng đúng công thức, nên SPX có lại **biểu đồ cột và
+phân tích AI** như mọi mã khác. Màn hình ghi rõ nguồn và dấu giờ của CBOE; trễ
+15 phút gần như không ảnh hưởng đến tường vì open interest chỉ đổi mỗi ngày
+một lần, nhưng giá bid/ask trong phần phân tích AI thì có thể đã dịch — kiểm
+tra lại trên Schwab trước khi đặt lệnh.
 
 Phía Unusual Whales cũng đã đo (2026-09-06): không endpoint nào của gói hiện tại
 có gamma **theo từng strike**. `greek-exposure` là chuỗi 251 ngày theo `date`,
 `spot-exposures` là 564 mốc thời gian mỗi mốc đúng một mức giá (tức chuỗi thời
 gian, không phải đường cong theo giá), còn `gex-levels` chỉ có 4 mức tổng hợp.
-Nên **SPX sẽ chỉ có 4 con số** chừng nào Schwab chưa mở dữ liệu quyền chọn chỉ
-số — không phải chuyện code sửa được.
+Nên UW chỉ là bậc dự phòng **sau** CBOE: 4 con số, không có biểu đồ.
 
 ### Hai nguồn cùng lúc: app tự tính (Schwab) và Unusual Whales
 
@@ -279,20 +290,24 @@ hình khác nhau trên hai nguồn dữ liệu khác nhau, nên lệch là bình
 đây không có bên nào là chuẩn. Nó nằm thường trực trên màn hình vì đúng một lần
 đối chiếu tay đã tìm ra lỗi định nghĩa call wall; để sẵn thì lần lệch sau tự lộ.
 
-**Ba mức xuống cấp, ba cách hiển thị khác nhau** — cố tình không cho chúng
+**Bốn mức xuống cấp, bốn cách hiển thị khác nhau** — cố tình không cho chúng
 trông giống nhau:
 
 1. Schwab chạy → biểu đồ đầy đủ + bảng đối chiếu. UW hỏng thì thay bảng bằng
    đúng lý do hỏng, không im lặng bỏ bảng đi.
-2. Schwab hỏng, UW chạy → chỉ còn các mức của UW, **không có biểu đồ cột và
-   không có phân tích AI** (cả hai cần chuỗi quyền chọn sống), màn hình nói rõ
-   đang xem số của ai và vì sao.
-3. Cả hai cùng hỏng → hiện **bản đọc gần nhất lưu trên đĩa**, kèm một băng đỏ
+2. Schwab hỏng hoặc trả chuỗi rỗng ruột (SPX), CBOE chạy → **vẫn biểu đồ đầy đủ
+   và phân tích AI**, tính bằng cùng công thức trên chuỗi CBOE trễ 15 phút; cột
+   trái bảng đối chiếu đổi thành "App (CBOE)" và có dòng nói vì sao Schwab
+   không dùng được.
+3. Cả Schwab lẫn CBOE hỏng, UW chạy → chỉ còn các mức của UW, **không có biểu
+   đồ cột và không có phân tích AI** (cả hai cần chuỗi quyền chọn sống), màn
+   hình nói rõ đang xem số của ai và vì sao cả hai nguồn kia hỏng.
+4. Cả ba cùng hỏng → hiện **bản đọc gần nhất lưu trên đĩa**, kèm một băng đỏ
    ghi giờ đọc và "đừng giao dịch theo bảng này". Chưa có lịch sử thì báo lỗi
-   thật của cả hai bên.
+   thật của cả ba bên.
 
-Riêng **hết phiên Schwab** thì luôn báo đúng là hết phiên, kể cả khi UW vẫn trả
-số — lấy số nơi khác lúc đó sẽ che mất việc cả app đang mất kết nối.
+Riêng **hết phiên Schwab** thì luôn báo đúng là hết phiên, không hỏi CBOE, kể cả
+khi UW vẫn trả số — lấy số nơi khác lúc đó sẽ che mất việc cả app đang mất kết nối.
 
 Lịch sử ghi tối đa **15 phút một lần cho mỗi mã** và giữ **30 ngày**
 (`GEX_HISTORY_PATH`, mặc định `./.cache/gex-history.json`, trên Render trỏ vào

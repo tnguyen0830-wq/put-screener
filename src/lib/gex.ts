@@ -85,6 +85,10 @@ export type GexLevelsResponse = {
   /** Lỗi thật của Schwab đã khiến phải quay sang UW - giữ lại để không ai
    *  tưởng dùng UW ở đây là lựa chọn thiết kế. */
   schwabDetail?: string;
+  /** Vì sao CBOE (bậc đứng giữa Schwab và UW, xem lib/cboe.ts) cũng không
+   *  cho chuỗi. Tới được UW nghĩa là CẢ HAI nguồn có biểu đồ đều hỏng - phải
+   *  nói ra cả hai. */
+  cboeDetail?: string;
 };
 
 /**
@@ -101,9 +105,13 @@ export type GexCacheResponse = {
   at: string;
   spot: number | null;
   schwab: GexSnapshotLevels | null;
+  /** Bản đọc tính từ chuỗi CBOE (cùng công thức, khác nguồn). Ghi riêng
+   *  chứ không nhét vào `schwab`: lịch sử là để thấy nguồn nào chết khi nào. */
+  cboe?: GexSnapshotLevels | null;
   uw: GexUwLevels | null;
-  /** Vì sao phải dùng số cũ: lỗi thật của cả hai nguồn, không gộp làm một. */
+  /** Vì sao phải dùng số cũ: lỗi thật của từng nguồn, không gộp làm một. */
   schwabDetail?: string;
+  cboeDetail?: string;
   uwDetail?: string;
 };
 

@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-06.
+Nothing in progress as of 2026-09-07.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-07 — #109 SPX has its bar chart and AI briefing back, via **CBOE's public 15-min-delayed chain** (`cdn.cboe.com/.../_SPX.json`, the feed tapchiphowall reads - no key, no quota). New `lib/cboe.ts` converts it to the Schwab chain shape; new `lib/gexchain.ts` owns the Schwab→CBOE rungs and is shared by /api/gex AND /api/tradebrief. Ladder is now Schwab → CBOE → UW → disk → error. CBOE's JSON shape is UNVERIFIED from the sandbox: a mismatch prints the real keys on screen - if the owner reports that line, fix the field names, don't guess. Touches i18n.tsx.
 - 2026-09-06 — #108 **Overturns #103.** SPX is a Schwab **API defect**, not a missing entitlement. The owner's thinkorswim, same account, 26 min after the API reading, shows real open interest on the same contracts (8 SEP 26: 7800C = 5,671, 7650P = 3,653) where the API returns 0 on all 3600. OI is exchange data, not computed locally, so the account HAS the data. Reported to traderapi@schwab.com. The measurements in #103 were right; the interpretation was not - it was inferred from one surface and never cross-checked against a second. Docs only.
 - 2026-09-06 — #107 Second uwprobe reading closes it: spot-exposures is a TIME SERIES (564 buckets, exactly 1 price each, looksLikePriceCurve=false), not a gamma-vs-price curve. So no UW endpoint can draw an SPX chart either - SPX stays 4 numbers unless Schwab opens index-option data. Logged what UW's unused endpoints CAN do (251-day + intraday time series of chain-wide greeks - a "is dealer gamma rising or falling" chart the app lacks) and that only the _oi basis is populated for SPX. Kept /api/uwprobe rather than deleting it - it paid for itself three times in one day.
 - 2026-09-06 — #106 First uwprobe reading from production: NO UW endpoint has gamma per strike (greek-exposure is 251 rows by date, spot-exposures 564 by time, gex-levels is 4 levels) - so the SPX bar chart can't come from UW either. Probe's own heuristic misfired though: 'price' was in STRIKE_HINTS, and at spot-exposures that's the spot price. Fixed, plus curveShape groups by the bucket key (start_time, not per-row time) to tell a gamma-vs-price curve from a time series. Also learned: UW's _oi basis is comparable to ours, gex-levels runs on 'vol', and UW's unit is per-1%-move - same as ours.
@@ -155,7 +156,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #107. If you're reading this and a
+No PR is currently open and unmerged as of #109. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -430,6 +431,14 @@ That also exposed a gap in the index-symbol fallback: it only advanced to the ne
 
 Whether another spelling carries real open interest is still unproven — but "we never asked" is now off the table.
 
+**SPX now gets its chain from CBOE (`src/lib/cboe.ts`, `src/lib/gexchain.ts`) — the source tapchiphowall.com reads.** The owner asked how that site draws an SPX chart when neither Schwab nor UW can. Answer: it does not use a broker at all. CBOE, the exchange that lists SPX, publishes a free, keyless, 15-minute-delayed JSON chain per symbol at `cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json` (indices carry a `_` prefix, equities do not: `AAPL.json`), with `open_interest`, `gamma`, `delta`, `iv`, bid/ask, volume and spot. Nearly every open-source SPX GEX tool reads exactly that file. So the ladder is now **Schwab → CBOE → UW → disk → error**, and SPX has the bar chart and AI briefing again.
+
+Structure, because #96/#99 taught that two parallel ladders drift: `loadGexChain()` in `gexchain.ts` owns the Schwab→CBOE rungs (all three index spellings, then CBOE), returns `{source, chain, window, profile, schwabDetail?, cboeAsOf?}` or throws `GexChainError` carrying **both** sources' real reasons plus a `reauth` flag, and **both** `/api/gex` and `/api/tradebrief` call it — the earlier layout had the briefing route calling Schwab directly, so SPX would have shown a chart with a briefing button that still 404'd. `/api/gex` keeps UW→disk→error. Session expiry stops the ladder before CBOE (401, never papered over — #101).
+
+`cboeToChain()` converts the CBOE payload into the exact Schwab shape (`callExpDateMap`/`putExpDateMap`, `"YYYY-MM-DD:dte"` keys, Schwab field names, IV as percent not decimal) so `computeGex()`, `flattenPuts()`/`flattenCalls()` and the briefing read it unchanged — one calculator, not two. It filters to 60 days to match the Schwab window. **The CBOE shape is unverified from this sandbox** (`cdn.cboe.com` is egress-blocked like everything else), so the conversion reads every field tolerantly and, when it yields no contracts or no spot, throws with the **real top-level, `data`, and per-option keys** — the first production run will print where the guess is wrong instead of four dashes. Two file names are tried (`_SPX`, then `SPX`) on 404, same "try the plausible spellings" posture as Schwab.
+
+What the screen says when CBOE is in use: source and CBOE timestamp under the chart, why Schwab was unusable, `App (CBOE)` as the comparison table's left column, and a warning above the AI briefing that bid/ask are 15 minutes stale. History records CBOE-derived levels in a separate `cboe` slot, never in `schwab` — the log exists to show which source died when.
+
 **SPX is NOT an entitlement limit — that conclusion was wrong, disproven 2026-09-06 by the owner's own thinkorswim screen.** Read this before acting on anything below it.
 
 thinkorswim, logged into **the same brokerage account, 26 minutes after** the API reading below (16:49 vs 17:15 ET, same day), shows **real open interest on the same contracts**:
@@ -495,12 +504,13 @@ Worth noting from the sample: for SPX only the `_oi` basis carries a value; `_di
 
 **`/api/gex` calls Schwab and UW in parallel on every request** (`Promise.allSettled`), rather than reaching for UW only after Schwab returns a 400/502. Two reasons, both from the owner: a permanent on-screen comparison (one manual comparison against tapchiphowall is what caught the call-wall definition bug in #94 — leaving it on screen means the next divergence surfaces itself), and UW covering *immediately* when Schwab fails for any reason, not just the two error codes previously matched. The UW quota cost is small and bounded — `/api/gex` only runs when a GEX screen is open, and the Heatmap panel refreshes every 10 minutes, so the worst case is ~144 requests/day against 30,000. That is nothing like dark pool, which blew the cap by calling per-symbol from the background loop.
 
-Four response shapes, deliberately distinct so the UI cannot render a degraded state as a healthy one:
+Five response shapes, deliberately distinct so the UI cannot render a degraded state as a healthy one:
 
 - Schwab OK → `GexProfile` + `uw` (levels, or null) + `uwDetail` (why UW failed). A failed UW call replaces the comparison table with its real error, rather than silently dropping the table.
-- Schwab fails, UW OK → `GexLevelsResponse` (`source: 'uw'`) — levels only, no bar chart, no AI briefing, both of which need a live chain.
-- Both fail → `GexCacheResponse` (`source: 'cache'`) carrying the newest saved reading and its timestamp, behind a red banner. **Session expiry is exempt**: `REAUTH_REQUIRED` always returns 401 and is never papered over by UW or by cache, because the user needs to reconnect, not to see a GEX table that looks fine.
-- Both fail with no history → the error, with both sources' real messages.
+- Schwab unusable, CBOE OK → the same `GexProfile` shape plus `source: 'cboe'`, `cboeAsOf`, `cboeSymbol` and `schwabDetail` — full chart and briefing, with the screen saying which chain it is.
+- Schwab and CBOE fail, UW OK → `GexLevelsResponse` (`source: 'uw'`) with `schwabDetail` **and** `cboeDetail` — levels only, no bar chart, no AI briefing, both of which need a live chain.
+- All three fail → `GexCacheResponse` (`source: 'cache'`) carrying the newest saved reading (Schwab or CBOE slot) and its timestamp, behind a red banner. **Session expiry is exempt**: `REAUTH_REQUIRED` always returns 401 and is never papered over by CBOE, UW or cache, because the user needs to reconnect, not to see a GEX table that looks fine.
+- All three fail with no history → the error, with all three sources' real messages. (Before this, the hollow-chain branch put only Schwab's reason in `detail` and dropped UW's — so an expired UW trial key was invisible on screen.)
 
 `src/lib/gexhistory.ts` keeps the readings: one file on `/var/data` (`GEX_HISTORY_PATH`), at most one record per symbol per **15 minutes** (the Heatmap panel's 10-minute refresh would otherwise write ~144 records/symbol/day for no new information), pruned to **30 days**. Failed reads *are* recorded with a null side — a run of nulls is the evidence that a source is down, not noise. Every function swallows its own errors: a broken history file must never take `/api/gex` down with it, since history is the extra, not the point.
 

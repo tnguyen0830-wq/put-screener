@@ -338,13 +338,28 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
   'gex.zeroGamma': { vi: 'Zero gamma', en: 'Zero gamma' },
   'gex.srcSchwab': { vi: 'App (Schwab)', en: 'App (Schwab)' },
+  'gex.srcCboe': { vi: 'App (CBOE)', en: 'App (CBOE)' },
+  'gex.cboeSource': {
+    vi: (v: any) =>
+      `Chuỗi quyền chọn ở đây lấy từ feed công khai trễ 15 phút của CBOE (file ${v.file}, dấu giờ CBOE: ${v.asOf}) - cùng nguồn mà tapchiphowall.com dùng - rồi app tự tính bằng đúng công thức như mọi mã khác. Không phải chuỗi Schwab: giá và greeks là của CBOE, trễ 15 phút; open interest chỉ đổi mỗi ngày một lần nên các mức tường không bị ảnh hưởng đáng kể.`,
+    en: (v: any) =>
+      `This chain comes from CBOE's public 15-minute-delayed feed (file ${v.file}, CBOE timestamp ${v.asOf}) - the same source tapchiphowall.com reads - and the app computes it with the same formula as every other symbol. It is not the Schwab chain: prices and greeks are CBOE's and 15 minutes stale; open interest only changes once a day, so the walls are barely affected.`,
+  },
+  'gex.cboeWhy': {
+    vi: (why: string) => `Đi đường CBOE vì chuỗi Schwab không dùng được cho mã này: ${why}`,
+    en: (why: string) => `Using CBOE because Schwab's option chain is unusable for this symbol: ${why}`,
+  },
+  'gex.cboeFailed': {
+    vi: (d: string) => `CBOE (feed công khai, bậc cho biểu đồ cột) cũng không cho chuỗi: ${d}`,
+    en: (d: string) => `CBOE (the public feed that would give the bar chart) failed too: ${d}`,
+  },
   'gex.srcUw': { vi: 'Unusual Whales', en: 'Unusual Whales' },
   'gex.diff': { vi: 'Lệch', en: 'Diff' },
   'gex.compareNote': {
     vi: (v: any) =>
-      `Số bên trái app tự tính từ chuỗi quyền chọn Schwab; bên phải là của Unusual Whales (cơ sở "${v.basis}", ngày ${v.date}). Hai mô hình khác nhau trên hai nguồn dữ liệu khác nhau — lệch nhau là bình thường, không bên nào là chuẩn.`,
+      `Số bên trái app tự tính từ chuỗi quyền chọn ${v.left ?? 'Schwab'}; bên phải là của Unusual Whales (cơ sở "${v.basis}", ngày ${v.date}). Hai mô hình khác nhau trên hai nguồn dữ liệu khác nhau — lệch nhau là bình thường, không bên nào là chuẩn.`,
     en: (v: any) =>
-      `Left column is self-computed from the Schwab option chain; right is Unusual Whales' own (basis "${v.basis}", ${v.date}). Two models on two different data feeds — a gap is expected, neither side is the reference.`,
+      `Left column is self-computed from the ${v.left ?? 'Schwab'} option chain; right is Unusual Whales' own (basis "${v.basis}", ${v.date}). Two models on two different data feeds — a gap is expected, neither side is the reference.`,
   },
   'gex.uwFailed': {
     vi: (d: string) => `Không lấy được mức của Unusual Whales để đối chiếu: ${d}`,
@@ -435,6 +450,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Toàn bộ strike, giá, lãi/lỗ tối đa và điểm hoà vốn dưới đây tính từ giá thật trên chuỗi quyền chọn Schwab (không phải Claude tạo ra) - Claude chỉ viết phần diễn giải bên dưới. Chưa có mô hình biến động Heston (spot vol/long-run vol/half-life) và chưa có Calendar Spread - cả hai cần thêm hạ tầng riêng. Lỗ tối đa của lệnh bán put trần trụi tính đúng theo lý thuyết (hữu hạn, giá không xuống dưới 0), không dùng quy ước "Unlimited" lỏng lẻo.',
     en: "Every strike, price, max gain/loss and breakeven below comes from real Schwab option chain prices (not written by Claude) - Claude only writes the narrative underneath. No Heston volatility model (spot vol/long-run vol/half-life) and no Calendar Spread yet - both need dedicated infrastructure. A naked short put's max loss is computed correctly per payoff theory (finite, since price can't go below 0), not the loose \"Unlimited\" convention.",
   },
+  'tb.cboeNote': {
+    vi: (asOf: string) =>
+      `Kèo dưới đây dựng từ chuỗi CBOE trễ 15 phút (dấu giờ ${asOf}), không phải chuỗi Schwab - giá bid/ask có thể đã dịch so với lúc bạn đọc. Kiểm tra lại giá trên Schwab trước khi đặt lệnh.`,
+    en: (asOf: string) =>
+      `These ideas are built from CBOE's 15-minute-delayed chain (timestamp ${asOf}), not Schwab's - bid/ask may have moved since. Re-check prices on Schwab before placing an order.`,
+  },
   'tb.regime': { vi: 'Chế độ GEX', en: 'GEX regime' },
   'tb.regimePositive': { vi: 'DƯƠNG — dealer hãm biến động', en: 'POSITIVE — dealers dampen moves' },
   'tb.regimeNegative': { vi: 'ÂM — dealer khuếch đại biến động', en: 'NEGATIVE — dealers amplify moves' },
@@ -464,8 +485,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (sym: string) => `Market Maker Exposure — ${sym}`,
   },
   'gexmm.note': {
-    vi: 'Tự tính từ chuỗi quyền chọn Schwab của chính bạn (giống biểu đồ GEX ở tab Phân tích), không phải dữ liệu CBOE trễ 15 phút. Tự làm mới mỗi 10 phút.',
-    en: "Self-computed from your own Schwab option chain (same method as the Analyze tab's GEX chart), not CBOE's 15-minute-delayed feed. Auto-refreshes every 10 minutes.",
+    vi: 'Tự tính từ chuỗi quyền chọn Schwab của chính bạn (giống biểu đồ GEX ở tab Phân tích). Mã nào Schwab không trả dữ liệu (SPX và các chỉ số) thì lấy chuỗi từ feed công khai trễ 15 phút của CBOE và màn hình nói rõ. Tự làm mới mỗi 10 phút.',
+    en: "Self-computed from your own Schwab option chain (same method as the Analyze tab's GEX chart). Where Schwab returns no data (SPX and other indices) the chain comes from CBOE's public 15-minute-delayed feed instead, and the screen says so. Auto-refreshes every 10 minutes.",
   },
   'gexmm.customPlaceholder': { vi: 'Mã khác…', en: 'Other ticker…' },
   'gexmm.go': { vi: 'Xem', en: 'Go' },

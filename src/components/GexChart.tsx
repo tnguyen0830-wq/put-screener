@@ -21,6 +21,13 @@ type SchwabGex = GexProfile & {
    *  cấu hình hoặc lượt gọi đó hỏng (khi đó `uwDetail` nói vì sao). */
   uw?: GexUwLevels | null;
   uwDetail?: string;
+  /** 'cboe' khi chuỗi lấy từ feed công khai trễ 15 phút của CBOE thay vì
+   *  Schwab (lib/cboe.ts) - cùng công thức, khác nguồn. Vắng mặt = Schwab. */
+  source?: 'cboe';
+  cboeAsOf?: string | null;
+  cboeSymbol?: string;
+  /** Chỉ khi source = 'cboe': vì sao Schwab không dùng được. */
+  schwabDetail?: string;
 };
 
 type GexResponse = SchwabGex | GexLevelsResponse | GexCacheResponse;
@@ -52,11 +59,15 @@ function GexCompare({
   schwab,
   uw,
   uwDetail,
+  leftLabel,
   t,
 }: {
   schwab: GexSnapshotLike | null;
   uw: GexUwLevels | null;
   uwDetail?: string;
+  /** Tiêu đề cột trái: "App (Schwab)" hay "App (CBOE)" - cùng công thức,
+   *  nhưng người đọc phải biết chuỗi nào đang được tính. */
+  leftLabel?: string;
   t: (k: string, v?: any) => string;
 }) {
   // UW chưa cấu hình và cũng không có lỗi -> không có gì để so, không hiện
@@ -78,7 +89,7 @@ function GexCompare({
         <thead>
           <tr>
             <th />
-            <th>{t('gex.srcSchwab')}</th>
+            <th>{leftLabel ?? t('gex.srcSchwab')}</th>
             <th>{t('gex.srcUw')}</th>
             <th>{t('gex.diff')}</th>
           </tr>
@@ -108,7 +119,13 @@ function GexCompare({
         </tbody>
       </table>
       <p className="cap">
-        {t('gex.compareNote', { basis: uw.basis ?? '—', date: uw.date ?? '—' })}
+        {t('gex.compareNote', {
+          basis: uw.basis ?? '—',
+          date: uw.date ?? '—',
+          // "Schwab" hay "CBOE" - cùng công thức, nhưng câu chú thích phải
+          // nói đúng chuỗi nào đang được tính, khớp với tiêu đề cột.
+          left: leftLabel === t('gex.srcCboe') ? 'CBOE' : 'Schwab',
+        })}
       </p>
       {uw.rawKeys && (
         <p className="cap">
@@ -248,6 +265,9 @@ export default function GexChart({
         )}
 
         {data.schwabDetail && <p className="cap">{t('gex.uwWhy', data.schwabDetail)}</p>}
+        {/* Tới được UW nghĩa là CBOE cũng hỏng - phải nói, vì CBOE mới là
+            bậc cho biểu đồ cột; im lặng thì đọc thành "SPX vốn chỉ có 4 số". */}
+        {data.cboeDetail && <p className="cap">{t('gex.cboeFailed', data.cboeDetail)}</p>}
 
         {refreshMs && updatedAt && (
           <p className="cap">{t('gex.updatedAt', new Date(updatedAt).toLocaleTimeString())}</p>
@@ -262,30 +282,35 @@ export default function GexChart({
      `strikes`) và không hiện AI Trade Briefing - nó dựng kèo từ chuỗi quyền
      chọn sống, mà chuỗi đó chính là thứ không lấy được. */
   if (isCached(data)) {
+    // Bản đọc cũ có thể tính từ Schwab hoặc từ CBOE (cùng công thức) - lấy
+    // cái nào có, và nói rõ là cái nào ở tiêu đề cột.
+    const own = data.schwab ?? data.cboe ?? null;
+    const ownLabel = data.schwab ? t('gex.srcSchwab') : t('gex.srcCboe');
     return (
       <>
         <p className="gexstale">{t('gex.stale', new Date(data.at).toLocaleString())}</p>
         <dl className="stats gexstats">
           <div>
             <dt>{t('gex.putWall')}</dt>
-            <dd className="num-key">{data.schwab?.putWall?.toFixed(2) ?? '—'}</dd>
+            <dd className="num-key">{own?.putWall?.toFixed(2) ?? '—'}</dd>
           </div>
           <div>
             <dt>{t('gex.callWall')}</dt>
-            <dd>{data.schwab?.callWall?.toFixed(2) ?? '—'}</dd>
+            <dd>{own?.callWall?.toFixed(2) ?? '—'}</dd>
           </div>
           <div>
             <dt>{t('gex.zeroGamma')}</dt>
-            <dd>{data.schwab?.zeroGamma?.toFixed(2) ?? '—'}</dd>
+            <dd>{own?.zeroGamma?.toFixed(2) ?? '—'}</dd>
           </div>
           <div>
             <dt>{t('gex.absGamma')}</dt>
-            <dd>{data.schwab?.absGamma?.toFixed(2) ?? '—'}</dd>
+            <dd>{own?.absGamma?.toFixed(2) ?? '—'}</dd>
           </div>
         </dl>
-        <GexCompare schwab={data.schwab} uw={data.uw} uwDetail={undefined} t={t} />
+        <GexCompare schwab={own} uw={data.uw} uwDetail={undefined} leftLabel={ownLabel} t={t} />
         <p className="cap">{t('gex.bothDown')}</p>
         {data.schwabDetail && <p className="cap">Schwab: {data.schwabDetail}</p>}
+        {data.cboeDetail && <p className="cap">CBOE: {data.cboeDetail}</p>}
         {data.uwDetail && <p className="cap">UW: {data.uwDetail}</p>}
       </>
     );
@@ -637,7 +662,26 @@ export default function GexChart({
         </div>
       </dl>
 
-      <GexCompare schwab={data} uw={data.uw ?? null} uwDetail={data.uwDetail} t={t} />
+      {/* Chuỗi từ CBOE chứ không phải Schwab: nói NGAY dưới biểu đồ, trước
+          mọi thứ khác. Cùng công thức nên biểu đồ trông y hệt - và đó chính
+          là lý do phải nói: trễ 15 phút, greeks của CBOE, và đây là đường
+          vòng vì Schwab trả chuỗi rỗng ruột cho mã này. */}
+      {data.source === 'cboe' && (
+        <>
+          <p className="cap">
+            {t('gex.cboeSource', { asOf: data.cboeAsOf ?? '—', file: data.cboeSymbol ?? '' })}
+          </p>
+          {data.schwabDetail && <p className="cap">{t('gex.cboeWhy', data.schwabDetail)}</p>}
+        </>
+      )}
+
+      <GexCompare
+        schwab={data}
+        uw={data.uw ?? null}
+        uwDetail={data.uwDetail}
+        leftLabel={data.source === 'cboe' ? t('gex.srcCboe') : undefined}
+        t={t}
+      />
 
       <p className="cap">
         {strike === undefined
