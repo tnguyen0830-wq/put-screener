@@ -59,73 +59,101 @@
 }
 
 [data-theme='dark'] {
-  --paper: #0d1117;
-  --card: #161c24;
-  --ink: #e4ecf4;
-  --muted: #8b98a8;
-  --rule: #2c343f;
-  --label: #bdc9d9;
-  --ticker: #9fd7ff;
+  /* Bảng màu lấy từ ảnh chụp app Schwab của chủ app (2026-09-08), đo bằng
+     cách phân loại từng pixel rồi lấy màu hay gặp nhất - không phải ước lượng
+     bằng mắt. Cả hai ảnh cho cùng một bộ nền, nên đây là màu thật của app đó.
+     Mọi cặp chữ/nền đã kiểm tương phản: thấp nhất là đỏ trên thẻ 4.47:1, trên
+     ngưỡng 3.0 cho chữ lớn/đậm; chữ thường đều trên 4.5:1. */
+  --paper: #111518;
+  --card: #161a1d;
+  --ink: #f2f3f4;
+  /* Xám ngả xanh, KHÔNG phải xám trung tính - đây là nét đặc trưng nhất của
+     giao diện Schwab và đo được rất nhất quán (#8f99a3 lặp lại hàng nghìn
+     pixel ở cả hai ảnh). */
+  --muted: #8f99a3;
+  --rule: #262c31;
+  --label: #c3ccd4;
+  /* Xanh cyan là màu nhấn cho link, nhãn cột và tab đang chọn. */
+  --ticker: #009dda;
   --gold: #e8c874;
-  --navy: #1b4587;
-  --on-navy: #eef3fb;
-  --title: #7d9bff;
-  --rule-soft: #1d242d;
-  --hover: #1c232c;
-  /* Xanh và đỏ phải sáng hơn bản sáng, nếu không sẽ chìm vào nền tối. */
-  --credit: #00e676;
-  --credit-tint: #102c20;
-  --risk: #ff3b30;
-  --risk-tint: #351711;
-  --warn: #e0a13a;
-  --warn-tint: #3a2c10;
-  --stamp: #7d9bff;
-  --stamp-tint: #16203a;
-  --fg-line: #5b7fe8;
-  --heat-flat: #59616c;
+  /* Xanh đậm của nút/pill thương hiệu. */
+  --navy: #016e99;
+  --on-navy: #ffffff;
+  --title: #009dda;
+  --rule-soft: #1d2226;
+  --hover: #1b1f22;
+  /* Xanh lá của Schwab dịu hơn hẳn màu neon trước đây (#00e676): đo được
+     #4cb84c. Đỏ tương tự, ngả san hô chứ không đỏ rực. */
+  --credit: #4cb84c;
+  --credit-tint: #12261a;
+  --risk: #e5484d;
+  --risk-tint: #2e1416;
+  --warn: #ed7e12;
+  --warn-tint: #33230b;
+  --stamp: #009dda;
+  --stamp-tint: #0a2a38;
+  --fg-line: #009dda;
+  --heat-flat: #5a636b;
+  /* GEX giữ nguyên: đây là màu PHÂN LOẠI call/put đã được kiểm riêng (#93,
+     #94), không xuất hiện trong ảnh tham chiếu nên không có gì để khớp. */
   --gexcall: #ff6b60;
   --gexput: #5aa9ff;
   --gexabs: #f0a24a;
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.45);
 
   color-scheme: dark;
 }
+
 
 /* Chưa chọn tay thì theo hệ điều hành. :not([data-theme]) để lựa chọn sáng của
    người dùng không bị máy tối đè lên. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --paper: #0d1117;
-    --card: #161c24;
-    --ink: #e4ecf4;
-    --muted: #8b98a8;
-    --rule: #2c343f;
-  --label: #bdc9d9;
-  --ticker: #9fd7ff;
-  --gold: #e8c874;
-  --navy: #1b4587;
-  --on-navy: #eef3fb;
-  --title: #7d9bff;
-    --rule-soft: #1d242d;
-    --hover: #1c232c;
-    --credit: #00e676;
-    --credit-tint: #102c20;
-    --risk: #ff3b30;
-    --risk-tint: #351711;
-  --warn: #e0a13a;
-  --warn-tint: #3a2c10;
-    --stamp: #7d9bff;
-  --stamp-tint: #16203a;
-  --fg-line: #5b7fe8;
-    --heat-flat: #59616c;
-  --gexcall: #ff6b60;
-  --gexput: #5aa9ff;
-  --gexabs: #f0a24a;
+    /* Bảng màu lấy từ ảnh chụp app Schwab của chủ app (2026-09-08), đo bằng
+       cách phân loại từng pixel rồi lấy màu hay gặp nhất - không phải ước lượng
+       bằng mắt. Cả hai ảnh cho cùng một bộ nền, nên đây là màu thật của app đó.
+       Mọi cặp chữ/nền đã kiểm tương phản: thấp nhất là đỏ trên thẻ 4.47:1, trên
+       ngưỡng 3.0 cho chữ lớn/đậm; chữ thường đều trên 4.5:1. */
+    --paper: #111518;
+    --card: #161a1d;
+    --ink: #f2f3f4;
+    /* Xám ngả xanh, KHÔNG phải xám trung tính - đây là nét đặc trưng nhất của
+       giao diện Schwab và đo được rất nhất quán (#8f99a3 lặp lại hàng nghìn
+       pixel ở cả hai ảnh). */
+    --muted: #8f99a3;
+    --rule: #262c31;
+    --label: #c3ccd4;
+    /* Xanh cyan là màu nhấn cho link, nhãn cột và tab đang chọn. */
+    --ticker: #009dda;
+    --gold: #e8c874;
+    /* Xanh đậm của nút/pill thương hiệu. */
+    --navy: #016e99;
+    --on-navy: #ffffff;
+    --title: #009dda;
+    --rule-soft: #1d2226;
+    --hover: #1b1f22;
+    /* Xanh lá của Schwab dịu hơn hẳn màu neon trước đây (#00e676): đo được
+       #4cb84c. Đỏ tương tự, ngả san hô chứ không đỏ rực. */
+    --credit: #4cb84c;
+    --credit-tint: #12261a;
+    --risk: #e5484d;
+    --risk-tint: #2e1416;
+    --warn: #ed7e12;
+    --warn-tint: #33230b;
+    --stamp: #009dda;
+    --stamp-tint: #0a2a38;
+    --fg-line: #009dda;
+    --heat-flat: #5a636b;
+    /* GEX giữ nguyên: đây là màu PHÂN LOẠI call/put đã được kiểm riêng (#93,
+       #94), không xuất hiện trong ảnh tham chiếu nên không có gì để khớp. */
+    --gexcall: #ff6b60;
+    --gexput: #5aa9ff;
+    --gexabs: #f0a24a;
 
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.45);
 
     color-scheme: dark;
   }
@@ -145,7 +173,10 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--body);
-  font-size: 14px;
+  /* 15px chứ không phải 14: đo trên ảnh Schwab, tỉ lệ nhãn-mờ / số-chính là
+     0.72 và app này vốn đã đúng tỉ lệ đó (11/15 ở .stats), chỉ nhỏ hơn về
+     tuyệt đối. Nên chỉ cần nâng thang chữ, không phải sửa lại tỉ lệ. */
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -665,14 +696,18 @@ select {
 .run {
   width: 100%;
   margin-top: 6px;
-  padding: 11px;
-  background: var(--ink);
-  color: var(--card);
+  /* Pill xanh chữ trắng, giống hành động chính trên app Schwab (nút chọn tài
+     khoản và tab đang chọn trong ảnh tham chiếu đều dùng đúng màu này). Trước
+     đây nút này đảo màu - nền trắng chữ đen - nên là mảng sáng nhất màn hình
+     tối, hút mắt mạnh hơn cả số liệu. */
+  padding: 13px;
+  background: var(--navy);
+  color: var(--on-navy);
   border: none;
-  border-radius: var(--r-sm);
+  border-radius: 999px;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 12.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
@@ -680,6 +715,7 @@ select {
 
 .run:hover:not(:disabled) {
   background: var(--stamp);
+  color: var(--paper);
 }
 
 .run:disabled {
@@ -932,16 +968,19 @@ table.results tbody tr.clickable {
 
 .stats dt {
   font-family: var(--data);
-  font-size: 11px;
+  font-size: 11.5px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .stats dd {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-family: var(--data);
-  font-size: 15px;
+  /* Số to hẳn so với nhãn (18 / 11.5 ≈ 0.64) - trên ảnh Schwab con số là thứ
+     đọc trước, nhãn chỉ để chú thích. Trước đây 15/11 quá gần nhau nên cả
+     hai đọc như nhau. */
+  font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
