@@ -7,6 +7,7 @@ import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl, tcpwGexUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
+import type { ProfileFields } from '@/lib/profiletranslate';
 
 /** Dạng dữ liệu do /api/analyze trả về. */
 type Analysis = {
@@ -141,8 +142,20 @@ function Row({
  *
  * Mọi trường đều có thể trống: trường nào trống thì biến mất, không để lại một
  * hàng dấu gạch.
+ *
+ * `sector`/`industry`/`country`/`description` lấy nguyên văn từ Finviz và FMP
+ * - hai nguồn chỉ có tiếng Anh. `translated` cho biết `p` đang truyền vào đã
+ * được AnalysisPanel thay bằng bản dịch tiếng Việt (lib/profiletranslate.ts)
+ * hay chưa (chưa dịch xong, dịch hỏng, hoặc UI đang ở tiếng Anh) - component
+ * này không tự gọi API dịch, chỉ hiện đúng những gì được đưa vào.
  */
-function CompanyProfileCard({ p }: { p: NonNullable<Analysis['profile']> }) {
+function CompanyProfileCard({
+  p,
+  translated,
+}: {
+  p: NonNullable<Analysis['profile']>;
+  translated?: boolean;
+}) {
   const { t: tr } = useLang();
   const [open, setOpen] = useState(false);
 
@@ -203,6 +216,7 @@ function CompanyProfileCard({ p }: { p: NonNullable<Analysis['profile']> }) {
       )}
 
       <p className="cap">{tr('an.companyNote')}</p>
+      {translated && <p className="cap">{tr('an.companyTranslated')}</p>}
     </>
   );
 }
@@ -223,14 +237,21 @@ export default function AnalysisPanel({
      phần "Claude đọc chỉ số" cùng với kỹ thuật/cơ bản - chủ app muốn Claude
      đọc TẤT CẢ chỉ số một lượt, không tách kỹ thuật một nơi, GEX một nơi. */
   const [gex, setGex] = useState<any>(null);
+  /* Bản dịch tiếng Việt của sector/industry/country/description - nguồn
+     gốc (Finviz/FMP) chỉ có tiếng Anh, đây là chỗ duy nhất trên trang còn
+     tiếng Anh khi UI ở chế độ tiếng Việt. null = chưa dịch xong hoặc dịch
+     hỏng; CompanyProfileCard khi đó tự lùi về hiện nguyên văn tiếng Anh. */
+  const [profileVi, setProfileVi] = useState<ProfileFields | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { lang } = useLang();
 
   const load = useCallback(async (symbol: string) => {
     const s = symbol.trim().toUpperCase();
     if (!s) return;
     setLoading(true);
     setError(null);
+    setProfileVi(null);
     try {
       const r = await fetch(`/api/analyze?symbol=${encodeURIComponent(s)}`);
       const j = await r.json();
@@ -244,6 +265,40 @@ export default function AnalysisPanel({
       setLoading(false);
     }
   }, []);
+
+  /* Dịch profile sang tiếng Việt khi UI đang ở tiếng Việt và mã đang xem có
+     gì để dịch. Có cache trên đĩa ở phía server (lib/profiletranslate.ts),
+     nên đây KHÔNG phải một lượt gọi Claude mỗi lần mở trang - chỉ tốn tiền
+     lần đầu tiên mã đó từng được xem ở chế độ tiếng Việt. Đổi ngôn ngữ
+     sang tiếng Anh không cần dịch ngược - văn bản gốc vốn đã là tiếng Anh. */
+  useEffect(() => {
+    if (lang !== 'vi' || !data?.profile) return;
+    const p = data.profile;
+    if (!p.sector && !p.industry && !p.country && !p.description) return;
+    let alive = true;
+    fetch('/api/ai/profile-translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: data.symbol,
+        sector: p.sector,
+        industry: p.industry,
+        country: p.country,
+        description: p.description,
+      }),
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive) setProfileVi(j.translated ?? null);
+      })
+      .catch(() => {
+        // Dịch hỏng: giữ nguyên tiếng Anh, không cần báo lỗi cho một phần
+        // phụ trợ hiển thị.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [lang, data?.symbol, data?.profile]);
 
   // Mã do tab khác đẩy sang thì luôn thắng lựa chọn hiện tại.
   useEffect(() => {
@@ -360,7 +415,16 @@ export default function AnalysisPanel({
               </div>
             </div>
 
-            {data.profile && <CompanyProfileCard p={data.profile} />}
+            {data.profile && (
+              <CompanyProfileCard
+                p={
+                  lang === 'vi' && profileVi
+                    ? { ...data.profile, ...profileVi }
+                    : data.profile
+                }
+                translated={lang === 'vi' && !!profileVi}
+              />
+            )}
 
             <ColorLegend />
 
