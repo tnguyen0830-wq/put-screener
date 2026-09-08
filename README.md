@@ -345,6 +345,14 @@ lịch sử giá Schwab, hồ sơ công ty, tin tức, và biểu đồ TradingV
 `/api/analyze` nói rõ **nguồn nào trả lời được, nguồn nào không** thay vì lặng lẽ
 để trống — một mục trống vì API lỗi trông y hệt một mục trống vì không có tin gì.
 
+Nút **"Nhờ Claude phân tích"** đọc **toàn bộ** chỉ số trên trang trong một lượt:
+kỹ thuật (SMA, RSI, MACD, ATR, Bollinger, HV), biến động ngụ ý, cơ bản, **và
+cấu trúc gamma** lấy từ đúng biểu đồ GEX cuối trang (put wall, call wall, zero
+gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi). Claude chỉ được dùng
+đúng những con số đang hiện, không có tin tức hay dữ liệu ngoài, và phải nói
+thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual Whales — một mục vắng mặt
+rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent API.
+
 ## Heatmap — nhìn cả thị trường
 
 Bản đồ nhiệt toàn rổ theo nhiều khung thời gian, kèm biểu đồ **RRG** (xoay vòng

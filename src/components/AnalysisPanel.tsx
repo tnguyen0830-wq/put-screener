@@ -219,6 +219,10 @@ export default function AnalysisPanel({
 }) {
   const [input, setInput] = useState('');
   const [data, setData] = useState<Analysis | null>(null);
+  /* Bản đọc GEX của mã đang xem, do GexChart (cuối trang) báo lên. Đưa vào
+     phần "Claude đọc chỉ số" cùng với kỹ thuật/cơ bản - chủ app muốn Claude
+     đọc TẤT CẢ chỉ số một lượt, không tách kỹ thuật một nơi, GEX một nơi. */
+  const [gex, setGex] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -235,6 +239,7 @@ export default function AnalysisPanel({
     } catch (e: any) {
       setError(e.message);
       setData(null);
+      setGex(null);
     } finally {
       setLoading(false);
     }
@@ -359,7 +364,7 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} />
+            <AiRead analysis={data} gex={gex} />
 
             <h3 className="dsec">{tr('an.technical')}</h3>
             <dl className="stats">
@@ -554,7 +559,7 @@ export default function AnalysisPanel({
             </p>
 
             <h3 className="dsec">{tr('an.gamma')}</h3>
-            <GexChart symbol={data.symbol} />
+            <GexChart symbol={data.symbol} onData={setGex} />
             <p className="cap">
               {tr('an.gammaNote')}
             </p>
