@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-07 — SPX GEX via CBOE's public 15-min-delayed chain (cdn.cboe.com `_SPX.json`, the feed tapchiphowall reads) as the rung between Schwab and UW, so SPX gets the bar chart + AI briefing again. Branch `claude/read-claude-reader-md-bmj1lu`. Touches gex route, tradebrief route, GexChart.tsx, TradeBriefingPanel.tsx, i18n.tsx, README, CLAUDE.md.
+Nothing in progress as of 2026-09-07.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-07 — #109 SPX has its bar chart and AI briefing back, via **CBOE's public 15-min-delayed chain** (`cdn.cboe.com/.../_SPX.json`, the feed tapchiphowall reads - no key, no quota). New `lib/cboe.ts` converts it to the Schwab chain shape; new `lib/gexchain.ts` owns the Schwab→CBOE rungs and is shared by /api/gex AND /api/tradebrief. Ladder is now Schwab → CBOE → UW → disk → error. CBOE's JSON shape is UNVERIFIED from the sandbox: a mismatch prints the real keys on screen - if the owner reports that line, fix the field names, don't guess. Touches i18n.tsx.
 - 2026-09-06 — #108 **Overturns #103.** SPX is a Schwab **API defect**, not a missing entitlement. The owner's thinkorswim, same account, 26 min after the API reading, shows real open interest on the same contracts (8 SEP 26: 7800C = 5,671, 7650P = 3,653) where the API returns 0 on all 3600. OI is exchange data, not computed locally, so the account HAS the data. Reported to traderapi@schwab.com. The measurements in #103 were right; the interpretation was not - it was inferred from one surface and never cross-checked against a second. Docs only.
 - 2026-09-06 — #107 Second uwprobe reading closes it: spot-exposures is a TIME SERIES (564 buckets, exactly 1 price each, looksLikePriceCurve=false), not a gamma-vs-price curve. So no UW endpoint can draw an SPX chart either - SPX stays 4 numbers unless Schwab opens index-option data. Logged what UW's unused endpoints CAN do (251-day + intraday time series of chain-wide greeks - a "is dealer gamma rising or falling" chart the app lacks) and that only the _oi basis is populated for SPX. Kept /api/uwprobe rather than deleting it - it paid for itself three times in one day.
 - 2026-09-06 — #106 First uwprobe reading from production: NO UW endpoint has gamma per strike (greek-exposure is 251 rows by date, spot-exposures 564 by time, gex-levels is 4 levels) - so the SPX bar chart can't come from UW either. Probe's own heuristic misfired though: 'price' was in STRIKE_HINTS, and at spot-exposures that's the spot price. Fixed, plus curveShape groups by the bucket key (start_time, not per-row time) to tell a gamma-vs-price curve from a time series. Also learned: UW's _oi basis is comparable to ours, gex-levels runs on 'vol', and UW's unit is per-1%-move - same as ours.
@@ -155,7 +156,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #107. If you're reading this and a
+No PR is currently open and unmerged as of #109. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
