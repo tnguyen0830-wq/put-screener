@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-08 — #112 Analyze tab's company-profile card (sector/industry/country from Finviz, description from FMP - all English-only sources) now auto-translates to Vietnamese via Claude, cached on disk per symbol (`lib/profiletranslate.ts`) so it costs one API call ever per symbol, not per page view. Cache checked before the API-key check so an existing translation survives a key rotation. Falls back to English on any failure. Owner report: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh".
 - 2026-09-08 — #111 Analyze tab's "Ask Claude" now reads EVERY indicator in one pass: technical + implied vol + fundamentals + the GEX profile from the page's own chart (`GexChart.onData` → `AnalysisPanel` → `AiRead`; falls back to one `/api/gex` fetch, and the prompt says NOT AVAILABLE and why when there is none). Prompt lives in new `lib/airead.ts` (standalone-testable). Fixed on the way: `macd.histogram` vs `macd.hist` (histogram was always n/a), and %B/bid/ask/volume/sector never sent. Owner's ask: "gom technical và gex tất cả chỉ số".
 - 2026-09-08 — #110 UI now remembers the open tab, both sub-tabs, the GEX ticker and zoom in localStorage (new `lib/remember.ts`, validated allow-lists, read after hydration), and `GexChart` keeps the last good reading per symbol in memory so coming back to the tab shows the chart at once (a failed refresh keeps it and warns). SPY added to the Heatmap GEX presets. Owner's ask: "SPX bị mất mỗi lần thoát ra".
 - 2026-09-07 — #109 SPX has its bar chart and AI briefing back, via **CBOE's public 15-min-delayed chain** (`cdn.cboe.com/.../_SPX.json`, the feed tapchiphowall reads - no key, no quota). New `lib/cboe.ts` converts it to the Schwab chain shape; new `lib/gexchain.ts` owns the Schwab→CBOE rungs and is shared by /api/gex AND /api/tradebrief. Ladder is now Schwab → CBOE → UW → disk → error. CBOE's JSON shape is UNVERIFIED from the sandbox: a mismatch prints the real keys on screen - if the owner reports that line, fix the field names, don't guess. Touches i18n.tsx.
@@ -158,7 +159,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #111. If you're reading this and a
+No PR is currently open and unmerged as of #112. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -525,6 +526,16 @@ One reading of **every** indicator on the Analyze page — technical, implied vo
 `lib/airead.ts` owns the prompt (`facts()`, `gexFacts()`, `system()`), outside the route because Next route files may only export handlers and the table needs a standalone test. `facts()` takes the analysis object the page is displaying plus the `/api/gex` payload the page's own `GexChart` already fetched — `GexChart` grew an `onData` prop, `AnalysisPanel` holds the value and hands it to `AiRead`, so no second chain request. If the chart has not answered when the button is pressed, `AiRead` fetches `/api/gex` once itself; if that fails too it sends `gexError`, and the prompt says **NOT AVAILABLE and why** rather than leaving a gap — to Claude an absent section reads as "no gamma structure worth mentioning", which is a wrong conclusion, not a missing one. `gexFacts()` handles all four `/api/gex` shapes (Schwab / CBOE profile, UW levels-only, disk cache) and labels stale or levels-only readings as such.
 
 Two things fixed on the way, both silent before: the prompt read `macd.histogram` while the analyze route emits `macd.hist`, so the histogram was always `n/a`; and Bollinger %B, bid/ask/volume, sector/industry and dividend amount were computed but never sent. Keep the field list in `facts()` in step with the `Analysis` type in `AnalysisPanel.tsx` — there is no type linking them.
+
+### Company profile translation (`src/lib/profiletranslate.ts`, `/api/ai/profile-translate`)
+
+`sector`/`industry`/`country` come from Finviz's quote page, `description` from FMP — both English-only sources. Every other label on the page goes through `i18n.tsx`, so with the UI in Vietnamese these four fields were the one spot still reading English (reported by the owner: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh").
+
+Translating is not the same cost shape as Ask Claude. Ask Claude reads live indicators that change every time the page opens, so it stays a button the owner presses on purpose. A company's sector or business description barely ever changes, so `translateProfile()` caches the Vietnamese result **on disk, keyed by symbol**, hashing the four source fields to know when a re-translation is actually owed (Finviz/FMP data changed) versus when the cache still applies. The practical effect: Claude is called once per symbol, ever — not once per page view — so `AnalysisPanel` can fire the request automatically whenever the UI is in Vietnamese and a profile is loaded, with no per-view spend after the first.
+
+Cache is checked **before** the `ANTHROPIC_API_KEY` check, not after — a translation already on disk must keep working even if the key is later rotated or removed, since serving it needs no API call at all. Only an actual cache miss (new symbol, or source text that changed) needs a live key; missing one there just means the card falls back to showing the original English, the same as any other failure path here (bad JSON back from Claude, a network error) — this is a display nicety, not core data, so nothing about the rest of the Analyze tab depends on it working.
+
+`AnalysisPanel` merges the translated fields over the English `profile` object before handing it to `CompanyProfileCard`, so the card itself stays language-unaware (it renders whatever `p` it's given) and only gets a `translated` flag to show the disclaimer note. Switching back to English needs no reverse translation — the original fields are English already.
 
 ### AI Trade Briefing (`src/lib/tradebrief.ts`, `TradeBriefingPanel.tsx`)
 

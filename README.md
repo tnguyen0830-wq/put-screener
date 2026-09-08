@@ -353,6 +353,14 @@ gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi). Claude chỉ �
 thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual Whales — một mục vắng mặt
 rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent API.
 
+**Hồ sơ công ty tự dịch sang tiếng Việt.** Lĩnh vực, ngành, quốc gia (Finviz)
+và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
+trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude
+dịch bốn trường này, kết quả lưu cache theo mã nên chỉ tốn một lượt gọi **mỗi
+mã, mãi mãi** chứ không phải mỗi lần mở trang. Dịch hỏng thì hiện lại nguyên
+văn tiếng Anh, không chặn phần còn lại của trang. Có dòng chú thích nhỏ nhắc
+đây là bản dịch tự động, có thể chưa chính xác 100%.
+
 ## Heatmap — nhìn cả thị trường
 
 Bản đồ nhiệt toàn rổ theo nhiều khung thời gian, kèm biểu đồ **RRG** (xoay vòng

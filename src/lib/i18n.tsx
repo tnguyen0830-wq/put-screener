@@ -946,6 +946,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chưa lấy được mô tả doanh nghiệp cho mã này.',
     en: 'No business description came back for this ticker.',
   },
+  'an.companyTranslated': {
+    vi: 'Lĩnh vực, ngành, quốc gia và mô tả ở trên do Claude dịch tự động từ nguyên văn tiếng Anh của Finviz/FMP - có thể chưa chính xác 100%.',
+    en: 'The sector, industry, country and description above were auto-translated by Claude from the original English Finviz/FMP text - may not be 100% accurate.',
+  },
 
   'an.technical': { vi: 'Kỹ thuật', en: 'Technicals' },
   'an.aboveSignal': { vi: 'trên tín hiệu', en: 'above signal' },
