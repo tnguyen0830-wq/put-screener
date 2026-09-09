@@ -164,7 +164,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #116. If you're reading this and a
+No PR is currently open and unmerged as of #117. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
