@@ -23,6 +23,12 @@ import Anthropic from '@anthropic-ai/sdk';
  * Đồng bộ model với `/api/ai` (cùng `claude-opus-5`) nhưng effort thấp -
  * dịch không cần suy luận sâu như đọc chỉ số. Không streaming: output ngắn
  * và phải đọc trọn vẹn thì cache mới ghi được, phát dần không có ý nghĩa.
+ *
+ * effort thấp KHÔNG có nghĩa là không suy nghĩ. Trên `claude-opus-5`,
+ * adaptive thinking BẬT SẴN kể cả khi không truyền `thinking`, và effort
+ * chỉ chỉnh độ sâu chứ không tắt. Phần suy nghĩ đó tiêu vào ĐÚNG hạn mức
+ * `max_tokens` của bản dịch - đây là lý do thật khiến bản dịch hỏng, xem
+ * ghi chú ở MAX_TOKENS ngay dưới.
  */
 
 const CACHE_PATH = path.resolve('.cache/profile-translate.json');
@@ -67,7 +73,28 @@ async function writeCache(c: Cache): Promise<void> {
 }
 
 const MODEL = 'claude-opus-5';
-const MAX_TOKENS = 3072;
+
+/**
+ * Trần, không phải mức chi - output tính tiền theo số chữ Claude thật sự
+ * viết, nên đặt rộng không tốn thêm đồng nào khi bản dịch ngắn.
+ *
+ * Trước đây trần này là 3072 và ĐÓ là nguyên nhân thật của triệu chứng
+ * "chọn tiếng Việt mà thông tin công ty vẫn tiếng Anh" mà chủ app đã báo
+ * ba lần (#112, #117, và lần này). Hai thứ cộng lại vượt trần:
+ *
+ *   - `claude-opus-5` bật adaptive thinking sẵn (khác Opus 4.8/4.7, nơi
+ *     không truyền `thinking` là không suy nghĩ), và phần suy nghĩ ăn
+ *     chung `max_tokens` với bản dịch.
+ *   - Tiếng Việt có dấu tốn token hơn tiếng Anh rõ rệt, mà `description`
+ *     của FMP là cả một đoạn văn.
+ *
+ * Chạm trần thì JSON bị cắt giữa chừng, `JSON.parse` văng, và bản cũ xếp
+ * chung vào `failed` - trông y hệt một lỗi mạng thoáng qua, nên không ai
+ * lần ra được. `/api/ai` (luồng "Nhờ Claude phân tích", vẫn chạy tốt) đã
+ * để 16.000 vì đúng lý do này; ở đây trước giờ lệch khỏi con số đó mà
+ * không có lý do nào cả.
+ */
+const MAX_TOKENS = 16_000;
 
 /** Chỉ đưa vào prompt - và chỉ mong đợi trong JSON trả về - những trường
  *  THẬT SỰ có nội dung. Không được để Claude tự bịa ra một "industry" khi
@@ -101,7 +128,20 @@ code fences, no commentary, no extra keys.`;
  * mà route AI khác (`/api/ai`) đã làm đúng - phân loại lỗi UY TÍN như dưới
  * đây chỉ là chép lại đúng cách route đó đã làm.
  */
-export type TranslateReason = 'no-key' | 'bad-key' | 'rate-limited' | 'failed';
+export type TranslateReason =
+  | 'no-key'
+  | 'bad-key'
+  | 'rate-limited'
+  /** Chạm trần `max_tokens` - câu trả lời bị cắt, JSON không đọc được. Tách
+   *  riêng khỏi `failed` vì cách sửa hoàn toàn khác: nới trần / rút ngắn
+   *  đầu vào, chứ không phải đợi rồi thử lại. Gộp chung chính là thứ đã
+   *  giấu nguyên nhân này suốt ba lần chủ app báo lỗi. */
+  | 'truncated'
+  /** API từ chối chính request - tham số sai, model sai. Lỗi CODE, vĩnh
+   *  viễn, không bao giờ tự khỏi; `failed` đọc như một trục trặc thoáng qua
+   *  nên người đọc sẽ thử lại mãi mà không ai đi sửa. */
+  | 'bad-request'
+  | 'failed';
 
 /** `reason` chỉ có mặt khi thật sự có lỗi. "Không có trường nào để dịch"
  *  không phải lỗi - trả `{ vi: null }` không kèm reason, để phía gọi biết
@@ -152,9 +192,22 @@ export async function translateProfile(
       messages: [{ role: 'user', content: JSON.stringify(Object.fromEntries(fields)) }],
     });
     const block = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+
+    // Kiểm tra trần TRƯỚC khi parse. Chạm trần thì hoặc không có khối text
+    // nào (suy nghĩ ăn hết hạn mức), hoặc có nhưng JSON đứt giữa chừng - cả
+    // hai đều là CÙNG một nguyên nhân, và cả hai trước đây đều rơi vào
+    // `failed` nên không phân biệt được với lỗi mạng.
+    if (res.stop_reason === 'max_tokens') return { vi: null, reason: 'truncated' };
     if (!block) return { vi: null, reason: 'failed' };
 
-    const parsed = JSON.parse(stripFence(block.text));
+    let parsed: any;
+    try {
+      parsed = JSON.parse(stripFence(block.text));
+    } catch {
+      // Trả về trọn vẹn nhưng không phải JSON - Claude nói gì đó thay vì
+      // dịch. Khác hẳn bị cắt, nên không được mang tiếng `truncated`.
+      return { vi: null, reason: 'failed' };
+    }
     const vi: ProfileFields = {};
     for (const [k] of fields) {
       const v = parsed?.[k];
@@ -175,7 +228,13 @@ export async function translateProfile(
         ? 'bad-key'
         : e instanceof Anthropic.RateLimitError
           ? 'rate-limited'
-          : 'failed';
+          : // 400: request sai chứ không phải dịch vụ trục trặc. Thêm vào vì
+            // `output_config` ở dưới là chỗ DUY NHẤT trong cả repo dùng tham
+            // số đó, và sandbox không có mạng nên nó chưa từng chạy thật một
+            // lần nào - nếu nó bị từ chối thì màn hình phải nói ra.
+            e instanceof Anthropic.BadRequestError
+            ? 'bad-request'
+            : 'failed';
     return { vi: null, reason };
   }
 }
