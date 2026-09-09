@@ -966,6 +966,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chưa dịch được: Anthropic đang giới hạn tần suất. Mở lại mã này sau ít phút.',
     en: 'Not translated: Anthropic is rate limiting. Reopen this symbol in a few minutes.',
   },
+  'an.companyTranslateTruncated': {
+    vi: 'Bản dịch bị cắt giữa chừng vì mô tả quá dài. Mở lại mã này để dịch lại - nếu vẫn vậy thì cần nới hạn mức token của phần dịch.',
+    en: 'The translation was cut off because the description ran long. Reopen this symbol to retry - if it keeps happening the translation token ceiling needs raising.',
+  },
+  'an.companyTranslateBadRequest': {
+    vi: 'Chưa dịch được: Anthropic từ chối yêu cầu (lỗi tham số phía app). Thử lại cũng không hết - cần sửa code.',
+    en: 'Not translated: Anthropic rejected the request (a parameter bug in the app). Retrying will not help - this needs a code fix.',
+  },
   'an.companyTranslateFailed': {
     vi: 'Chưa dịch được lần này. Mở lại mã này để thử lại.',
     en: 'Translation failed this time. Reopen this symbol to try again.',

@@ -234,7 +234,11 @@ function CompanyProfileCard({
                 ? 'an.companyTranslateBadKey'
                 : translateReason === 'rate-limited'
                   ? 'an.companyTranslateRateLimited'
-                  : 'an.companyTranslateFailed'
+                  : translateReason === 'truncated'
+                    ? 'an.companyTranslateTruncated'
+                    : translateReason === 'bad-request'
+                      ? 'an.companyTranslateBadRequest'
+                      : 'an.companyTranslateFailed'
           )}
         </p>
       )}
