@@ -694,7 +694,18 @@ select {
   margin: 0 0 13px;
 }
 
-.hint-warn {
+/* BUG THẬT, đo được: viết `.hint-warn` một mình thì specificity bằng đúng
+   `.hint` (0,1,0 cả hai), và khối "tầng 3: ghi chú" ở cuối file định nghĩa
+   lại `.hint { color: var(--muted) }` SAU rule này - nên every className=
+   "hint hint-warn" trong app từng render ra XÁM MỜ, không phải màu cảnh
+   báo, ở CẢ MƯỜI chỗ đang dùng (AiRead, FearGreed, FilterPanel×3, GexChart,
+   TradeBriefingPanel×3). Xác nhận bằng cách dựng phần tử thật trong trình
+   duyệt và đọc `getComputedStyle().color` - không đoán bằng mắt đọc CSS,
+   đúng bài học đã trả giá hai lần trước (#58's specificity bug, #101's
+   .gexstale). Viết thành selector ghép hai lớp để độ ưu tiên (0,2,0) LUÔN
+   thắng `.hint` một lớp (0,1,0), bất kể thứ tự khai báo trong file có đổi
+   sau này hay không - sửa tận gốc, không né bằng cách đặt lại thứ tự. */
+.hint.hint-warn {
   color: var(--warn);
 }
 

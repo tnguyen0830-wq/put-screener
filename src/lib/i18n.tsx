@@ -950,6 +950,26 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Lĩnh vực, ngành, quốc gia và mô tả ở trên do Claude dịch tự động từ nguyên văn tiếng Anh của Finviz/FMP - có thể chưa chính xác 100%.',
     en: 'The sector, industry, country and description above were auto-translated by Claude from the original English Finviz/FMP text - may not be 100% accurate.',
   },
+  // Vì sao phần này vẫn hiện tiếng Anh dù đang ở chế độ tiếng Việt - trước
+  // đây mọi lý do lùi về tiếng Anh trông giống hệt nhau (im lặng), nên báo
+  // lại đúng một triệu chứng không cách nào biết đang thiếu key hay hết hạn
+  // mức hay lỗi khác. Ba lý do sửa khác nhau nên tách ba câu.
+  'an.companyTranslateNoKey': {
+    vi: 'Chưa dịch được: server chưa có ANTHROPIC_API_KEY. Thêm biến đó trên Render rồi mở lại mã này.',
+    en: 'Not translated: the server has no ANTHROPIC_API_KEY. Add it on Render and reopen this symbol.',
+  },
+  'an.companyTranslateBadKey': {
+    vi: 'Chưa dịch được: khoá API bị từ chối. Kiểm tra lại ANTHROPIC_API_KEY trên Render.',
+    en: 'Not translated: the API key was rejected. Check ANTHROPIC_API_KEY on Render.',
+  },
+  'an.companyTranslateRateLimited': {
+    vi: 'Chưa dịch được: Anthropic đang giới hạn tần suất. Mở lại mã này sau ít phút.',
+    en: 'Not translated: Anthropic is rate limiting. Reopen this symbol in a few minutes.',
+  },
+  'an.companyTranslateFailed': {
+    vi: 'Chưa dịch được lần này. Mở lại mã này để thử lại.',
+    en: 'Translation failed this time. Reopen this symbol to try again.',
+  },
 
   'an.technical': { vi: 'Kỹ thuật', en: 'Technicals' },
   'an.aboveSignal': { vi: 'trên tín hiệu', en: 'above signal' },
