@@ -7,7 +7,7 @@ import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl, tcpwGexUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
-import type { ProfileFields } from '@/lib/profiletranslate';
+import type { ProfileFields, TranslateReason } from '@/lib/profiletranslate';
 
 /** Dạng dữ liệu do /api/analyze trả về. */
 type Analysis = {
@@ -148,13 +148,21 @@ function Row({
  * được AnalysisPanel thay bằng bản dịch tiếng Việt (lib/profiletranslate.ts)
  * hay chưa (chưa dịch xong, dịch hỏng, hoặc UI đang ở tiếng Anh) - component
  * này không tự gọi API dịch, chỉ hiện đúng những gì được đưa vào.
+ *
+ * `translateReason`: có mặt CHỈ khi đang ở tiếng Việt, có gì đó để dịch,
+ * và lượt dịch thật sự hỏng - phân biệt với `translated` false đơn thuần
+ * vì đang ở tiếng Anh hoặc chưa dịch xong (hai trường hợp không cần cảnh
+ * báo gì). Không có dòng này thì "đang tải" và "dịch hỏng vĩnh viễn" trông
+ * giống hệt nhau trên màn hình - đúng thứ chủ app đã báo lại hai lần.
  */
 function CompanyProfileCard({
   p,
   translated,
+  translateReason,
 }: {
   p: NonNullable<Analysis['profile']>;
   translated?: boolean;
+  translateReason?: TranslateReason | null;
 }) {
   const { t: tr } = useLang();
   const [open, setOpen] = useState(false);
@@ -217,6 +225,19 @@ function CompanyProfileCard({
 
       <p className="cap">{tr('an.companyNote')}</p>
       {translated && <p className="cap">{tr('an.companyTranslated')}</p>}
+      {translateReason && (
+        <p className="hint hint-warn">
+          {tr(
+            translateReason === 'no-key'
+              ? 'an.companyTranslateNoKey'
+              : translateReason === 'bad-key'
+                ? 'an.companyTranslateBadKey'
+                : translateReason === 'rate-limited'
+                  ? 'an.companyTranslateRateLimited'
+                  : 'an.companyTranslateFailed'
+          )}
+        </p>
+      )}
     </>
   );
 }
@@ -242,6 +263,13 @@ export default function AnalysisPanel({
      tiếng Anh khi UI ở chế độ tiếng Việt. null = chưa dịch xong hoặc dịch
      hỏng; CompanyProfileCard khi đó tự lùi về hiện nguyên văn tiếng Anh. */
   const [profileVi, setProfileVi] = useState<ProfileFields | null>(null);
+  /* Vì sao profileVi vẫn null - null nghĩa là "không có gì để dịch, không
+     phải lỗi" (mã ngắn, hoặc UI đang tiếng Anh); một chuỗi lý do nghĩa là
+     ĐÃ thử dịch và hỏng. Thêm sau khi chủ app báo lại đúng triệu chứng
+     "chọn tiếng Việt mà thông tin công ty vẫn tiếng Anh" lần thứ hai - bản
+     trước (#112) nuốt mọi lỗi thành cùng một null, không cách nào phân biệt
+     thiếu key với hết hạn mức với lỗi khác. */
+  const [profileViReason, setProfileViReason] = useState<TranslateReason | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { lang } = useLang();
@@ -252,6 +280,7 @@ export default function AnalysisPanel({
     setLoading(true);
     setError(null);
     setProfileVi(null);
+    setProfileViReason(null);
     try {
       const r = await fetch(`/api/analyze?symbol=${encodeURIComponent(s)}`);
       const j = await r.json();
@@ -276,6 +305,7 @@ export default function AnalysisPanel({
     const p = data.profile;
     if (!p.sector && !p.industry && !p.country && !p.description) return;
     let alive = true;
+    setProfileViReason(null);
     fetch('/api/ai/profile-translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -289,11 +319,18 @@ export default function AnalysisPanel({
     })
       .then((r) => r.json())
       .then((j) => {
-        if (alive) setProfileVi(j.translated ?? null);
+        if (!alive) return;
+        setProfileVi(j.translated ?? null);
+        // `reason` chỉ có khi dịch thật sự hỏng - không có gì để dịch thì
+        // route trả `{ translated: null }` không kèm reason, và không có
+        // cảnh báo nào hiện ra (đúng, vì không có gì sai cả).
+        setProfileViReason(j.reason ?? null);
       })
       .catch(() => {
-        // Dịch hỏng: giữ nguyên tiếng Anh, không cần báo lỗi cho một phần
-        // phụ trợ hiển thị.
+        // Lỗi mạng/parse ở CHÍNH lượt fetch này (route.ts chưa kịp trả JSON
+        // hợp lệ) - khác với lỗi Claude mà route đã bắt gọn thành `reason`.
+        // Vẫn phải nói ra, không được im lặng lùi về tiếng Anh.
+        if (alive) setProfileViReason('failed');
       });
     return () => {
       alive = false;
@@ -423,6 +460,7 @@ export default function AnalysisPanel({
                     : data.profile
                 }
                 translated={lang === 'vi' && !!profileVi}
+                translateReason={lang === 'vi' ? profileViReason : null}
               />
             )}
 

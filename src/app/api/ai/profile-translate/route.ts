@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
   };
 
   // Không văng lỗi ra ngoài: dịch là phần phụ trợ hiển thị, phía gọi lùi về
-  // tiếng Anh khi `translated` là null, không phải một trang lỗi.
-  const translated = await translateProfile(symbol, fields);
-  return NextResponse.json({ translated });
+  // tiếng Anh khi `translated` là null, không phải một trang lỗi. Nhưng
+  // `reason` (khi có) phải đi kèm - nó là thứ duy nhất phân biệt "chưa có gì
+  // để dịch" với "đã thử dịch và hỏng vì X", điều mà #112 từng bỏ sót và
+  // khiến chủ app phải báo lại đúng một triệu chứng lần thứ hai.
+  const { vi: translated, reason } = await translateProfile(symbol, fields);
+  return NextResponse.json({ translated, reason });
 }

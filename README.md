@@ -357,9 +357,16 @@ rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn v
 và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
 trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude
 dịch bốn trường này, kết quả lưu cache theo mã nên chỉ tốn một lượt gọi **mỗi
-mã, mãi mãi** chứ không phải mỗi lần mở trang. Dịch hỏng thì hiện lại nguyên
-văn tiếng Anh, không chặn phần còn lại của trang. Có dòng chú thích nhỏ nhắc
-đây là bản dịch tự động, có thể chưa chính xác 100%.
+mã, mãi mãi** chứ không phải mỗi lần mở trang. Dịch xong thì có dòng chú thích
+nhỏ nhắc đây là bản dịch tự động, có thể chưa chính xác 100%.
+
+Dịch hỏng thì hiện lại nguyên văn tiếng Anh — không chặn phần còn lại của
+trang — nhưng **có dòng nói rõ vì sao**: thiếu `ANTHROPIC_API_KEY`, khoá bị từ
+chối, hay Anthropic đang giới hạn tần suất là ba lý do khác nhau, sửa khác
+nhau. Trước đây cả ba trông giống hệt "chưa dịch xong" — không có gì để phân
+biệt "chưa chạy" với "chạy rồi mà hỏng luôn" — nên nếu bạn từng thấy phần này
+vẫn tiếng Anh dù đã bật tiếng Việt, hãy tìm dòng chữ cam bên dưới đoạn mô tả:
+nó nói đúng lý do và cách sửa.
 
 ## Heatmap — nhìn cả thị trường
 
