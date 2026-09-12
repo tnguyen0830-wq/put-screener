@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { COOKIE, SESSION_MS, signSession } from '@/lib/session';
-import { resolveUser, roleOf } from '@/lib/users';
+import { COOKIE, sessionMsFor, signSession } from '@/lib/session';
+import { authenticate } from '@/lib/userstore';
 
 /**
- * Nhận mật khẩu, phát phiên. Và thu lại khi đăng xuất.
+ * Nhận tên + mật khẩu, phát phiên. Và thu lại khi đăng xuất.
  *
  * Tách khỏi /api/auth/login - chỗ đó đã là bước bắt đầu OAuth của Schwab, một
  * chuyện hoàn toàn khác.
+ *
+ * Ô TÊN là thay đổi so với #119, nơi chỉ có ô mật khẩu và danh tính suy ra
+ * từ mật khẩu nào khớp. Cách cũ có một cái bẫy im lặng: hai người nhà vô
+ * tình đặt trùng mật khẩu thì người sau đăng nhập thành người trước, không
+ * có dấu hiệu gì trên màn hình.
  */
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +22,8 @@ export const dynamic = 'force-dynamic';
  * thì khoá một lúc. Nhớ trong RAM là đủ: server khởi động lại thì bộ đếm
  * mất, nhưng bot cũng phải bắt đầu lại từ đầu.
  *
- * Bộ đếm tính chung cho mọi tài khoản chứ không theo từng người: người gõ
- * sai chưa khai mình là ai (form chỉ có ô mật khẩu), nên không có gì để
- * đếm riêng - và đếm chung thì thêm tài khoản cho người nhà cũng không nới
- * thêm cửa cho bot.
+ * Đếm theo IP chứ không theo tên đăng nhập: đếm theo tên thì một người biết
+ * tên "vo" có thể cố tình gõ sai vài lần để KHOÁ người đó ra khỏi app.
  */
 const MAX_TRIES = 8;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -32,8 +35,7 @@ const clientIp = (req: NextRequest) =>
   'unknown';
 
 export async function POST(req: NextRequest) {
-  const password = process.env.APP_PASSWORD;
-  if (!password) {
+  if (!process.env.APP_PASSWORD) {
     // Chưa đặt mật khẩu thì không có gì để đăng nhập, và cũng không có gì được
     // gác. Nói thẳng thay vì phát ra một phiên vô nghĩa.
     return NextResponse.json({ error: 'NO_PASSWORD_SET' }, { status: 400 });
@@ -50,22 +52,28 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const given = typeof body?.password === 'string' ? body.password : '';
+  const givenUser = typeof body?.username === 'string' ? body.username : '';
+  const givenPass = typeof body?.password === 'string' ? body.password : '';
 
-  // Mật khẩu nào khớp thì đó là danh tính - không có ô tên đăng nhập. Xem
-  // lý do ở đầu lib/users.ts.
-  const user = resolveUser(given);
-  if (!user) {
+  const who = await authenticate(givenUser, givenPass);
+  if (!who) {
     const next = rec && rec.until > now ? rec : { n: 0, until: now + WINDOW_MS };
     next.n += 1;
     tries.set(ip, next);
-    return NextResponse.json({ error: 'WRONG_PASSWORD' }, { status: 401 });
+    // Một thông báo duy nhất cho cả tên sai lẫn mật khẩu sai: nói rõ cái nào
+    // sai là nói cho người lạ biết tên nào có thật trên máy này.
+    return NextResponse.json({ error: 'WRONG_LOGIN' }, { status: 401 });
   }
 
   tries.delete(ip);
-  const expiresAt = now + SESSION_MS;
-  const res = NextResponse.json({ ok: true, expiresAt, user, role: roleOf(user) });
-  res.cookies.set(COOKIE, await signSession(password, user, expiresAt), {
+  const expiresAt = now + sessionMsFor(who.role);
+  const res = NextResponse.json({
+    ok: true,
+    expiresAt,
+    user: who.name,
+    role: who.role,
+  });
+  res.cookies.set(COOKIE, await signSession(process.env.APP_PASSWORD, who.name, expiresAt), {
     httpOnly: true,
     sameSite: 'lax',
     // Trên máy nhà chạy http thì cookie secure sẽ không bao giờ được gửi đi.

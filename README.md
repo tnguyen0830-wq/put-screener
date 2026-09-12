@@ -148,24 +148,37 @@ xếp hạng tương đối, đừng coi là con số tuyệt đối.
 Mặc định app chỉ có một tài khoản, và ai có mật khẩu là thấy mọi thứ — kể cả
 tab My Portfolio, tức vị thế thật trong tài khoản Schwab của bạn.
 
-Đặt thêm biến `APP_USERS` trên Render (xem `DEPLOY.md`) để mở tài khoản cho
-người nhà:
+Đăng nhập gõ **tên + mật khẩu**. Tên của bạn là `owner` (đổi được bằng
+`APP_OWNER_USER`), mật khẩu là `APP_PASSWORD`.
 
-```
-APP_USERS=vo:matkhau-cua-vo,con:matkhau-cua-con
-```
+### Tạo tài khoản ngay trong app
 
-Người nhà đăng nhập bằng **mật khẩu riêng của họ** — form vẫn chỉ một ô, mật
-khẩu nào khớp thì đó là người đó. Họ dùng được Sell Put Screener, Analyze,
-Heatmap, Insider Trade, và có **watchlist riêng**. Họ **không** thấy My
-Portfolio, P/L đã chốt, cảnh báo, và không bấm được nút kết nối Schwab — gọi
-thẳng vào địa chỉ đó cũng bị từ chối, không chỉ ẩn nút đi.
+Menu ⚙️ → **Quản lý tài khoản** (chỉ chủ app thấy mục này). Ở đó thêm người,
+đổi mật khẩu cho họ, hoặc xoá — không phải sửa biến môi trường, không phải
+deploy lại. Tài khoản lưu trên ổ đĩa của app, **mật khẩu đã băm scrypt với
+salt riêng từng người**, nên mở file ra cũng không đọc được mật khẩu của ai.
 
-Ba điều cần biết: mọi người **dùng chung phiên Schwab và chung hạn mức** của
-bạn (người nhà quét cả rổ là tiêu vào 100 request/phút của bạn, bấm "Nhờ Claude
-phân tích" là tiêu tiền API của bạn); **mỗi lần chỉ một người quét được**, người
-thứ hai được báo chờ thay vì nhận nhầm kết quả của người kia; và muốn tách hẳn
-thì phải deploy một bản riêng chứ không phải thêm tài khoản.
+Người nhà dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade, và có
+**watchlist riêng**. Họ **không** thấy My Portfolio, P/L đã chốt, cảnh báo,
+và không bấm được nút kết nối Schwab — gọi thẳng vào địa chỉ đó cũng bị từ
+chối, không chỉ ẩn nút đi.
+
+Xoá một người là họ mất quyền **ngay lập tức** với mọi thứ riêng tư (danh mục,
+P/L, cảnh báo) và mất luôn quyền đăng nhập lại. Phần công cụ thị trường thuần
+tuý thì cookie cũ của họ còn đọc được tới khi hết hạn — phiên của người nhà
+cố tình chỉ **7 ngày** (của chủ app là 30) để khoảng đó không kéo dài.
+
+### Ba điều cần biết
+
+Mọi người **dùng chung phiên Schwab và chung hạn mức** của bạn (người nhà quét
+cả rổ là tiêu vào 100 request/phút của bạn, bấm "Nhờ Claude phân tích" là tiêu
+tiền API của bạn); **mỗi lần chỉ một người quét được**, người thứ hai được báo
+chờ thay vì nhận nhầm kết quả của người kia; và muốn tách hẳn thì phải deploy
+một bản riêng chứ không phải thêm tài khoản.
+
+Nếu bạn từng dùng biến `APP_USERS` (cách cũ): lần chạy đầu tiên sau khi cập
+nhật, app đọc nó **đúng một lần** để chuyển các tài khoản đó sang kho đã băm,
+rồi thôi. Từ đó sửa `APP_USERS` không còn tác dụng — quản lý trong app.
 
 ## Watchlist
 

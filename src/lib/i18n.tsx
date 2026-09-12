@@ -83,10 +83,16 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- login ----
+  'login.username': { vi: 'Tên đăng nhập', en: 'Username' },
   'login.password': { vi: 'Mật khẩu', en: 'Password' },
   'login.enter': { vi: 'Vào', en: 'Enter' },
   'login.checking': { vi: 'Đang kiểm tra…', en: 'Checking…' },
-  'login.wrong': { vi: 'Sai mật khẩu.', en: 'Wrong password.' },
+  'login.wrong': {
+    // Cố tình KHÔNG nói cái nào sai: nói "không có tên này" là nói cho người
+    // lạ biết tên nào có thật trên máy này.
+    vi: 'Sai tên đăng nhập hoặc mật khẩu.',
+    en: 'Wrong username or password.',
+  },
   'login.tooMany': {
     vi: (s: number) => `Thử sai quá nhiều lần. Chờ ${Math.ceil(s / 60)} phút rồi thử lại.`,
     en: (s: number) => `Too many attempts. Wait ${Math.ceil(s / 60)} minutes and try again.`,
@@ -104,6 +110,74 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không liên kết, không được bảo trợ và không do Charles Schwab & Co., Inc. vận hành. Trang này không bao giờ hỏi mật khẩu Schwab của bạn — việc đăng nhập Schwab diễn ra trên schwab.com.',
     en: 'Not affiliated with, endorsed by, or operated by Charles Schwab & Co., Inc. This page never asks for your Schwab credentials — Schwab sign-in happens on schwab.com.',
   },
+  /* ---- Quản lý tài khoản (/accounts, chỉ chủ app) ---- */
+  'acct.title': { vi: 'Tài khoản gia đình', en: 'Family accounts' },
+  'acct.open': { vi: 'Quản lý tài khoản', en: 'Manage accounts' },
+  'acct.intro': {
+    vi: 'Mỗi người nhà một tên đăng nhập và mật khẩu riêng. Họ dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade và có watchlist riêng — nhưng không thấy My Portfolio, P/L đã chốt, cảnh báo, và không kết nối Schwab được. Mật khẩu lưu dưới dạng đã băm, không ai đọc lại được, kể cả bạn.',
+    en: 'Each family member gets their own username and password. They can use Sell Put Screener, Analyze, Heatmap and Insider Trade, and keep their own watchlist — but not My Portfolio, realized P/L or alerts, and they cannot connect Schwab. Passwords are stored hashed; nobody can read them back, including you.',
+  },
+  'acct.listTitle': { vi: 'Đang có', en: 'Existing accounts' },
+  'acct.loading': { vi: 'Đang tải…', en: 'Loading…' },
+  'acct.empty': {
+    vi: 'Chưa có tài khoản nào cho người nhà. Thêm ở dưới.',
+    en: 'No family accounts yet. Add one below.',
+  },
+  'acct.loadFailed': {
+    vi: (e: string) => `Không đọc được danh sách tài khoản: ${e}`,
+    en: (e: string) => `Could not load the account list: ${e}`,
+  },
+  'acct.colName': { vi: 'Tên đăng nhập', en: 'Username' },
+  'acct.colCreated': { vi: 'Tạo ngày', en: 'Created' },
+  'acct.colUpdated': { vi: 'Đổi mật khẩu', en: 'Password changed' },
+  'acct.resetBtn': { vi: 'Đặt lại mật khẩu', en: 'Reset password' },
+  'acct.deleteBtn': { vi: 'Xoá', en: 'Delete' },
+  'acct.resetTitle': {
+    vi: (n: string) => `Đặt mật khẩu mới cho ${n}`,
+    en: (n: string) => `Set a new password for ${n}`,
+  },
+  'acct.newPassword': { vi: 'Mật khẩu mới (ít nhất 8 ký tự)', en: 'New password (8 characters minimum)' },
+  'acct.save': { vi: 'Lưu', en: 'Save' },
+  'acct.cancel': { vi: 'Huỷ', en: 'Cancel' },
+  'acct.addTitle': { vi: 'Thêm người', en: 'Add someone' },
+  'acct.name': { vi: 'Tên đăng nhập', en: 'Username' },
+  'acct.namePlaceholder': { vi: 'chữ thường, ví dụ: vo, con', en: 'lowercase, e.g. wife, son' },
+  'acct.password': { vi: 'Mật khẩu (ít nhất 8 ký tự)', en: 'Password (8 characters minimum)' },
+  'acct.addBtn': { vi: 'Tạo tài khoản', en: 'Create account' },
+  'acct.saving': { vi: 'Đang lưu…', en: 'Saving…' },
+  'acct.added': {
+    vi: (n: string) => `Đã tạo tài khoản "${n}". Đưa tên và mật khẩu cho họ.`,
+    en: (n: string) => `Created "${n}". Give them the username and password.`,
+  },
+  'acct.reset': {
+    vi: (n: string) => `Đã đổi mật khẩu cho "${n}".`,
+    en: (n: string) => `Password changed for "${n}".`,
+  },
+  'acct.deleted': {
+    vi: (n: string) => `Đã xoá "${n}".`,
+    en: (n: string) => `Deleted "${n}".`,
+  },
+  'acct.confirmDelete': {
+    vi: (n: string) => `Xoá tài khoản "${n}"? Họ sẽ không đăng nhập được nữa. Watchlist của họ vẫn còn trên đĩa nếu sau này tạo lại đúng tên đó.`,
+    en: (n: string) => `Delete "${n}"? They will no longer be able to log in. Their watchlist stays on disk if you later recreate the same name.`,
+  },
+  'acct.note': {
+    vi: 'Mọi người dùng chung phiên Schwab và chung hạn mức của bạn: người nhà quét cả rổ là tiêu vào 100 request/phút của bạn, bấm "Nhờ Claude phân tích" là tiêu tiền API của bạn. Xoá một người thì họ không đăng nhập lại được ngay, nhưng phiên đang mở của họ còn xem được dữ liệu thị trường tới khi hết hạn (tối đa 7 ngày) — danh mục của bạn thì không bao giờ.',
+    en: 'Everyone shares your Schwab session and your quotas: a family member scanning the full basket spends your 100 requests/minute, and pressing "Ask Claude" spends your API credit. Deleting someone blocks new logins immediately, but an open session of theirs can still read market data until it expires (7 days at most) — never your portfolio.',
+  },
+  'acct.err.invalid-name': {
+    vi: 'Tên chỉ được gồm chữ thường, số, gạch dưới và gạch ngang, tối đa 20 ký tự.',
+    en: 'Username may only contain lowercase letters, digits, underscore and hyphen, up to 20 characters.',
+  },
+  'acct.err.reserved-name': {
+    vi: '"owner" là tên dành riêng cho tài khoản của bạn.',
+    en: '"owner" is reserved for your own account.',
+  },
+  'acct.err.duplicate-name': { vi: 'Tên này đã có người dùng.', en: 'That username is already taken.' },
+  'acct.err.weak-password': { vi: 'Mật khẩu phải dài ít nhất 8 ký tự.', en: 'Password must be at least 8 characters.' },
+  'acct.err.not-found': { vi: 'Không tìm thấy tài khoản này.', en: 'No such account.' },
+  'acct.err.failed': { vi: 'Không lưu được. Thử lại.', en: 'Could not save. Try again.' },
+
   'login.note': {
     vi: 'Trang riêng. Phiên đăng nhập giữ 30 ngày trên máy này; đổi mật khẩu trên server là mọi phiên cũ hết hiệu lực ngay.',
     en: 'Private. A session lasts 30 days on this device; changing the password on the server ends every existing session at once.',

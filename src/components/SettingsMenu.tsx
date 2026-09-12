@@ -58,6 +58,23 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
     };
   }, [open]);
 
+  /* Vai trò, chỉ để quyết định có hiện link quản lý tài khoản hay không.
+     Mặc định 'member' lúc chưa biết: thà hiện thiếu một giây rồi thêm vào,
+     còn hơn loé lên rồi biến mất. */
+  const [role, setRole] = useState<'owner' | 'member'>('member');
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && (j.role === 'owner' || j.role === 'member')) setRole(j.role);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const attention = attentionOf(status);
 
   return (
@@ -129,6 +146,14 @@ export default function SettingsMenu({ status }: { status: ConnStatus | null }) 
           {status?.locked && (
             <>
               <div className="popsec">{t('settings.session')}</div>
+              {/* Chỉ chủ app thấy đường vào quản lý tài khoản. Ẩn ở đây là
+                  cho gọn mắt, không phải để gác - middleware chặn /accounts
+                  và /api/users theo vai trò, kể cả khi gõ thẳng địa chỉ. */}
+              {role === 'owner' && (
+                <a className="popaction" href="/accounts">
+                  {t('acct.open')}
+                </a>
+              )}
               <button
                 className="popaction"
                 onClick={async () => {

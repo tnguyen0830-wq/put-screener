@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser, roleOf } from '@/lib/users';
+import { roleOf } from '@/lib/users';
+import { requireUser } from '@/lib/userstore';
 
 /**
  * Ai đang đăng nhập, và với vai trò gì.
@@ -16,6 +17,9 @@ import { currentUser, roleOf } from '@/lib/users';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const user = currentUser(req);
+  const user = await requireUser(req);
+  // Tài khoản đã bị xoá nhưng cookie còn hạn: nói thẳng, để giao diện đưa
+  // họ ra trang đăng nhập thay vì hiện một app nửa vời.
+  if (!user) return NextResponse.json({ error: 'ACCOUNT_GONE' }, { status: 401 });
   return NextResponse.json({ user, role: roleOf(user) });
 }

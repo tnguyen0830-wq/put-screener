@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-12 — #120 **Ô tên đăng nhập + màn hình quản lý tài khoản.** #119 suy danh tính từ mật khẩu nào khớp; hai người trùng mật khẩu là người sau lặng lẽ đăng nhập THÀNH người trước - có ô tên thì lỗi đó không tồn tại được. Tài khoản rời `APP_USERS` sang file trên đĩa (`USERS_PATH`), **băm scrypt, salt riêng từng người và từng lần đổi**, quản lý ngay trong app (⚙ → Quản lý tài khoản, chỉ chủ app). `APP_USERS` giờ là HẠT GIỐNG MỘT LẦN - nếu để nó làm chủ thì xoá người trong app rồi deploy lại là họ sống dậy. Mật khẩu chủ app cố tình nằm NGOÀI kho đó (`APP_PASSWORD`), để file hỏng cũng không tự khoá mình ra ngoài. Ràng buộc định hình cả thiết kế: **middleware chạy Edge, không có `fs`**, nên `knownUser()` của #119 không hỏi được nữa - bù bằng ba thứ (cổng vai trò đọc từ cookie ĐÃ KÝ vẫn nguyên; `requireUser()` kiểm tra tồn tại phía Node, 401 `ACCOUNT_GONE` + đẩy ra `/login`; phiên người nhà rút còn 7 ngày vì route dữ liệu thị trường thuần tuý vẫn trả lời cookie của người đã xoá - ĐO được, không phải đoán). Hai lỗi tự soi ra và sửa luôn: `GET /api/session` trả tên chủ app trên một route ai cũng gọi được (đã xoá hẳn endpoint), và nhánh chưa xác thực của middleware chuyển tiếp `x-ps-user` của client (`strip()`). **Deploy: phải tự thêm `USERS_PATH` trên Render, và mọi người đăng nhập lại một lần.** Touches i18n.tsx, globals.css (chỉ thêm).
 - 2026-09-12 — #119 **Tài khoản cho người nhà.** `APP_USERS="ten:matkhau,..."` mở tài khoản phụ: dùng được Screener/Analyze/Heatmap/Insider Trade + watchlist RIÊNG, nhưng 403 với danh mục, P/L, cảnh báo và OAuth Schwab. Đăng nhập vẫn chỉ một ô mật khẩu - mật khẩu nào khớp thì đó là danh tính. Cookie giờ mang tên người dùng trong phần được ký; **định dạng cookie cũ bị từ chối, nên deploy lần đầu là mọi người phải đăng nhập lại một lần**. Watchlist trên đĩa đổi sang `{ten: [...]}`, mảng phẳng cũ vẫn đọc là của chủ app (đừng sửa chỗ đó - nó giữ watchlist thật trên Render). Đây là phân tách VAI TRÒ trên một phiên Schwab, không phải đa người dùng.
 - 2026-09-09 — #118 **Real root cause of the company profile staying English** (third report of the same symptom; #112 built it, #117 only made it visible). `claude-opus-5` runs adaptive thinking BY DEFAULT when `thinking` isn't passed — a change from Opus 4.8/4.7 — and thinking eats the same `max_tokens` as the answer. `profiletranslate.ts` capped it at 3072 believing "effort thấp" meant shallow/no reasoning; effort only tunes depth, it never turns thinking off. Long FMP description + Vietnamese diacritics + thinking overruns 3072 → JSON cut mid-string → `JSON.parse` throws → old code filed it as `failed`, identical on screen to a network blip. Cap now 16_000, matching `/api/ai`, which documents this exact hazard and had never been followed here. New reasons `truncated` (checked before the parse) and `bad-request` (`output_config.effort` is the repo's only use of that param and has never run live). Test fails against pre-fix code on all three points.
 - 2026-09-08 — #112 Analyze tab's company-profile card (sector/industry/country from Finviz, description from FMP - all English-only sources) now auto-translates to Vietnamese via Claude, cached on disk per symbol (`lib/profiletranslate.ts`) so it costs one API call ever per symbol, not per page view. Cache checked before the API-key check so an existing translation survives a key rotation. Falls back to English on any failure. Owner report: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh".
@@ -166,7 +167,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #117. If you're reading this and a
+No PR is currently open and unmerged as of #120. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -186,24 +187,55 @@ Both share one `RateLimiter` (100 req/min, under Schwab's 120 documented ceiling
 
 ### Two gates in `src/middleware.ts`, not one
 
-`/api/md/*` is a separate surface for a companion phone app, gated by a bearer/header token (`MD_API_TOKEN`) that must match the phone app's own config — no cookies involved. Everything else (pages + all other `/api/*`, including the Schwab OAuth callback itself) is gated by `APP_PASSWORD` via an HMAC-signed session cookie (`src/lib/session.ts`, Web Crypto so it works in Edge middleware — not `node:crypto`). The signing key defaults to the password itself, so changing the password invalidates every existing session at once. Both gates are opt-in: an unset env var means that gate is open, which is correct for local dev but means a deploy that forgets to set `APP_PASSWORD` is silently public — `/api/auth/status` reports lock state and the UI shows a red warning.
+`/api/md/*` is a separate surface for a companion phone app, gated by a bearer/header token (`MD_API_TOKEN`) that must match the phone app's own config — no cookies involved. Everything else (pages + all other `/api/*`, including the Schwab OAuth callback itself) is gated by a username-and-password login — `APP_PASSWORD` for the owner, the hashed account store for everyone else — via an HMAC-signed session cookie (`src/lib/session.ts`, Web Crypto so it works in Edge middleware — not `node:crypto`). The signing key defaults to the password itself, so changing the password invalidates every existing session at once. Both gates are opt-in: an unset env var means that gate is open, which is correct for local dev but means a deploy that forgets to set `APP_PASSWORD` is silently public — `/api/auth/status` reports lock state and the UI shows a red warning.
 
-### Family accounts: roles, not tenants (`src/lib/users.ts`)
+### Family accounts: roles, not tenants (`src/lib/users.ts`, `userstore.ts`)
 
-The app was built single-user, and `APP_PASSWORD` gated *everything* — so handing a family member the password also handed them the My Portfolio tab, i.e. real positions in the owner's Schwab account. `APP_USERS=name:password,...` adds member accounts that get the market tools (Screener, Analyze, Heatmap, Insider Trade) and **their own watchlist**, but not the portfolio, the realized P/L, the alerts, or the Schwab OAuth endpoints.
-
-**Login takes a password only — no username field.** Whichever password matches *is* the identity (`resolveUser`). That keeps the one-input login form and the owner's saved password working untouched, and a family member only has to remember one string. `owner` is a reserved name that `APP_USERS` cannot claim.
+The app was built single-user, and `APP_PASSWORD` gated *everything* — so handing a family member the password also handed them the My Portfolio tab, i.e. real positions in the owner's Schwab account. Member accounts get the market tools (Screener, Analyze, Heatmap, Insider Trade) and **their own watchlist**, but not the portfolio, the realized P/L, the alerts, the Schwab OAuth endpoints, or account management.
 
 **This is role separation on one Schwab session, not multi-tenancy.** Everyone shares the owner's token, the 100 req/min Schwab limit, the UW quota and the Anthropic key. Real isolation means a second deploy, not more code here.
 
-Four things that are load-bearing and easy to undo by accident:
+**Login takes a username and a password.** #119 shipped a single password field and inferred identity from whichever password matched (`resolveUser`). That has a silent failure mode: two people who happen to pick the same password mean the second one quietly logs in *as the first* — same watchlist, same saved scans, no error anywhere. A username field makes that mistake unrepresentable. The owner's username is `APP_OWNER_USER` (default `owner`), reserved so no member can claim it.
+
+**`APP_OWNER_USER` changes only what the owner types.** Internally the owner is always the `OWNER` constant, and that is what goes in the cookie and in watchlist/scan keys — otherwise renaming the env var later would orphan every piece of data keyed to the old name. `authenticate()` returns `{ name: OWNER }` no matter which spelling was typed.
+
+**The owner's password is deliberately NOT in the account store.** It stays `APP_PASSWORD`. A corrupt or deleted `users.json` must never be able to lock the owner out of their own app, so the two credentials live in different places on purpose, and `userExists()` short-circuits `true` for `OWNER` rather than looking him up.
+
+#### The Edge constraint is the thing that shapes this design
+
+`middleware.ts` runs on the **Edge runtime**, which has neither `fs` nor `node:crypto`. So the code splits in two, and the split is not cosmetic:
+
+- `users.ts` must stay **Edge-safe**: pure logic only — name validation, `roleOf`, the owner-only path lists. `middleware.ts` imports it.
+- `userstore.ts` is **Node-only**: scrypt hashing, the on-disk store, `authenticate()`, `requireUser()`. Middleware can never import it.
+
+That is why #119's `knownUser()` could not survive. It read `APP_USERS` from the environment — something Edge *can* do — to make a removed member lose access instantly even with a live cookie. Once accounts moved to a file, middleware lost the ability to ask the question at all. Three compensations, written down so a later reader does not mistake this for an oversight:
+
+1. **The role gate in middleware is untouched.** Role is derived from the name inside the *signed* cookie, so a deleted member still never reaches the portfolio, the alerts, or `/api/users` — they get 403 as before.
+2. **`requireUser()` does the existence check on the Node side**, and every route that needs to know *who* is calling goes through it (`/api/me`, `/api/watchlist`, `/api/screen`, `/api/screen/last`), returning 401 `ACCOUNT_GONE`. `page.tsx` turns that 401 into a redirect to `/login` rather than rendering a half-broken app.
+3. **Member sessions are 7 days, the owner's 30** (`sessionMsFor()` in `session.ts`). What actually leaks is the residue: pure market-data routes that never ask for identity keep answering a deleted member's cookie until it expires. Measured, not assumed — `/api/feargreed` still executed for a deleted member. The short session is the bound on that window.
+
+#### Password storage
+
+scrypt (`node:crypto`), **a fresh 16-byte salt per user and per password change**, compared with `timingSafeEqual` — `===` returns at the first differing byte and that timing is measurable from outside. An unknown username still runs a **dummy hash** so a wrong name and a wrong password take the same time; otherwise the login form becomes a username oracle. The store is written tmp-then-rename so a crash mid-write cannot leave a truncated file where everyone's account used to be.
+
+`listUsers()` returns only `{name, createdAt, updatedAt}` — never the salt or the hash, not even to the owner. `updatedAt` is shown on the management screen as "password last changed", which is the only reason it exists.
+
+**Login never says which field was wrong** (`WRONG_LOGIN`), and `GET /api/session` was **removed**: it had returned the owner's username to prefill the form, on a route that is necessarily reachable without a session — handing a brute-forcer half the credential. The form prefills the literal string `owner` client-side instead, which tells an attacker only what the default already is.
+
+#### `APP_USERS` is now a one-time seed, not a source of truth
+
+The env var is read **only when the store file does not yet exist**, to migrate #119's accounts into hashed form. After that, editing it does nothing. That is deliberate and it is the interesting half: if the env var stayed authoritative, deleting someone in the app and then redeploying would silently **resurrect** them. A test pins exactly that.
+
+#### Load-bearing, easy to undo by accident
 
 - **The session cookie carries the username** (`user.expiresAt.signature`), inside the signed payload. Renaming it breaks the signature — verified by a test that rewrites `vo.` to `owner.` and expects rejection. The old two-part cookie format is refused outright rather than assumed to be the owner, so the first deploy after this logs everyone out once.
-- **`middleware.ts` always overwrites `USER_HEADER` on every path that passes** (`pass()`), including the no-password and phone-app branches. A single branch that forwards the client's own header would let a member send `x-ps-user: owner` and become the owner. Tested with curl.
-- **The owner-only list lives in middleware, not in each route.** A new portfolio route that forgets its own check is still gated. `/api/auth/status` is deliberately *not* on the list — Render health-checks it and it leaks no numbers. `/api/alerts` *is*, because subscribing to web push there would deliver the owner's ITM/sizing alerts to a member: the same data leaking through a different door.
-- **`knownUser()` is what makes removal take effect.** A removed member's cookie stays cryptographically valid for its full 30 days; only the name disappearing from `APP_USERS` stops it.
+- **`middleware.ts` always overwrites `USER_HEADER` on every path that passes** (`pass()`), including the no-password and phone-app branches, and `strip()` deletes it on the unauthenticated ones (`/login`, `/api/session`, `/api/auth/status`, CORS preflight). A single branch that forwarded the client's own header would let a member send `x-ps-user: owner` and become the owner. Tested with curl — the spoofed header still resolves to `{"user":"vo","role":"member"}`.
+- **The owner-only list lives in middleware, not in each route.** A new portfolio route that forgets its own check is still gated; `/api/users` and the `/accounts` page are on it, so the management screen and its API have exactly one gate rather than two that can drift. `/api/auth/status` is deliberately *not* — Render health-checks it and it leaks no numbers. `/api/alerts` *is*, because subscribing to web push there would deliver the owner's ITM/sizing alerts to a member: the same data leaking through a different door.
+- **Members hitting an owner-only *page* get a redirect, not a 403.** A 403 on a navigation renders as a broken app; the API keeps the 403, which is what a curl deserves.
 
 Per-user state is deliberately narrow: watchlists (`{ [user]: string[] }`, and a flat array on disk still reads as the owner's — the Render disk holds the owner's real list in that old shape) and saved scans (`user:universe`, with the bare old keys still readable by the owner only). `allWatchlistSymbols()` is the union, used by the Form 4 background sync so a member's tickers are not permanently blank. `startScan` refuses to hand a running job to a *different* user — joining is there to protect the rate limit, but the job carries the starter's watchlist and filters, so serving it to someone else is serving wrong results silently.
+
+`USERS_PATH` must point at `/var/data` on Render. Render does **not** add a new env var to an already-created service, so this is a manual step — the same trap `WATCHLIST_PATH` documents in `DEPLOY.md`, and with a worse failure: accounts land in the build directory and vanish on the next deploy while the app keeps running as if nothing happened.
 
 ### My Portfolio: read-only, live-synced, no manual entry
 

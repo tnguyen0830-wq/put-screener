@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE, verifySession } from '@/lib/session';
-import { OWNER, USER_HEADER, isOwnerOnly, knownUser, roleOf } from '@/lib/users';
+import { OWNER, USER_HEADER, isOwnerOnly, isOwnerOnlyPage, roleOf } from '@/lib/users';
 
 /**
  * Hai cái cổng, hai loại khách.
@@ -68,11 +68,20 @@ export async function middleware(req: NextRequest) {
     return strip(req);
 
   const user = await verifySession(req.cookies.get(COOKIE)?.value, password);
-  // `knownUser` là chỗ một tài khoản bị gỡ khỏi APP_USERS thật sự mất quyền:
-  // chữ ký của họ vẫn đúng suốt 30 ngày, chỉ cái tên là không còn tồn tại.
-  if (user && knownUser(user)) {
-    if (roleOf(user) !== 'owner' && isOwnerOnly(pathname)) {
-      return NextResponse.json({ error: 'OWNER_ONLY' }, { status: 403 });
+  /* KHÔNG kiểm tra "tài khoản còn tồn tại" ở đây được: từ khi tài khoản
+     chuyển sang file trên đĩa, Edge runtime không đọc nổi. Phép kiểm tra đó
+     nằm ở `requireUser()` phía Node - xem chú thích dài ở users.ts. Cổng
+     theo vai trò dưới đây vẫn nguyên vẹn, vì vai trò suy ra từ cái tên nằm
+     trong cookie ĐÃ KÝ. */
+  if (user) {
+    if (roleOf(user) !== 'owner') {
+      if (isOwnerOnly(pathname)) {
+        return NextResponse.json({ error: 'OWNER_ONLY' }, { status: 403 });
+      }
+      // Trang (không phải API): đưa về trang chủ, đừng ném JSON vào mặt.
+      if (isOwnerOnlyPage(pathname)) {
+        return NextResponse.redirect(new URL('/', req.nextUrl.origin));
+      }
     }
     return pass(req, user);
   }

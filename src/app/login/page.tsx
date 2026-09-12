@@ -13,6 +13,15 @@ import Logo from '@/components/Logo';
  */
 export default function LoginPage() {
   const { t, lang } = useLang();
+  /* Điền sẵn "owner" - tên mặc định của tài khoản chủ app, vốn đã nằm trong
+     tài liệu nên không phải bí mật. Người dùng nhiều nhất của trang này là
+     chủ app, bắt họ gõ lại mỗi lần là thêm ma sát vô ích.
+
+     CỐ TÌNH không hỏi server tên thật: trang đăng nhập mở cho cả Internet,
+     và một endpoint trả về đúng tên đăng nhập đang dùng là dâng cho người
+     dò mật khẩu một nửa lời giải - nhất là khi chủ app có đổi tên bằng
+     APP_OWNER_USER. Ai đổi tên thì tự gõ tên mình. */
+  const [username, setUsername] = useState('owner');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,7 +34,7 @@ export default function LoginPage() {
       const r = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.ok) {
@@ -63,6 +72,19 @@ export default function LoginPage() {
         </div>
 
         <label className="loginfield">
+          <span>{t('login.username')}</span>
+          <input
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </label>
+
+        <label className="loginfield">
           <span>{t('login.password')}</span>
           <input
             type="password"
@@ -73,7 +95,7 @@ export default function LoginPage() {
           />
         </label>
 
-        <button type="submit" disabled={busy || !password}>
+        <button type="submit" disabled={busy || !username || !password}>
           {busy ? t('login.checking') : t('login.enter')}
         </button>
 

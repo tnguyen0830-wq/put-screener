@@ -1,5 +1,3 @@
-import { sameSecret } from './session';
-
 /**
  * Tài khoản đăng nhập của chính trang này.
  *
@@ -8,16 +6,18 @@ import { sameSecret } from './session';
  * app. Chủ app muốn người nhà dùng được phần công cụ thị trường (Screener,
  * Analyze, Heatmap, Insider Trade) mà KHÔNG nhìn thấy danh mục của mình.
  *
- * Thiết kế: **đăng nhập vẫn chỉ gõ mật khẩu, không có ô tên.** Mật khẩu nào
- * khớp thì đó chính là danh tính. Giữ nguyên form đăng nhập một ô như cũ
- * (trình quản lý mật khẩu trên máy chủ app không phải sửa gì), và người nhà
- * cũng chỉ cần nhớ đúng một chuỗi.
+ * Đăng nhập gõ **tên + mật khẩu**. Bản đầu (#119) chỉ có ô mật khẩu và suy ra
+ * danh tính từ mật khẩu nào khớp; cách đó có một cái bẫy im lặng: hai người
+ * vô tình đặt trùng mật khẩu thì người sau lặng lẽ đăng nhập thành người
+ * trước. Có ô tên thì lỗi đó không tồn tại được.
  *
- *   APP_PASSWORD=...                  → tài khoản chủ (role 'owner')
- *   APP_USERS=vo:matkhau1,con:matkhau2 → người nhà   (role 'member')
+ *   APP_PASSWORD=...  → tài khoản chủ (role 'owner'), tên đăng nhập `owner`
+ *   người nhà         → nằm trong kho tài khoản trên đĩa, xem lib/userstore.ts
  *
- * Không đặt `APP_USERS` thì app chạy y hệt trước đây - cùng khuôn mẫu tự tắt
- * như Telegram/web push/MD_API_TOKEN ở khắp repo này.
+ * **File này phải luôn chạy được ở Edge runtime** - `middleware.ts` import nó,
+ * và Edge không có `fs` lẫn `node:crypto`. Nên ở đây chỉ có logic thuần: hợp
+ * lệ hoá tên, vai trò, và danh sách đường chỉ chủ app được đi. Mọi thứ đụng
+ * tới đĩa hay băm mật khẩu nằm ở `userstore.ts` (Node-only).
  *
  * CẢNH BÁO cho người đọc sau: đây là phân tách theo VAI TRÒ trên cùng MỘT
  * phiên Schwab, không phải đa người dùng thật. Người nhà không có token
@@ -50,65 +50,26 @@ export function isValidName(name: string): boolean {
   return NAME_RE.test(name);
 }
 
-type Account = { name: string; password: string };
-
 /**
- * Đọc `APP_USERS` dạng "ten1:matkhau1,ten2:matkhau2".
+ * Tên này có còn hiệu lực không - **chỉ trả lời được cho chủ app**.
  *
- * Mật khẩu KHÔNG được chứa dấu phẩy (ký tự ngăn cách); dấu hai chấm thì
- * được, vì chỉ tách ở dấu hai chấm ĐẦU TIÊN. Mục nào sai định dạng thì bỏ
- * qua mục đó chứ không làm hỏng cả danh sách - một dòng env gõ nhầm không
- * nên khoá cửa toàn bộ người nhà.
- */
-export function parseUsers(raw: string | undefined): Account[] {
-  if (!raw) return [];
-  const out: Account[] = [];
-  const seen = new Set<string>();
-  for (const entry of raw.split(',')) {
-    const trimmed = entry.trim();
-    if (!trimmed) continue;
-    const i = trimmed.indexOf(':');
-    if (i < 1) continue;
-    const name = trimmed.slice(0, i).trim().toLowerCase();
-    const password = trimmed.slice(i + 1);
-    if (!password || !isValidName(name)) continue;
-    // `owner` là tên dành riêng cho APP_PASSWORD; trùng tên thì bỏ mục sau.
-    if (name === OWNER || seen.has(name)) continue;
-    seen.add(name);
-    out.push({ name, password });
-  }
-  return out;
-}
-
-/**
- * Mật khẩu vừa gõ là của ai? `null` nếu không khớp ai cả.
+ * #119 có một hàm `knownUser()` đọc `APP_USERS` để một tài khoản bị gỡ mất
+ * quyền ngay lập tức dù cookie 30 ngày của họ còn hạn. Từ khi tài khoản
+ * chuyển sang file trên đĩa, middleware KHÔNG đọc được nữa (Edge không có
+ * `fs`), nên phép kiểm tra đó không thể ở lại đây.
  *
- * Duyệt HẾT danh sách chứ không dừng ở lần khớp đầu: thoát sớm sẽ làm thời
- * gian phản hồi khác nhau tuỳ vị trí tài khoản trong danh sách, đúng thứ mà
- * `sameSecret` được viết ra để tránh ngay từ đầu.
+ * Bù lại bằng ba thứ, ghi ra để người sau không tưởng là bỏ quên:
+ *   1. Cổng theo VAI TRÒ ở middleware vẫn nguyên vẹn - vai trò suy ra từ
+ *      tên nằm trong cookie ĐÃ KÝ, nên người nhà bị xoá vẫn không bao giờ
+ *      chạm được vào danh mục.
+ *   2. `requireUser()` (userstore.ts, phía Node) kiểm tra tài khoản còn tồn
+ *      tại, và mọi route cần biết danh tính đều đi qua nó.
+ *   3. Phiên của người nhà ngắn hơn của chủ app (xem SESSION_MS ở
+ *      session.ts), nên cùng lắm quyền đọc dữ liệu thị trường của một tài
+ *      khoản đã xoá chỉ sống thêm ngần ấy.
  */
-export function resolveUser(given: string): string | null {
-  let match: string | null = null;
-
-  const ownerPassword = process.env.APP_PASSWORD;
-  if (ownerPassword && sameSecret(given, ownerPassword)) match = OWNER;
-
-  for (const account of parseUsers(process.env.APP_USERS)) {
-    if (sameSecret(given, account.password) && match === null) match = account.name;
-  }
-  return match;
-}
-
-/**
- * Tên này còn hiệu lực không?
- *
- * Cookie sống 30 ngày, nên xoá một người khỏi `APP_USERS` phải làm phiên cũ
- * của họ chết theo NGAY - nếu chỉ kiểm tra chữ ký thì cookie đã phát vẫn
- * dùng được tiếp cả tháng sau khi bị gỡ quyền.
- */
-export function knownUser(name: string): boolean {
-  if (name === OWNER) return true;
-  return parseUsers(process.env.APP_USERS).some((u) => u.name === name);
+export function isOwnerName(name: string): boolean {
+  return name === OWNER;
 }
 
 export function roleOf(name: string): Role {
@@ -136,10 +97,22 @@ const OWNER_ONLY = [
   '/api/alerts',
   '/api/auth/login',
   '/api/auth/callback',
+  // Quản lý tài khoản: đọc được danh sách người nhà đã đủ đáng giấu, còn
+  // ghi thì là tự phong quyền. Cả GET lẫn POST/PATCH/DELETE đều chặn ở đây.
+  '/api/users',
 ];
+
+/** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang
+ *  chủ chứ không nhận JSON 403 - một trang trắng in chữ JSON đọc như app
+ *  hỏng, trong khi đây là chuyện bình thường. */
+const OWNER_ONLY_PAGES = ['/accounts'];
 
 export function isOwnerOnly(pathname: string): boolean {
   return OWNER_ONLY.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+export function isOwnerOnlyPage(pathname: string): boolean {
+  return OWNER_ONLY_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 /**

@@ -28,6 +28,11 @@ services:
         value: "22"
       - key: TOKEN_PATH
         value: /var/data/.tokens.json
+      # Tài khoản người nhà (tên + mật khẩu đã băm). Tạo/xoá ngay trong app,
+      # nên đây là dữ liệu người dùng nhập: để trong thư mục build thì mỗi
+      # lần deploy là cả nhà mất tài khoản.
+      - key: USERS_PATH
+        value: /var/data/users.json
       # Watchlist là dữ liệu người dùng nhập: mất là mất thật, nên nằm trên ổ
       # đĩa gắn thêm với token thay vì trong thư mục build. Vị thế danh mục
       # không cần đường dẫn riêng nữa - đọc thẳng từ tài khoản Schwab, không
@@ -91,10 +96,14 @@ services:
       # và từ lúc có tab danh mục thì trên đó là vị thế thật.
       - key: APP_PASSWORD
         sync: false
-      # Tài khoản cho người nhà: "ten1:matkhau1,ten2:matkhau2" (src/lib/users.ts).
-      # Dùng chung phiên Schwab của chủ app nhưng KHÔNG xem được danh mục,
-      # P/L, cảnh báo; watchlist thì mỗi người một cái. Bỏ trống = không có
-      # tài khoản phụ.
+      # Tên đăng nhập của chủ app. Bỏ trống = "owner".
+      - key: APP_OWNER_USER
+        sync: false
+      # HẠT GIỐNG MỘT LẦN, không phải nguồn sự thật. Tài khoản người nhà tạo
+      # trong app (menu ⚙ → Quản lý tài khoản) và nằm ở USERS_PATH đã băm;
+      # biến này chỉ được đọc khi file đó chưa tồn tại, để chuyển tiếp từ cách
+      # cũ "ten1:matkhau1,ten2:matkhau2". Sửa nó sau đó không có tác dụng -
+      # xoá một người trong app rồi thì env không được hồi sinh họ.
       - key: APP_USERS
         sync: false
       # Powers the "Claude reads the indicators" button in the analyze tab.
