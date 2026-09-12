@@ -96,9 +96,18 @@ export default function Page() {
   useEffect(() => {
     let alive = true;
     fetch('/api/me')
-      .then((r) => r.json())
+      .then(async (r) => {
+        // 401 ở đây nghĩa là tài khoản đã bị xoá trong khi phiên còn hạn.
+        // Đưa thẳng ra trang đăng nhập: một app hiện ra nhưng mọi thứ đều
+        // lỗi 401 thì đọc như app hỏng, chứ không đọc như "bạn bị xoá".
+        if (r.status === 401) {
+          window.location.href = '/login';
+          return null;
+        }
+        return r.json();
+      })
       .then((j) => {
-        if (alive && (j.role === 'owner' || j.role === 'member')) setRole(j.role);
+        if (alive && j && (j.role === 'owner' || j.role === 'member')) setRole(j.role);
       })
       .catch(() => {
         /* không hỏi được thì giữ 'member' - chặn thật nằm ở middleware */

@@ -204,37 +204,57 @@ Trang chạy trên một URL công khai. Chừng nào trên đó chỉ có giá 
 | Biến | Giá trị |
 |---|---|
 | `APP_PASSWORD` | mật khẩu bạn tự đặt, dài, không trùng mật khẩu Schwab |
-| `APP_USERS` | *(tuỳ chọn)* tài khoản cho người nhà — xem mục ngay dưới |
+| `APP_OWNER_USER` | *(tuỳ chọn)* tên đăng nhập của bạn. Bỏ trống = `owner` |
+| `USERS_PATH` | `/var/data/users.json` — kho tài khoản người nhà, xem mục dưới |
+| `APP_USERS` | *(tuỳ chọn, chỉ để chuyển tiếp từ bản cũ)* — xem mục dưới |
 
-Đặt xong deploy lại. Vào trang sẽ thấy ô nhập mật khẩu; đăng nhập một lần, phiên giữ
-**30 ngày** trên máy đó. Đăng xuất nằm trong menu ⚙️.
+`USERS_PATH` có trong `render.yaml`, nhưng **Render không tự thêm biến mới vào
+service đã tạo sẵn** (cùng cái bẫy với `WATCHLIST_PATH` ở Bước 1) — phải vào
+Environment thêm tay. Thiếu nó thì tài khoản người nhà rơi vào thư mục build và
+lần deploy sau là mất sạch, trong khi app vẫn chạy như không có gì.
+
+Đặt xong deploy lại. Vào trang sẽ thấy ô **tên đăng nhập** và ô **mật khẩu**; đăng
+nhập một lần, phiên chủ app giữ **30 ngày** trên máy đó (người nhà **7 ngày**).
+Đăng xuất nằm trong menu ⚙️.
 
 **Không đặt thì trang mở cho tất cả.** Để không ai vô tình chạy như vậy mà không biết,
 `/api/auth/status` trả về `locked: false` và menu ⚙️ hiện chấm đỏ kèm dòng cảnh báo.
 Ở máy nhà thì không cần đặt — không đặt là không có cổng, tiện cho lúc phát triển.
 
-### Tài khoản cho người nhà (`APP_USERS`)
+### Tài khoản cho người nhà
 
 Mặc định chỉ có một tài khoản: ai biết `APP_PASSWORD` là thấy mọi thứ, **kể cả
 tab My Portfolio** — tức vị thế thật trong tài khoản Schwab của bạn. Muốn người
-nhà dùng được phần công cụ thị trường mà không thấy danh mục, đặt thêm:
+nhà dùng được phần công cụ thị trường mà không thấy danh mục, tạo tài khoản cho
+họ **ngay trong app**: menu ⚙️ → **Quản lý tài khoản** (mục này chỉ chủ app
+thấy, và `/accounts` lẫn `/api/users` đều bị chặn theo vai trò ở middleware,
+nên gõ thẳng địa chỉ cũng không vào được).
 
-```
-APP_USERS=vo:matkhau-cua-vo,con:matkhau-cua-con
-```
+Ở đó thêm người, đổi mật khẩu, hoặc xoá. Không phải sửa biến môi trường, không
+phải deploy lại. Tên chỉ gồm `a-z 0-9 _ -`, mật khẩu tối thiểu 8 ký tự.
 
-Mỗi người **một mật khẩu riêng**; form đăng nhập vẫn chỉ có một ô, mật khẩu nào
-khớp thì đó là danh tính. Tên chỉ gồm `a-z 0-9 _ -`; mật khẩu **không được chứa
-dấu phẩy** (ký tự ngăn cách giữa các tài khoản), dấu hai chấm thì được.
+**Mật khẩu được băm bằng scrypt, salt riêng cho từng người**, lưu ở `USERS_PATH`
+(`/var/data/users.json` trên Render). Mật khẩu thô không bao giờ được ghi ra
+đĩa — mở file ra cũng không đọc lại được mật khẩu của ai, kể cả của bạn. Vì nằm
+trên ổ đĩa gắn thêm nên tài khoản sống qua mọi lần deploy; để trong thư mục
+build thì mỗi lần deploy là cả nhà mất tài khoản.
 
-| | Chủ app (`APP_PASSWORD`) | Người nhà (`APP_USERS`) |
+Mật khẩu của **chủ app** cố tình KHÔNG nằm trong file đó — nó vẫn là
+`APP_PASSWORD`. Nghĩa là file tài khoản có hỏng, có bị xoá, thì bạn vẫn đăng
+nhập được và tạo lại; không có đường nào tự khoá mình ra ngoài.
+
+| | Chủ app | Người nhà |
 |---|---|---|
+| Tên đăng nhập | `owner` (hoặc `APP_OWNER_USER`) | tên bạn đặt trong app |
+| Mật khẩu nằm ở | `APP_PASSWORD` | `USERS_PATH`, đã băm |
 | Sell Put Screener, Analyze, Heatmap, Insider Trade | ✓ | ✓ |
 | Watchlist | riêng | riêng |
 | My Portfolio, P/L đã chốt, cảnh báo | ✓ | **không** (403) |
 | Kết nối / ngắt Schwab | ✓ | **không** (403) |
+| Quản lý tài khoản (`/accounts`) | ✓ | **không** (403) |
+| Phiên đăng nhập | 30 ngày | 7 ngày |
 
-Ba điều phải biết trước khi bật:
+Bốn điều phải biết trước khi bật:
 
 - **Dùng CHUNG phiên Schwab và chung mọi hạn mức.** Người nhà quét cả rổ là
   tiêu vào đúng 100 request/phút của bạn, và bấm "Nhờ Claude phân tích" là tiêu
@@ -243,9 +263,33 @@ Ba điều phải biết trước khi bật:
 - **Mỗi lần chỉ một người quét được.** Hai lần quét song song sẽ giành nhau hạn
   mức Schwab; người thứ hai nhận thông báo "đang có người quét" thay vì kết quả
   của người kia.
-- **Gỡ một người là họ mất quyền ngay**, kể cả khi phiên 30 ngày của họ còn hạn:
-  xoá tên khỏi `APP_USERS` rồi deploy lại. Đổi `APP_PASSWORD` thì **mọi người**
-  phải đăng nhập lại, vì nó là khoá ký phiên.
+- **Xoá một người: mất ngay mọi thứ riêng tư, và mất luôn quyền đăng nhập
+  lại.** Cổng theo vai trò đọc tên từ cookie ĐÃ KÝ, nên họ không bao giờ chạm
+  được vào danh mục; và mọi route cần biết danh tính đều kiểm tra tài khoản còn
+  tồn tại, nên `/api/me`, watchlist, quét đều trả 401 và giao diện đẩy họ ra
+  trang đăng nhập. Cái còn sót lại là mấy route dữ liệu thị trường thuần tuý,
+  không hỏi danh tính: cookie cũ còn đọc được tới khi hết hạn. Đó là lý do
+  phiên của người nhà chỉ 7 ngày — middleware chạy ở Edge runtime, không đọc
+  được file trên đĩa, nên phép kiểm tra "còn tài khoản không" buộc phải nằm ở
+  phía Node.
+- **Đổi `APP_PASSWORD` thì MỌI người phải đăng nhập lại**, vì nó là khoá ký
+  phiên. Tài khoản người nhà thì không mất, chỉ phải đăng nhập lại.
+
+#### Chuyển tiếp từ `APP_USERS` (bản cũ)
+
+Bản trước giữ tài khoản người nhà trong biến `APP_USERS="ten:matkhau,..."`, dạng
+chữ thường. Biến đó vẫn còn đọc được, nhưng **chỉ đúng một lần**: lần chạy đầu
+tiên mà file `USERS_PATH` chưa tồn tại, app chuyển mọi tài khoản trong đó sang
+kho đã băm rồi thôi. Sau đó sửa `APP_USERS` không có tác dụng gì nữa.
+
+Đó là chủ ý, không phải thiếu sót: xoá một người trong app rồi thì một biến môi
+trường bỏ quên không được phép hồi sinh họ. Chuyển xong thì **xoá `APP_USERS`
+đi** — mật khẩu thô nằm trong bảng Environment của Render không có lý do gì để
+ở lại.
+
+Một việc phải làm thủ công sau lần deploy này: **mọi người đăng nhập lại một
+lần**, và lần này có thêm ô tên. Cookie phiên bản cũ bị từ chối thẳng chứ không
+được đoán là của chủ app.
 
 ### Những gì cổng này gác, và không gác
 

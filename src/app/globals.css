@@ -2431,3 +2431,63 @@ body {
   gap: 8px;
   margin: 10px 0 4px;
 }
+
+/* ---- Quản lý tài khoản gia đình (/accounts) ----
+   Bảng và form dùng lại biến màu sẵn có, không đặt màu cứng - xem quy tắc
+   ba khối ở đầu file. */
+.acctlist {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 4px;
+}
+.acctlist th,
+.acctlist td {
+  text-align: left;
+  padding: 8px 10px 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 14px;
+}
+.acctlist thead th {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.acctlist tbody th {
+  font-weight: 700;
+  color: var(--ink);
+}
+.acctlist td {
+  color: var(--muted);
+}
+.acctactions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.acctactions button {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.acctactions button:hover:not(:disabled) {
+  border-color: var(--stamp);
+}
+.acctactions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.acctactions .acctdel:hover:not(:disabled) {
+  border-color: var(--risk);
+  color: var(--risk);
+}
+.acctform {
+  margin-top: 14px;
+  max-width: 380px;
+}

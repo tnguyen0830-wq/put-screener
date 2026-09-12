@@ -20,6 +20,21 @@ export const COOKIE = 'ps_session';
 /** 30 ngày: đủ lâu để điện thoại không hỏi lại mỗi lần mở. */
 export const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * Phiên của người nhà ngắn hơn - 7 ngày.
+ *
+ * Không phải vì họ đáng ngờ hơn, mà vì cái chốt "xoá tài khoản là mất quyền
+ * ngay" không còn đặt được ở middleware (Edge không đọc được file tài khoản,
+ * xem users.ts). `requireUser()` chặn được mọi route biết danh tính, nhưng
+ * các route dữ liệu thị trường thuần thì không - nên con số này là trần cho
+ * việc một tài khoản đã xoá còn xem được bảng giá. Chủ app không cần trần
+ * đó: không ai xoá được tài khoản chủ.
+ */
+export const MEMBER_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+
+export const sessionMsFor = (role: 'owner' | 'member') =>
+  role === 'owner' ? SESSION_MS : MEMBER_SESSION_MS;
+
 const enc = new TextEncoder();
 
 const b64url = (buf: ArrayBuffer) => {
@@ -105,5 +120,3 @@ export async function verifySession(
   return sameString(expected, value) ? user : null;
 }
 
-/** Dùng cho cả lúc so mật khẩu, để đoán đúng/sai không đo được bằng đồng hồ. */
-export const sameSecret = sameString;
