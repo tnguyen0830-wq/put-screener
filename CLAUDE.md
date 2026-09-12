@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-09.
+2026-09-12 — Tài khoản riêng cho gia đình (Mức 2): mỗi người một mật khẩu + watchlist riêng, KHÔNG thấy My Portfolio / phiên Schwab của chủ app. Branch `claude/family-accounts`. Touches middleware.ts, session.ts, api/session, api/me (mới), api/watchlist, watchlist.ts, scan-store.ts, scan-job.ts, api/screen, page.tsx, i18n.tsx.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -186,6 +186,23 @@ Both share one `RateLimiter` (100 req/min, under Schwab's 120 documented ceiling
 ### Two gates in `src/middleware.ts`, not one
 
 `/api/md/*` is a separate surface for a companion phone app, gated by a bearer/header token (`MD_API_TOKEN`) that must match the phone app's own config — no cookies involved. Everything else (pages + all other `/api/*`, including the Schwab OAuth callback itself) is gated by `APP_PASSWORD` via an HMAC-signed session cookie (`src/lib/session.ts`, Web Crypto so it works in Edge middleware — not `node:crypto`). The signing key defaults to the password itself, so changing the password invalidates every existing session at once. Both gates are opt-in: an unset env var means that gate is open, which is correct for local dev but means a deploy that forgets to set `APP_PASSWORD` is silently public — `/api/auth/status` reports lock state and the UI shows a red warning.
+
+### Family accounts: roles, not tenants (`src/lib/users.ts`)
+
+The app was built single-user, and `APP_PASSWORD` gated *everything* — so handing a family member the password also handed them the My Portfolio tab, i.e. real positions in the owner's Schwab account. `APP_USERS=name:password,...` adds member accounts that get the market tools (Screener, Analyze, Heatmap, Insider Trade) and **their own watchlist**, but not the portfolio, the realized P/L, the alerts, or the Schwab OAuth endpoints.
+
+**Login takes a password only — no username field.** Whichever password matches *is* the identity (`resolveUser`). That keeps the one-input login form and the owner's saved password working untouched, and a family member only has to remember one string. `owner` is a reserved name that `APP_USERS` cannot claim.
+
+**This is role separation on one Schwab session, not multi-tenancy.** Everyone shares the owner's token, the 100 req/min Schwab limit, the UW quota and the Anthropic key. Real isolation means a second deploy, not more code here.
+
+Four things that are load-bearing and easy to undo by accident:
+
+- **The session cookie carries the username** (`user.expiresAt.signature`), inside the signed payload. Renaming it breaks the signature — verified by a test that rewrites `vo.` to `owner.` and expects rejection. The old two-part cookie format is refused outright rather than assumed to be the owner, so the first deploy after this logs everyone out once.
+- **`middleware.ts` always overwrites `USER_HEADER` on every path that passes** (`pass()`), including the no-password and phone-app branches. A single branch that forwards the client's own header would let a member send `x-ps-user: owner` and become the owner. Tested with curl.
+- **The owner-only list lives in middleware, not in each route.** A new portfolio route that forgets its own check is still gated. `/api/auth/status` is deliberately *not* on the list — Render health-checks it and it leaks no numbers. `/api/alerts` *is*, because subscribing to web push there would deliver the owner's ITM/sizing alerts to a member: the same data leaking through a different door.
+- **`knownUser()` is what makes removal take effect.** A removed member's cookie stays cryptographically valid for its full 30 days; only the name disappearing from `APP_USERS` stops it.
+
+Per-user state is deliberately narrow: watchlists (`{ [user]: string[] }`, and a flat array on disk still reads as the owner's — the Render disk holds the owner's real list in that old shape) and saved scans (`user:universe`, with the bare old keys still readable by the owner only). `allWatchlistSymbols()` is the union, used by the Form 4 background sync so a member's tickers are not permanently blank. `startScan` refuses to hand a running job to a *different* user — joining is there to protect the rate limit, but the job carries the starter's watchlist and filters, so serving it to someone else is serving wrong results silently.
 
 ### My Portfolio: read-only, live-synced, no manual entry
 

@@ -91,6 +91,12 @@ services:
       # và từ lúc có tab danh mục thì trên đó là vị thế thật.
       - key: APP_PASSWORD
         sync: false
+      # Tài khoản cho người nhà: "ten1:matkhau1,ten2:matkhau2" (src/lib/users.ts).
+      # Dùng chung phiên Schwab của chủ app nhưng KHÔNG xem được danh mục,
+      # P/L, cảnh báo; watchlist thì mỗi người một cái. Bỏ trống = không có
+      # tài khoản phụ.
+      - key: APP_USERS
+        sync: false
       # Powers the "Claude reads the indicators" button in the analyze tab.
       # Billed API usage, separate from a Claude.ai subscription. Leave it
       # unset and the button reports the feature is off instead of failing.

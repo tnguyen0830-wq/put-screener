@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readWatchlist, writeWatchlist } from '@/lib/watchlist';
+import { currentUser } from '@/lib/users';
 
+/**
+ * Watchlist của CHÍNH người đang đăng nhập - xem lý do tách theo người ở
+ * lib/watchlist.ts. Danh tính lấy từ header do middleware gắn, không phải
+ * từ body, nên không ai đọc hay sửa được danh sách của người khác.
+ */
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  return NextResponse.json({ symbols: await readWatchlist() });
+export async function GET(req: NextRequest) {
+  return NextResponse.json({ symbols: await readWatchlist(currentUser(req)) });
 }
 
 export async function PUT(req: NextRequest) {
@@ -18,5 +24,7 @@ export async function PUT(req: NextRequest) {
       { status: 400 }
     );
   }
-  return NextResponse.json({ symbols: await writeWatchlist(body.symbols) });
+  return NextResponse.json({
+    symbols: await writeWatchlist(body.symbols, currentUser(req)),
+  });
 }

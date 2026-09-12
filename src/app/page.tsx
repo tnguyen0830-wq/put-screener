@@ -88,6 +88,32 @@ export default function Page() {
     remember('heatmapSub', heatmapSub);
     remember('insiderSub', insiderSub);
   }, [restored, tab, heatmapSub, insiderSub]);
+
+  /* Vai trò của người đang đăng nhập. 'owner' thấy tab My Portfolio, người
+     nhà thì không - xem lib/users.ts. Mặc định 'member' trong lúc chưa biết:
+     đoán thấp rồi hiện thêm, an toàn hơn là cho tab loé lên rồi biến mất. */
+  const [role, setRole] = useState<'owner' | 'member'>('member');
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((j) => {
+        if (alive && (j.role === 'owner' || j.role === 'member')) setRole(j.role);
+      })
+      .catch(() => {
+        /* không hỏi được thì giữ 'member' - chặn thật nằm ở middleware */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /* Tab đã nhớ có thể là 'portfolio' - từ lần chủ app đăng nhập trên chính
+     máy này, vì localStorage theo trình duyệt chứ không theo tài khoản. Đưa
+     người nhà về Screener thay vì để họ nhìn một tab rỗng toàn lỗi 403. */
+  useEffect(() => {
+    if (role !== 'owner' && tab === 'portfolio') setTab('screener');
+  }, [role, tab]);
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULTS);
   const [rows, setRows] = useState<Candidate[]>([]);
@@ -141,7 +167,10 @@ export default function Page() {
       try {
         const st = await fetch('/api/screen').then((r) => r.json());
         if (!alive) return;
-        if (st.running) {
+        // `mine` sai nghĩa là người khác đang quét: nối vào sẽ nhận kết quả
+        // chạy bằng watchlist và bộ lọc của họ. Nạp kết quả cũ của chính
+        // mình như bình thường.
+        if (st.running && st.mine !== false) {
           run();
           return;
         }
@@ -195,6 +224,14 @@ export default function Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filters),
       });
+      // 409: người khác trong nhà đang quét. Nói ra thay vì để màn hình
+      // đứng im ở "đang lấy báo giá" mãi mãi.
+      if (res.status === 409) {
+        setError(t('scan.busy'));
+        setRunning(false);
+        setPhase('');
+        return;
+      }
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buf = '';
@@ -285,12 +322,14 @@ export default function Page() {
           >
             {t('tab.heatmap')}
           </button>
-          <button
-            className={tab === 'portfolio' ? 'on' : undefined}
-            onClick={() => setTab('portfolio')}
-          >
-            {t('tab.portfolio')}
-          </button>
+          {role === 'owner' && (
+            <button
+              className={tab === 'portfolio' ? 'on' : undefined}
+              onClick={() => setTab('portfolio')}
+            >
+              {t('tab.portfolio')}
+            </button>
+          )}
           <button
             className={tab === 'insider' ? 'on' : undefined}
             onClick={() => setTab('insider')}

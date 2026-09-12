@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { COOKIE, SESSION_MS, sameSecret, signSession } from '@/lib/session';
+import { COOKIE, SESSION_MS, signSession } from '@/lib/session';
+import { resolveUser, roleOf } from '@/lib/users';
 
 /**
  * Nhận mật khẩu, phát phiên. Và thu lại khi đăng xuất.
@@ -12,9 +13,14 @@ export const dynamic = 'force-dynamic';
 /**
  * Chống dò mật khẩu.
  *
- * Một mật khẩu duy nhất trên một URL công khai thì sớm muộn cũng có bot thử.
- * Đếm theo IP, quá số lần thì khoá một lúc. Nhớ trong RAM là đủ: server khởi
- * động lại thì bộ đếm mất, nhưng bot cũng phải bắt đầu lại từ đầu.
+ * Một URL công khai thì sớm muộn cũng có bot thử. Đếm theo IP, quá số lần
+ * thì khoá một lúc. Nhớ trong RAM là đủ: server khởi động lại thì bộ đếm
+ * mất, nhưng bot cũng phải bắt đầu lại từ đầu.
+ *
+ * Bộ đếm tính chung cho mọi tài khoản chứ không theo từng người: người gõ
+ * sai chưa khai mình là ai (form chỉ có ô mật khẩu), nên không có gì để
+ * đếm riêng - và đếm chung thì thêm tài khoản cho người nhà cũng không nới
+ * thêm cửa cho bot.
  */
 const MAX_TRIES = 8;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -46,7 +52,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const given = typeof body?.password === 'string' ? body.password : '';
 
-  if (!sameSecret(given, password)) {
+  // Mật khẩu nào khớp thì đó là danh tính - không có ô tên đăng nhập. Xem
+  // lý do ở đầu lib/users.ts.
+  const user = resolveUser(given);
+  if (!user) {
     const next = rec && rec.until > now ? rec : { n: 0, until: now + WINDOW_MS };
     next.n += 1;
     tries.set(ip, next);
@@ -55,8 +64,8 @@ export async function POST(req: NextRequest) {
 
   tries.delete(ip);
   const expiresAt = now + SESSION_MS;
-  const res = NextResponse.json({ ok: true, expiresAt });
-  res.cookies.set(COOKIE, await signSession(password, expiresAt), {
+  const res = NextResponse.json({ ok: true, expiresAt, user, role: roleOf(user) });
+  res.cookies.set(COOKIE, await signSession(password, user, expiresAt), {
     httpOnly: true,
     sameSite: 'lax',
     // Trên máy nhà chạy http thì cookie secure sẽ không bao giờ được gửi đi.
