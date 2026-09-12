@@ -1151,6 +1151,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   // ---- misc ----
   'common.saving': { vi: ' đang lưu…', en: ' saving…' },
+  'scan.busy': {
+    vi: 'Một người khác trong nhà đang quét. Hai lần quét cùng lúc sẽ giành nhau hạn mức Schwab và làm chậm cả hai — chờ lần quét kia xong rồi bấm lại.',
+    en: 'Someone else in the household is scanning. Two scans at once fight over the same Schwab rate limit and slow each other down — wait for theirs to finish, then try again.',
+  },
   'phase.quotes': { vi: 'Đang lấy báo giá…', en: 'Fetching quotes…' },
 
   /* ---- Người nội bộ (Form 4) ---- */

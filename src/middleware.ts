@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE, verifySession } from '@/lib/session';
+import { OWNER, USER_HEADER, isOwnerOnly, knownUser, roleOf } from '@/lib/users';
 
 /**
  * Hai cái cổng, hai loại khách.
@@ -15,6 +16,12 @@ import { COOKIE, verifySession } from '@/lib/session';
  * không đặt gì thì chạy y như trước - nhưng bản deploy mà quên đặt thì trang
  * mở toang, nên /api/auth/status nói rõ trang đã khoá hay chưa và giao diện
  * cảnh báo bằng chữ đỏ.
+ *
+ * Từ khi người nhà có tài khoản riêng (lib/users.ts), cổng trình duyệt làm
+ * thêm hai việc: nói cho route biết AI đang gọi (qua `USER_HEADER`), và chặn
+ * thẳng những đường chỉ chủ app được đi. Chặn ở đây chứ không phải trong
+ * từng route là có chủ ý - thêm một route danh mục mới mà quên tự kiểm tra
+ * quyền thì nó vẫn được gác, thay vì lặng lẽ để lọt.
  */
 
 const TOKEN_HEADER = 'x-md-token';
@@ -42,10 +49,12 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith('/api/md')) {
     const expected = process.env.MD_API_TOKEN;
-    if (!expected) return NextResponse.next();
+    // App điện thoại là của chính chủ app, nên mọi request qua cổng này đi
+    // tiếp dưới danh nghĩa chủ app.
+    if (!expected) return pass(req, OWNER);
     // CORS preflight không mang được thông tin xác thực, phải để route tự trả lời.
-    if (req.method === 'OPTIONS') return NextResponse.next();
-    if (hasMdToken(req, expected)) return NextResponse.next();
+    if (req.method === 'OPTIONS') return strip(req);
+    if (hasMdToken(req, expected)) return pass(req, OWNER);
 
     const res = NextResponse.json({ error: 'MD_TOKEN_INVALID' }, { status: 401 });
     res.headers.set('Access-Control-Allow-Origin', '*');
@@ -53,12 +62,20 @@ export async function middleware(req: NextRequest) {
   }
 
   const password = process.env.APP_PASSWORD;
-  if (!password) return NextResponse.next();
+  // Chưa đặt mật khẩu: cổng mở, và chỉ có một người - chính là chủ máy.
+  if (!password) return pass(req, OWNER);
   if (OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`)))
-    return NextResponse.next();
+    return strip(req);
 
-  if (await verifySession(req.cookies.get(COOKIE)?.value, password))
-    return NextResponse.next();
+  const user = await verifySession(req.cookies.get(COOKIE)?.value, password);
+  // `knownUser` là chỗ một tài khoản bị gỡ khỏi APP_USERS thật sự mất quyền:
+  // chữ ký của họ vẫn đúng suốt 30 ngày, chỉ cái tên là không còn tồn tại.
+  if (user && knownUser(user)) {
+    if (roleOf(user) !== 'owner' && isOwnerOnly(pathname)) {
+      return NextResponse.json({ error: 'OWNER_ONLY' }, { status: 403 });
+    }
+    return pass(req, user);
+  }
 
   // Trình duyệt thì đưa tới trang đăng nhập, và nhớ chỗ đang định tới. Còn
   // request dữ liệu thì trả 401 gọn - để giao diện biết mà đưa người dùng đi
@@ -69,6 +86,36 @@ export async function middleware(req: NextRequest) {
   const to = new URL('/login', req.nextUrl.origin);
   if (pathname !== '/') to.searchParams.set('next', pathname);
   return NextResponse.redirect(to);
+}
+
+/**
+ * Cho request đi tiếp, và LUÔN ghi đè `USER_HEADER` bằng tên đã xác thực.
+ *
+ * Ghi đè là phần quan trọng nhất của hàm này: nếu có nhánh nào để nguyên
+ * header của client, người nhà chỉ cần tự gửi `x-ps-user: owner` là thành
+ * chủ app.
+ */
+function pass(req: NextRequest, user: string) {
+  const headers = new Headers(req.headers);
+  headers.set(USER_HEADER, user);
+  return NextResponse.next({ request: { headers } });
+}
+
+/**
+ * Cho đi tiếp nhưng XOÁ hẳn `USER_HEADER` - dùng cho những nhánh không xác
+ * thực ai cả (trang đăng nhập, `/api/session`, `/api/auth/status`, và CORS
+ * preflight).
+ *
+ * Các route đó hiện không đọc danh tính, nên đây chưa phải lỗ hổng - nhưng
+ * để nguyên thì header do client tự gửi sẽ đi thẳng tới route, và ngày nào
+ * có người thêm `currentUser()` vào một trong số đó thì nó thành đường leo
+ * thang quyền, im lặng và không ai nhớ vì sao. Bất biến cần giữ là: KHÔNG
+ * nhánh nào chuyển tiếp header của client.
+ */
+function strip(req: NextRequest) {
+  const headers = new Headers(req.headers);
+  headers.delete(USER_HEADER);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-09.
+Nothing in progress as of 2026-09-12.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -124,6 +124,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-12 — #119 **Tài khoản cho người nhà.** `APP_USERS="ten:matkhau,..."` mở tài khoản phụ: dùng được Screener/Analyze/Heatmap/Insider Trade + watchlist RIÊNG, nhưng 403 với danh mục, P/L, cảnh báo và OAuth Schwab. Đăng nhập vẫn chỉ một ô mật khẩu - mật khẩu nào khớp thì đó là danh tính. Cookie giờ mang tên người dùng trong phần được ký; **định dạng cookie cũ bị từ chối, nên deploy lần đầu là mọi người phải đăng nhập lại một lần**. Watchlist trên đĩa đổi sang `{ten: [...]}`, mảng phẳng cũ vẫn đọc là của chủ app (đừng sửa chỗ đó - nó giữ watchlist thật trên Render). Đây là phân tách VAI TRÒ trên một phiên Schwab, không phải đa người dùng.
 - 2026-09-09 — #118 **Real root cause of the company profile staying English** (third report of the same symptom; #112 built it, #117 only made it visible). `claude-opus-5` runs adaptive thinking BY DEFAULT when `thinking` isn't passed — a change from Opus 4.8/4.7 — and thinking eats the same `max_tokens` as the answer. `profiletranslate.ts` capped it at 3072 believing "effort thấp" meant shallow/no reasoning; effort only tunes depth, it never turns thinking off. Long FMP description + Vietnamese diacritics + thinking overruns 3072 → JSON cut mid-string → `JSON.parse` throws → old code filed it as `failed`, identical on screen to a network blip. Cap now 16_000, matching `/api/ai`, which documents this exact hazard and had never been followed here. New reasons `truncated` (checked before the parse) and `bad-request` (`output_config.effort` is the repo's only use of that param and has never run live). Test fails against pre-fix code on all three points.
 - 2026-09-08 — #112 Analyze tab's company-profile card (sector/industry/country from Finviz, description from FMP - all English-only sources) now auto-translates to Vietnamese via Claude, cached on disk per symbol (`lib/profiletranslate.ts`) so it costs one API call ever per symbol, not per page view. Cache checked before the API-key check so an existing translation survives a key rotation. Falls back to English on any failure. Owner report: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh".
 - 2026-09-08 — #111 Analyze tab's "Ask Claude" now reads EVERY indicator in one pass: technical + implied vol + fundamentals + the GEX profile from the page's own chart (`GexChart.onData` → `AnalysisPanel` → `AiRead`; falls back to one `/api/gex` fetch, and the prompt says NOT AVAILABLE and why when there is none). Prompt lives in new `lib/airead.ts` (standalone-testable). Fixed on the way: `macd.histogram` vs `macd.hist` (histogram was always n/a), and %B/bid/ask/volume/sector never sent. Owner's ask: "gom technical và gex tất cả chỉ số".
@@ -186,6 +187,23 @@ Both share one `RateLimiter` (100 req/min, under Schwab's 120 documented ceiling
 ### Two gates in `src/middleware.ts`, not one
 
 `/api/md/*` is a separate surface for a companion phone app, gated by a bearer/header token (`MD_API_TOKEN`) that must match the phone app's own config — no cookies involved. Everything else (pages + all other `/api/*`, including the Schwab OAuth callback itself) is gated by `APP_PASSWORD` via an HMAC-signed session cookie (`src/lib/session.ts`, Web Crypto so it works in Edge middleware — not `node:crypto`). The signing key defaults to the password itself, so changing the password invalidates every existing session at once. Both gates are opt-in: an unset env var means that gate is open, which is correct for local dev but means a deploy that forgets to set `APP_PASSWORD` is silently public — `/api/auth/status` reports lock state and the UI shows a red warning.
+
+### Family accounts: roles, not tenants (`src/lib/users.ts`)
+
+The app was built single-user, and `APP_PASSWORD` gated *everything* — so handing a family member the password also handed them the My Portfolio tab, i.e. real positions in the owner's Schwab account. `APP_USERS=name:password,...` adds member accounts that get the market tools (Screener, Analyze, Heatmap, Insider Trade) and **their own watchlist**, but not the portfolio, the realized P/L, the alerts, or the Schwab OAuth endpoints.
+
+**Login takes a password only — no username field.** Whichever password matches *is* the identity (`resolveUser`). That keeps the one-input login form and the owner's saved password working untouched, and a family member only has to remember one string. `owner` is a reserved name that `APP_USERS` cannot claim.
+
+**This is role separation on one Schwab session, not multi-tenancy.** Everyone shares the owner's token, the 100 req/min Schwab limit, the UW quota and the Anthropic key. Real isolation means a second deploy, not more code here.
+
+Four things that are load-bearing and easy to undo by accident:
+
+- **The session cookie carries the username** (`user.expiresAt.signature`), inside the signed payload. Renaming it breaks the signature — verified by a test that rewrites `vo.` to `owner.` and expects rejection. The old two-part cookie format is refused outright rather than assumed to be the owner, so the first deploy after this logs everyone out once.
+- **`middleware.ts` always overwrites `USER_HEADER` on every path that passes** (`pass()`), including the no-password and phone-app branches. A single branch that forwards the client's own header would let a member send `x-ps-user: owner` and become the owner. Tested with curl.
+- **The owner-only list lives in middleware, not in each route.** A new portfolio route that forgets its own check is still gated. `/api/auth/status` is deliberately *not* on the list — Render health-checks it and it leaks no numbers. `/api/alerts` *is*, because subscribing to web push there would deliver the owner's ITM/sizing alerts to a member: the same data leaking through a different door.
+- **`knownUser()` is what makes removal take effect.** A removed member's cookie stays cryptographically valid for its full 30 days; only the name disappearing from `APP_USERS` stops it.
+
+Per-user state is deliberately narrow: watchlists (`{ [user]: string[] }`, and a flat array on disk still reads as the owner's — the Render disk holds the owner's real list in that old shape) and saved scans (`user:universe`, with the bare old keys still readable by the owner only). `allWatchlistSymbols()` is the union, used by the Form 4 background sync so a member's tickers are not permanently blank. `startScan` refuses to hand a running job to a *different* user — joining is there to protect the rate limit, but the job carries the starter's watchlist and filters, so serving it to someone else is serving wrong results silently.
 
 ### My Portfolio: read-only, live-synced, no manual entry
 

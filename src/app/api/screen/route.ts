@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentScan, startScan } from '@/lib/scan-job';
+import { currentUser } from '@/lib/users';
 import type { Filters, StreamEvent } from '@/lib/types';
 
 /**
@@ -13,11 +14,20 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 900;
 
 /** Đang quét dở hay không, để mở app lên là biết ngay. */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const job = currentScan();
   if (!job) return NextResponse.json({ running: false });
+
+  // Lần quét của người KHÁC: vẫn phải nói là máy đang bận (người này bấm
+  // quét sẽ bị từ chối), nhưng không trả về phạm vi hay số mã tìm được -
+  // đó là kết quả của người ta.
+  const mine = job.startedBy === currentUser(req);
+  if (!mine) {
+    return NextResponse.json({ running: job.status === 'running', mine: false });
+  }
   return NextResponse.json({
     running: job.status === 'running',
+    mine: true,
     universe: job.universe,
     startedAt: job.startedAt,
     status: job.status,
@@ -27,7 +37,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const filters = (await req.json()) as Filters;
-  const job = startScan(filters);
+  const job = startScan(filters, currentUser(req));
+  if (!job) {
+    // Đang có người khác quét. Chờ là đúng: hai lần quét song song sẽ giành
+    // nhau hạn mức Schwab và làm chậm cả hai.
+    return NextResponse.json({ error: 'SCAN_BUSY' }, { status: 409 });
+  }
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

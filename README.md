@@ -143,6 +143,30 @@ xếp hạng tương đối, đừng coi là con số tuyệt đối.
 
 ---
 
+## Tài khoản cho người nhà
+
+Mặc định app chỉ có một tài khoản, và ai có mật khẩu là thấy mọi thứ — kể cả
+tab My Portfolio, tức vị thế thật trong tài khoản Schwab của bạn.
+
+Đặt thêm biến `APP_USERS` trên Render (xem `DEPLOY.md`) để mở tài khoản cho
+người nhà:
+
+```
+APP_USERS=vo:matkhau-cua-vo,con:matkhau-cua-con
+```
+
+Người nhà đăng nhập bằng **mật khẩu riêng của họ** — form vẫn chỉ một ô, mật
+khẩu nào khớp thì đó là người đó. Họ dùng được Sell Put Screener, Analyze,
+Heatmap, Insider Trade, và có **watchlist riêng**. Họ **không** thấy My
+Portfolio, P/L đã chốt, cảnh báo, và không bấm được nút kết nối Schwab — gọi
+thẳng vào địa chỉ đó cũng bị từ chối, không chỉ ẩn nút đi.
+
+Ba điều cần biết: mọi người **dùng chung phiên Schwab và chung hạn mức** của
+bạn (người nhà quét cả rổ là tiêu vào 100 request/phút của bạn, bấm "Nhờ Claude
+phân tích" là tiêu tiền API của bạn); **mỗi lần chỉ một người quét được**, người
+thứ hai được báo chờ thay vì nhận nhầm kết quả của người kia; và muốn tách hẳn
+thì phải deploy một bản riêng chứ không phải thêm tài khoản.
+
 ## Watchlist
 
 Nút gạt ở đầu panel lọc chuyển giữa hai phạm vi quét:

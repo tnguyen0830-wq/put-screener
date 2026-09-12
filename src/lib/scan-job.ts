@@ -71,6 +71,9 @@ async function pooled<T>(
 
 export type ScanJob = {
   universe: Universe;
+  /** Ai bấm quét. Một lần quét dùng watchlist và bộ lọc CỦA NGƯỜI ĐÓ, nên
+   *  người khác nối vào sẽ nhận kết quả không phải của mình - xem startScan. */
+  startedBy: string;
   startedAt: number;
   status: 'running' | 'done' | 'error';
   /** Mọi sự kiện từ đầu lần quét. Nối vào giữa chừng thì phát lại từ đây. */
@@ -82,13 +85,22 @@ let job: ScanJob | null = null;
 
 export const currentScan = () => job;
 
-/** Bắt đầu quét, hoặc trả về lần đang chạy nếu có. */
-export function startScan(filters: Filters): ScanJob {
-  if (job?.status === 'running') return job;
+/**
+ * Bắt đầu quét, hoặc trả về lần ĐANG CHẠY CỦA CHÍNH NGƯỜI ĐÓ nếu có.
+ *
+ * Nối vào lần quét đang chạy là có chủ ý (hai lần quét song song sẽ giành
+ * nhau hạn mức 100 request/phút của Schwab) - nhưng chỉ đúng khi là cùng
+ * một người. Lần quét mang watchlist và bộ lọc của người bấm nút, nên trả
+ * nó cho người khác là đưa nhầm kết quả mà màn hình không có cách nào nói
+ * ra. Người thứ hai nhận `null` và route báo "đang có người quét".
+ */
+export function startScan(filters: Filters, user: string): ScanJob | null {
+  if (job?.status === 'running') return job.startedBy === user ? job : null;
 
   const started = Date.now();
   const j: ScanJob = {
     universe: filters.universe,
+    startedBy: user,
     startedAt: started,
     status: 'running',
     events: [],
@@ -113,7 +125,7 @@ export function startScan(filters: Filters): ScanJob {
       let list: Constituent[];
 
       if (filters.universe === 'watchlist') {
-        const saved = await readWatchlist();
+        const saved = await readWatchlist(user);
         if (!saved.length) {
           send({
             type: 'error',
@@ -257,13 +269,16 @@ export function startScan(filters: Filters): ScanJob {
       // bấm lưu thì sớm muộn cũng có lần quên. Hỏng chỗ này không được
       // làm hỏng lần quét - kết quả đã stream xong về màn hình rồi.
       try {
-        await saveScan({
-          universe: filters.universe,
-          at: Date.now(),
-          scanned: survivors.length,
-          ms: Date.now() - started,
-          rows: collected,
-        });
+        await saveScan(
+          {
+            universe: filters.universe,
+            at: Date.now(),
+            scanned: survivors.length,
+            ms: Date.now() - started,
+            rows: collected,
+          },
+          user
+        );
       } catch (e: any) {
         send({
           type: 'error',

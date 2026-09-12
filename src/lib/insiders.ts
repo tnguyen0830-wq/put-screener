@@ -359,8 +359,10 @@ export async function trackedSymbols(): Promise<{
 }> {
   const { symbols: sp500, error: sp500Error } = await sp500Symbols();
 
-  const { readWatchlist } = await import('./watchlist');
-  const list = await readWatchlist().catch(() => [] as string[]);
+  // Hợp watchlist của mọi tài khoản: cache Form 4 dùng chung, nên phải phủ
+  // cả mã của người nhà chứ không riêng chủ app.
+  const { allWatchlistSymbols } = await import('./watchlist');
+  const list = await allWatchlistSymbols().catch(() => [] as string[]);
 
   let holdingsError: string | null = null;
   let held: string[] = [];

@@ -2,8 +2,14 @@
  * Phiên đăng nhập của chính trang này.
  *
  * Trang chạy trên một URL công khai, và từ lúc có tab danh mục thì trên đó là
- * vị thế thật. Một mật khẩu duy nhất là đủ cho một người dùng - nhưng cái cookie
- * cầm phiên phải được ký, nếu không ai cũng tự đặt cho mình một cái.
+ * vị thế thật. Cookie cầm phiên phải được ký, nếu không ai cũng tự đặt cho
+ * mình một cái.
+ *
+ * Cookie mang theo TÊN người đăng nhập (xem lib/users.ts): từ khi người nhà
+ * có tài khoản riêng, "đã đăng nhập" không còn đủ - route còn phải biết là
+ * AI đăng nhập, vì tab danh mục chỉ chủ app được xem. Tên nằm trong cookie
+ * dưới dạng chữ thường nhìn thấy được, nhưng nằm TRONG phần được ký nên
+ * không sửa được: đổi tên là chữ ký sai.
  *
  * Ký bằng Web Crypto chứ không phải node:crypto: middleware của Next chạy trong
  * môi trường Edge, ở đó không có node:crypto. Web Crypto có ở cả hai nơi.
@@ -26,8 +32,14 @@ const b64url = (buf: ArrayBuffer) => {
 /**
  * Khoá ký.
  *
- * Mặc định là chính mật khẩu, để chỉ phải đặt một biến môi trường. Hệ quả có
- * lợi: đổi mật khẩu là mọi phiên cũ chết theo, kể cả phiên trên máy đã mất.
+ * Mặc định là chính mật khẩu CHỦ APP (`APP_PASSWORD`), để chỉ phải đặt một
+ * biến môi trường. Hệ quả có lợi: đổi mật khẩu chủ là mọi phiên cũ chết
+ * theo, kể cả phiên của người nhà và phiên trên máy đã mất.
+ *
+ * Cố ý KHÔNG ký bằng mật khẩu của từng người: làm vậy thì chỉ cần một người
+ * nhà đổi mật khẩu là phải tính lại khoá theo từng phiên, mà không đổi được
+ * gì về mặt an toàn - chữ ký chỉ cần không giả được, không cần bí mật riêng
+ * cho mỗi người.
  */
 const secretOf = (password: string) => process.env.SESSION_SECRET || password;
 
@@ -41,12 +53,19 @@ async function hmacKey(secret: string) {
   );
 }
 
-/** Cookie có dạng `hạn.chữ ký`. Không có gì bí mật bên trong, chỉ cần không giả được. */
-export async function signSession(password: string, expiresAt: number) {
+/**
+ * Cookie có dạng `tên.hạn.chữ ký`. Không có gì bí mật bên trong, chỉ cần
+ * không giả được.
+ *
+ * Tách được bằng dấu chấm vì cả ba phần đều không chứa dấu chấm: tên đi qua
+ * `NAME_RE` ở users.ts (chỉ a-z0-9_-), hạn là số, và b64url đã thay `+/` bằng
+ * `-_` rồi bỏ `=`.
+ */
+export async function signSession(password: string, user: string, expiresAt: number) {
   const key = await hmacKey(secretOf(password));
-  const payload = String(expiresAt);
+  const payload = `${user}|${expiresAt}`;
   const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
-  return `${payload}.${b64url(sig)}`;
+  return `${user}.${expiresAt}.${b64url(sig)}`;
 }
 
 /** So sánh không rò rỉ thời gian: dừng sớm ở ký tự khác nhau là lộ độ dài khớp. */
@@ -57,19 +76,33 @@ function sameString(a: string, b: string) {
   return diff === 0;
 }
 
+/**
+ * Trả về TÊN người đăng nhập, hay `null` nếu cookie thiếu/hết hạn/sai chữ ký.
+ *
+ * Trả tên chứ không phải true/false vì nơi gọi cần biết ai: cùng một cookie
+ * hợp lệ, chủ app được vào `/api/positions` còn người nhà thì không.
+ *
+ * Cookie định dạng CŨ (`hạn.chữ ký`, hai phần) không còn hợp lệ - nó không
+ * mang tên nên không thể biết chủ nhân là ai, và đoán là `owner` sẽ trao
+ * quyền xem danh mục cho một cookie bất kỳ còn sót lại. Hệ quả: lần deploy
+ * đầu tiên sau thay đổi này, mọi người phải đăng nhập lại đúng một lần.
+ */
 export async function verifySession(
   value: string | undefined,
   password: string
-): Promise<boolean> {
-  if (!value) return false;
-  const dot = value.lastIndexOf('.');
-  if (dot < 1) return false;
+): Promise<string | null> {
+  if (!value) return null;
 
-  const expiresAt = Number(value.slice(0, dot));
-  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return false;
+  const parts = value.split('.');
+  if (parts.length !== 3) return null;
+  const [user, expText] = parts;
+  if (!user) return null;
 
-  const expected = await signSession(password, expiresAt);
-  return sameString(expected, value);
+  const expiresAt = Number(expText);
+  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return null;
+
+  const expected = await signSession(password, user, expiresAt);
+  return sameString(expected, value) ? user : null;
 }
 
 /** Dùng cho cả lúc so mật khẩu, để đoán đúng/sai không đo được bằng đồng hồ. */

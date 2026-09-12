@@ -204,6 +204,7 @@ Trang chạy trên một URL công khai. Chừng nào trên đó chỉ có giá 
 | Biến | Giá trị |
 |---|---|
 | `APP_PASSWORD` | mật khẩu bạn tự đặt, dài, không trùng mật khẩu Schwab |
+| `APP_USERS` | *(tuỳ chọn)* tài khoản cho người nhà — xem mục ngay dưới |
 
 Đặt xong deploy lại. Vào trang sẽ thấy ô nhập mật khẩu; đăng nhập một lần, phiên giữ
 **30 ngày** trên máy đó. Đăng xuất nằm trong menu ⚙️.
@@ -211,6 +212,40 @@ Trang chạy trên một URL công khai. Chừng nào trên đó chỉ có giá 
 **Không đặt thì trang mở cho tất cả.** Để không ai vô tình chạy như vậy mà không biết,
 `/api/auth/status` trả về `locked: false` và menu ⚙️ hiện chấm đỏ kèm dòng cảnh báo.
 Ở máy nhà thì không cần đặt — không đặt là không có cổng, tiện cho lúc phát triển.
+
+### Tài khoản cho người nhà (`APP_USERS`)
+
+Mặc định chỉ có một tài khoản: ai biết `APP_PASSWORD` là thấy mọi thứ, **kể cả
+tab My Portfolio** — tức vị thế thật trong tài khoản Schwab của bạn. Muốn người
+nhà dùng được phần công cụ thị trường mà không thấy danh mục, đặt thêm:
+
+```
+APP_USERS=vo:matkhau-cua-vo,con:matkhau-cua-con
+```
+
+Mỗi người **một mật khẩu riêng**; form đăng nhập vẫn chỉ có một ô, mật khẩu nào
+khớp thì đó là danh tính. Tên chỉ gồm `a-z 0-9 _ -`; mật khẩu **không được chứa
+dấu phẩy** (ký tự ngăn cách giữa các tài khoản), dấu hai chấm thì được.
+
+| | Chủ app (`APP_PASSWORD`) | Người nhà (`APP_USERS`) |
+|---|---|---|
+| Sell Put Screener, Analyze, Heatmap, Insider Trade | ✓ | ✓ |
+| Watchlist | riêng | riêng |
+| My Portfolio, P/L đã chốt, cảnh báo | ✓ | **không** (403) |
+| Kết nối / ngắt Schwab | ✓ | **không** (403) |
+
+Ba điều phải biết trước khi bật:
+
+- **Dùng CHUNG phiên Schwab và chung mọi hạn mức.** Người nhà quét cả rổ là
+  tiêu vào đúng 100 request/phút của bạn, và bấm "Nhờ Claude phân tích" là tiêu
+  tiền trên `ANTHROPIC_API_KEY` của bạn. Đây là phân tách theo vai trò, không
+  phải đa người dùng thật — muốn tách hẳn thì deploy một bản riêng.
+- **Mỗi lần chỉ một người quét được.** Hai lần quét song song sẽ giành nhau hạn
+  mức Schwab; người thứ hai nhận thông báo "đang có người quét" thay vì kết quả
+  của người kia.
+- **Gỡ một người là họ mất quyền ngay**, kể cả khi phiên 30 ngày của họ còn hạn:
+  xoá tên khỏi `APP_USERS` rồi deploy lại. Đổi `APP_PASSWORD` thì **mọi người**
+  phải đăng nhập lại, vì nó là khoá ký phiên.
 
 ### Những gì cổng này gác, và không gác
 
