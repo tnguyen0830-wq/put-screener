@@ -227,6 +227,56 @@ scrypt (`node:crypto`), **a fresh 16-byte salt per user and per password change*
 
 The env var is read **only when the store file does not yet exist**, to migrate #119's accounts into hashed form. After that, editing it does nothing. That is deliberate and it is the interesting half: if the env var stayed authoritative, deleting someone in the app and then redeploying would silently **resurrect** them. A test pins exactly that.
 
+#### Forgot password: a one-time code the owner hands over
+
+The owner could already reset a member's password from `/accounts`, but that
+means inventing a password and then *transmitting* it — and a password sent
+over a messaging app stays in that thread forever. The code flow inverts it:
+the owner hands over a short-lived token, the member chooses their own
+password, and the owner never learns it.
+
+`createResetCode()` issues an 8-character code, returns it **once**, and
+stores only a scrypt hash with its own salt and a 30-minute expiry.
+`redeemResetCode()` verifies it, rotates the password salt, and deletes the
+code. `/api/users/reset-code` (owner-only, inherited from `/api/users`'s
+prefix in `OWNER_ONLY`) issues; `/api/password-reset` (in `OPEN`) redeems.
+
+**The owner can never have a reset code, and that is the whole security
+argument.** The redeem endpoint has to be reachable without a session —
+someone who forgot their password cannot log in first — so it is open to the
+internet. If a code could reset `APP_PASSWORD`, a leaked code would not cost
+one member account; it would hand over My Portfolio, i.e. real Schwab
+positions. `createResetCode()` refuses `OWNER` outright and `redeemResetCode()`
+never even looks the owner up. Owner recovery is changing `APP_PASSWORD` on
+Render, which is documented in `DEPLOY.md` and stated on the login screen
+itself — otherwise the owner waits for a code that cannot exist.
+
+Four smaller decisions, each of which was a real choice:
+
+- **The alphabet excludes I, L, O, 0 and 1.** The code is read aloud down a
+  phone. A mis-heard `O`/`0` is indistinguishable from a made-up code on the
+  screen — the member just sees "wrong code" and has no idea why.
+- **Rejection sampling, not modulo.** `randomBytes % 31` looks tidy but 256 is
+  not a multiple of 31, so the early letters would come up more often and the
+  code would quietly lose entropy. Bytes ≥ 248 are discarded instead.
+- **`expired` is reported; everything else collapses into `bad-code`.** The
+  app's rule is never to reveal which usernames exist, so unknown name / no
+  code issued / wrong code all return one message. But "expired" is only ever
+  said to someone who *typed the right code*, i.e. someone already holding it —
+  they learn nothing new, and without it they would retype a dead code forever.
+  An unknown user still runs a dummy hash, same as `verifyPassword`.
+- **A too-short new password does not consume the code or a rate-limit try.**
+  The check runs *after* the code verifies, so fumbling your own new password
+  does not cost you the code you were just given.
+
+`lib/ratelimit.ts` exists because this endpoint needed the counter
+`/api/session` already had. Copying it would have accepted two copies that
+drift, and the one that drifts is the one nobody looks at — which is the one
+holding a door open. One mechanism, **separate buckets per door**: a member
+fumbling a reset code must not use up the owner's login attempts. Verified by
+measurement, not assumption — five wrong codes lock the reset door while login
+still returns 200.
+
 #### Load-bearing, easy to undo by accident
 
 - **The session cookie carries the username** (`user.expiresAt.signature`), inside the signed payload. Renaming it breaks the signature — verified by a test that rewrites `vo.` to `owner.` and expects rejection. The old two-part cookie format is refused outright rather than assumed to be the owner, so the first deploy after this logs everyone out once.

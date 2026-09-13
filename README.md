@@ -168,6 +168,26 @@ P/L, cảnh báo) và mất luôn quyền đăng nhập lại. Phần công cụ
 tuý thì cookie cũ của họ còn đọc được tới khi hết hạn — phiên của người nhà
 cố tình chỉ **7 ngày** (của chủ app là 30) để khoảng đó không kéo dài.
 
+### Quên mật khẩu
+
+Người nhà quên thì **không cần anh đặt hộ mật khẩu rồi nhắn cho họ** — nhắn
+mật khẩu qua tin nhắn là mật khẩu nằm lại trong lịch sử chat mãi mãi.
+
+1. Anh vào ⚙️ → **Quản lý tài khoản**, bấm **Tạo mã đặt lại** ở dòng của họ.
+2. Một mã kiểu `ABCD-EFGH` hiện lên **đúng một lần**. Đọc cho họ nghe.
+3. Họ vào trang đăng nhập, bấm **Quên mật khẩu?**, nhập tên + mã + mật khẩu
+   mới **do chính họ chọn**. Anh không bao giờ biết mật khẩu của họ.
+
+Mã sống **30 phút**, dùng **một lần**, và trên đĩa chỉ lưu bản băm — mở file
+ra cũng không đọc lại được mã. Bảng tài khoản hiện dấu "đang có mã" kèm giờ
+hết hạn, và có nút huỷ nếu anh đổi ý.
+
+**Mã đặt lại cố tình KHÔNG áp dụng cho tài khoản của anh.** Cửa nhập mã mở
+cho cả Internet (người quên mật khẩu thì chưa đăng nhập được), nên nếu một
+mã đặt lại được mật khẩu chủ app thì một mã lọt ra ngoài không chỉ mất một
+tài khoản phụ — nó trao cả tab My Portfolio, tức vị thế Schwab thật. Anh
+quên mật khẩu thì đổi `APP_PASSWORD` trên Render, xem `DEPLOY.md`.
+
 ### Ba điều cần biết
 
 Mọi người **dùng chung phiên Schwab và chung hạn mức** của bạn (người nhà quét

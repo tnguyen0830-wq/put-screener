@@ -15,7 +15,17 @@ import Logo from '@/components/Logo';
  * đưa về trang chủ trước khi component này kịp chạy.
  */
 
-type User = { name: string; createdAt: string; updatedAt: string };
+type User = {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Có mã đặt lại đang treo và còn hạn. Server chỉ gửi hạn dùng, không
+   *  bao giờ gửi lại mã - xem `listUsers()` ở userstore.ts. */
+  resetExpiresAt?: number;
+};
+
+const hhmm = (ms: number) =>
+  new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
 export default function AccountsPage() {
   const { t } = useLang();
@@ -27,6 +37,10 @@ export default function AccountsPage() {
   const [resetFor, setResetFor] = useState<string | null>(null);
   const [resetPass, setResetPass] = useState('');
   const [busy, setBusy] = useState(false);
+  /* Mã vừa tạo, giữ trong bộ nhớ trang cho tới khi chủ app bấm đã đọc
+     xong. Không lưu đâu cả: trên đĩa chỉ có bản băm, nên đây là lần duy
+     nhất mã tồn tại ở dạng đọc được. */
+  const [code, setCode] = useState<{ name: string; code: string; expiresAt: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -105,6 +119,37 @@ export default function AccountsPage() {
     }
   };
 
+  const makeCode = async (name: string) => {
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      const r = await fetch('/api/users/reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(t(`acct.err.${j.error ?? 'failed'}`));
+        return;
+      }
+      if (Array.isArray(j.users)) setUsers(j.users);
+      setCode({ name, code: j.code, expiresAt: j.expiresAt });
+    } catch {
+      setError(t('acct.err.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelCode = async (name: string) => {
+    await write(
+      { method: 'DELETE', url: `/api/users/reset-code?name=${encodeURIComponent(name)}` },
+      t('acct.codeCancelled', name)
+    );
+  };
+
   const remove = async (name: string) => {
     // Xoá là mất quyền, và không hoàn tác được - hỏi lại một lần.
     if (!window.confirm(t('acct.confirmDelete', name))) return;
@@ -146,10 +191,25 @@ export default function AccountsPage() {
               <tbody>
                 {(users ?? []).map((u) => (
                   <tr key={u.name}>
-                    <th scope="row">{u.name}</th>
+                    <th scope="row">
+                      {u.name}
+                      {u.resetExpiresAt && (
+                        <span className="acctpending">
+                          {t('acct.codePending', hhmm(u.resetExpiresAt))}
+                        </span>
+                      )}
+                    </th>
                     <td>{u.createdAt.slice(0, 10)}</td>
                     <td>{u.updatedAt.slice(0, 10)}</td>
                     <td className="acctactions">
+                      <button type="button" onClick={() => makeCode(u.name)} disabled={busy}>
+                        {t('acct.codeBtn')}
+                      </button>
+                      {u.resetExpiresAt && (
+                        <button type="button" onClick={() => cancelCode(u.name)} disabled={busy}>
+                          {t('acct.codeCancel')}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -175,6 +235,19 @@ export default function AccountsPage() {
                 ))}
               </tbody>
             </table>
+          )}
+
+          {code && (
+            <div className="acctcode">
+              <h3 className="dsec">{t('acct.codeTitle', code.name)}</h3>
+              <p className="codeval">{code.code}</p>
+              <p className="hint hint-warn">{t('acct.codeShown')}</p>
+              <p className="cap">{t('acct.codeExpires', hhmm(code.expiresAt))}</p>
+              <p className="cap">{t('acct.codeWhere')}</p>
+              <button type="button" onClick={() => setCode(null)}>
+                {t('acct.codeDone')}
+              </button>
+            </div>
           )}
 
           {resetFor && (
@@ -232,6 +305,7 @@ export default function AccountsPage() {
           {done && <p className="cap">{done}</p>}
 
           <p className="cap">{t('acct.note')}</p>
+          <p className="cap">{t('acct.ownerNoCode')}</p>
         </div>
       </section>
     </div>

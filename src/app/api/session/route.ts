@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE, sessionMsFor, signSession } from '@/lib/session';
 import { authenticate } from '@/lib/userstore';
+import {
+  clientIp,
+  newBucket,
+  recordFailure,
+  retryAfter,
+  clear,
+} from '@/lib/ratelimit';
 
 /**
  * Nhận tên + mật khẩu, phát phiên. Và thu lại khi đăng xuất.
@@ -24,15 +31,14 @@ export const dynamic = 'force-dynamic';
  *
  * Đếm theo IP chứ không theo tên đăng nhập: đếm theo tên thì một người biết
  * tên "vo" có thể cố tình gõ sai vài lần để KHOÁ người đó ra khỏi app.
+ *
+ * Cơ chế nằm ở `lib/ratelimit.ts`, dùng chung với `/api/password-reset` -
+ * nhưng mỗi cửa một cái xô riêng, để người nhà gõ nhầm mã đặt lại không
+ * làm chủ app hết lượt đăng nhập.
  */
 const MAX_TRIES = 8;
 const WINDOW_MS = 15 * 60 * 1000;
-const tries = new Map<string, { n: number; until: number }>();
-
-const clientIp = (req: NextRequest) =>
-  req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-  req.headers.get('x-real-ip') ||
-  'unknown';
+const bucket = newBucket();
 
 export async function POST(req: NextRequest) {
   if (!process.env.APP_PASSWORD) {
@@ -43,10 +49,10 @@ export async function POST(req: NextRequest) {
 
   const ip = clientIp(req);
   const now = Date.now();
-  const rec = tries.get(ip);
-  if (rec && rec.until > now && rec.n >= MAX_TRIES) {
+  const wait = retryAfter(bucket, ip, MAX_TRIES, now);
+  if (wait !== null) {
     return NextResponse.json(
-      { error: 'TOO_MANY_TRIES', retryInSec: Math.ceil((rec.until - now) / 1000) },
+      { error: 'TOO_MANY_TRIES', retryInSec: wait },
       { status: 429 }
     );
   }
@@ -57,15 +63,13 @@ export async function POST(req: NextRequest) {
 
   const who = await authenticate(givenUser, givenPass);
   if (!who) {
-    const next = rec && rec.until > now ? rec : { n: 0, until: now + WINDOW_MS };
-    next.n += 1;
-    tries.set(ip, next);
+    recordFailure(bucket, ip, WINDOW_MS, now);
     // Một thông báo duy nhất cho cả tên sai lẫn mật khẩu sai: nói rõ cái nào
     // sai là nói cho người lạ biết tên nào có thật trên máy này.
     return NextResponse.json({ error: 'WRONG_LOGIN' }, { status: 401 });
   }
 
-  tries.delete(ip);
+  clear(bucket, ip);
   const expiresAt = now + sessionMsFor(who.role);
   const res = NextResponse.json({
     ok: true,
