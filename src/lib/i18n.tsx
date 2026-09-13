@@ -101,6 +101,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Server chưa đặt mật khẩu, nên không có gì để đăng nhập. Đặt APP_PASSWORD rồi deploy lại.',
     en: 'The server has no password set, so there is nothing to sign in to. Set APP_PASSWORD and redeploy.',
   },
+  'login.unknown': {
+    // Gần như chắc chắn là trang đang mở đã cũ hơn server: tải lại bằng
+    // Ctrl+Shift+R là xong. Có in kèm mã thật để còn lần ra được.
+    vi: (code: string) =>
+      `Server trả về mã lạ (${code}). Trang này có thể là bản cũ - tải lại trang (Ctrl+Shift+R) rồi thử lại.`,
+    en: (code: string) =>
+      `The server returned an unfamiliar code (${code}). This page may be an old copy - reload it (Ctrl+Shift+R) and try again.`,
+  },
   'login.failed': { vi: 'Không kết nối được server.', en: 'Could not reach the server.' },
   'login.what': {
     vi: 'Công cụ cá nhân, một người dùng. Đọc dữ liệu thị trường qua API chính thức dành cho nhà phát triển của Charles Schwab, bằng chính tài khoản của chủ trang. Ô mật khẩu phía trên là để bảo vệ dữ liệu của chủ trang, không thu thập thông tin của ai khác.',
