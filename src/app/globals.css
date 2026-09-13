@@ -2491,3 +2491,81 @@ body {
   margin-top: 14px;
   max-width: 380px;
 }
+
+/* ---- Quên mật khẩu: khối đặt lại trên trang đăng nhập ---- */
+
+.loginsub {
+  margin: 4px 0 2px;
+  font: 700 14px/1.3 var(--data);
+  color: var(--ink);
+}
+
+/* Thông báo "đổi xong" sau khi đặt lại mật khẩu. Dùng --credit chứ không
+   phải --risk: đây là tin tốt nằm đúng chỗ dòng lỗi vẫn hiện ra, nên màu
+   là thứ duy nhất phân biệt hai loại tin trong một nháy mắt. */
+.logindone {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--credit);
+}
+
+/* Nút trông như một đường dẫn. Là <button> chứ không phải <a href="#">:
+   nó không đi đâu cả, chỉ đổi khối đang hiện - và một <a> giả làm bàn
+   phím lẫn trình đọc màn hình hiểu sai. */
+.loginlink {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--stamp);
+  font: 600 12.5px/1 var(--data);
+  text-align: left;
+  cursor: pointer;
+}
+.loginlink:hover {
+  text-decoration: underline;
+}
+
+/* ---- Mã đặt lại, trong màn hình quản lý tài khoản ---- */
+
+.acctcode {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--stamp);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  max-width: 380px;
+}
+.acctcode > button {
+  margin-top: 10px;
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.acctcode > button:hover {
+  border-color: var(--stamp);
+}
+
+/* Mã phải đọc to được qua điện thoại: to, giãn chữ, và cho phép bôi đen
+   để copy. `user-select` nói ra vì phần còn lại của app không cần tới nó. */
+.codeval {
+  margin: 6px 0 10px;
+  font: 700 26px/1.2 var(--data);
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  user-select: all;
+}
+
+/* Dấu "đang có mã" cạnh tên. Chữ nhỏ, màu nhấn - đủ để thấy khi lướt
+   bảng, không đủ để tranh chỗ với chính cái tên. */
+.acctpending {
+  display: block;
+  margin-top: 2px;
+  font: 600 11px/1.3 var(--data);
+  color: var(--stamp);
+}

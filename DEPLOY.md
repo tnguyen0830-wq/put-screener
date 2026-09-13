@@ -275,6 +275,31 @@ Bốn điều phải biết trước khi bật:
 - **Đổi `APP_PASSWORD` thì MỌI người phải đăng nhập lại**, vì nó là khoá ký
   phiên. Tài khoản người nhà thì không mất, chỉ phải đăng nhập lại.
 
+#### Quên mật khẩu
+
+**Người nhà** — bạn tạo mã đặt lại trong ⚙️ → Quản lý tài khoản, đọc cho họ,
+họ tự đặt mật khẩu mới ở trang đăng nhập (nút **Quên mật khẩu?**). Mã sống 30
+phút, dùng một lần, trên đĩa chỉ lưu bản băm. Không cần deploy, không cần
+nhắn mật khẩu qua tin nhắn.
+
+Cửa nhập mã (`/api/password-reset`) **mở cho cả Internet** — bắt buộc, vì
+người quên mật khẩu chưa đăng nhập được. Ba thứ giữ nó an toàn: mã ngẫu nhiên
+8 ký tự trong bảng 31 chữ (~8.5×10¹¹ tổ hợp) hết hạn sau 30 phút; bộ đếm khoá
+sau 5 lần sai trong 15 phút, xô riêng với xô của trang đăng nhập; và quan
+trọng nhất — **không tồn tại mã đặt lại cho chủ app**, nên đường này không bao
+giờ chạm tới danh mục.
+
+**Chủ app** — không có mã, và đó là chủ ý. Khôi phục thế này:
+
+1. Render → service → **Environment** → sửa `APP_PASSWORD` thành mật khẩu mới.
+2. **Save**, chờ deploy lại xong.
+3. Đăng nhập với tên `owner` (hoặc `APP_OWNER_USER`) + mật khẩu mới.
+
+Hai hệ quả phải biết trước khi làm: `APP_PASSWORD` là **khoá ký phiên**, nên
+đổi nó là **mọi người** — cả nhà — bị đăng xuất và phải đăng nhập lại; và tài
+khoản người nhà thì **không mất**, mật khẩu của họ vẫn nguyên, chỉ phải đăng
+nhập lại một lần. Phiên Schwab, watchlist, danh mục đều không ảnh hưởng.
+
 #### Chuyển tiếp từ `APP_USERS` (bản cũ)
 
 Bản trước giữ tài khoản người nhà trong biến `APP_USERS="ten:matkhau,..."`, dạng

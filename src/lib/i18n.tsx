@@ -109,6 +109,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (code: string) =>
       `The server returned an unfamiliar code (${code}). This page may be an old copy - reload it (Ctrl+Shift+R) and try again.`,
   },
+  'login.forgot': { vi: 'Quên mật khẩu?', en: 'Forgot your password?' },
+  'login.backToLogin': { vi: '← Quay lại đăng nhập', en: '← Back to sign in' },
   'login.failed': { vi: 'Không kết nối được server.', en: 'Could not reach the server.' },
   'login.what': {
     vi: 'Công cụ cá nhân, một người dùng. Đọc dữ liệu thị trường qua API chính thức dành cho nhà phát triển của Charles Schwab, bằng chính tài khoản của chủ trang. Ô mật khẩu phía trên là để bảo vệ dữ liệu của chủ trang, không thu thập thông tin của ai khác.',
@@ -119,6 +121,46 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Not affiliated with, endorsed by, or operated by Charles Schwab & Co., Inc. This page never asks for your Schwab credentials — Schwab sign-in happens on schwab.com.',
   },
   /* ---- Quản lý tài khoản (/accounts, chỉ chủ app) ---- */
+  'reset.title': { vi: 'Đặt lại mật khẩu bằng mã', en: 'Reset your password with a code' },
+  'reset.intro': {
+    vi: 'Xin chủ app một mã đặt lại (họ bấm “Tạo mã đặt lại” trong Quản lý tài khoản). Mã sống 30 phút và chỉ dùng được một lần.',
+    en: 'Ask the app owner for a reset code (they press "Create reset code" in Manage accounts). A code lasts 30 minutes and works once.',
+  },
+  'reset.ownerNote': {
+    // Nói thẳng, nếu không chủ app sẽ ngồi chờ một cái mã không bao giờ tồn
+    // tại. Mã đặt lại CỐ TÌNH không áp dụng cho chủ app - xem userstore.ts.
+    vi: 'Nếu bạn là chủ app: mã đặt lại không dùng cho tài khoản của bạn. Mật khẩu của bạn là APP_PASSWORD — đổi nó trong Render → Environment rồi deploy lại (xem DEPLOY.md).',
+    en: 'If you are the app owner: reset codes do not apply to your account. Your password is APP_PASSWORD — change it in Render → Environment and redeploy (see DEPLOY.md).',
+  },
+  'reset.username': { vi: 'Tên đăng nhập', en: 'Username' },
+  'reset.code': { vi: 'Mã đặt lại', en: 'Reset code' },
+  'reset.codePlaceholder': { vi: 'ví dụ: ABCD-EFGH', en: 'e.g. ABCD-EFGH' },
+  'reset.newPassword': { vi: 'Mật khẩu mới (ít nhất 8 ký tự)', en: 'New password (8 characters minimum)' },
+  'reset.submit': { vi: 'Đổi mật khẩu', en: 'Change password' },
+  'reset.saving': { vi: 'Đang đổi…', en: 'Changing…' },
+  'reset.done': {
+    vi: 'Đổi xong. Đăng nhập bằng mật khẩu mới.',
+    en: 'Done. Sign in with your new password.',
+  },
+  'reset.err.bad-code': {
+    // Một câu cho cả ba trường hợp: không có tên đó, chưa phát mã, và mã
+    // sai. Nói rõ cái nào là nói cho người lạ biết tên nào có thật.
+    vi: 'Tên đăng nhập hoặc mã không đúng.',
+    en: 'Wrong username or code.',
+  },
+  'reset.err.expired': {
+    vi: 'Mã này đã hết hạn. Xin chủ app tạo mã mới.',
+    en: 'That code has expired. Ask the owner for a new one.',
+  },
+  'reset.err.weak-password': {
+    vi: 'Mật khẩu mới phải dài ít nhất 8 ký tự. Mã của bạn vẫn còn dùng được.',
+    en: 'The new password must be at least 8 characters. Your code still works.',
+  },
+  'reset.err.failed': { vi: 'Không đổi được. Thử lại.', en: 'Could not change it. Try again.' },
+  'reset.tooMany': {
+    vi: (s: number) => `Thử sai quá nhiều lần. Chờ ${Math.ceil(s / 60)} phút rồi thử lại.`,
+    en: (s: number) => `Too many attempts. Wait ${Math.ceil(s / 60)} minutes and try again.`,
+  },
   'acct.title': { vi: 'Tài khoản gia đình', en: 'Family accounts' },
   'acct.open': { vi: 'Quản lý tài khoản', en: 'Manage accounts' },
   'acct.intro': {
@@ -140,6 +182,40 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'acct.colUpdated': { vi: 'Đổi mật khẩu', en: 'Password changed' },
   'acct.resetBtn': { vi: 'Đặt lại mật khẩu', en: 'Reset password' },
   'acct.deleteBtn': { vi: 'Xoá', en: 'Delete' },
+  'acct.codeBtn': { vi: 'Tạo mã đặt lại', en: 'Create reset code' },
+  'acct.codeTitle': {
+    vi: (name: string) => `Mã đặt lại cho “${name}”`,
+    en: (name: string) => `Reset code for "${name}"`,
+  },
+  'acct.codeShown': {
+    // Nói trước, không nói sau: trên đĩa chỉ có bản băm, nên đóng hộp này
+    // lại là mã biến mất thật. Người đọc phải biết điều đó TRƯỚC khi đóng.
+    vi: 'Đọc mã này cho họ ngay. Mã chỉ hiện một lần — đóng đi là không xem lại được, phải tạo mã khác.',
+    en: 'Read this out to them now. It is shown once — close this and it is gone for good; you would have to create another.',
+  },
+  'acct.codeExpires': {
+    vi: (hhmm: string) => `Hết hạn lúc ${hhmm}, và chỉ dùng được một lần.`,
+    en: (hhmm: string) => `Expires at ${hhmm}, and works once.`,
+  },
+  'acct.codeWhere': {
+    vi: 'Họ vào trang đăng nhập, bấm “Quên mật khẩu?”, rồi nhập tên + mã này + mật khẩu mới do họ tự chọn.',
+    en: 'They open the sign-in page, press "Forgot your password?", then enter their username, this code, and a new password of their own choosing.',
+  },
+  'acct.codeDone': { vi: 'Đã đọc xong', en: 'Done reading it' },
+  'acct.codePending': {
+    vi: (hhmm: string) => `đang có mã, hết hạn ${hhmm}`,
+    en: (hhmm: string) => `code pending, expires ${hhmm}`,
+  },
+  'acct.codeCancel': { vi: 'Huỷ mã', en: 'Cancel code' },
+  'acct.codeCancelled': {
+    vi: (name: string) => `Đã huỷ mã đặt lại của “${name}”.`,
+    en: (name: string) => `Cancelled the reset code for "${name}".`,
+  },
+  'acct.ownerNoCode': {
+    vi: 'Mã đặt lại chỉ dành cho người nhà. Mật khẩu của chính bạn là APP_PASSWORD trên Render — cố tình để ngoài kho tài khoản, để một cái mã lọt ra ngoài không bao giờ chạm được tới danh mục.',
+    en: 'Reset codes are for family accounts only. Your own password is APP_PASSWORD on Render — deliberately kept outside the account store, so a leaked code can never reach the portfolio.',
+  },
+
   'acct.resetTitle': {
     vi: (n: string) => `Đặt mật khẩu mới cho ${n}`,
     en: (n: string) => `Set a new password for ${n}`,

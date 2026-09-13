@@ -42,7 +42,18 @@ function hasMdToken(req: NextRequest, expected: string): boolean {
  * Callback của Schwab cố tình KHÔNG nằm ở đây. Để ngỏ nó thì người lạ có thể
  * đăng nhập tài khoản Schwab của họ vào server này và ghi đè token của bạn.
  */
-const OPEN = ['/login', '/api/session', '/api/auth/status'];
+const OPEN = [
+  '/login',
+  '/api/session',
+  '/api/auth/status',
+  /* Đổi mật khẩu bằng mã đặt lại. Bắt buộc phải mở: người quên mật khẩu
+     thì chưa đăng nhập được, nên không thể gác bằng cookie. Thứ giữ cửa
+     này an toàn nằm ở chính route đó và ở `createResetCode()` - đọc chú
+     thích ở cả hai trước khi sửa gì quanh đây. Riêng việc PHÁT mã thì
+     ngược lại: `/api/users/reset-code` nằm dưới `/api/users`, tức chỉ chủ
+     app. */
+  '/api/password-reset',
+];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

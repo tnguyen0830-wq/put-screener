@@ -26,6 +26,58 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /* Quên mật khẩu: cùng một trang, đổi khối hiển thị - không phải một
+     trang riêng. Người đang ở đây vừa gõ sai mật khẩu, và một cú nhảy
+     trang nữa là một chỗ nữa để lạc. */
+  const [mode, setMode] = useState<'login' | 'reset'>('login');
+  const [code, setCode] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [resetDone, setResetDone] = useState(false);
+
+  const submitReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, code, password: newPass }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        // Cố tình KHÔNG tự đăng nhập hộ. Gõ lại mật khẩu mới một lần là
+        // cách người dùng tự xác nhận mình nhớ đúng nó.
+        setResetDone(true);
+        setMode('login');
+        setCode('');
+        setNewPass('');
+        setPassword('');
+        return;
+      }
+      const known = ['bad-code', 'expired', 'weak-password'];
+      setError(
+        j.error === 'TOO_MANY_TRIES'
+          ? t('reset.tooMany', j.retryInSec ?? 0)
+          : known.includes(j.error)
+            ? t(`reset.err.${j.error}`)
+            : t('reset.err.failed')
+      );
+    } catch {
+      setError(t('login.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Đổi qua lại giữa hai khối, và dọn sạch thông báo cũ - một dòng lỗi
+   *  của khối kia còn nằm lại thì đọc như khối này vừa hỏng. */
+  const switchTo = (m: 'login' | 'reset') => {
+    setMode(m);
+    setError(null);
+    setResetDone(false);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -72,7 +124,7 @@ export default function LoginPage() {
 
   return (
     <div className="loginwrap">
-      <form className="loginbox" onSubmit={submit}>
+      <form className="loginbox" onSubmit={mode === 'login' ? submit : submitReset}>
         <div className="loginbrand">
           <Logo height={34} />
           <span className="wordmark">
@@ -95,22 +147,72 @@ export default function LoginPage() {
           />
         </label>
 
-        <label className="loginfield">
-          <span>{t('login.password')}</span>
-          <input
-            type="password"
-            autoFocus
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
+        {mode === 'login' ? (
+          <>
+            <label className="loginfield">
+              <span>{t('login.password')}</span>
+              <input
+                type="password"
+                autoFocus
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
 
-        <button type="submit" disabled={busy || !username || !password}>
-          {busy ? t('login.checking') : t('login.enter')}
-        </button>
+            <button type="submit" disabled={busy || !username || !password}>
+              {busy ? t('login.checking') : t('login.enter')}
+            </button>
 
-        {error && <p className="loginerr">{error}</p>}
+            {resetDone && <p className="logindone">{t('reset.done')}</p>}
+            {error && <p className="loginerr">{error}</p>}
+
+            <button type="button" className="loginlink" onClick={() => switchTo('reset')}>
+              {t('login.forgot')}
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="loginsub">{t('reset.title')}</h2>
+            <p className="cap">{t('reset.intro')}</p>
+
+            <label className="loginfield">
+              <span>{t('reset.code')}</span>
+              <input
+                type="text"
+                autoFocus
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder={t('reset.codePlaceholder')}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </label>
+
+            <label className="loginfield">
+              <span>{t('reset.newPassword')}</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+              />
+            </label>
+
+            <button type="submit" disabled={busy || !username || !code || newPass.length < 8}>
+              {busy ? t('reset.saving') : t('reset.submit')}
+            </button>
+
+            {error && <p className="loginerr">{error}</p>}
+            <p className="cap">{t('reset.ownerNote')}</p>
+
+            <button type="button" className="loginlink" onClick={() => switchTo('login')}>
+              {t('login.backToLogin')}
+            </button>
+          </>
+        )}
+
         <p className="cap">{t('login.note')}</p>
 
         {/*
