@@ -45,12 +45,23 @@ export default function LoginPage() {
         window.location.href = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
         return;
       }
+      /* Mã lỗi lạ thì NÓI RA mã đó, đừng đoán là sai mật khẩu.
+         Đây chính là thứ đã biến một lần lệch phiên bản thành một lời buộc
+         tội sai: bản #119 gộp mọi mã chưa biết vào "Sai mật khẩu.", nên khi
+         server lên #120 và trả về `WRONG_LOGIN` (mã trang cũ chưa từng
+         nghe), màn hình vẫn quả quyết là mật khẩu sai - trong khi mật khẩu
+         đúng và cái sai là trang đang chạy đã cũ. Cùng một nguyên tắc với
+         phần còn lại của app: "không biết" không được hiện ra giống
+         "đã biết và đây là câu trả lời". */
+      const known = ['WRONG_LOGIN', 'TOO_MANY_TRIES', 'NO_PASSWORD_SET'];
       setError(
         j.error === 'TOO_MANY_TRIES'
           ? t('login.tooMany', j.retryInSec ?? 0)
           : j.error === 'NO_PASSWORD_SET'
             ? t('login.noPassword')
-            : t('login.wrong')
+            : known.includes(j.error)
+              ? t('login.wrong')
+              : t('login.unknown', String(j.error ?? r.status))
       );
     } catch {
       setError(t('login.failed'));

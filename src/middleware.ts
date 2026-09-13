@@ -65,7 +65,7 @@ export async function middleware(req: NextRequest) {
   // Chưa đặt mật khẩu: cổng mở, và chỉ có một người - chính là chủ máy.
   if (!password) return pass(req, OWNER);
   if (OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`)))
-    return strip(req);
+    return noStore(strip(req), pathname);
 
   const user = await verifySession(req.cookies.get(COOKIE)?.value, password);
   /* KHÔNG kiểm tra "tài khoản còn tồn tại" ở đây được: từ khi tài khoản
@@ -104,6 +104,37 @@ export async function middleware(req: NextRequest) {
  * header của client, người nhà chỉ cần tự gửi `x-ps-user: owner` là thành
  * chủ app.
  */
+/**
+ * Cấm mọi bộ nhớ đệm giữ lại trang đăng nhập.
+ *
+ * ĐO ĐƯỢC, không phải phòng xa: `next start` trả `/login` kèm
+ * `Cache-Control: s-maxage=31536000, stale-while-revalidate` vì đó là trang
+ * tĩnh dựng sẵn lúc build. `s-maxage` nói riêng với các bộ đệm CHUNG - và
+ * app này chạy sau proxy của Render - rằng giữ một năm cũng được.
+ *
+ * Hệ quả thật, chính là lỗi chủ app gặp sau #120: HTML cũ (một ô mật khẩu)
+ * được phục vụ lại trong khi server đã là bản mới cần hai ô. Trang cũ gửi
+ * `{password}` không kèm tên, server mới từ chối, và vì mã lỗi mới
+ * (`WRONG_LOGIN`) không nằm trong danh sách trang cũ biết, nó rơi vào nhánh
+ * mặc định và in ra đúng chữ của bản cũ: "Sai mật khẩu." Mật khẩu đúng,
+ * người dùng bị khoá ngoài, còn màn hình thì đổ lỗi cho họ.
+ *
+ * Trang đăng nhập là trang DUY NHẤT không được phép cũ: nó là cái cửa, và
+ * hình dạng dữ liệu nó gửi đi phải khớp với server đang chạy. Nó cũng không
+ * có gì đáng để đệm - không ảnh nặng, không dữ liệu, mỗi lần vào một lần.
+ *
+ * Đặt ở middleware chứ không phải trong page: `export const dynamic` không
+ * dùng được trong file `'use client'`, và làm ở đây thì mọi đường trong
+ * `OPEN` đều được che cùng một lúc, kể cả đường thêm sau này.
+ */
+function noStore(res: NextResponse, pathname: string) {
+  // `/api/session` là POST nên vốn không bị đệm; chặn thêm cũng vô hại, và
+  // để một chỗ thì không có đường nào bị bỏ sót.
+  if (pathname.startsWith('/api/')) return res;
+  res.headers.set('Cache-Control', 'no-store, must-revalidate');
+  return res;
+}
+
 function pass(req: NextRequest, user: string) {
   const headers = new Headers(req.headers);
   headers.set(USER_HEADER, user);
