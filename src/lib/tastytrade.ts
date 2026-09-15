@@ -22,10 +22,19 @@
  *
  * Hai cách xác thực, theo tài liệu tôi nhớ - probe sẽ nói cách nào đúng:
  *
- *   1. OAuth (ưu tiên): `TT_CLIENT_SECRET` + `TT_REFRESH_TOKEN`, đổi lấy
- *      access token ngắn hạn qua `POST /oauth/token`. Refresh token tạo trong
- *      phần API của tài khoản tastytrade, thu hồi được, KHÔNG phải mật khẩu
- *      đăng nhập. Đây là cách nên dùng trên Render.
+ *   1. OAuth (ưu tiên): `TT_CLIENT_SECRET` + `TT_REFRESH_TOKEN` (+
+ *      `TT_CLIENT_ID` nếu có), đổi lấy access token ngắn hạn qua
+ *      `POST /oauth/token`. Refresh token tạo trong phần API của tài khoản
+ *      tastytrade, thu hồi được, KHÔNG phải mật khẩu đăng nhập. Đây là cách
+ *      nên dùng trên Render.
+ *
+ *      **Ứng dụng OAuth phải xin đúng scope `read`, KHÔNG xin `trade`.**
+ *      Ranh giới này không nằm trong code được - nó do màn hình tạo ứng
+ *      dụng bên tastytrade quyết định, một lần, vĩnh viễn. Client này chỉ
+ *      đọc dữ liệu thị trường; nếu token mang thêm quyền `trade` thì một
+ *      lần lộ biến môi trường không còn là lộ dữ liệu mà là người lạ đặt
+ *      được lệnh trên tài khoản môi giới thật. Quyền tối thiểu ở đây đổi
+ *      hậu quả tệ nhất từ MẤT TIỀN thành lộ vài con số thị trường.
  *   2. Phiên (dự phòng): `TT_USERNAME` + `TT_PASSWORD` qua `POST /sessions`.
  *      Đặt mật khẩu tài khoản môi giới vào biến môi trường là thứ tôi không
  *      thích - chỉ để ở đây phòng khi tài khoản chưa mở được OAuth. Tài liệu
@@ -131,12 +140,34 @@ export async function ttAuthenticate(force = false): Promise<{
   }
 
   if (method === 'oauth') {
+    /* `client_id` gửi kèm KHI CÓ. OAuth2 chuẩn đòi nó ở grant
+       `refresh_token`, nhưng vài nhà cung cấp chỉ cần `client_secret` -
+       chưa gọi thật được từ sandbox nên không biết tastytrade thuộc nhóm
+       nào. Gửi thừa một tham số chuẩn thì vô hại; thiếu nó thì hỏng, nên
+       chọn phía gửi. Bỏ hẳn khỏi payload khi không đặt, đừng gửi
+       `client_id: undefined` - `JSON.stringify` bỏ undefined đi, nhưng để
+       người đọc sau khỏi phải tự suy ra điều đó. */
     const { res, text, json } = await postJson('/oauth/token', {
       grant_type: 'refresh_token',
+      ...(process.env.TT_CLIENT_ID ? { client_id: process.env.TT_CLIENT_ID } : {}),
       client_secret: process.env.TT_CLIENT_SECRET,
       refresh_token: process.env.TT_REFRESH_TOKEN,
     });
-    if (!res.ok) throw new TtError(`tastytrade ${res.status} ở /oauth/token`, res.status, text.slice(0, 300));
+    if (!res.ok) {
+      /* Nói ra thứ KHÔNG nhìn thấy được từ thân lỗi: đã gửi kèm client_id
+         hay chưa. 400/401 ở đây có ba nguyên nhân hay gặp - thiếu
+         client_id, refresh token sai/hết hạn, hoặc ứng dụng thiếu scope
+         `read` - và thân lỗi của tastytrade thường chỉ nói "invalid_grant"
+         cho cả ba. Một dòng nói rõ mình đã gửi gì rút ngắn việc dò tìm. */
+      const hint = process.env.TT_CLIENT_ID
+        ? 'đã gửi kèm client_id'
+        : 'KHÔNG gửi client_id (TT_CLIENT_ID chưa đặt) - nếu tastytrade đòi thì đây là nguyên nhân';
+      throw new TtError(
+        `tastytrade ${res.status} ở /oauth/token (${hint})`,
+        res.status,
+        text.slice(0, 300)
+      );
+    }
     // Tên trường theo tài liệu OAuth chuẩn; nếu sai, `responseKeys` trong
     // probe sẽ chỉ ra tên thật.
     const token = json?.access_token ?? json?.data?.access_token;

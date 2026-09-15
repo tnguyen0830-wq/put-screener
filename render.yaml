@@ -71,6 +71,8 @@ services:
       # tastytrade Open API (earnings, IV rank) - dữ liệu thị trường, không
       # đặt lệnh. Ưu tiên cặp OAuth; cặp USERNAME/PASSWORD chỉ là dự phòng
       # và là mật khẩu môi giới thật. Bỏ trống = tính năng tắt.
+      - key: TT_CLIENT_ID
+        sync: false
       - key: TT_CLIENT_SECRET
         sync: false
       - key: TT_REFRESH_TOKEN
