@@ -100,6 +100,10 @@ const OWNER_ONLY = [
   // Quản lý tài khoản: đọc được danh sách người nhà đã đủ đáng giấu, còn
   // ghi thì là tự phong quyền. Cả GET lẫn POST/PATCH/DELETE đều chặn ở đây.
   '/api/users',
+  // Probe tastytrade: kích hoạt lượt gọi trên TÀI KHOẢN MÔI GIỚI của chủ
+  // app. Chỉ trả hình dạng, không trả số - nhưng người nhà vẫn không được
+  // là người bấm nút trên tài khoản đó.
+  '/api/ttprobe',
 ];
 
 /** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang

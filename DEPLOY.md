@@ -316,6 +316,48 @@ Một việc phải làm thủ công sau lần deploy này: **mọi người đ�
 lần**, và lần này có thêm ô tên. Cookie phiên bản cũ bị từ chối thẳng chứ không
 được đoán là của chủ app.
 
+### tastytrade (tuỳ chọn): earnings + IV rank cho screener
+
+Schwab không cho ngày earnings và IV rank. Hệ quả thật: hard gate "không có
+earnings trong kỳ hợp đồng" đang **đi qua mọi mã ngoài watchlist chỉ vì không
+có dữ liệu**. tastytrade có cả hai thứ đó miễn phí cho người có tài khoản, chỉ
+đọc dữ liệu thị trường — không đặt lệnh, không đọc vị thế.
+
+**Bước 1 — lấy OAuth (ưu tiên), không dùng mật khẩu.** Vào tastytrade →
+phần **API** trong cài đặt tài khoản → tạo ứng dụng OAuth cho cá nhân → lấy
+*client secret* và *refresh token*. Token này thu hồi được bất cứ lúc nào và
+không phải mật khẩu đăng nhập.
+
+Render → Environment:
+
+| Biến | Giá trị |
+|---|---|
+| `TT_CLIENT_SECRET` | client secret vừa tạo |
+| `TT_REFRESH_TOKEN` | refresh token vừa tạo |
+
+Nếu tài khoản chưa mở được OAuth thì tạm dùng `TT_USERNAME` + `TT_PASSWORD` —
+nhưng đó là **mật khẩu tài khoản môi giới** nằm trong bảng Environment, nên
+chuyển sang OAuth ngay khi có thể và xoá hai biến kia đi.
+
+**Bước 2 — chạy probe một lần, đọc kết quả, rồi mới có tính năng.** Sau khi
+deploy, đăng nhập bằng tài khoản chủ app và mở:
+
+```
+https://<app>/api/ttprobe?symbols=AAPL,MSFT,SPY,TSLA,NVDA
+```
+
+Nó chỉ trả về **hình dạng** (tên khoá, kiểu dữ liệu, mã nào bị rơi), không
+có token nào trong câu trả lời. Ba dòng đáng đọc:
+
+- `auth.ok` + `marketMetrics.schemeAccepted` — xác thực chạy được chưa, và
+  header kiểu nào được chấp nhận.
+- `marketMetrics.found.earnings` — **rỗng nghĩa là không vá được gate
+  earnings từ đây**, dừng lại.
+- `marketMetrics.missing` — hỏi 5 mã mà về 4 thì phải biết trước khi tin.
+
+Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
+theo tài liệu.
+
 ### Những gì cổng này gác, và không gác
 
 - **Gác:** mọi trang và mọi `/api/*`, kể cả `/api/auth/callback` của Schwab. Để ngỏ
