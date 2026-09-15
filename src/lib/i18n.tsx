@@ -1475,6 +1475,54 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Outside market hours, so automatic syncing pauses - options only trade while the exchange is open. "Sync now" still works normally.',
   },
   'of.colSweeps': { vi: 'Sweep', en: 'Sweeps' },
+  'of.colPremium': { vi: 'Tổng tiền', en: 'Premium' },
+  'of.colSplit': { vi: 'Call / Put', en: 'Call / Put' },
+  'of.colBiggest': { vi: 'Lệnh lớn nhất', en: 'Biggest' },
+  'of.colCount': { vi: 'Số lệnh', en: 'Alerts' },
+  'of.keyCall': { vi: 'Tiền vào Call', en: 'Money into calls' },
+  'of.keyPut': { vi: 'Tiền vào Put', en: 'Money into puts' },
+  'of.keyCaveat': {
+    // Giới hạn thật của dữ liệu, phải nói ra. UW cho biết tiền đổ vào phía
+    // nào, KHÔNG cho biết ai mua ai bán - mà một lệnh call lớn hoàn toàn có
+    // thể là người ta đang BÁN call. Không có câu này thì "tiền vào Call"
+    // đọc thành "đang đặt cược giá lên", một kết luận sai chứ không phải
+    // một thông tin thiếu.
+    vi: 'Đây là tiền đổ vào phía nào, KHÔNG phải ai mua ai bán — một lệnh call lớn có thể là người ta bán call.',
+    en: 'This is which side the money went into, NOT who bought or sold — a large call trade can be someone selling calls.',
+  },
+  'of.splitLabel': {
+    vi: (pct: number) => `${pct}% call`,
+    en: (pct: number) => `${pct}% calls`,
+  },
+  'of.splitNone': { vi: 'không rõ phía', en: 'side unknown' },
+  'of.otherSide': {
+    vi: (m: string) => `· ${m} không rõ phía`,
+    en: (m: string) => `· ${m} unknown side`,
+  },
+  'of.dWhen': { vi: 'Lúc', en: 'When' },
+  'of.dContract': { vi: 'Hợp đồng', en: 'Contract' },
+  'of.dDte': { vi: 'Còn (ngày)', en: 'DTE' },
+  'of.dPremium': { vi: 'Tiền', en: 'Premium' },
+  'of.dVolOi': { vi: 'KL/OI', en: 'Vol/OI' },
+  'of.dTags': { vi: 'Dấu hiệu', en: 'Flags' },
+  'of.multi': { vi: 'Nhiều chân', en: 'Multi-leg' },
+  'of.sweepWhat': {
+    vi: 'Một lệnh bị xé ra quét qua nhiều sàn cùng lúc — người đặt chấp nhận giá xấu hơn để khớp cho bằng được. Dấu hiệu của sự vội vàng.',
+    en: 'One order split across several exchanges at once — the buyer accepted a worse price to get filled immediately. A sign of urgency.',
+  },
+  'of.floorWhat': {
+    vi: 'Khớp trên sàn giao dịch truyền thống, thường là lệnh lớn của tổ chức thay vì lệnh máy.',
+    en: 'Executed on the exchange floor — usually a large institutional order rather than an algorithmic one.',
+  },
+  'of.multiWhat': {
+    vi: 'Lệnh có nhiều chân (spread), không phải một cú đặt cược thẳng một chiều — đừng đọc số tiền này như đặt cược tăng hay giảm.',
+    en: 'A multi-leg order (a spread), not a one-directional bet — do not read this premium as bullish or bearish.',
+  },
+  'of.volOiWhat': {
+    vi: 'Khối lượng chia cho số hợp đồng đang mở. Trên 1 nghĩa là hôm nay giao dịch nhiều hơn toàn bộ hợp đồng đang tồn tại ở mức giá đó — gần như chắc chắn là vị thế MỚI.',
+    en: 'Volume divided by open interest. Above 1 means more traded today than all contracts that existed at that strike — almost certainly a new position.',
+  },
+
   'of.put': { vi: 'Put', en: 'Put' },
   'of.call': { vi: 'Call', en: 'Call' },
   'of.sweep': { vi: 'Sweep', en: 'Sweep' },

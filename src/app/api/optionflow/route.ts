@@ -20,8 +20,14 @@ export async function GET() {
 
   const { symbols, holdingsError, sp500Error } = await trackedSymbols();
   const rows = await readOptionFlow(symbols);
+  /* Xếp theo SỐ TIỀN, không phải số lần sweep.
+     Cũ: sweepCount giảm dần - tức một mã có ba sweep nhỏ đứng trên một mã
+     có một lệnh 5 triệu đô. Câu hỏi của luồng quyền chọn là "tiền lớn đang
+     ở đâu", nên tiền phải là khoá xếp hạng. Sweep vẫn là một cột, chỉ
+     không còn quyết định thứ tự. */
   rows.sort(
     (a, b) =>
+      b.totalPremium - a.totalPremium ||
       b.sweepCount - a.sweepCount ||
       (b.lastAlertAt ?? '').localeCompare(a.lastAlertAt ?? '')
   );

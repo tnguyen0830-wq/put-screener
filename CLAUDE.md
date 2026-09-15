@@ -473,6 +473,60 @@ range, so they're parsed to numbers rather than kept as strings — treating
 them the same way as Congress data would be applying the wrong caution to
 the wrong field.
 
+### Options Flow, and why the old panel could not be read
+
+The owner's ask was plain: *"quyền chọn trong mục insider có cách nào nhìn hay
+hơn hay dễ biết hơn không?"* The panel had three columns — symbol, sweep count,
+last date — and a bullet list behind each row. So the one question options flow
+exists to answer, **where is the big money and on which side**, was invisible
+without clicking every row, and barely legible after.
+
+Four changes, each fixing a different failure:
+
+- **Rows sort by total premium, not sweep count.** Sorting by sweeps put three
+  small sweeps above one $5M trade. Money is the ranking key; sweeps stayed as
+  a column.
+- **A call/put bar per symbol.** Bar *width* is that symbol's premium against
+  the largest row (one shared scale — per-row scaling would draw a $50K symbol
+  the same length as a $5M one), and the split *inside* it is call vs put.
+- **The detail is a real table** (time / contract / DTE / premium / vol-OI /
+  flags), not `.pfskipped` bullets. The old list reused the "skipped positions"
+  style and ran every field together as prose, so comparing two trades meant
+  re-reading both from the start.
+- **Vol/OI is computed and shown.** Above 1 means more traded today than every
+  contract that existed at that strike — almost certainly a *new* position, and
+  the single strongest read in a flow row. It was in the payload and never
+  displayed.
+
+**`flowSide()` exists because `type === 'put' ? 'put' : 'call'` is a silent
+mis-total.** While the panel only printed a word, an unrecognised `type`
+rendering as "call" was cosmetic. Once premium is *summed by side*, the same
+line turns an unknown value into a wrong number that looks right — every
+surprise value would pour into the call column and the bar would still render
+perfectly. `other` is now a real side, and the screen names its premium when it
+is non-zero. The test pins this with a `"mystery-side"` record.
+
+**`hasMultileg` is displayed now; omitting it invited a wrong conclusion.** The
+field was parsed and never shown, so a large multi-leg premium read as a
+one-directional bet when it is a spread.
+
+**The panel says what the data cannot tell you.** UW's `flow-alerts` records
+carry no buy/sell side in what this app stores, so "money into calls" is not
+"someone is bullish" — a large call trade can be someone *selling* calls. That
+caveat sits in the legend, in `--warn`, next to the colour key. Leaving it out
+would not have been a missing fact but a wrong one.
+
+Colour reuses `--gexcall` / `--gexput`, the pair GEX already defines in all
+three theme blocks. Call-vs-put is **classification**, so `--credit`/`--risk`
+would read as "calls good, puts bad" — the exact confusion `ColorLegend.tsx`
+exists to prevent. Reusing existing tokens also keeps this change out of the
+three-block editing trap entirely.
+
+Unknown `alert_rule` values print **UW's own name**, not the i18n key. `t()`
+returns the key on a miss (deliberate, so gaps show while writing code), but UW
+adds rules without notice, so the raw fallback in `ruleLabel()` is what stops
+`of.rule.SomethingNew` appearing on screen.
+
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 
 Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".

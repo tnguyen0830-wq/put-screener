@@ -214,11 +214,39 @@ export async function syncOptionFlow(force = false): Promise<OptionFlowRun> {
   return lastRun;
 }
 
+/**
+ * Call, put, hay không rõ.
+ *
+ * Bản đầu viết `a.type === 'put' ? 'put' : 'call'` - tức MỌI giá trị lạ đều
+ * lặng lẽ thành "call". Lúc chỉ in một chữ ra màn hình thì sai đó còn nhỏ;
+ * từ khi tiền được CỘNG theo phía, nó thành một con số sai trông y như số
+ * đúng: một giá trị UW đổi tên sẽ chảy hết vào cột call và bảng vẫn đẹp.
+ * Nên ở đây `other` là một phía thật, và màn hình nói ra khi nó khác 0.
+ */
+export type FlowSide = 'call' | 'put' | 'other';
+
+export function flowSide(type: string | null | undefined): FlowSide {
+  const t = String(type ?? '').trim().toLowerCase();
+  if (t === 'call' || t === 'c') return 'call';
+  if (t === 'put' || t === 'p') return 'put';
+  return 'other';
+}
+
 export type SymbolFlowAlerts = {
   symbol: string;
   alerts: FlowAlert[];
   sweepCount: number;
   lastAlertAt: string | null;
+  /** Tổng premium theo phía. Đây là thứ bảng cần để xếp hạng và để vẽ
+   *  thanh call/put - đếm số alert thì một lệnh 50 nghìn đô cân bằng với
+   *  một lệnh 5 triệu, tức là đếm sai thứ. */
+  callPremium: number;
+  putPremium: number;
+  otherPremium: number;
+  totalPremium: number;
+  /** Lệnh đơn lẻ lớn nhất. Mười lệnh nhỏ và một lệnh khổng lồ có thể ra
+   *  cùng một tổng, nhưng đọc khác hẳn nhau. */
+  biggestPremium: number;
 };
 
 export async function readOptionFlow(symbols: string[]): Promise<SymbolFlowAlerts[]> {
@@ -236,11 +264,30 @@ export async function readOptionFlow(symbols: string[]): Promise<SymbolFlowAlert
 
   return [...bySymbol.entries()].map(([symbol, alerts]) => {
     alerts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    let callPremium = 0;
+    let putPremium = 0;
+    let otherPremium = 0;
+    let biggestPremium = 0;
+    for (const a of alerts) {
+      const p = a.totalPremium ?? 0;
+      if (p > biggestPremium) biggestPremium = p;
+      const side = flowSide(a.type);
+      if (side === 'call') callPremium += p;
+      else if (side === 'put') putPremium += p;
+      else otherPremium += p;
+    }
+
     return {
       symbol,
       alerts,
       sweepCount: alerts.filter((a) => a.hasSweep).length,
       lastAlertAt: alerts[0]?.createdAt ?? null,
+      callPremium,
+      putPremium,
+      otherPremium,
+      totalPremium: callPremium + putPremium + otherPremium,
+      biggestPremium,
     };
   });
 }

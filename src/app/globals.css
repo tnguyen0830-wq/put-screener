@@ -2569,3 +2569,138 @@ body {
   font: 600 11px/1.3 var(--data);
   color: var(--stamp);
 }
+
+/* ---- Options Flow (tab Insider Trade) ---- */
+
+/* Chú giải + cảnh báo ngay trên bảng. Bảng này nói về tiền theo phía call/put,
+   và phía KHÔNG đồng nghĩa với mua/bán - câu cảnh báo đứng cùng chỗ với chú
+   giải màu để không ai đọc màu mà bỏ qua nghĩa. */
+.ofkey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  padding-top: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.ofkey > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ofswatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+/* Dùng lại đúng cặp màu call/put của biểu đồ GEX. Đây là PHÂN LOẠI (call so
+   với put), không phải quy tắc dấu xanh/đỏ của ColorLegend - lấy --credit/
+   --risk ở đây sẽ đọc thành "call là tốt, put là xấu", điều không hề đúng.
+   Cặp biến này đã được định nghĩa sẵn ở cả ba khối theme. */
+.ofswatch-call {
+  background: var(--gexcall);
+}
+.ofswatch-put {
+  background: var(--gexput);
+}
+
+.oftable td.num,
+.oftable th.num,
+.ofdetail td.num,
+.ofdetail th.num {
+  text-align: right;
+}
+
+/* Thanh call/put. Bề RỘNG của cả thanh là tổng tiền so với mã lớn nhất; tỷ lệ
+   BÊN TRONG là call so với put. Hai thông tin trên một thanh, và cái quan
+   trọng hơn (quy mô) đọc được ngay cả khi liếc qua. */
+.ofbar {
+  display: flex;
+  height: 9px;
+  min-width: 24px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--rule-soft);
+}
+.ofbar-call {
+  background: var(--gexcall);
+}
+.ofbar-put {
+  background: var(--gexput);
+}
+.ofsplit {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Bảng chi tiết trong dòng bung ra. Trước đây chỗ này là một danh sách gạch
+   đầu dòng nhồi tất cả vào một dòng chữ chạy dài - mắt không có cột nào để
+   bám, nên so hai lệnh với nhau phải đọc lại từ đầu. */
+.ofdetail {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ofdetail th {
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 10px 4px 0;
+  white-space: nowrap;
+}
+.ofdetail td {
+  padding: 5px 10px 5px 0;
+  border-top: 1px solid var(--rule-soft);
+  white-space: nowrap;
+  vertical-align: top;
+}
+.ofside-call {
+  color: var(--gexcall);
+}
+.ofside-put {
+  color: var(--gexput);
+}
+/* Phía không đọc được: màu cảnh báo, không phải màu call. Im lặng gán nó
+   vào một phía là tạo ra một con số sai trông như số đúng. */
+.ofside-other {
+  color: var(--warn);
+}
+.ofexp {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.oftags {
+  white-space: normal;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.oftag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  cursor: help;
+}
+/* Sweep là dấu hiệu đáng chú ý nhất trong hàng - người đặt chấp nhận giá xấu
+   hơn để khớp bằng được. Nó được nổi lên, phần còn lại giữ nguyên nền. */
+.oftag-hot {
+  border-color: var(--stamp);
+  color: var(--stamp);
+  font-weight: 600;
+}
+.oftag-rule {
+  border-style: dashed;
+}
