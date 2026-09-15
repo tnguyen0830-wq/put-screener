@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-Nothing in progress as of 2026-09-12.
+2026-09-15 — Probe tastytrade `/api/ttprobe` (đo hình dạng thật của `/market-metrics`: earnings, IV rank, term structure) TRƯỚC khi vá gate earnings đang pass-vì-thiếu-dữ-liệu cho ~450 mã ngoài watchlist. Branch `claude/tastytrade-probe`. Chưa viết tính năng nào lên tastytrade cho tới khi probe chạy trong production.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -527,6 +527,55 @@ Unknown `alert_rule` values print **UW's own name**, not the i18n key. `t()`
 returns the key on a miss (deliberate, so gaps show while writing code), but UW
 adds rules without notice, so the raw fallback in `ruleLabel()` is what stops
 `of.rule.SomethingNew` appearing on screen.
+
+### tastytrade (`src/lib/tastytrade.ts`, `/api/ttprobe`)
+
+**Why a second broker's API when Schwab is already wired up:** Schwab's market
+data has no earnings dates and no IV rank. That is not cosmetic — the
+screener's hard gate *"no earnings in the contract window"* reads
+`earnings[u.symbol] || []`, and `data/earnings.json` is built from
+`data/watchlist.json` only. So on a full S&P 500 scan, every symbol not on
+the watchlist **passes the earnings gate because there is no data**, not
+because there is no earnings. "Not known" rendering as "safe" — the exact
+failure this file names under the degradation idiom, and the shape of the
+CRWD miss. tastytrade's `/market-metrics` carries an earnings date, IV rank,
+IV percentile and per-expiry IV, free with an account. It is market data
+only: this client never places an order and never reads a position.
+
+**Nothing here has run against the live API yet.** The sandbox has no
+network, and this repo has been burned by coding to remembered docs
+(`congress-trader`'s silent `name` default, `gex-levels`' all-string
+values). So the first and only thing built is `/api/ttprobe` — the
+`/api/uwprobe` idiom: call once in production, print the real **keys and
+types**, and only then write the feature against what was measured. The
+questions it answers, in order: which auth method works and how the session
+token goes in the header; whether `market-metrics` really has an earnings
+date and what the field is called; whether IV rank / term structure exist;
+and whether asking N symbols returns N — a symbol dropped silently is the
+one thing a gate must know about before trusting the feed.
+
+Two auth paths, OAuth preferred. `TT_CLIENT_SECRET` + `TT_REFRESH_TOKEN`
+(created in the tastytrade account's API section; revocable, not the login
+password) exchange for a ~15-minute access token at `POST /oauth/token`.
+`TT_USERNAME` + `TT_PASSWORD` via `POST /sessions` is the fallback only —
+that is the brokerage password sitting in an env var, which is why it is
+documented as the thing to avoid. Tokens live in RAM, never on disk.
+
+**The one place docs and reality most often disagree is the header scheme.**
+The docs I remember say a session token goes in `Authorization` *without*
+`Bearer`. `ttGet()` tries the documented way, and on a 401 tries the other
+once and **remembers** which was accepted; the probe reports it as
+`schemeAccepted`. Tested against a mock that demands the opposite of the
+docs: one retry, then no further retries.
+
+`/api/ttprobe` is in `OWNER_ONLY`. It returns shape only, but it triggers
+calls on the owner's **brokerage** account, and a family member must not be
+the one pressing that button. The response is built from booleans, key
+names and status codes — a test asserts the token, password, remember-token
+and email never appear in it.
+
+Not built yet, deliberately: the earnings gate fix, IV-rank-from-tastytrade,
+any sync loop. All of it waits on one probe reading from production.
 
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 
