@@ -555,9 +555,25 @@ date and what the field is called; whether IV rank / term structure exist;
 and whether asking N symbols returns N — a symbol dropped silently is the
 one thing a gate must know about before trusting the feed.
 
+**The OAuth app must be created with the `read` scope only, never `trade`.**
+That boundary is set once on tastytrade's own "New OAuth Client" screen and
+no amount of code can enforce it afterwards. The token lives in Render's
+environment table: leaking a `read` token leaks a few market numbers, while
+leaking a `trade` token lets a stranger **place orders in the real brokerage
+account**. Least privilege here changes the worst case from losing money to
+exposing data. `DEPLOY.md` carries the same warning where the owner will
+actually be standing when they choose.
+
 Two auth paths, OAuth preferred. `TT_CLIENT_SECRET` + `TT_REFRESH_TOKEN`
 (created in the tastytrade account's API section; revocable, not the login
 password) exchange for a ~15-minute access token at `POST /oauth/token`.
+`TT_CLIENT_ID` is sent **only when set** — standard OAuth2 requires it on a
+`refresh_token` grant but some providers accept the secret alone, and the
+sandbox cannot tell which tastytrade is. Sending a standard extra parameter
+is harmless; omitting a required one fails, so the code errs toward sending.
+A failed token exchange names whether `client_id` went with it, because
+tastytrade's own body is likely to say `invalid_grant` for all three of
+missing client_id / bad refresh token / missing `read` scope.
 `TT_USERNAME` + `TT_PASSWORD` via `POST /sessions` is the fallback only —
 that is the brokerage password sitting in an env var, which is why it is
 documented as the thing to avoid. Tokens live in RAM, never on disk.

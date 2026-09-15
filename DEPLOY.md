@@ -324,14 +324,33 @@ có dữ liệu**. tastytrade có cả hai thứ đó miễn phí cho người c
 đọc dữ liệu thị trường — không đặt lệnh, không đọc vị thế.
 
 **Bước 1 — lấy OAuth (ưu tiên), không dùng mật khẩu.** Vào tastytrade →
-phần **API** trong cài đặt tài khoản → tạo ứng dụng OAuth cho cá nhân → lấy
-*client secret* và *refresh token*. Token này thu hồi được bất cứ lúc nào và
-không phải mật khẩu đăng nhập.
+`my.tastytrade.com/app.html#/manage/api` → **New OAuth Client**.
+
+> ### Tick ĐÚNG `read`. Không tick `trade`.
+>
+> Đây là quyết định một lần và là ranh giới an toàn quan trọng nhất của cả
+> phần tastytrade — code không kiểm soát được nó.
+>
+> | Scope | Tick | Vì sao |
+> |---|---|---|
+> | `read` | ✅ | Đủ để đọc `/market-metrics`. Scope tối thiểu để token dùng được |
+> | `trade` | ❌ | **Quyền đặt lệnh thật.** App không bao giờ đặt lệnh |
+> | `openid` | ❌ | Chỉ cho đăng nhập liên kết danh tính, app không cần |
+>
+> Token sống trong bảng Environment của Render. Lộ một token chỉ có `read`
+> là lộ vài con số thị trường; lộ token có `trade` là **người lạ giao dịch
+> được trên tài khoản môi giới thật**. Quyền tối thiểu ở đây đổi hậu quả tệ
+> nhất từ mất tiền thành lộ dữ liệu.
+
+**Redirect URI** bắt buộc điền dù luồng `refresh_token` không dùng tới nó.
+Đặt một URL https thuộc về bạn, ví dụ
+`https://<app>.onrender.com/api/auth/tastytrade/callback`. Sửa lại sau được.
 
 Render → Environment:
 
 | Biến | Giá trị |
 |---|---|
+| `TT_CLIENT_ID` | client id (gửi kèm khi có; OAuth2 chuẩn đòi nó) |
 | `TT_CLIENT_SECRET` | client secret vừa tạo |
 | `TT_REFRESH_TOKEN` | refresh token vừa tạo |
 
