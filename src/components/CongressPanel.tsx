@@ -9,6 +9,8 @@ type Trade = {
   name: string;
   chamber: string | null;
   issuer: string | null;
+  party: string | null;
+  state: string | null;
   txnType: string;
   /** Chuỗi khoảng tiền nguyên văn kiểu STOCK Act - KHÔNG phải số chính
    *  xác, luật chỉ cho khai khoảng. */
@@ -95,26 +97,35 @@ function initials(name: string): string {
  * trường hợp đều phải ra một ô tròn có chữ, không bao giờ là một ảnh vỡ -
  * ảnh vỡ đọc như app hỏng chứ không đọc như "chưa có ảnh".
  */
-function Face({ trade, size }: { trade: Trade; size: 'sm' | 'md' }) {
+function Face({ trade, size }: { trade: Trade; size: 'sm' | 'md' | 'lg' }) {
   const [failed, setFailed] = useState(false);
-  const cls = `cgface cgface-${size}`;
-  if (!trade.photo || failed) {
-    return (
-      <span className={`${cls} cgface-initials`} title={trade.name} aria-hidden>
+  const ring = partyClass(trade.party);
+  const cls = `cgface cgface-${size}${ring ? ` cgface-${ring}` : ''}`;
+
+  /* Chữ cái đầu LUÔN được vẽ, ảnh nằm ĐÈ LÊN nó - không phải "hoặc cái này
+     hoặc cái kia". Lý do là `loading="lazy"`: một cái ảnh nằm dưới màn hình
+     chưa hề được tải, nên `onError` chưa chạy, nên nhánh "hỏng thì vẽ chữ"
+     chưa tới lượt - và cái vòng tròn RỖNG ở giữa đó đúng là thứ mà cả hàm
+     này sinh ra để không bao giờ xuất hiện. Đo được trên ảnh chụp cả trang:
+     hai thẻ dưới đáy hiện vòng trống. Xếp lớp thì trạng thái "chưa tải",
+     "tải hỏng" và "không có đường dẫn" ra cùng một kết quả nhìn thấy được,
+     không cần trạng thái nào cả. */
+  return (
+    <span className={cls} title={trade.name}>
+      <span className="cgface-txt" aria-hidden>
         {initials(trade.name)}
       </span>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      className={cls}
-      src={trade.photo}
-      alt={trade.name}
-      title={trade.name}
-      loading="lazy"
-      onError={() => setFailed(true)}
-    />
+      {trade.photo && !failed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="cgface-img"
+          src={trade.photo}
+          alt={trade.name}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
   );
 }
 
@@ -144,6 +155,76 @@ function median(xs: number[]): number | null {
 
 const FACE_LIMIT = 4;
 
+type Member = {
+  id: string;
+  head: Trade;
+  trades: Trade[];
+  symbols: string[];
+  buys: number;
+  sells: number;
+  others: number;
+  lastTradeDate: string | null;
+  medianLagDays: number | null;
+};
+
+/**
+ * Gom mọi giao dịch đang hiện lại THEO NGƯỜI.
+ *
+ * Bảng theo mã trả lời "mã này ai đụng vào"; nó không trả lời được "người này
+ * đang làm gì", mà đó mới là câu hỏi của một trang giao dịch Quốc hội. Gom ở
+ * màn hình chứ không thêm một endpoint: dữ liệu đã có đủ trong chính payload
+ * đang hiện, thêm một đường tính thứ hai chỉ tạo ra một con số có thể lệch
+ * với bảng ngay bên cạnh.
+ */
+function byMember(rows: Row[]): Member[] {
+  const map = new Map<string, Member>();
+  for (const r of rows) {
+    for (const tr of r.trades) {
+      const id = tr.politicianId || tr.name;
+      let m = map.get(id);
+      if (!m) {
+        m = { id, head: tr, trades: [], symbols: [], buys: 0, sells: 0, others: 0,
+              lastTradeDate: null, medianLagDays: null };
+        map.set(id, m);
+      }
+      m.trades.push(tr);
+      if (!m.symbols.includes(r.symbol)) m.symbols.push(r.symbol);
+      const side = sideOf(tr.txnType);
+      if (side === 'buy') m.buys++;
+      else if (side === 'sell') m.sells++;
+      else m.others++;
+    }
+  }
+  for (const m of map.values()) {
+    m.trades.sort((a, b) => b.transactionDate.localeCompare(a.transactionDate));
+    m.lastTradeDate = m.trades[0]?.transactionDate ?? null;
+    m.medianLagDays = median(
+      m.trades.map((tr) => tr.lagDays).filter((d): d is number => d !== null)
+    );
+  }
+  return [...map.values()].sort(
+    (a, b) =>
+      b.trades.length - a.trades.length ||
+      (b.lastTradeDate ?? '').localeCompare(a.lastTradeDate ?? '')
+  );
+}
+
+/**
+ * Đảng -> lớp CSS vẽ vòng màu quanh ảnh.
+ *
+ * CHƯA XÁC NHẬN là UW có trả trường `party` (sandbox không có mạng), nên
+ * không có thì trả `null` và vòng giữ màu trung tính. Tuyệt đối không suy
+ * đảng từ tên hay từ bang: đó là bịa ra một sự thật chính trị về một người
+ * có thật, và một cái vòng màu trông y như một cái vòng màu đúng.
+ */
+function partyClass(party: string | null): 'dem' | 'gop' | null {
+  const p = String(party ?? '').trim().toLowerCase();
+  if (!p) return null;
+  if (p.startsWith('d')) return 'dem';
+  if (p.startsWith('r')) return 'gop';
+  return null;
+}
+
 export default function CongressPanel() {
   const { t } = useLang();
   /**
@@ -162,9 +243,20 @@ export default function CongressPanel() {
     const got = t(key);
     return got === key ? raw : got;
   };
+  /** Tên đảng, dịch khi biết, giữ nguyên chữ của UW khi không - cùng khuôn
+   *  với `issuerLabel()`. Không có đảng thì KHÔNG in gì, không in "Không rõ
+   *  đảng" cho kín chỗ: một nhãn thừa không nói thêm được gì. */
+  const partyLabel = (party: string | null) => {
+    const raw = String(party ?? '').trim();
+    if (!raw) return null;
+    const key = `cg.party.${raw.toLowerCase()}`;
+    const got = t(key);
+    return got === key ? raw : got;
+  };
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [view, setView] = useState<'symbol' | 'member'>('symbol');
 
   const load = useCallback(async () => {
     try {
@@ -311,6 +403,102 @@ export default function CongressPanel() {
             <span>{t('cg.lookback', data?.lookbackDays ?? 90)}</span>
           </div>
 
+          {/* Hai câu hỏi khác nhau, hai cách xếp. Bảng theo mã trả lời "mã này
+              ai đụng vào"; thẻ theo nghị sĩ trả lời "người này đang làm gì" -
+              câu hỏi mà một bảng xếp theo mã không trả lời được dù có bao
+              nhiêu cột đi nữa. */}
+          <div className="panel-body" style={{ paddingTop: 0, paddingBottom: 0 }}>
+            <div className="segmented cgview">
+              <button
+                className={view === 'symbol' ? 'on' : undefined}
+                onClick={() => setView('symbol')}
+              >
+                {t('cg.bySymbol')}
+              </button>
+              <button
+                className={view === 'member' ? 'on' : undefined}
+                onClick={() => setView('member')}
+              >
+                {t('cg.byMember')}
+              </button>
+            </div>
+          </div>
+
+          {view === 'member' ? (
+            <div className="panel-body">
+              <div className="cgcards">
+                {byMember(data!.rows).map((m) => {
+                  const known = m.buys + m.sells;
+                  const buyPct = known > 0 ? (m.buys / known) * 100 : 0;
+                  const party = partyLabel(m.head.party);
+                  return (
+                    <article key={m.id} className="cgcard">
+                      <Face trade={m.head} size="lg" />
+                      <b className="cgcardname">{m.head.name}</b>
+                      <span className="cgcardsub">
+                        {[chamber(t, m.head.chamber), party, m.head.state]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+
+                      <div
+                        className="cgbar cgcardbar"
+                        title={`${t('cg.keyBuy')} ${m.buys} · ${t('cg.keySell')} ${m.sells}`}
+                      >
+                        <i className="cgbar-buy" style={{ width: `${buyPct}%` }} />
+                        <i className="cgbar-sell" style={{ width: `${100 - buyPct}%` }} />
+                      </div>
+                      <span className="cgsplit">
+                        {known > 0 ? t('cg.sideSplit', Math.round(buyPct)) : t('cg.sideNone')}
+                        {m.others > 0 && (
+                          <span className="hint hint-warn"> {t('cg.otherSide', m.others)}</span>
+                        )}
+                      </span>
+
+                      <dl className="cgcardstats">
+                        <div>
+                          <dt>{t('cg.mTrades')}</dt>
+                          <dd>{m.trades.length}</dd>
+                        </div>
+                        <div>
+                          <dt>{t('cg.mSymbols')}</dt>
+                          <dd>{m.symbols.length}</dd>
+                        </div>
+                        {/* Trễ bao lâu đứng ngang hàng với số lệnh, không phải
+                            một dòng chú thích: nó quyết định mấy con số kia
+                            còn dùng được cho quyết định hôm nay hay không. */}
+                        <div>
+                          <dt>{t('cg.mLag')}</dt>
+                          <dd className={m.medianLagDays === null ? '' : 'warnline'}>
+                            {m.medianLagDays === null ? '—' : m.medianLagDays}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>{t('cg.mLast')}</dt>
+                          <dd className="cgcarddate">{m.lastTradeDate ?? '—'}</dd>
+                        </div>
+                      </dl>
+
+                      <div className="cgchips">
+                        {m.symbols.slice(0, 8).map((sym) => (
+                          <span key={sym} className="cgchip">
+                            {sym}
+                          </span>
+                        ))}
+                        {m.symbols.length > 8 && (
+                          <span className="cgchip">+{m.symbols.length - 8}</span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {/* Nói thẳng vì sao KHÔNG có cột "tổng tiền" như các trang khác
+                  - thiếu câu này thì app trông như thiếu dữ liệu, trong khi
+                  thật ra là từ chối bịa một con số. */}
+              <p className="cap hint hint-warn cgnovol">{t('cg.noVolume')}</p>
+            </div>
+          ) : (
           <div className="tablewrap">
             <table className="pftable cgtable">
               <thead>
@@ -462,6 +650,7 @@ export default function CongressPanel() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </section>

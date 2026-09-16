@@ -484,6 +484,44 @@ Unknown `issuer` values print **UW's own word**, not `cg.issuer.xxx`, for the
 same reason `ruleLabel()` exists in Options Flow: `t()` returns the key on a
 miss, and UW adds values without notice.
 
+#### Two views, because there are two questions
+
+The owner's reference was `capitoltrades.com/politicians`: a grid of member
+cards, each a large round portrait with a party-coloured ring, name,
+chamber/party/state and a small stats block. A table sorted by *symbol*
+answers "who touched this ticker" and cannot answer "what is this person
+doing", however many columns it grows. So the panel has a `By symbol` /
+`By member` toggle, and `byMember()` regroups **the payload already on
+screen** rather than adding a second endpoint — a second computation path is
+a second number that can disagree with the table beside it.
+
+One column the reference has and this deliberately does not: **total volume**.
+The STOCK Act only permits a range, so any dollar total is that site picking a
+point inside each range. Trades are counted instead, because that can be
+counted exactly, and the screen says why — otherwise the absence reads as
+missing data rather than as a refusal to invent a number.
+
+`party` and `state` are parsed **tolerantly and are unverified**: it is not
+confirmed that `/api/congress/recent-trades` carries them (no network here).
+Absent, `partyClass()` returns null and the portrait gets no coloured ring.
+Party is never inferred from a name or a state — that would fabricate a
+political fact about a real person, and a guessed ring looks exactly like a
+correct one. The ring reuses `--gexput`/`--gexcall`, already defined in all
+three theme blocks: party is classification, like call/put, so `--credit`/
+`--risk` would read as "this party good, that party bad", and reusing existing
+tokens keeps the change out of the three-block editing trap.
+
+**`loading="lazy"` turned the portrait fallback into the bug it was meant to
+prevent.** The first version picked *either* an `<img>` *or* an initials
+circle, switching on `onError`. A portrait below the fold is never fetched, so
+`onError` never fires, so the fallback never runs — and the card renders an
+**empty circle**, which is precisely the "the app is broken" reading the
+fallback exists to avoid. Caught in a full-page screenshot, not by reasoning
+about the code. The fix is structural rather than another state: the initials
+are always drawn and the image is layered **over** them, so not-yet-loaded,
+failed and no-URL all render identically. Measured with the page unscrolled
+and two images still pending: zero empty circles.
+
 ### Options flow and dark pool (`src/lib/optionflow.ts`, `darkpool.ts`)
 
 Two more Unusual Whales signals in the same Insider Trade tab, both answering

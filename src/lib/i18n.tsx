@@ -1540,6 +1540,25 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chưa có ảnh chân dung cho nghị sĩ này.',
     en: 'No portrait available for this member.',
   },
+  /* Xem theo MÃ hay theo NGHỊ SĨ. Hai câu hỏi khác nhau: "mã này ai đụng
+     vào" và "người này đang làm gì" - một bảng xếp theo mã không trả lời
+     được câu thứ hai. */
+  'cg.bySymbol': { vi: 'Theo mã', en: 'By symbol' },
+  'cg.byMember': { vi: 'Theo nghị sĩ', en: 'By member' },
+  'cg.mTrades': { vi: 'Lệnh', en: 'Trades' },
+  'cg.mSymbols': { vi: 'Mã', en: 'Symbols' },
+  'cg.mLast': { vi: 'Gần nhất', en: 'Last traded' },
+  'cg.mLag': { vi: 'Trễ (trung vị)', en: 'Lag (median)' },
+  'cg.mNoneKnown': { vi: 'Không rõ', en: 'Unknown' },
+  /* Đảng/bang chỉ hiện khi UW thật sự trả về. Đoán đảng của một nghị sĩ là
+     bịa ra một sự thật chính trị - để trống thật thà hơn nhiều. */
+  'cg.party.democrat': { vi: 'Dân chủ', en: 'Democrat' },
+  'cg.party.republican': { vi: 'Cộng hoà', en: 'Republican' },
+  'cg.party.independent': { vi: 'Độc lập', en: 'Independent' },
+  'cg.noVolume': {
+    vi: 'Không có cột "tổng tiền" như các trang khác: luật STOCK Act chỉ cho khai theo KHOẢNG, nên mọi con số tổng đều là do trang đó tự đoán giữa khoảng. App này đếm SỐ LỆNH - thứ đếm được chính xác.',
+    en: 'There is deliberately no "total volume" column like other sites show: the STOCK Act only allows ranges, so any total is that site guessing a point inside each range. This app counts TRADES instead - the thing that can be counted exactly.',
+  },
   'cg.photoSource': {
     vi: 'Ảnh chân dung thuộc phạm vi công cộng, lấy từ kho unitedstates/images - chỉ hiện khi mã định danh đúng dạng Bioguide, nếu không màn hình vẽ chữ cái đầu tên.',
     en: 'Portraits are public-domain images from the unitedstates/images repository - shown only when the member id matches the Bioguide format; otherwise initials are drawn instead.',

@@ -42,6 +42,15 @@ export type CongressTrade = {
   ticker: string;
   /** self / spouse / undisclosed / joint... giữ nguyên chữ UW trả về. */
   issuer: string | null;
+  /**
+   * Đảng và bang. CHƯA XÁC NHẬN là UW có trả hai trường này ở
+   * `/api/congress/recent-trades` (sandbox không có mạng) - nên đọc theo kiểu
+   * dung thứ: có thì dùng, không có thì null và màn hình KHÔNG vẽ vòng màu
+   * đảng. Đoán đảng của một nghị sĩ là bịa ra một sự thật chính trị, còn tệ
+   * hơn để trống.
+   */
+  party: string | null;
+  state: string | null;
   txnType: string;
   /** Chuỗi khoảng tiền nguyên văn kiểu STOCK Act, ví dụ
    *  "$500,001 - $1,000,000" - KHÔNG parse thành số, luật chỉ cho khai
@@ -90,6 +99,8 @@ function parseTrade(raw: any): CongressTrade {
     chamber: raw.member_type ?? null,
     ticker: String(raw.ticker ?? '').toUpperCase(),
     issuer: raw.issuer ?? null,
+    party: raw.party ?? null,
+    state: raw.state ?? null,
     txnType: String(raw.txn_type ?? ''),
     amounts: raw.amounts ?? null,
     transactionDate: String(raw.transaction_date ?? ''),

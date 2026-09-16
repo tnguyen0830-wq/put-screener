@@ -1938,14 +1938,23 @@ table.results tbody tr.clickable {
 /* .segmented mặc định là lưới 2 cột (dùng cho nút gạt S&P 500 / Watchlist).
    Thanh tab và bộ chọn khung thời gian cần một hàng ngang, số cột tự co. */
 .rail .tabs,
-.hmranges {
+.hmranges,
+.cgview {
   display: flex;
   margin-bottom: 0;
 }
 .rail .tabs button,
-.hmranges button {
+.hmranges button,
+.cgview button {
   padding: 7px 14px;
   white-space: nowrap;
+}
+/* Nút gạt xem-theo-mã / xem-theo-nghị-sĩ. Chỉ rộng bằng chữ của nó: kéo dài
+   hết bề ngang thì hai cái nút trông như hai tiêu đề mục chứ không như một
+   cái công tắc. */
+.cgview {
+  width: fit-content;
+  margin: 0 0 12px;
 }
 .hmranges {
   margin: 4px 0 12px;
@@ -2835,8 +2844,9 @@ body {
    đầu khi không. Không bao giờ để ảnh vỡ: ảnh vỡ đọc như app hỏng, chữ cái
    đầu đọc đúng nghĩa "chưa có ảnh". */
 .cgface {
+  position: relative;
   border-radius: 50%;
-  object-fit: cover;
+  overflow: hidden;
   background: var(--rule-soft);
   display: inline-flex;
   align-items: center;
@@ -2846,6 +2856,16 @@ body {
   font-weight: 700;
   color: var(--muted);
   border: 1px solid var(--card);
+}
+/* Ảnh nằm ĐÈ lên chữ cái đầu, không thay thế nó - xem chú thích ở `Face()`.
+   Ảnh chưa tải / tải hỏng / không có đường dẫn đều ra cùng một hình: vòng
+   tròn có chữ, không bao giờ là vòng tròn rỗng. */
+.cgface-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .cgface-sm {
   width: 26px;
@@ -2860,6 +2880,9 @@ body {
 .cgface-more {
   background: var(--rule);
   color: var(--ink);
+}
+.cgface-txt {
+  line-height: 1;
 }
 
 /* Chồng nhẹ lên nhau: bốn khuôn mặt vẫn vừa một ô hẹp, và cách xếp này đọc
@@ -2936,4 +2959,117 @@ body {
 }
 .cgphotonote {
   margin: 8px 0 0;
+}
+
+/* Thẻ theo nghị sĩ. Bố cục theo đúng trang tham chiếu chủ app gửi
+   (capitoltrades.com/politicians): ảnh tròn lớn, tên, chức vụ/đảng/bang, rồi
+   một lưới số liệu. Khác một chỗ có chủ ý - KHÔNG có ô "tổng tiền": luật chỉ
+   cho khai theo KHOẢNG, nên mọi con số tổng là trang đó tự chọn một điểm
+   giữa khoảng. App này đếm SỐ LỆNH, thứ đếm được chính xác, và nói ra lý do
+   ngay dưới lưới thẻ thay vì để trông như thiếu dữ liệu. */
+.cgcards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.cgcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 16px 12px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--card);
+  min-width: 0;
+}
+.cgcardname {
+  font-size: 15px;
+  margin-top: 8px;
+  line-height: 1.25;
+}
+.cgcardsub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.cgcardbar {
+  width: 100%;
+  margin-top: 8px;
+}
+.cgcard > .cgsplit {
+  margin-top: 0;
+}
+
+/* Lưới số liệu: nhãn nhỏ, số lớn - cùng tỷ lệ với .stats ở phần còn lại của
+   app, nơi con số là thứ mắt phải bắt được trước. */
+.cgcardstats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  width: 100%;
+  margin: 10px 0 0;
+}
+.cgcardstats > div {
+  min-width: 0;
+}
+.cgcardstats dt {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cgcardstats dd {
+  margin: 0;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+/* Ngày dài hơn một con số nên phải nhỏ lại, nếu không nó tràn ô trên điện
+   thoại và đẩy lệch cả lưới. */
+.cgcarddate {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.cgchips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+.cgchip {
+  font-family: var(--data);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+}
+.cgnovol {
+  margin: 12px 0 0;
+}
+
+.cgface-lg {
+  width: 84px;
+  height: 84px;
+  font-size: 26px;
+  border-width: 3px;
+}
+/* Vòng màu đảng. Dùng lại cặp --gexput/--gexcall đã có sẵn ở CẢ BA khối
+   theme: đảng là PHÂN LOẠI y như call/put, không phải dấu của một con số,
+   nên --credit/--risk sẽ đọc thành "đảng này tốt, đảng kia xấu". Dùng lại
+   biến có sẵn cũng giữ thay đổi này nằm ngoài bẫy sửa-ba-khối. Không có dữ
+   liệu đảng thì KHÔNG có vòng màu - đoán đảng là bịa ra một sự thật chính
+   trị về một người có thật. */
+.cgface-dem {
+  border-color: var(--gexput);
+}
+.cgface-gop {
+  border-color: var(--gexcall);
 }
