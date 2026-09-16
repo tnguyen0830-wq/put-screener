@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ttAuthenticate, ttConfigured, ttGet, ttAuthMethod, TtError } from '@/lib/tastytrade';
+import { ttAuthenticate, ttConfigured, ttGet, ttAuthMethod, TtError, classifyBody } from '@/lib/tastytrade';
 
 /**
  * Dò HÌNH DẠNG thật của tastytrade `/market-metrics`, chạy một lần trong
@@ -97,15 +97,24 @@ export async function GET(req: NextRequest) {
     const a = await ttAuthenticate(true);
     auth = { ok: true, ...a };
   } catch (e: any) {
+    const body = e instanceof TtError ? e.body ?? null : null;
+    const bodyKind = body ? classifyBody(body) : null;
     return NextResponse.json({
       configuredMethod: ttAuthMethod(),
       auth: {
         ok: false,
         status: e instanceof TtError ? e.status ?? null : null,
         error: String(e?.message ?? e),
-        body: e instanceof TtError ? e.body ?? null : null,
+        /** Cái quyết định đi sửa ở đâu. `json-api-error` = API đã xem giấy
+         *  tờ và từ chối (sửa phía tastytrade). `bot-wall`/`html-other` =
+         *  bị chặn ở rìa, chưa tới API (sửa phía mình: cách gửi, header). */
+        bodyKind,
+        body,
       },
-      note: 'Xác thực thất bại nên chưa đo gì thêm. Đọc `body` - đó là lời thật của tastytrade.',
+      note:
+        bodyKind === 'bot-wall' || bodyKind === 'html-other'
+          ? 'Bị chặn ở RÌA, không phải API từ chối - đã thử cả 4 cách gửi (form/json × có/không User-Agent) và cả 4 đều không qua. Giấy tờ có thể vẫn đúng; vấn đề là request không tới được API.'
+          : 'Xác thực thất bại và API ĐÃ trả lời - đọc `body`, đó là lời thật của tastytrade về giấy tờ.',
     });
   }
 

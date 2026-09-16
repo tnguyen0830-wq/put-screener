@@ -578,6 +578,39 @@ missing client_id / bad refresh token / missing `read` scope.
 that is the brokerage password sitting in an env var, which is why it is
 documented as the thing to avoid. Tokens live in RAM, never on disk.
 
+**First production reading (2026-09-16): a 401 that was never tastytrade's.**
+The probe earned its keep immediately. The token exchange returned HTTP 401,
+but the body was `<title>401 Authorization Required</title> … <hr><center>
+nginx</center>` plus a `<script src="/Bwlu3He5C3/odH-YXpm/…">` — **HTML from
+an edge proxy, not JSON from the API**, and that random script path is the
+signature of a bot-protection layer. So the request never reached the API and
+the credentials were never examined: chasing the client id, secret or refresh
+token would have been hours spent re-issuing keys that were probably fine.
+
+Two differences from the clients in this repo that **do** work against real
+hosts, both found by comparison rather than guesswork:
+
+- `schwab.ts` posts its token request as `application/x-www-form-urlencoded`
+  (what RFC 6749 mandates for a token endpoint); tastytrade.ts was posting
+  JSON, which is off-spec.
+- `sec.ts` sends a real `User-Agent` and its own comment records that a
+  missing one earns a 403; tastytrade.ts sent none, so Node's default went
+  out — exactly what bot protection drops.
+
+Either could be the cause, so **neither is guessed**. `TOKEN_VARIANTS` tries
+all four combinations (form/json × with/without User-Agent) in
+likelihood order and remembers the one that works, the same try-then-remember
+shape the header scheme already uses. `classifyBody()` splits the two kinds
+of 401 that matter: `json-api-error` means the API read the credentials and
+refused them (fix on tastytrade's side), while `bot-wall`/`html-other` means
+the edge refused the request (fix on ours). The error message names which,
+and the probe reports it as `auth.bodyKind`.
+
+The loop **stops on the first `json-api-error`**: once the API has answered,
+changing how the request is framed cannot help, and three more attempts would
+only burn requests carrying the same rejected credentials. Only an edge block
+is worth retrying differently.
+
 **The one place docs and reality most often disagree is the header scheme.**
 The docs I remember say a session token goes in `Authorization` *without*
 `Bearer`. `ttGet()` tries the documented way, and on a 401 tries the other
