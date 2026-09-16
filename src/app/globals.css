@@ -2718,3 +2718,222 @@ body {
   font-weight: 600;
   opacity: 0.85;
 }
+
+/* ---- Giao dịch Quốc hội (tab Insider Trade) ---- */
+
+/* Độ trễ công bố, đặt TRƯỚC bảng. Nó không phải một chú thích: nó quyết định
+   cách đọc mọi con số bên dưới. Luật nói 30-45 ngày, đo thật thì trung vị
+   Thượng viện là 116 ngày - một bảng "ai đang mua" mà thật ra là "ai đã mua
+   bốn tháng trước" dẫn tới quyết định sai, chứ không chỉ thiếu thông tin. */
+.cglag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  padding-bottom: 0;
+}
+.cglagbig {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.cglaglabel {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cglagbig > b {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  line-height: 1.2;
+  /* Không nowrap: trên điện thoại nhãn + con số không vừa một dòng, và một
+     con số bị CẮT MẤT chữ cuối ("Trung vị 23 ngà") đọc sai hẳn so với bị
+     xuống dòng. */
+  white-space: normal;
+}
+.cglag > .cap {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+/* Chú giải + cảnh báo ngay trên bảng, cùng khuôn với .ofkey. */
+.cgkey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  padding-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.cgkey > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cgswatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+/* Mua/bán là HƯỚNG của dòng tiền, không phải hai loại ngang hàng như
+   call/put - nên ở đây dùng đúng cặp xanh/đỏ của ColorLegend chứ không phải
+   --gexcall/--gexput. Câu cảnh báo `cg.keyCaveat` đứng ngay cạnh chú giải là
+   để màu đỏ không bị đọc thành "nghị sĩ biết tin xấu". */
+.cgswatch-buy {
+  background: var(--credit);
+}
+.cgswatch-sell {
+  background: var(--risk);
+}
+
+.cgtable td.num,
+.cgtable th.num,
+.cgdetail td.num,
+.cgdetail th.num {
+  text-align: right;
+}
+/* Cột số đứng sát ngay cạnh thanh mua/bán và cạnh cột ngày; thiếu khoảng
+   thở thì hai con số của hai cột khác nhau đọc thành một. */
+.cgtable td.num,
+.cgtable th.num {
+  padding-right: 16px;
+}
+
+/* Thanh mua/bán. Bề RỘNG là số lệnh so với mã nhiều nhất; tỷ lệ BÊN TRONG là
+   mua so với bán. Hai thông tin trên một thanh, và cái quan trọng hơn (quy
+   mô) đọc được ngay cả khi liếc qua. */
+.cgbar {
+  display: flex;
+  height: 9px;
+  min-width: 24px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--rule-soft);
+}
+.cgbar-buy {
+  background: var(--credit);
+}
+.cgbar-sell {
+  background: var(--risk);
+}
+.cgsplit {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Ảnh chân dung. Luôn là một ô tròn có nội dung - ảnh thật khi có, chữ cái
+   đầu khi không. Không bao giờ để ảnh vỡ: ảnh vỡ đọc như app hỏng, chữ cái
+   đầu đọc đúng nghĩa "chưa có ảnh". */
+.cgface {
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--rule-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-family: var(--data);
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--card);
+}
+.cgface-sm {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+.cgface-md {
+  width: 34px;
+  height: 34px;
+  font-size: 12px;
+}
+.cgface-more {
+  background: var(--rule);
+  color: var(--ink);
+}
+
+/* Chồng nhẹ lên nhau: bốn khuôn mặt vẫn vừa một ô hẹp, và cách xếp này đọc
+   ngay ra "một nhóm người" thay vì một hàng ô rời rạc. */
+.cgfaces {
+  display: flex;
+  align-items: center;
+}
+.cgfaces > .cgface + .cgface {
+  margin-left: -8px;
+}
+.cgnames {
+  margin-left: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+}
+
+/* Bảng chi tiết trong dòng bung ra. Trước đây chỗ này là một danh sách gạch
+   đầu dòng nhồi tất cả vào một dòng chữ chạy dài (dùng lại .pfskipped, style
+   của vị thế bị BỎ QUA) - mắt không có cột nào để bám, nên so hai lệnh với
+   nhau phải đọc lại từ đầu. */
+.cgdetail {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cgdetail th {
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 10px 4px 0;
+  white-space: nowrap;
+}
+.cgdetail td {
+  padding: 6px 10px 6px 0;
+  border-top: 1px solid var(--rule-soft);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.cgwho {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cgsub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.cgside-buy {
+  color: var(--credit);
+}
+.cgside-sell {
+  color: var(--risk);
+}
+/* Phía không đọc được: màu cảnh báo, không phải màu mua. Im lặng gán nó vào
+   một phía là tạo ra một con số sai trông như số đúng. */
+.cgside-other {
+  color: var(--warn);
+}
+.cgnotes {
+  white-space: normal;
+  color: var(--muted);
+  font-size: 11.5px;
+  max-width: 260px;
+}
+.cgphotonote {
+  margin: 8px 0 0;
+}
