@@ -503,12 +503,78 @@ missing data rather than as a refusal to invent a number.
 `party` and `state` are parsed **tolerantly and are unverified**: it is not
 confirmed that `/api/congress/recent-trades` carries them (no network here).
 Absent, `partyClass()` returns null and the portrait gets no coloured ring.
+
+**`syncCongress()` overwrites stored records, and skipping them was a
+90-day-invisible bug.** The loop used to write a trade only when its key was
+absent. A record already on disk was parsed by an *older* build, so it is
+missing exactly the fields most recently added — `party` and `state`. Adding
+the code to read them therefore changed nothing on screen until every old
+record aged out of the 90-day window, and the empty result was
+indistinguishable from "Unusual Whales does not send a party". Records are now
+rewritten on every sync; `saved` still counts only genuinely new keys and
+`allSeenAlready` is still computed before the write, so paging and the
+catch-up stop are unchanged. A test pins the backfill.
+
+**"No photo" and "no party" now say which of four things happened**, because
+on screen they were one initials circle and the fixes are completely
+different: never synced since the app learned to read the field / synced and
+the id is not Bioguide-shaped / synced and there is no party field / it works.
+The panel names the real `politician_id` verbatim, taken from the records
+already displayed rather than from `lastRun` (which lives in RAM and is empty
+after a deploy — making the owner press Sync to read something already on
+screen is pure waiting). `CongressRun` also carries `sampleKeys`, UW's real
+field names measured at sync time: the `/api/uwprobe` idiom applied in place,
+so the next change is written against a measurement instead of remembered
+docs.
 Party is never inferred from a name or a state — that would fabricate a
 political fact about a real person, and a guessed ring looks exactly like a
 correct one. The ring reuses `--gexput`/`--gexcall`, already defined in all
 three theme blocks: party is classification, like call/put, so `--credit`/
 `--risk` would read as "this party good, that party bad", and reusing existing
 tokens keeps the change out of the three-block editing trap.
+
+#### Three rendering bugs the owner saw that reading the CSS could not
+
+All three were found by scrolling and screenshotting the real page, not by
+reading the file — the same lesson as the `.hint.hint-warn` specificity trap,
+and the reason this repo keeps a browser in the loop.
+
+**A sticky column with `z-index: auto` does not stay on top.**
+`.pftable th:first-child, td:first-child` is `position: sticky` with an opaque
+background, and the comment above it says the background is what stops text
+bleeding through. That is only half true: a sticky box at `z-index: auto`
+creates no stacking context, so any *later* sibling cell that is itself
+positioned paints **over** it. The buy/sell bar, the call/put bar and the
+portrait circles are all positioned elements. Scroll the table left and the
+ticker gets covered by a red bar and half the words "không rõ" — the pinned
+column, whose entire job is to say which row you are reading, was being
+overwritten by the row. `z-index: 1` on the column and `2` on the header
+corner fixes it. **This is app-wide, so Options Flow had the identical bug**
+and is fixed by the same two lines.
+
+Also written out on that rule: `padding-left: 10px`. Without it the cell used
+the browser's 1px default and the ticker sat flush against the card edge; the
+`padding-right: 10px` sitting right beside it shows the original intent was
+even padding, only half-written.
+
+**Overlapping avatars is right for photos and wrong for initials.** The face
+stack used `margin-left: -8px`, the usual "group of people" treatment. It is
+safe for photographs — the outer edge of a portrait is hair and background —
+but the fallback circle is *centred text*, so the next circle covered the
+second letter: "NP" (Nancy Pelosi) rendered as "NF", "BS" as "B5". A control
+whose whole purpose is to say *who* was printing the wrong name. Since most
+circles are initials until portraits resolve, the stack now uses a 3px gap:
+~33px wider for four faces, and never wrong.
+
+**A nested `nowrap` table sets its parent table's width.** The 8-column detail
+table lives in a `<td colSpan={7}>`, so expanding one row grew the outer table
+from 640px to 832px on a phone — "kéo qua trái dài quá". A bare
+`overflow-x: auto` on a wrapper does **not** help, because the parent cell
+still sizes to its content. Six variants were measured; the two that work are
+`max-width: 0` on the cell and `width: 0; min-width: 100%` on the wrapper.
+Letting the cells wrap also holds the width but squeezes the detail table to
+625px with columns touching, so the wrapper trick wins: the detail keeps its
+full 817px and scrolls in its own box while the outer table stays at 640px.
 
 **`loading="lazy"` turned the portrait fallback into the bug it was meant to
 prevent.** The first version picked *either* an `<img>` *or* an initials

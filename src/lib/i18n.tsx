@@ -1559,6 +1559,29 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không có cột "tổng tiền" như các trang khác: luật STOCK Act chỉ cho khai theo KHOẢNG, nên mọi con số tổng đều là do trang đó tự đoán giữa khoảng. App này đếm SỐ LỆNH - thứ đếm được chính xác.',
     en: 'There is deliberately no "total volume" column like other sites show: the STOCK Act only allows ranges, so any total is that site guessing a point inside each range. This app counts TRADES instead - the thing that can be counted exactly.',
   },
+  /* Vì sao chưa có ảnh / chưa có đảng. Bốn trạng thái này trước đây trông
+     y hệt nhau trên màn hình (một vòng tròn chữ cái đầu), mà cách sửa của
+     mỗi cái lại khác hẳn: bấm đồng bộ / báo cho Claude / không làm gì được.
+     Im lặng ở đây đọc thành "app hỏng", đúng thứ degradation idiom cấm. */
+  'cg.noPhotoHead': { vi: 'Chưa có ảnh chân dung', en: 'No portraits yet' },
+  'cg.noPhotoBioguide': {
+    vi: (id: string) =>
+      `Unusual Whales trả mã định danh dạng "${id}", không phải Bioguide ID (một chữ cái + 6 chữ số, ví dụ P000197). Kho ảnh công khai chỉ tra được bằng Bioguide ID, nên app KHÔNG dựng đường dẫn ảnh - vẽ đường dẫn đoán bừa chỉ tạo ra một loạt ảnh vỡ. Gửi dòng này cho Claude để nối thêm bảng tra tên → Bioguide ID.`,
+    en: (id: string) =>
+      `Unusual Whales returns an id shaped like "${id}", not a Bioguide ID (one letter + 6 digits, e.g. P000197). The public portrait repository can only be looked up by Bioguide ID, so the app does not build an image URL — a guessed one would just produce broken images. Send this line to Claude to add a name → Bioguide ID lookup.`,
+  },
+  'cg.noPhotoUnknown': {
+    vi: 'Chưa đồng bộ lần nào từ khi app biết đọc mã định danh, nên chưa đo được UW trả gì. Bấm "Đồng bộ ngay" ở trên rồi mở lại tab này.',
+    en: 'No sync has run since the app learned to read the member id, so there is nothing measured yet. Press "Sync now" above, then reopen this tab.',
+  },
+  'cg.noParty': {
+    vi: 'Chưa có dữ liệu đảng cho các nghị sĩ bên dưới, nên không có vòng màu quanh ảnh. Bản ghi đã lưu trước khi app biết đọc trường này - bấm "Đồng bộ ngay" ở trên để lấy lại. Nếu bấm rồi mà vẫn trống thì nghĩa là UW không trả trường đảng, và app sẽ KHÔNG đoán đảng từ tên hay bang.',
+    en: 'No party data for the members below, so the portraits carry no coloured ring. These records were stored before the app read that field — press "Sync now" above to refresh them. If it stays empty after that, Unusual Whales does not send a party, and the app will NOT guess one from a name or a state.',
+  },
+  'cg.uwKeys': {
+    vi: (keys: string) => `Tên trường thật UW gửi về: ${keys}`,
+    en: (keys: string) => `Real field names Unusual Whales sends: ${keys}`,
+  },
   'cg.photoSource': {
     vi: 'Ảnh chân dung thuộc phạm vi công cộng, lấy từ kho unitedstates/images - chỉ hiện khi mã định danh đúng dạng Bioguide, nếu không màn hình vẽ chữ cái đầu tên.',
     en: 'Portraits are public-domain images from the unitedstates/images repository - shown only when the member id matches the Bioguide format; otherwise initials are drawn instead.',
