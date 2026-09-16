@@ -18,6 +18,7 @@ import {
   windowTo,
   type UnderlyingContext,
 } from './screener';
+import { ttEarningsDetail } from './ttearnings';
 import { readWatchlist } from './watchlist';
 import { saveScan } from './scan-store';
 import { historyBars } from './history';
@@ -121,6 +122,12 @@ export function startScan(filters: Filters, user: string): ScanJob | null {
   void (async () => {
       try {
       const earnings = await loadEarnings();
+      /* Cùng một kho, nhưng đọc thêm cờ ƯỚC TÍNH mà `loadEarnings()` làm
+         phẳng mất (nó trả Record<string, string[]>). Hỏng thì coi như mọi
+         ngày đã xác nhận - đúng hành vi trước khi có tastytrade. */
+      const earningsMeta = await ttEarningsDetail().catch(
+        () => ({}) as Record<string, { date: string | null; estimated: boolean }>
+      );
       const index = await constituents();
       let list: Constituent[];
 
@@ -247,7 +254,7 @@ export function startScan(filters: Filters, user: string): ScanJob | null {
           const termSkew = termStructureAndSkew(contracts, calls, u.spot);
           if (termSkew.skew !== null) await recordSkew(c.symbol, termSkew.skew);
 
-          const best = await evaluate(u, contracts, filters, earnings, termSkew);
+          const best = await evaluate(u, contracts, filters, earnings, termSkew, earningsMeta);
           if (best) {
             found++;
             collected.push(best);

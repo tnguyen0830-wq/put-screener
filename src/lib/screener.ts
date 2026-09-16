@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { loadTtEarnings } from './ttearnings';
 import { isOn, type Candidate, type Filters, type ScoreBreakdown } from './types';
 
 /* ---------------- price-history math ---------------- */
@@ -145,7 +146,7 @@ export async function ivRank(symbol: string, iv: number): Promise<number | null>
 let earningsCache: { mtimeMs: number; data: Record<string, string[]> } | null =
   null;
 
-export async function loadEarnings(): Promise<Record<string, string[]>> {
+async function loadEarningsFile(): Promise<Record<string, string[]>> {
   const file = path.resolve('./data/earnings.json');
   try {
     const { mtimeMs } = await fs.stat(file);
@@ -157,6 +158,43 @@ export async function loadEarnings(): Promise<Record<string, string[]>> {
     earningsCache = null;
     return {};
   }
+}
+
+/**
+ * Lịch tay (`data/earnings.json`) HỢP với lịch tastytrade.
+ *
+ * Nối ở ĐÂY chứ không ở từng nơi gọi, vì hàm này là điểm nghẽn duy nhất -
+ * cổng của Screener, ô "cần để ý" của My Portfolio, tab Analyze và API cho
+ * điện thoại đều đi qua nó. Sửa một chỗ thì cả bốn cùng hết mù, và không
+ * chỗ nào có cơ hội trôi lệch khỏi ba chỗ còn lại.
+ *
+ * HỢP chứ không đè: `earnings.json` do người dựng, có thể chứa NHIỀU ngày
+ * trong khi tastytrade chỉ trả ngày kế tiếp. Lấy hợp thì không bao giờ
+ * đánh rơi một ngày đã biết, còn đè lên thì ngày quý sau trong file tay sẽ
+ * biến mất mà không ai thấy.
+ *
+ * Mã tastytrade nói "không có earnings" (ETF) vào kho dưới dạng MẢNG RỖNG.
+ * Cổng đọc `!(symbol in earnings)` để biết "chưa biết", nên mảng rỗng nói
+ * đúng "đã kiểm, không có gì" mà cổng không phải sửa một dòng - khuôn ba
+ * trạng thái của #131 vốn đã đúng, chỉ là chưa từng có dữ liệu thật để đổ
+ * vào.
+ *
+ * Không có tastytrade (chưa cấu hình, chưa đồng bộ, đọc kho lỗi) thì hàm
+ * trả về đúng những gì nó vẫn trả về trước đây.
+ */
+export async function loadEarnings(): Promise<Record<string, string[]>> {
+  const [manual, tt] = await Promise.all([
+    loadEarningsFile(),
+    loadTtEarnings().catch(() => ({}) as Record<string, string[]>),
+  ]);
+  if (!Object.keys(tt).length) return manual;
+
+  const out: Record<string, string[]> = { ...manual };
+  for (const [sym, dates] of Object.entries(tt)) {
+    const merged = new Set([...(out[sym] ?? []), ...dates]);
+    out[sym] = [...merged].sort();
+  }
+  return out;
 }
 
 /* ---------------- contract selection ---------------- */
@@ -389,7 +427,11 @@ export async function evaluate(
   contracts: ChainContract[],
   f: Filters,
   earnings: Record<string, string[]>,
-  termSkew: TermSkew
+  termSkew: TermSkew,
+  /** Chi tiết earnings của tastytrade, để biết một ngày là ƯỚC TÍNH hay đã
+   *  xác nhận. Không bắt buộc: thiếu nó thì mọi ngày coi như đã xác nhận,
+   *  đúng như hành vi trước đây. */
+  earningsMeta: Record<string, { date: string | null; estimated: boolean }> = {}
 ): Promise<Candidate | null> {
   // Depends on the underlying alone, so it settles before the contract loop
   // rather than being re-tested against every strike.
@@ -461,9 +503,17 @@ export async function evaluate(
     const earn = (earnings[u.symbol] || []).find(
       (d) => d >= new Date().toISOString().slice(0, 10) && d <= c.expirationDate
     );
+    /* Ngày này là đoán hay chắc. Cố ý cảnh báo THỪA chứ không thiếu: nếu
+       cùng một ngày có cả trong file tay (người gõ = đã xác nhận) lẫn trong
+       tastytrade với cờ ước tính, nó vẫn hiện là ước tính. Nói "hãy kiểm
+       lại" nhầm thì vô hại; nói "chắc chắn" nhầm thì không. */
+    const earningsEstimated =
+      !!earn && earningsMeta[u.symbol]?.date === earn && earningsMeta[u.symbol]?.estimated === true;
     if (earn) {
       if (f.excludeEarnings) continue;
-      warnings.push(`Earnings ${earn} trong kỳ hợp đồng`);
+      warnings.push(
+        `Earnings ${earn} trong kỳ hợp đồng${earningsEstimated ? ' (ngày ước tính)' : ''}`
+      );
     }
     if (spreadPct > 3) warnings.push('Spread rộng');
 
@@ -490,6 +540,7 @@ export async function evaluate(
            cho qua mà TRÔNG NHƯ đã kiểm và sạch. */
         passed: !earn,
         ...(earningsUnknown ? { unknown: true } : {}),
+        ...(earningsEstimated ? { estimated: true } : {}),
       },
       {
         key: 'liquidity',
@@ -566,6 +617,7 @@ export async function evaluate(
       returnIfAssignedPct:
         ((credit - Math.max(0, c.strikePrice - u.spot) * 100) / capital) * 100,
       earningsBefore: earn ?? null,
+      earningsEstimated,
       earningsUnknown,
       gates,
       scoreBreakdown: breakdown,

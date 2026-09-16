@@ -3,6 +3,8 @@ import path from 'node:path';
 import { collectAlerts, inMarketHours, tradingDay, type Alert } from './alerts';
 import { sendAlerts, telegramConfigured, webPushConfigured } from './notify';
 import { syncTracked } from './insiders';
+import { syncTtEarnings } from './ttearnings';
+import { trackedSymbols } from './insiders';
 import { syncCongress } from './congress';
 import { syncOptionFlow } from './optionflow';
 import { syncDarkpool } from './darkpool';
@@ -123,6 +125,25 @@ let timer: NodeJS.Timeout | null = null;
  *  trading day hay bất kỳ trạng thái nào khác. */
 let tick = 0;
 
+
+/**
+ * Lịch earnings từ tastytrade, đi nhờ chính bộ đếm giờ này.
+ *
+ * ĐỨNG NGOÀI `runOnce()`, cùng lý do với Form 4: cảnh báo thì nghỉ ngoài
+ * giờ giao dịch và tắt hẳn khi chưa cấu hình kênh nào, còn ngày earnings
+ * thì công ty công bố bất kể giờ nào - phần lớn là sau khi sàn đóng cửa,
+ * tức đúng khoảng thời gian `runOnce()` đang nghỉ. Gắn nó vào runOnce sẽ
+ * làm cái lịch này lặng lẽ ngừng cập nhật.
+ *
+ * Gọi mỗi 15 phút vẫn rẻ: `syncTtEarnings()` bỏ qua mọi mã đã hỏi trong
+ * 24 giờ, nên thực tế mỗi mã chỉ ra mạng một lần một ngày, và gộp lô 100
+ * mã nên cả rổ ~500 mã tốn khoảng 6 request.
+ */
+async function syncEarningsCalendar() {
+  const { symbols } = await trackedSymbols();
+  if (symbols.length) await syncTtEarnings(symbols);
+}
+
 /** Khởi động vòng lặp đúng một lần cho cả tiến trình. */
 export function startAlertLoop() {
   if (timer) return;
@@ -131,6 +152,7 @@ export function startAlertLoop() {
     void runOnce().catch(() => {});
     void syncTracked().catch(() => {});
     void syncCongress().catch(() => {});
+    void syncEarningsCalendar().catch(() => {});
     void syncOptionFlow().catch(() => {});
     // Dark Pool tốn hẳn 1 request MỖI MÃ (không gộp lô được như Options
     // Flow) - với rổ ~500+ mã, gọi ở đúng nhịp 15 phút như các mục còn
@@ -158,6 +180,7 @@ export function startAlertLoop() {
   // khác Options Flow/Dark Pool, đơn công bố của Quốc hội không gắn với
   // phiên giao dịch nào cả.
   void syncCongress().catch(() => {});
+  void syncEarningsCalendar().catch(() => {});
   // Options Flow và Dark Pool: quyền chọn/lệnh khối lớn ngoài sàn chỉ
   // thật sự khớp lệnh trong giờ sàn mở cửa (SỬA lại chú thích cũ ở đây -
   // từng ghi nhầm là "bất kể giờ nào", đúng là lý do gây ra sự cố hết hạn

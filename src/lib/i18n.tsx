@@ -672,6 +672,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dd.roiAssigned': { vi: 'Lợi suất nếu bị assign', en: 'Return if assigned' },
   'dd.maxLoss': { vi: 'Lỗ tối đa', en: 'Max loss' },
   'dd.gateUnknown': { vi: 'chưa có dữ liệu', en: 'no data' },
+  /* Ngày earnings do tastytrade ƯỚC TÍNH, chưa phải ngày công ty xác nhận.
+     Một hợp đồng bị loại vì ngày đoán bị loại trên bằng chứng yếu hơn hẳn -
+     người đọc phải biết để còn tự kiểm lại. */
+  'dd.gateEstimated': { vi: 'ngày ước tính', en: 'estimated date' },
+  'dd.gateEstimatedWhy': {
+    vi: 'tastytrade đánh dấu ngày báo cáo này là ƯỚC TÍNH, không phải ngày công ty đã xác nhận. Cổng vẫn tính nó là earnings trong kỳ, nhưng nên kiểm lại trước khi bỏ qua hẳn một hợp đồng vì nó.',
+    en: 'tastytrade marks this report date as an ESTIMATE, not a company-confirmed date. The gate still counts it as earnings inside the window, but check it before discarding a contract over it.',
+  },
   'dd.gateUnknownWhy': {
     vi: 'Không có ngày earnings nào cho mã này, nên cổng không xét được — KHÁC với "đã xét và không có earnings trong kỳ". Lịch earnings chỉ được dựng cho mã trong watchlist.',
     en: 'No earnings dates exist for this symbol, so the gate could not judge it — which is NOT the same as "checked, and no earnings in the window". The earnings calendar is only built for watchlist symbols.',
