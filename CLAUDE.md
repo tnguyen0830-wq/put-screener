@@ -649,6 +649,33 @@ The chain fetch is `fullChain` (contractType ALL), not puts only, because term s
 
 **Hard gates** (`Filters.hardGates`, default on) are seven fixed pass/fail checks that drop a contract outright: VRP ≥ 1.0, no earnings in the contract window, OI ≥ 500 and volume ≥ 100, spread ≤ 5%, not down >20% over 20 sessions, term structure ≥ 0.95, put skew z ≤ 2. Unlike every other criterion these thresholds are *not* user-editable, and a high score never rescues a failure. `Candidate.gates` is computed for every candidate regardless of the toggle, so switching gates off turns the drawer's checklist into real ✓/✗ annotation with no separate code path. A null reading (missing HV20, missing history) **passes** — a data gap is not evidence of a problem.
 
+**The earnings gate has three answers, not two — and collapsing them was the
+app telling its worst lie.** `data/earnings.json` is built by
+`scripts/earnings-sync.js` for **watchlist symbols only**, so on a full S&P
+500 scan most symbols have no entry at all. The gate read
+`passed: !earn`, and `earn` is undefined in two completely different
+situations: *checked, and no earnings falls in the contract window* versus
+*nothing is known about this symbol*. Both rendered as a green ✓ in the
+drawer's checklist — a screen saying "verified clear" about a symbol nobody
+had ever looked up. That is exactly the failure the degradation idiom names,
+and the shape of the CRWD miss.
+
+The fix is **not** to fail unknown symbols: that would drop ~450 of 503 on a
+basket scan and hand back an empty table, and it would break the repo's own
+standing rule that a data gap is not evidence of a problem (`ivHv`,
+`chg20Pct` both pass on null). So `passed` is unchanged and the pass count is
+identical — a test pins that. What changes is that the gate carries
+`unknown: true`, the drawer draws `?` in `--warn` with a "chưa có dữ liệu"
+tag instead of a ✓, and `Candidate.earningsUnknown` exposes it.
+
+**The pattern was already in this codebase, on the other tab.** My Portfolio
+has done this correctly since it was written — `portfolio.ts` computes
+`earningsUnknown: !(p.symbol in earnings)` per row and `earningsDataGap` for
+the summary. The Screener simply never got the same treatment. Worth
+remembering as a search strategy: when a gap like this turns up, grep for
+whether some other surface of the same app already solved it, before
+inventing an approach.
+
 **Put skew z-score has the same bootstrapping problem as IV Rank**: it needs a rolling mean/std that cannot exist on day one. `.cache/skew-history.json` accumulates one reading per symbol per day (mirroring `iv-history.json` exactly) and `skewZScore()` returns null until ~60 readings exist. Term structure needs no such warm-up — it is a same-day ratio, live from the first scan.
 
 ### The scan outlives the browser (`src/lib/scan-job.ts`, `src/lib/scan-store.ts`)

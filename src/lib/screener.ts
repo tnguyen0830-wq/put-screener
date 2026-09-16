@@ -453,6 +453,11 @@ export async function evaluate(
     const breakeven = c.strikePrice - mid;
     if (breakeven < u.low52) warnings.push('Break-even dưới đáy 52 tuần');
 
+    /* Hai câu hỏi khác nhau, và gộp lại là chỗ cổng earnings nói dối.
+       `earningsUnknown` = KHÔNG BIẾT gì về mã này; `earn` = biết, và có một
+       ngày rơi vào kỳ hợp đồng. `earnings.json` chỉ dựng cho watchlist, nên
+       quét cả rổ thì phần lớn mã rơi vào vế đầu. */
+    const earningsUnknown = !(u.symbol in earnings);
     const earn = (earnings[u.symbol] || []).find(
       (d) => d >= new Date().toISOString().slice(0, 10) && d <= c.expirationDate
     );
@@ -478,7 +483,13 @@ export async function evaluate(
       {
         key: 'earnings',
         label: 'Không có earnings trong kỳ hợp đồng',
+        /* VẪN qua cổng khi không có dữ liệu - cùng quy tắc với ivHv/chg20Pct
+           ở trên, và đổi thành trượt sẽ loại ~450 mã ngoài watchlist khiến
+           quét cả rổ ra bảng trống. Nhưng `unknown` được gắn cờ để màn hình
+           vẽ nó khác dấu ✓: cái sai của bản cũ không phải là cho qua, mà là
+           cho qua mà TRÔNG NHƯ đã kiểm và sạch. */
         passed: !earn,
+        ...(earningsUnknown ? { unknown: true } : {}),
       },
       {
         key: 'liquidity',
@@ -555,6 +566,7 @@ export async function evaluate(
       returnIfAssignedPct:
         ((credit - Math.max(0, c.strikePrice - u.spot) * 100) / capital) * 100,
       earningsBefore: earn ?? null,
+      earningsUnknown,
       gates,
       scoreBreakdown: breakdown,
       warnings,

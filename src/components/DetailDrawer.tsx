@@ -135,9 +135,17 @@ export default function DetailDrawer({
             <>
               <h3 className="dsec">{t('dd.gates')}</h3>
               <ul className="gatelist">
+                {/* Ba trạng thái, ba dấu. "Chưa biết" mà vẽ dấu ✓ là nói
+                    với người đọc rằng đã kiểm và sạch - lời nói dối đắt nhất
+                    một cái checklist có thể kể. */}
                 {row.gates.map((g) => (
-                  <li key={g.key} className={g.passed ? 'good' : 'bad'}>
-                    {g.passed ? '✓' : '✗'} {g.label}
+                  <li
+                    key={g.key}
+                    className={g.unknown ? 'gateunknown' : g.passed ? 'good' : 'bad'}
+                    title={g.unknown ? t('dd.gateUnknownWhy') : undefined}
+                  >
+                    {g.unknown ? '?' : g.passed ? '✓' : '✗'} {g.label}
+                    {g.unknown && <span className="gateunknowntag">{t('dd.gateUnknown')}</span>}
                   </li>
                 ))}
               </ul>

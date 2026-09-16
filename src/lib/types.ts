@@ -113,13 +113,30 @@ export type Candidate = {
   returnIfAssignedPct: number;
   earningsBefore: string | null; // known earnings date inside the contract window
   /**
+   * KHÔNG có ngày earnings nào cho mã này, chứ không phải "có mà không rơi
+   * vào kỳ hợp đồng". `data/earnings.json` chỉ dựng cho mã trong watchlist
+   * (scripts/earnings-sync.js), nên quét cả S&P 500 thì phần lớn mã rơi vào
+   * đây. Tab My Portfolio đã phân biệt hai chuyện này từ lâu
+   * (`earningsUnknown`/`earningsDataGap` ở portfolio.ts); Screener thì chưa.
+   */
+  earningsUnknown: boolean;
+  /**
    * The five fixed hard-gate checks, always computed and attached regardless
    * of whether `Filters.hardGates` is on - so a candidate shown while the
    * bundle is switched off can still show a real ✗, not just a blank. When
    * the bundle is on, every candidate that reaches the results has already
    * passed all five, so this is confirmation rather than a live filter here.
    */
-  gates: { key: string; label: string; passed: boolean }[];
+  /**
+   * `unknown` là trạng thái THỨ BA, không phải một kiểu `passed` khác.
+   *
+   * `passed: true, unknown: true` nghĩa là "không có dữ liệu để xét", và nó
+   * vẫn qua cổng theo đúng quy tắc sẵn có của repo này (thiếu dữ liệu không
+   * phải bằng chứng có vấn đề - xem HV20/chg20Pct). Nhưng màn hình PHẢI vẽ
+   * nó khác dấu ✓, nếu không "chưa biết" đọc y hệt "đã kiểm và sạch" - đúng
+   * cái cách CRWD bị bỏ lỡ.
+   */
+  gates: { key: string; label: string; passed: boolean; unknown?: boolean }[];
   /**
    * The four weighted pieces that sum to `score`, kept alongside it instead
    * of discarded after the sum - two candidates can land on the same total
