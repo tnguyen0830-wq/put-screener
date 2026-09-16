@@ -146,6 +146,13 @@ export default function DetailDrawer({
                   >
                     {g.unknown ? '?' : g.passed ? '✓' : '✗'} {g.label}
                     {g.unknown && <span className="gateunknowntag">{t('dd.gateUnknown')}</span>}
+                    {/* Ngày đoán và ngày chắc không được hiện giống nhau -
+                        cùng lý do với `unknown` ngay trên. */}
+                    {g.estimated && (
+                      <span className="gateunknowntag" title={t('dd.gateEstimatedWhy')}>
+                        {t('dd.gateEstimated')}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

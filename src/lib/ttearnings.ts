@@ -1,0 +1,231 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { ttConfigured, ttGet, TtError } from './tastytrade';
+
+/**
+ * Lịch earnings lấy từ tastytrade `/market-metrics`.
+ *
+ * Đây là thứ vá lỗ hổng #131. `data/earnings.json` chỉ dựng cho watchlist,
+ * nên quét cả S&P 500 thì ~450 mã đi qua cổng "không có earnings trong kỳ
+ * hợp đồng" vì KHÔNG CÓ DỮ LIỆU chứ không phải vì không có earnings. #131
+ * làm cho chuyện đó NHÌN THẤY được (`unknown: true`); file này làm cho nó
+ * BIẾN MẤT với mọi mã tastytrade phủ được.
+ *
+ * ĐO THẬT từ production 2026-09-16, không phải đọc tài liệu:
+ *
+ *   AAPL  earnings = {visible: true,  expected-report-date: "2026-10-29",
+ *                     estimated: false, quarter-end-date, actual-eps, …}
+ *   SPY   earnings = {visible: false, estimated: false, late-flag: 0}
+ *
+ * SPY là ETF nên KHÔNG CÓ earnings, và tastytrade nói ra điều đó bằng
+ * `visible: false` cộng với việc không gửi `expected-report-date` - chứ
+ * không phải bằng cách im lặng. Đó chính là ranh giới mà cả #131 xoay
+ * quanh: "đã hỏi, mã này không có earnings" là một câu trả lời THẬT, khác
+ * hẳn "chưa ai hỏi mã này bao giờ".
+ */
+
+const STORE = path.resolve(process.env.TT_EARNINGS_PATH || './.cache/ttearnings.json');
+
+/**
+ * Bao nhiêu mã một lượt gọi.
+ *
+ * CHƯA ĐO được trần thật của endpoint (mới xác nhận 8/8 và 1/1). 100 là
+ * chọn thận trọng, và quan trọng hơn: mỗi lô đều ĐỐI CHIẾU số mã hỏi với
+ * số mã về, mã rơi được ghi lại và báo ra (`missing`). Nên trần có thấp
+ * hơn 100 thì nó lộ ra thành một con số, không phải thành một khoảng
+ * trống im lặng trong cổng - đúng thứ file này sinh ra để chặn.
+ */
+const BATCH = 100;
+
+/** Ngày báo cáo đổi rất chậm; hỏi lại mỗi mã nhiều nhất một lần một ngày. */
+const TTL_MS = 24 * 60 * 60 * 1000;
+
+export type TtEarningsRecord = {
+  /** Ngày báo cáo kế tiếp, hoặc null khi tastytrade nói mã này không có
+   *  earnings (ETF). null ở đây là một CÂU TRẢ LỜI, không phải chỗ trống. */
+  date: string | null;
+  /** tastytrade tự đánh dấu ngày này là ước tính hay đã xác nhận. Một ngày
+   *  đoán và một ngày chắc không được hiện giống nhau. */
+  estimated: boolean;
+  /** `earnings.visible`. false = công cụ này không có khái niệm earnings. */
+  visible: boolean;
+  fetchedAt: number;
+};
+
+type Stored = {
+  records: Record<string, TtEarningsRecord>;
+  lastSyncAt: number | null;
+};
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Một bản ghi `/market-metrics` -> trạng thái earnings, hoặc null khi chưa
+ * kết luận được.
+ *
+ * Ba lối ra, và việc tách chúng CHÍNH LÀ điểm của hàm này:
+ *
+ *   visible === false            -> đã hỏi, mã này không có earnings  -> date null
+ *   visible === true  + có ngày  -> đã hỏi, có ngày                   -> date
+ *   visible === true  + KHÔNG có -> tastytrade biết mã này báo cáo nhưng
+ *                                   hiện chưa có ngày -> CHƯA BIẾT, trả null
+ *                                   để mã không vào kho và cổng vẫn gắn cờ
+ *                                   `unknown`.
+ *
+ * Lối ra thứ ba là lối dễ làm sai nhất: gộp nó vào "không có earnings" sẽ
+ * vẽ một dấu ✓ chắc nịch lên đúng thứ chưa ai biết - lặp lại nguyên vẹn lỗi
+ * #131 vừa sửa, chỉ là ở một tầng sâu hơn.
+ */
+export function parseEarnings(rec: any, now = Date.now()): TtEarningsRecord | null {
+  const e = rec?.earnings;
+  if (!e || typeof e !== 'object') return null;
+
+  const visible = e.visible === true;
+  const raw = e['expected-report-date'];
+  const date = typeof raw === 'string' && DATE_RE.test(raw.trim()) ? raw.trim() : null;
+
+  if (!visible) return { date: null, estimated: false, visible: false, fetchedAt: now };
+  if (!date) return null;
+  return { date, estimated: e.estimated === true, visible: true, fetchedAt: now };
+}
+
+async function read(): Promise<Stored> {
+  try {
+    const j = JSON.parse(await fs.readFile(STORE, 'utf8'));
+    if (j && typeof j === 'object' && j.records) return j;
+  } catch {
+    /* chưa đồng bộ lần nào */
+  }
+  return { records: {}, lastSyncAt: null };
+}
+
+async function write(s: Stored): Promise<void> {
+  await fs.mkdir(path.dirname(STORE), { recursive: true });
+  await fs.writeFile(STORE, JSON.stringify(s));
+}
+
+/**
+ * Kho đã đồng bộ, đổi sang đúng hình dạng `data/earnings.json` dùng.
+ *
+ * Mã "không có earnings" ra MẢNG RỖNG chứ không bị bỏ ra ngoài - và đó là
+ * cả mẹo tích hợp: cổng đọc `!(symbol in earnings)` để biết "chưa biết",
+ * nên một mảng rỗng nói đúng "đã kiểm, không có gì" mà không phải sửa một
+ * dòng nào của cổng. Khuôn đã có sẵn từ #131; chỗ này chỉ đổ dữ liệu thật
+ * vào.
+ */
+export async function loadTtEarnings(): Promise<Record<string, string[]>> {
+  const store = await read();
+  const out: Record<string, string[]> = {};
+  for (const [sym, r] of Object.entries(store.records)) {
+    out[sym] = r.date ? [r.date] : [];
+  }
+  return out;
+}
+
+/** Chi tiết cho màn hình: ngày này là ước tính hay đã xác nhận. */
+export async function ttEarningsDetail(): Promise<Record<string, TtEarningsRecord>> {
+  return (await read()).records;
+}
+
+export type TtEarningsRun = {
+  at: number;
+  asked: number;
+  returned: number;
+  /** Mã hỏi mà KHÔNG về. Một cái gate phải biết mình đang không phủ mã nào. */
+  missing: string[];
+  /** Mã về nhưng chưa kết luận được (tastytrade bảo có báo cáo, chưa có ngày). */
+  undecided: string[];
+  saved: number;
+  batches: number;
+  skipped: 'not-configured' | null;
+  error: string | null;
+};
+
+let lastRun: TtEarningsRun | null = null;
+export const getTtEarningsLastRun = () => lastRun;
+
+let inFlight = false;
+export const ttEarningsSyncing = () => inFlight;
+
+/**
+ * Kéo ngày earnings cho các mã đưa vào, bỏ qua mã đã hỏi trong 24 giờ.
+ *
+ * Một lô lỗi được BỎ QUA chứ không làm hỏng cả lượt: mất một lô là mất
+ * ~100 mã trong lần này (chúng giữ nguyên trạng thái "chưa biết", đúng
+ * nghĩa), còn ném ra ngoài là mất tất cả những lô đã lấy được.
+ */
+export async function syncTtEarnings(symbols: string[]): Promise<TtEarningsRun> {
+  if (inFlight) {
+    return lastRun ?? { at: Date.now(), asked: 0, returned: 0, missing: [], undecided: [], saved: 0, batches: 0, skipped: null, error: null };
+  }
+  if (!ttConfigured()) {
+    lastRun = { at: Date.now(), asked: 0, returned: 0, missing: [], undecided: [], saved: 0, batches: 0, skipped: 'not-configured', error: null };
+    return lastRun;
+  }
+
+  inFlight = true;
+  const at = Date.now();
+  let returned = 0;
+  let saved = 0;
+  let batches = 0;
+  const missing: string[] = [];
+  const undecided: string[] = [];
+  let error: string | null = null;
+
+  try {
+    const store = await read();
+    const want = [...new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))].filter(
+      (s) => !(store.records[s] && at - store.records[s].fetchedAt < TTL_MS)
+    );
+
+    for (let i = 0; i < want.length; i += BATCH) {
+      const lot = want.slice(i, i + BATCH);
+      batches++;
+      try {
+        const { data } = await ttGet<any>('/market-metrics', { symbols: lot.join(',') });
+        const body = data?.data ?? data;
+        const items: any[] = Array.isArray(body?.items) ? body.items : Array.isArray(body) ? body : [];
+        const seen = new Set<string>();
+        for (const rec of items) {
+          const sym = String(rec?.symbol ?? '').toUpperCase();
+          if (!sym) continue;
+          seen.add(sym);
+          returned++;
+          const parsed = parseEarnings(rec, at);
+          if (parsed) {
+            store.records[sym] = parsed;
+            saved++;
+          } else {
+            /* tastytrade trả lời nhưng chưa kết luận được. KHÔNG ghi vào
+               kho: để trống thì cổng vẫn gắn cờ "chưa biết", đúng sự thật. */
+            undecided.push(sym);
+          }
+        }
+        for (const s of lot) if (!seen.has(s)) missing.push(s);
+      } catch (e: any) {
+        /* Lô hỏng thì cả lô coi như chưa hỏi - đúng nghĩa, và những lô
+           trước đó vẫn được giữ lại. */
+        for (const s of lot) missing.push(s);
+        if (!error) {
+          error =
+            e instanceof TtError && e.status
+              ? `tastytrade trả mã ${e.status}${e.body ? ` — ${e.body.slice(0, 150)}` : ''}`
+              : String(e?.message ?? e);
+        }
+      }
+    }
+
+    store.lastSyncAt = at;
+    await write(store);
+    lastRun = { at, asked: want.length, returned, missing, undecided, saved, batches, skipped: null, error };
+  } catch (e: any) {
+    lastRun = { at, asked: 0, returned, missing, undecided, saved, batches, skipped: null, error: String(e?.message ?? e) };
+  } finally {
+    inFlight = false;
+  }
+
+  return lastRun!;
+}
+
+/** Chỉ dùng cho kiểm thử. */
+export const __store = STORE;

@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-16 — tastytrade: **lần đo đầu tiên THÀNH CÔNG**, ghi đầy đủ ở mục tastytrade bên dưới. Xác thực chạy (`form+UA`, scheme `bearer` - TRÁI với tài liệu), `earnings.expected-report-date` CÓ THẬT, term structure 25 kỳ có thật, 8 mã hỏi về đủ 8. Đang chờ hai phép đo nữa trước khi viết code, vì cả hai quyết định KIẾN TRÚC chứ không phải chi tiết: (1) `?symbols=SPY` - ETF có `earnings` không (ETF "không có earnings" là ĐÚNG, cổ phiếu thiếu dữ liệu là "chưa biết" - #131 chính là về chuyện không gộp hai cái đó); (2) một lượt ~120 mã có về đủ 120 không, và mã có dấu gạch chéo (BRK/B, BF/B) có rơi không. Không có branch đang mở.
+2026-09-16 — Đang làm: vá cổng earnings bằng lịch tastytrade (`lib/ttearnings.ts`), branch `claude/tastytrade-earnings-gate`. Đã đo xong cả ETF (`visible: false` = đã kiểm, không có earnings) lẫn cổ phiếu. Còn MỘT phép đo chưa có: một lượt ~120 mã có về đủ 120 không - nhưng KHÔNG chặn nữa, vì mỗi lô đều đối chiếu hỏi/về và mã rơi ghi vào `missing` thay vì biến mất im lặng.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -854,8 +854,73 @@ the one pressing that button. The response is built from booleans, key
 names and status codes — a test asserts the token, password, remember-token
 and email never appear in it.
 
-Not built yet, deliberately: the earnings gate fix, IV-rank-from-tastytrade,
-any sync loop. All of it waits on one probe reading from production.
+#### The earnings gate is closed (`src/lib/ttearnings.ts`)
+
+`visible` is the field that makes the three-way split possible, and it was
+measured, not guessed:
+
+| | AAPL (a stock) | SPY (an ETF) |
+|---|---|---|
+| `earnings.visible` | `true` | `false` |
+| `expected-report-date` | `"2026-10-29"` | absent |
+
+So tastytrade says "this instrument has no earnings" **out loud** rather than
+by staying silent — which is exactly the boundary #131 turns on.
+`parseEarnings()` therefore has three exits, and keeping them apart is the
+whole point:
+
+- `visible: false` → **checked, no earnings exists** (ETF) → `date: null`.
+- `visible: true` + a date → **checked, here is the date**.
+- `visible: true` + *no* date → tastytrade knows this instrument reports but
+  has no date right now → **still unknown**, so the symbol is left out of the
+  store entirely and the gate keeps flagging it. Folding this third case into
+  "no earnings" would paint a confident ✓ on something nobody knows — #131's
+  bug again, one level down.
+
+**The integration is three lines because #131 already built the shape.** The
+gate reads `!(symbol in earnings)` for "unknown", so a symbol with **an empty
+array** reads as *known, and nothing due* — no gate change at all.
+`loadTtEarnings()` emits `[]` for ETFs and `[date]` for stocks, and
+`loadEarnings()` merges it in. That merge is the **one chokepoint all five
+consumers share** (Screener gate, My Portfolio's "needs attention", Analyze,
+the phone API), so one edit un-blinds all of them and none can drift.
+
+It **unions**, never overwrites: `data/earnings.json` is hand-built and can
+hold several dates while tastytrade returns only the next one, so overwriting
+would silently drop next quarter's date. A test pins that.
+
+**`estimated` is displayed, not just stored.** tastytrade flags a report date
+as an estimate, and a contract rejected on a *guessed* date is rejected on
+much weaker evidence than one rejected on a confirmed date. Storing the flag
+and never showing it is precisely what `hasMultileg` was criticised for in
+#125, so `Candidate.earningsEstimated` and a gate-row tag both carry it. The
+flag deliberately **over-warns**: if a date appears in both the hand file and
+tastytrade-as-estimate, it still shows as an estimate. Saying "check this"
+wrongly is harmless; saying "certain" wrongly is not.
+
+**No new env var and no Render step.** The store is `.cache/ttearnings.json`,
+which this repo already documents as lossy and regenerable — a deploy wipes
+it and the next sync refills ~500 symbols in about 6 requests. That avoids
+the `USERS_PATH` trap entirely: nothing to add by hand, nothing to forget.
+
+**The batch ceiling is still unmeasured, and is handled by design rather than
+by guess.** `BATCH = 100` is a conservative pick (8/8 and 1/1 are the only
+confirmed readings). Every lot compares what was asked against what came
+back and pushes the difference into `missing`, so a lower real ceiling shows
+up as a number rather than as a silent hole in the gate's coverage. A lot
+that throws is skipped rather than fatal — losing one lot costs ~100 symbols
+their update for that cycle (they correctly stay "unknown"), while throwing
+would discard the lots already fetched.
+
+The sync rides the alert loop **outside `runOnce()`**, same reasoning as the
+Form 4 sync: alerts stand down outside market hours, but companies announce
+earnings dates at any hour — mostly after the close, i.e. exactly when
+`runOnce()` is resting. Each symbol is re-asked at most once per 24h.
+
+Not built yet, deliberately: IV-rank-from-tastytrade (see the three
+disagreeing rank fields and the 0-1 vs 0-100 scale trap above — both are
+real traps, not details), and using tastytrade's `sector`/`industry` in
+place of the Finviz scrape.
 
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 

@@ -112,6 +112,11 @@ export type Candidate = {
    */
   returnIfAssignedPct: number;
   earningsBefore: string | null; // known earnings date inside the contract window
+  /** Ngày ở `earningsBefore` là ƯỚC TÍNH của tastytrade, không phải ngày đã
+   *  xác nhận. Một hợp đồng bị loại vì ngày đoán bị loại trên bằng chứng
+   *  yếu hơn hẳn - và lưu cờ này mà không hiện ra thì đúng bằng lỗi
+   *  `hasMultileg` mà #125 phê bình. */
+  earningsEstimated: boolean;
   /**
    * KHÔNG có ngày earnings nào cho mã này, chứ không phải "có mà không rơi
    * vào kỳ hợp đồng". `data/earnings.json` chỉ dựng cho mã trong watchlist
@@ -136,7 +141,7 @@ export type Candidate = {
    * nó khác dấu ✓, nếu không "chưa biết" đọc y hệt "đã kiểm và sạch" - đúng
    * cái cách CRWD bị bỏ lỡ.
    */
-  gates: { key: string; label: string; passed: boolean; unknown?: boolean }[];
+  gates: { key: string; label: string; passed: boolean; unknown?: boolean; estimated?: boolean }[];
   /**
    * The four weighted pieces that sum to `score`, kept alongside it instead
    * of discarded after the sum - two candidates can land on the same total
