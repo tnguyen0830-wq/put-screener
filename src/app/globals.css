@@ -2704,3 +2704,17 @@ body {
 .oftag-rule {
   border-style: dashed;
 }
+
+/* Cổng "chưa có dữ liệu" trong checklist của DetailDrawer.
+   Màu cảnh báo, KHÔNG phải xanh và cũng không phải đỏ: nó không trượt (vẫn
+   qua cổng), nhưng cũng chưa hề được kiểm. Dùng chung --warn với mọi chỗ
+   khác trong app nói "để ý cái này". */
+.gatelist li.gateunknown {
+  color: var(--warn);
+}
+.gateunknowntag {
+  margin-left: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.85;
+}
