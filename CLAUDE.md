@@ -84,6 +84,8 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
+2026-09-16 — Đang làm: viết lại tab Quốc hội cho dễ đọc (ảnh nghị sĩ, bảng chi tiết, độ trễ công bố đo thật), branch `claude/congress-readable`.
+
 2026-09-16 — tastytrade **TẠM DỪNG**: chủ app báo tài khoản tastytrade đang bị duyệt (KYC), API chưa mở. Lần đo production đầu tiên trả 401 nhưng là HTML của nginx + script chống bot, tức chặn ở RÌA chứ không phải API từ chối - #130 cho thử 4 cách gửi và phân loại thân lỗi. ĐỪNG dò tiếp cho tới khi tài khoản được duyệt; cái 401 lúc này có thể chỉ là tài khoản chưa sống. Nửa nguy hiểm của lỗ hổng earnings đã vá xong bằng #131 mà không cần tastytrade. Không có branch đang mở.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
@@ -95,12 +97,13 @@ next session can pick one up rather than rediscovering it):
   own**, unlike every other tab. So code-P-only filtering, the 10b5-1
   exclusion, and "UW is paid and self-disables without a key" are documented
   in this file for Claude but nowhere for the person using the app.
-- Congress disclosure lag is described here and in the UI as the legal
-  **"30-45 days"**. That is the statutory ceiling, not observed reality:
-  sampling 250 recently-disclosed records gives a Senate **median of 116
-  days**, and **0 of 250** were trades from the last 7 days. Worth showing the
-  real lag on screen, or the tab reads as a live signal when it is a
-  historical record.
+- ~~Congress disclosure lag shown only as the legal "30-45 days".~~ **Closed
+  by #133**: the tab now measures the lag from the records actually on screen
+  (transaction date → filing date), prints the median above the table and per
+  symbol in its own column, and names 30-45 as the statutory *ceiling* rather
+  than the observed number. The original observation is why it was worth
+  doing: sampling 250 recently-disclosed records gave a Senate **median of
+  116 days**, and **0 of 250** were trades from the last 7 days.
 - SPX-in-GEX, latest state: Schwab is **not** a dead end after all. Chasing
   symbol spellings (#86-#91) was chasing the wrong thing - once the real
   error text was surfaced, SPX started returning `502 {"faultstring":"Body
@@ -419,6 +422,105 @@ buying," just from different populations (Congress vs. corporate officers).
 Same self-disabling posture as the rest of the paid/optional integrations —
 and more so than usual, since the key on hand is a 7-day trial, not a
 purchase, and can stop working at any moment regardless of what the code does.
+
+#### The disclosure lag is the number the tab was missing
+
+The panel's own text said trades are disclosed "within 30-45 days", which is
+the **statutory ceiling**, not what actually happens. Measured on real
+recently-disclosed records, the Senate median is around **116 days**, and in a
+250-record sample **none** were trades from the last 7 days. A table headed
+"who is buying" that is really "who bought four months ago" does not just omit
+a fact — it invites a wrong decision.
+
+So `disclosureLagDays()` (transaction date → filing date) and `medianLag()`
+are computed, and the panel prints the median **above** the table, measured
+from the records actually on screen, with 30-45 named as the ceiling it is.
+Each symbol row carries its own median in a column. Two rules the arithmetic
+follows and the screen depends on: a missing `filed_at_date` yields `null`,
+never `0` (a `0` on screen reads as "disclosed the same day", i.e. turns *not
+known* into a confident falsehood — the degradation idiom again); and a
+**negative** lag, meaning the feed says the filing predates the trade, also
+yields `null` rather than printing an impossible number that looks real. The
+median, not the mean, because one record three years late drags a mean but not
+a median.
+
+#### `tradeSide()` is the same trap `flowSide()` was
+
+`txnType === 'Sale' ? sell : buy` is a silent mis-count. While the panel only
+printed the word, an unrecognised type rendering as "Purchase" was cosmetic.
+Once buys and sells are **counted by side** to draw a bar, the same line turns
+every unknown value into a wrong number that looks right. UW writes
+"Purchase", "Sale", "Sale (Partial)", "Sale (Full)", "Exchange" — and adds
+values without notice. `other` is a real side, the screen names its count when
+non-zero, and a test pins `"Exchange"` and `"mystery-type"` landing there
+rather than in buys.
+
+#### Photos: the format check *is* the measurement
+
+Portraits come from the public-domain `unitedstates/images` repository, which
+is keyed by **Bioguide ID**. UW's `politician_id` *may* be one — unverified,
+since the sandbox has no network. So `politicianPhoto()` does not guess: it
+returns a URL only when the id matches `^[A-Z]\d{6}$`, and `null` otherwise,
+and the panel draws an initials circle for every `null` **and** for every
+image that fails to load. There is no path that renders a broken image, which
+would read as "the app is broken" rather than "no portrait". Verified in a
+real browser with egress blocked: every `<img>` failed and every one fell back
+to initials, zero broken images.
+
+The check lives in `/api/congress` rather than in the panel, because the panel
+is a client component and `congress.ts` imports `node:fs`. Computing it in the
+route keeps the regex in exactly one place; copying it into the component
+would have created a second copy, and the copy is the one that drifts.
+
+Buy/sell here **does** use `--credit`/`--risk`, unlike Options Flow's call/put.
+Call vs put is classification; buy vs sell is direction of money, the same
+thing the green/red rule in `ColorLegend.tsx` governs everywhere else. What
+that colouring invites is wrong, though, so the legend says it outright: a
+sale does **not** mean the member knows something bad — most are blind trusts,
+rebalancing or selling to pay tax, and many accounts are run by a family
+member. Same posture as `of.keyCaveat`.
+
+Unknown `issuer` values print **UW's own word**, not `cg.issuer.xxx`, for the
+same reason `ruleLabel()` exists in Options Flow: `t()` returns the key on a
+miss, and UW adds values without notice.
+
+#### Two views, because there are two questions
+
+The owner's reference was `capitoltrades.com/politicians`: a grid of member
+cards, each a large round portrait with a party-coloured ring, name,
+chamber/party/state and a small stats block. A table sorted by *symbol*
+answers "who touched this ticker" and cannot answer "what is this person
+doing", however many columns it grows. So the panel has a `By symbol` /
+`By member` toggle, and `byMember()` regroups **the payload already on
+screen** rather than adding a second endpoint — a second computation path is
+a second number that can disagree with the table beside it.
+
+One column the reference has and this deliberately does not: **total volume**.
+The STOCK Act only permits a range, so any dollar total is that site picking a
+point inside each range. Trades are counted instead, because that can be
+counted exactly, and the screen says why — otherwise the absence reads as
+missing data rather than as a refusal to invent a number.
+
+`party` and `state` are parsed **tolerantly and are unverified**: it is not
+confirmed that `/api/congress/recent-trades` carries them (no network here).
+Absent, `partyClass()` returns null and the portrait gets no coloured ring.
+Party is never inferred from a name or a state — that would fabricate a
+political fact about a real person, and a guessed ring looks exactly like a
+correct one. The ring reuses `--gexput`/`--gexcall`, already defined in all
+three theme blocks: party is classification, like call/put, so `--credit`/
+`--risk` would read as "this party good, that party bad", and reusing existing
+tokens keeps the change out of the three-block editing trap.
+
+**`loading="lazy"` turned the portrait fallback into the bug it was meant to
+prevent.** The first version picked *either* an `<img>` *or* an initials
+circle, switching on `onError`. A portrait below the fold is never fetched, so
+`onError` never fires, so the fallback never runs — and the card renders an
+**empty circle**, which is precisely the "the app is broken" reading the
+fallback exists to avoid. Caught in a full-page screenshot, not by reasoning
+about the code. The fix is structural rather than another state: the initials
+are always drawn and the image is layered **over** them, so not-yet-loaded,
+failed and no-URL all render identically. Measured with the page unscrolled
+and two images still pending: zero empty circles.
 
 ### Options flow and dark pool (`src/lib/optionflow.ts`, `darkpool.ts`)
 

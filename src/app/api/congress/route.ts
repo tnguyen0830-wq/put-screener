@@ -3,7 +3,9 @@ import { startAlertLoop } from '@/lib/alert-runner';
 import {
   LOOKBACK_DAYS,
   congressSyncing,
+  disclosureLagDays,
   getCongressLastRun,
+  politicianPhoto,
   readCongress,
   syncCongress,
 } from '@/lib/congress';
@@ -30,9 +32,27 @@ export async function GET() {
       (b.lastTradeDate ?? '').localeCompare(a.lastTradeDate ?? '')
   );
 
+  /**
+   * Ảnh chân dung và số ngày công bố trễ được tính Ở ĐÂY chứ không lưu vào
+   * kho: cả hai đều suy ra được từ dữ liệu đã có, nên ghi thêm vào đĩa chỉ
+   * tạo ra một bản sao có thể lệch. Quan trọng hơn, phép kiểm dạng Bioguide
+   * (`politicianPhoto`) phải nằm đúng một chỗ - màn hình là client component,
+   * không import được `congress.ts` (module này đọc `node:fs`), nên nếu
+   * không trang trí ở đây thì cái regex sẽ bị chép lại lần thứ hai và bản
+   * chép là bản sẽ lệch.
+   */
+  const decorated = rows.map((r) => ({
+    ...r,
+    trades: r.trades.map((t) => ({
+      ...t,
+      photo: politicianPhoto(t.politicianId),
+      lagDays: disclosureLagDays(t),
+    })),
+  }));
+
   return NextResponse.json({
     configured: uwConfigured(),
-    rows,
+    rows: decorated,
     lookbackDays: LOOKBACK_DAYS,
     lastRun: getCongressLastRun(),
     syncing: congressSyncing(),

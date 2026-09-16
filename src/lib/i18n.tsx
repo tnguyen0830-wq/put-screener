@@ -1468,6 +1468,102 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Congress trades are far rarer than corporate insider trades (Insider Trade tab) - most symbols will show nothing most of the time. An empty table is not bad news.',
   },
 
+  /* Độ trễ công bố. Giao diện trước đây chỉ nói "30-45 ngày" theo luật, đó là
+     TRẦN PHÁP LÝ chứ không phải thực tế - đo thật thì trung vị Thượng viện là
+     116 ngày và không có giao dịch nào trong 7 ngày gần nhất. Không nói ra
+     thì bảng này đọc như tín hiệu sống trong khi nó là hồ sơ lịch sử. */
+  'cg.lagHead': { vi: 'Công bố trễ (đo thật)', en: 'Disclosure lag (measured)' },
+  'cg.lagMedian': {
+    vi: (n: number) => `Trung vị ${n} ngày`,
+    en: (n: number) => `Median ${n} days`,
+  },
+  'cg.lagNote': {
+    vi: 'Luật cho phép khai trong 30-45 ngày, nhưng đó là TRẦN chứ không phải thực tế. Con số bên trái là đo thật trên chính dữ liệu đang hiện: từ ngày nghị sĩ giao dịch tới ngày hồ sơ được công bố. Bảng này là HỒ SƠ LỊCH SỬ, không phải tín hiệu trong ngày - giá đã chạy xong từ lâu trước khi bạn nhìn thấy dòng này.',
+    en: 'The law allows 30-45 days, but that is a CEILING, not reality. The figure on the left is measured from the data actually on screen: from the day the member traded to the day the filing was published. This table is a HISTORICAL RECORD, not an intraday signal - the price moved long before the row appeared here.',
+  },
+  'cg.lagUnknown': {
+    vi: 'Không tính được - dữ liệu đang hiện không có ngày công bố nào.',
+    en: 'Cannot be computed - none of the records on screen carry a filing date.',
+  },
+  'cg.colSide': { vi: 'Mua / Bán', en: 'Buy / Sell' },
+  'cg.colCount': { vi: 'Số lệnh', en: 'Trades' },
+  'cg.colLag': { vi: 'Trễ (ngày)', en: 'Lag (days)' },
+  'cg.buy': { vi: 'Mua', en: 'Buy' },
+  'cg.sell': { vi: 'Bán', en: 'Sell' },
+  'cg.keyBuy': { vi: 'Lượt mua', en: 'Buys' },
+  'cg.keySell': { vi: 'Lượt bán', en: 'Sells' },
+  /* Cùng bài học với `of.keyCaveat` (#125): nói thẳng thứ dữ liệu KHÔNG cho
+     biết. Thiếu câu này thì một hàng toàn màu đỏ đọc thành "nghị sĩ biết tin
+     xấu", trong khi phần lớn lệnh bán là quỹ uỷ thác mù, cân lại danh mục hay
+     bán để đóng thuế. */
+  'cg.keyCaveat': {
+    vi: 'Màu chỉ nói mua hay bán. Một lệnh bán KHÔNG có nghĩa là nghị sĩ biết tin xấu - phần lớn là quỹ uỷ thác mù, cân lại danh mục hoặc bán để nộp thuế, và nhiều tài khoản do người nhà quản lý.',
+    en: 'Colour only says buy or sell. A sale does NOT mean the member knows something bad - most are blind trusts, rebalancing or selling to pay tax, and many accounts are managed by a family member.',
+  },
+  'cg.sideSplit': {
+    vi: (buyPct: number) => `${buyPct}% mua`,
+    en: (buyPct: number) => `${buyPct}% buys`,
+  },
+  'cg.sideNone': { vi: 'không rõ phía', en: 'side unknown' },
+  /* Khác 0 nghĩa là UW gửi kiểu giao dịch lạ (không phải Purchase/Sale). Nói
+     ra chứ đừng cộng lén vào "mua" - xem `tradeSide()` trong congress.ts. */
+  'cg.otherSide': {
+    vi: (n: number) => `+${n} không rõ`,
+    en: (n: number) => `+${n} unknown`,
+  },
+  'cg.dWho': { vi: 'Nghị sĩ', en: 'Member' },
+  'cg.dAccount': { vi: 'Tài khoản', en: 'Account' },
+  'cg.dSide': { vi: 'Loại', en: 'Type' },
+  'cg.dAmount': { vi: 'Khoảng tiền', en: 'Amount range' },
+  'cg.dTraded': { vi: 'Ngày giao dịch', en: 'Traded' },
+  'cg.dFiled': { vi: 'Ngày công bố', en: 'Filed' },
+  'cg.dLag': { vi: 'Trễ', en: 'Lag' },
+  'cg.dNotes': { vi: 'Ghi chú', en: 'Notes' },
+  'cg.days': {
+    vi: (n: number) => `${n} ngày`,
+    en: (n: number) => `${n}d`,
+  },
+  'cg.amountWhat': {
+    vi: 'Luật STOCK Act chỉ bắt khai theo KHOẢNG, không phải số chính xác. Đây là nguyên văn khoảng được khai, app không quy ra số.',
+    en: 'The STOCK Act only requires a RANGE, never an exact figure. This is the disclosed range verbatim; the app does not convert it to a number.',
+  },
+  /* Ai đứng tên tài khoản. UW viết thường: self / spouse / joint /
+     dependent / undisclosed - và họ thêm giá trị mới lúc nào không báo, nên
+     `issuerLabel()` in NGUYÊN chữ của UW khi gặp giá trị lạ thay vì in ra
+     khoá `cg.issuer.xxx` (cùng lý do với `ruleLabel()` ở Options Flow). */
+  'cg.issuer.self': { vi: 'Chính nghị sĩ', en: 'The member' },
+  'cg.issuer.spouse': { vi: 'Vợ/chồng', en: 'Spouse' },
+  'cg.issuer.joint': { vi: 'Tài khoản chung', en: 'Joint' },
+  'cg.issuer.dependent': { vi: 'Con phụ thuộc', en: 'Dependent child' },
+  'cg.issuer.undisclosed': { vi: 'Không khai', en: 'Undisclosed' },
+  'cg.noPhoto': {
+    vi: 'Chưa có ảnh chân dung cho nghị sĩ này.',
+    en: 'No portrait available for this member.',
+  },
+  /* Xem theo MÃ hay theo NGHỊ SĨ. Hai câu hỏi khác nhau: "mã này ai đụng
+     vào" và "người này đang làm gì" - một bảng xếp theo mã không trả lời
+     được câu thứ hai. */
+  'cg.bySymbol': { vi: 'Theo mã', en: 'By symbol' },
+  'cg.byMember': { vi: 'Theo nghị sĩ', en: 'By member' },
+  'cg.mTrades': { vi: 'Lệnh', en: 'Trades' },
+  'cg.mSymbols': { vi: 'Mã', en: 'Symbols' },
+  'cg.mLast': { vi: 'Gần nhất', en: 'Last traded' },
+  'cg.mLag': { vi: 'Trễ (trung vị)', en: 'Lag (median)' },
+  'cg.mNoneKnown': { vi: 'Không rõ', en: 'Unknown' },
+  /* Đảng/bang chỉ hiện khi UW thật sự trả về. Đoán đảng của một nghị sĩ là
+     bịa ra một sự thật chính trị - để trống thật thà hơn nhiều. */
+  'cg.party.democrat': { vi: 'Dân chủ', en: 'Democrat' },
+  'cg.party.republican': { vi: 'Cộng hoà', en: 'Republican' },
+  'cg.party.independent': { vi: 'Độc lập', en: 'Independent' },
+  'cg.noVolume': {
+    vi: 'Không có cột "tổng tiền" như các trang khác: luật STOCK Act chỉ cho khai theo KHOẢNG, nên mọi con số tổng đều là do trang đó tự đoán giữa khoảng. App này đếm SỐ LỆNH - thứ đếm được chính xác.',
+    en: 'There is deliberately no "total volume" column like other sites show: the STOCK Act only allows ranges, so any total is that site guessing a point inside each range. This app counts TRADES instead - the thing that can be counted exactly.',
+  },
+  'cg.photoSource': {
+    vi: 'Ảnh chân dung thuộc phạm vi công cộng, lấy từ kho unitedstates/images - chỉ hiện khi mã định danh đúng dạng Bioguide, nếu không màn hình vẽ chữ cái đầu tên.',
+    en: 'Portraits are public-domain images from the unitedstates/images repository - shown only when the member id matches the Bioguide format; otherwise initials are drawn instead.',
+  },
+
 
   /* ---- Options Flow (Unusual Whales) ---- */
   'of.title': { vi: 'Lệnh quyền chọn bất thường', en: 'Options Flow' },
