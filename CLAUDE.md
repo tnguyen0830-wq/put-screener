@@ -84,7 +84,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-16 — tastytrade **ĐÃ ĐƯỢC DUYỆT, đang chờ một lần đo**. Chủ app báo tài khoản qua KYC. Bước tiếp theo là mở `https://app.tylerinvestment.com/api/ttprobe?symbols=AAPL,MSFT,SPY,TSLA,NVDA,CRWD,QQQ,IWM` trong trình duyệt (OWNER_ONLY, không gọi được từ sandbox) và đọc `auth.ok` + `auth.bodyKind`. Lần chạy này kiểm HAI thứ cùng lúc: bốn cách gửi của #130 có qua được tường chống bot ở rìa không, VÀ giấy tờ có được chấp nhận không - `bodyKind` là thứ tách hai cái đó ra. CHƯA viết dòng code tính năng nào cho tới khi có kết quả; `found.earnings` rỗng thì cả hướng vá gate earnings bằng tastytrade là sai và phải bỏ. Không có branch đang mở.
+2026-09-16 — tastytrade: **lần đo đầu tiên THÀNH CÔNG**, ghi đầy đủ ở mục tastytrade bên dưới. Xác thực chạy (`form+UA`, scheme `bearer` - TRÁI với tài liệu), `earnings.expected-report-date` CÓ THẬT, term structure 25 kỳ có thật, 8 mã hỏi về đủ 8. Đang chờ hai phép đo nữa trước khi viết code, vì cả hai quyết định KIẾN TRÚC chứ không phải chi tiết: (1) `?symbols=SPY` - ETF có `earnings` không (ETF "không có earnings" là ĐÚNG, cổ phiếu thiếu dữ liệu là "chưa biết" - #131 chính là về chuyện không gộp hai cái đó); (2) một lượt ~120 mã có về đủ 120 không, và mã có dấu gạch chéo (BRK/B, BF/B) có rơi không. Không có branch đang mở.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -747,6 +747,66 @@ missing client_id / bad refresh token / missing `read` scope.
 `TT_USERNAME` + `TT_PASSWORD` via `POST /sessions` is the fallback only —
 that is the brokerage password sitting in an env var, which is why it is
 documented as the thing to avoid. Tokens live in RAM, never on disk.
+
+**SECOND production reading (2026-09-16), after the brokerage account cleared
+KYC: everything works, and the endpoint carries what the gate needs.** This is
+measured, not remembered — code against these names and types, not the docs.
+
+Auth: `tokenVariant: "form+UA"` — the **first** of #130's four framings, i.e.
+form-encoded with a real User-Agent, exactly the two differences found by
+comparing against `schwab.ts` and `sec.ts`. The edge block is gone. Access
+token lives 900s.
+
+**`schemeAccepted: "bearer"` — the docs I remembered were WRONG.** They say a
+tastytrade session token goes in `Authorization` *without* `Bearer`. The live
+API accepted `bearer`. `ttGet()`'s try-then-remember is what found it; a
+hardcoded "follow the docs" would have 401'd on every call.
+
+`asked: 8, returned: 8, missing: []` — no silent drops at 8 symbols. **The
+batch ceiling is still unmeasured** and matters: the screener universe is 503.
+
+`/market-metrics` record, 40 keys. What matters:
+
+- **`earnings` is an OBJECT, not an array**, keyed
+  `{visible, expected-report-date, estimated, late-flag, quarter-end-date,
+  actual-eps, consensus-estimate, updated-at}`. `expected-report-date`
+  (`"2026-10-29"`) is the field that closes the gate hole from #131. It is the
+  **next** expected report, one date — not the list `earnings.json` holds, so
+  the gate's "does an earnings date fall inside the contract window" reads it
+  as a single-date containment test, not a search.
+- **`estimated` is a boolean sitting right next to it.** A guessed date and a
+  confirmed one must not render alike — that is the same shape as #131's
+  `unknown`, one level down.
+- **THREE IV-rank fields that disagree, plus a field naming which one is
+  live.** `implied-volatility-index-rank: "0.418645049"`,
+  `tos-implied-volatility-index-rank: "0.418645049"`,
+  `tw-implied-volatility-index-rank: "0.359264507"`, and
+  `implied-volatility-index-rank-source: "tos"`. The generic field currently
+  mirrors the `tos` one — *currently*. Reading the generic field is reading
+  whichever source tastytrade happens to point at, and tos vs tw differ by
+  ~6 points of rank on the same symbol at the same instant. Pick one source
+  explicitly and record which, or print the `-source` value beside the number;
+  do not silently follow a pointer that can move.
+- **Scale trap: tastytrade's rank is a 0-1 fraction; this app's `ivRank()`
+  returns 0-100** (`((iv - lo) / (hi - lo)) * 100`). Feeding one into the other
+  is a 100× error that still looks like a plausible number — the exact failure
+  mode of a wrong unit. Convert at the boundary, once.
+- **Almost every value is a STRING**, including every volatility and rank
+  number. Only `liquidity-rating`, `market-cap` and `late-flag` are numbers.
+  Same trap as UW's `gex-levels`, and `num()` in `gex.ts` already exists for
+  it — `Number.isFinite('0.41')` is `false`.
+- `option-expiration-implied-volatilities` is a real 25-row term structure
+  (`expiration-date`, `option-chain-type`, `settlement-type`,
+  `implied-volatility`), so per-expiry IV is available without a chain fetch.
+- Also present and currently scraped from elsewhere or missing entirely:
+  `sector`, `industry` (Finviz today), `historical-volatility-30/60/90-day`,
+  `iv-hv-30-day-difference`, `beta`, `corr-spy-3month`, `lendability`,
+  `borrow-rate`, `market-cap`, dividend dates.
+
+Still unmeasured, and both decide the design rather than the details: whether
+an **ETF** (SPY/QQQ/IWM) carries an `earnings` object at all — "no earnings"
+is *true* for an ETF and *unknown* for a stock, and #131 is precisely about
+not collapsing those — and whether asking ~120 symbols returns ~120.
 
 **First production reading (2026-09-16): a 401 that was never tastytrade's.**
 The probe earned its keep immediately. The token exchange returned HTTP 401,
