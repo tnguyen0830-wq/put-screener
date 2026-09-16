@@ -193,6 +193,21 @@ export type CongressRun = {
   /** Giao dịch mới lưu thêm (đã lọc theo mã đang theo dõi). */
   saved: number;
   error: string | null;
+  /**
+   * HÌNH DẠNG THẬT của một bản ghi UW, đo tại lần đồng bộ này.
+   *
+   * Cùng khuôn `/api/uwprobe` và `/api/ttprobe`: sandbox không có mạng nên
+   * mọi thứ viết ở đây đều là đoán từ tài liệu, và repo này đã bị đốt vì
+   * chuyện đó nhiều lần. Hai câu hỏi đang không trả lời được từ màn hình -
+   * "vì sao không có ảnh" và "vì sao không có đảng" - đều chỉ cần đúng một
+   * lần đo: UW gọi các trường là gì, và `politician_id` trông ra sao.
+   *
+   * CHỈ tên khoá và MỘT mã định danh, không phải cả bản ghi: khoá và một id
+   * công khai thì không lộ gì, còn đổ nguyên payload lên màn hình là chuyện
+   * khác hẳn.
+   */
+  sampleKeys: string[] | null;
+  samplePoliticianId: string | null;
 };
 
 let lastRun: CongressRun | null = null;
@@ -212,10 +227,18 @@ export const congressSyncing = () => inFlight;
  */
 export async function syncCongress(): Promise<CongressRun> {
   if (inFlight) {
-    return lastRun ?? { at: Date.now(), pagesRead: 0, seen: 0, saved: 0, error: null };
+    return (
+      lastRun ?? {
+        at: Date.now(), pagesRead: 0, seen: 0, saved: 0, error: null,
+        sampleKeys: null, samplePoliticianId: null,
+      }
+    );
   }
   if (!uwConfigured()) {
-    lastRun = { at: Date.now(), pagesRead: 0, seen: 0, saved: 0, error: 'UW_API_KEY chưa được cấu hình' };
+    lastRun = {
+      at: Date.now(), pagesRead: 0, seen: 0, saved: 0,
+      error: 'UW_API_KEY chưa được cấu hình', sampleKeys: null, samplePoliticianId: null,
+    };
     return lastRun;
   }
 
@@ -225,6 +248,8 @@ export async function syncCongress(): Promise<CongressRun> {
   let seen = 0;
   let saved = 0;
   let error: string | null = null;
+  let sampleKeys: string[] | null = null;
+  let samplePoliticianId: string | null = null;
 
   try {
     const { symbols } = await trackedSymbols();
@@ -243,14 +268,27 @@ export async function syncCongress(): Promise<CongressRun> {
       let allSeenAlready = true;
       for (const raw of rows) {
         seen++;
+        if (!sampleKeys && raw && typeof raw === 'object') {
+          sampleKeys = Object.keys(raw).sort();
+          samplePoliticianId = raw.politician_id == null ? null : String(raw.politician_id);
+        }
         const key = tradeKey(raw);
-        if (!(key in store.trades)) allSeenAlready = false;
+        const isNew = !(key in store.trades);
+        if (isNew) allSeenAlready = false;
         // Chỉ giữ mã đang theo dõi - lọc PHÍA APP vì recent-trades không
         // có tham số ticker khi cần lấy nhiều mã một lượt.
         const ticker = String(raw.ticker ?? '').toUpperCase();
-        if (ticker && wanted.has(ticker) && !(key in store.trades)) {
+        if (ticker && wanted.has(ticker)) {
+          /* GHI ĐÈ, không phải "chỉ ghi khi chưa có". Bản ghi cũ trên đĩa
+             được phân tích bởi phiên bản code CŨ, nên nó thiếu đúng những
+             trường mới thêm (`party`, `state`) - và vì khoá đã tồn tại, cách
+             cũ sẽ bỏ qua nó mãi mãi. Hậu quả nhìn thấy được: thêm code đọc
+             đảng xong, màn hình vẫn trống suốt 90 ngày cho tới khi bản ghi
+             cũ hết hạn, và trông y như "UW không trả trường đó".
+             `saved` vẫn chỉ đếm bản ghi MỚI, và `allSeenAlready` đã tính
+             xong ở trên, nên cách dừng trang không đổi. */
           store.trades[key] = parseTrade(raw);
-          saved++;
+          if (isNew) saved++;
         }
       }
       // Cả trang đều là giao dịch đã lưu từ lần trước -> đã bắt kịp,
@@ -269,7 +307,7 @@ export async function syncCongress(): Promise<CongressRun> {
     inFlight = false;
   }
 
-  lastRun = { at, pagesRead, seen, saved, error };
+  lastRun = { at, pagesRead, seen, saved, error, sampleKeys, samplePoliticianId };
   return lastRun;
 }
 

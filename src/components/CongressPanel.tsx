@@ -46,6 +46,9 @@ type Payload = {
     seen: number;
     saved: number;
     error: string | null;
+    /** Tên khoá thật của một bản ghi UW, đo tại lần đồng bộ gần nhất. */
+    sampleKeys: string[] | null;
+    samplePoliticianId: string | null;
   } | null;
   syncing: boolean;
   trackedCount: number;
@@ -426,6 +429,48 @@ export default function CongressPanel() {
 
           {view === 'member' ? (
             <div className="panel-body">
+              {/* Hai thứ chủ app hỏi thẳng - "chưa có hình ảnh? và thuộc đảng?"
+                  - đều từng im lặng: không ảnh và không đảng nhìn y hệt nhau,
+                  trong khi cách sửa khác hẳn nhau. Nói ra ĐO ĐƯỢC cái gì. */}
+              {(() => {
+                const members = byMember(data!.rows);
+                if (!members.length) return null;
+                const anyPhoto = members.some((m) => m.head.photo);
+                const anyParty = members.some((m) => partyClass(m.head.party));
+                /* Mã định danh lấy từ CHÍNH dữ liệu đang hiện trước, chỉ
+                   rơi về mẫu của lần đồng bộ khi không có. `lastRun` nằm
+                   trong RAM nên deploy xong là mất, mà bản ghi trên đĩa thì
+                   đã mang sẵn `politicianId` - bắt chủ app bấm đồng bộ chỉ
+                   để đọc một thứ đã nằm ngay trên màn hình là bắt chờ vô
+                   ích. */
+                const sampleId =
+                  members.find((m) => m.head.politicianId)?.head.politicianId ||
+                  data?.lastRun?.samplePoliticianId ||
+                  null;
+                const keys = data?.lastRun?.sampleKeys ?? null;
+                if (anyPhoto && anyParty) return null;
+                return (
+                  <div className="cgdiag">
+                    {!anyPhoto && (
+                      <p className="cap hint hint-warn">
+                        <b>{t('cg.noPhotoHead')}</b>{' '}
+                        {sampleId
+                          ? t('cg.noPhotoBioguide', sampleId)
+                          : t('cg.noPhotoUnknown')}
+                      </p>
+                    )}
+                    {!anyParty && <p className="cap hint hint-warn">{t('cg.noParty')}</p>}
+                    {/* Tên trường THẬT của UW. Đây là thứ duy nhất biến "đoán
+                        theo tài liệu" thành "code theo cái đo được" - cùng
+                        khuôn với /api/uwprobe và /api/ttprobe. */}
+                    {keys?.length ? (
+                      <p className="cap">
+                        <code>{t('cg.uwKeys', keys.join(', '))}</code>
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
               <div className="cgcards">
                 {byMember(data!.rows).map((m) => {
                   const known = m.buys + m.sells;
@@ -585,6 +630,13 @@ export default function CongressPanel() {
                       {open && (
                         <tr className="ins-expand-row">
                           <td colSpan={7}>
+                            {/* Bảng chi tiết có 8 cột không xuống dòng, nên nếu
+                                để trần trong ô này thì CHÍNH NÓ quyết định bề
+                                ngang của bảng ngoài - mở một dòng ra là cả bảng
+                                phình lên và phải kéo sang trái rất xa mới thấy
+                                lại các cột. Cho nó khung cuộn RIÊNG thì nó cuộn
+                                trong phạm vi của nó, bảng ngoài giữ nguyên. */}
+                            <div className="cgdetailwrap">
                             <table className="cgdetail">
                               <thead>
                                 <tr>
@@ -640,6 +692,7 @@ export default function CongressPanel() {
                                 })}
                               </tbody>
                             </table>
+                            </div>
                             <p className="cap cgphotonote">{t('cg.photoSource')}</p>
                           </td>
                         </tr>

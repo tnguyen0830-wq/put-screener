@@ -1644,14 +1644,34 @@ table.results tbody tr.clickable {
 }
 
 /* Cuộn ngang mà mất luôn cột mã thì các con số còn lại chẳng biết của ai. Ghim
-   cột đầu lại; nền phải đục, nếu không chữ bên dưới trôi xuyên qua. */
+   cột đầu lại; nền phải đục, nếu không chữ bên dưới trôi xuyên qua.
+
+   NỀN ĐỤC THÔI CHƯA ĐỦ, và đây là lỗi đã tồn tại sẵn (thấy được ở tab Quốc
+   hội, nhưng Options Flow cũng dính y hệt): `position: sticky` mà để
+   `z-index: auto` thì ô này KHÔNG tạo tầng riêng, nên bất kỳ ô nào ĐỨNG SAU
+   nó trong DOM mà có `position` (thanh mua/bán, thanh call/put, vòng tròn
+   ảnh đều là phần tử được định vị) sẽ vẽ ĐÈ LÊN nó. Kéo bảng sang trái là
+   mã cổ phiếu bị thanh màu và chữ "không rõ" trườn qua - đọc ra một mớ chữ
+   cụt. Đo được bằng cách cuộn thật rồi chụp, không phải bằng cách đọc CSS -
+   cùng bài học với bẫy độ ưu tiên `.hint.hint-warn`.
+
+   `padding-left` cũng được ghi ra hẳn: không có nó thì ô lấy mặc định 1px
+   của trình duyệt, mã cổ phiếu dính sát mép thẻ. Vế `padding-right: 10px`
+   ngay dưới cho thấy ý định ban đầu vốn là đệm đều hai bên, chỉ là mới viết
+   một nửa. */
 .pftable th:first-child,
 .pftable td:first-child {
   position: sticky;
   left: 0;
+  z-index: 1;
   background: var(--card);
   border-right: 1px solid var(--rule-soft);
+  padding-left: 10px;
   padding-right: 10px;
+}
+/* Ô góc trên-trái phải nằm trên cả hàng tiêu đề lẫn cột đã ghim. */
+.pftable th:first-child {
+  z-index: 2;
 }
 .pftable td {
   vertical-align: top;
@@ -2885,14 +2905,18 @@ body {
   line-height: 1;
 }
 
-/* Chồng nhẹ lên nhau: bốn khuôn mặt vẫn vừa một ô hẹp, và cách xếp này đọc
-   ngay ra "một nhóm người" thay vì một hàng ô rời rạc. */
+/* KHÔNG chồng lên nhau. Kiểu xếp chồng (margin-left âm) là đúng cho ẢNH -
+   mép ngoài của một khuôn mặt là tóc và nền, che đi không mất gì. Nhưng ở
+   đây phần lớn ô là CHỮ CÁI ĐẦU căn giữa, nên ô sau che mất chữ cái thứ hai
+   của ô trước: "NP" (Nancy Pelosi) đọc thành "NF", "BS" thành "B5". Tức là
+   cái vòng tròn sinh ra để nói "ai" lại nói SAI tên người. Đo được trên ảnh
+   chụp thật, không phải suy từ CSS. Khoảng hở nhỏ tốn thêm ~33px cho bốn ô
+   và không bao giờ cắt chữ. */
 .cgfaces {
   display: flex;
   align-items: center;
-}
-.cgfaces > .cgface + .cgface {
-  margin-left: -8px;
+  gap: 3px;
+  min-width: 0;
 }
 .cgnames {
   margin-left: 8px;
@@ -2901,13 +2925,37 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 190px;
+  min-width: 0;
+}
+/* Tên chạy chữ chỉ là thứ tiện, không phải thông tin duy nhất: khuôn mặt và
+   cột "số nghị sĩ" đã trả lời "ai", và bung dòng ra là có tên đầy đủ trong
+   bảng chi tiết. Trên màn hình hẹp nó ngốn ~200px và đẩy năm cột còn lại ra
+   ngoài tầm nhìn, nên ở đó nó biến mất hẳn. */
+@media (max-width: 860px) {
+  .cgnames {
+    display: none;
+  }
 }
 
 /* Bảng chi tiết trong dòng bung ra. Trước đây chỗ này là một danh sách gạch
    đầu dòng nhồi tất cả vào một dòng chữ chạy dài (dùng lại .pfskipped, style
    của vị thế bị BỎ QUA) - mắt không có cột nào để bám, nên so hai lệnh với
    nhau phải đọc lại từ đầu. */
+/* Khung cuộn RIÊNG cho bảng chi tiết. Tám cột không xuống dòng, để trần
+   trong ô của bảng ngoài thì chính nó kéo bảng ngoài rộng ra - mở một dòng
+   là phải kéo ngang rất xa mới thấy lại các cột. */
+.cgdetailwrap {
+  /* `width: 0` + `min-width: 100%` là cách duy nhất ĐO ĐƯỢC trong sáu cách
+     đã thử: một `overflow-x: auto` trần vẫn để bảng con kéo bảng cha rộng ra
+     (ô của bảng cha co theo nội dung), còn cho ô xuống dòng thì giữ được bề
+     ngang nhưng bóp bảng chi tiết xuống 625px và các cột dính vào nhau.
+     Cách này giữ NGUYÊN bảng chi tiết 817px và cho nó cuộn trong khung của
+     chính nó: mở một dòng ra, bảng ngoài đứng yên ở 640px thay vì phình lên
+     832px. */
+  width: 0;
+  min-width: 100%;
+  overflow-x: auto;
+}
 .cgdetail {
   width: 100%;
   border-collapse: collapse;
@@ -3072,4 +3120,27 @@ body {
 }
 .cgface-gop {
   border-color: var(--gexcall);
+}
+
+/* Cột số bớt đệm trên màn hình hẹp: 16px × bốn cột là 64px, đủ để đẩy một
+   cột nữa ra khỏi tầm nhìn trên điện thoại. */
+@media (max-width: 860px) {
+  .cgtable td.num,
+  .cgtable th.num {
+    padding-right: 8px;
+  }
+}
+
+/* Vì sao chưa có ảnh / chưa có đảng. Đứng TRƯỚC lưới thẻ: nó giải thích
+   những vòng tròn chữ cái ngay bên dưới, đọc sau thì đã kịp kết luận nhầm
+   là app hỏng. */
+.cgdiag {
+  margin-bottom: 12px;
+}
+.cgdiag > p {
+  margin: 0 0 6px;
+}
+.cgdiag code {
+  font-size: 11px;
+  word-break: break-word;
 }
