@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ciksFor, companyFacts, SecError } from '@/lib/sec';
+import { ciksFor, companyFacts, secTickerCandidates, SecError } from '@/lib/sec';
 import { secDiagnosis, secFundamentals, TAGS } from '@/lib/secfacts';
 
 export const dynamic = 'force-dynamic';
@@ -26,9 +26,21 @@ export async function GET(req: NextRequest) {
   const symbol = (req.nextUrl.searchParams.get('symbol') ?? 'AAPL').trim().toUpperCase();
   const t0 = Date.now();
   try {
-    const { found, missing } = await ciksFor([symbol]);
+    const { found, missing, spelling } = await ciksFor([symbol]);
     if (missing.length) {
-      return NextResponse.json({ symbol, ok: false, reason: 'no-cik', missing }, { status: 404 });
+      return NextResponse.json(
+        {
+          symbol,
+          ok: false,
+          reason: 'no-cik',
+          missing,
+          /* Nói ra ĐÃ THỬ NHỮNG CÁCH VIẾT NÀO - không có dòng này thì
+             "no-cik" của một ETF (đúng) và của một mã bị chuẩn hoá sai
+             (lỗi) trông y hệt nhau. Bài học #102. */
+          triedSpellings: secTickerCandidates(symbol),
+        },
+        { status: 404 }
+      );
     }
     const cik = found[symbol];
     const raw = await companyFacts(cik);
@@ -53,6 +65,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       symbol,
       cik,
+      /** Cách viết đã khớp danh bạ SEC, nếu khác mã gốc (BRK/B -> BRK-B). */
+      secSpelling: spelling[symbol] ?? null,
       ok: f.revenue.length > 0,
       ms: Date.now() - t0,
       entityName: f.entityName,

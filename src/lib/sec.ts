@@ -175,23 +175,73 @@ async function readCikCache(): Promise<{ at: number; map: CikMap } | null> {
   return null;
 }
 
-/** Tra CIK cho một danh sách mã. Mã không có trong danh bạ được trả riêng. */
+/**
+ * Các cách viết một mã mà danh bạ SEC CÓ THỂ dùng, theo thứ tự khả năng.
+ *
+ * Schwab viết cổ phiếu nhiều lớp bằng GẠCH CHÉO (`BRK/B`, `BF/B`); không
+ * nguồn nào khác trong app này dùng gạch chéo, và mỗi nguồn lại đổi một kiểu
+ * riêng - `finviz.ts` đổi sang `-`, `news.ts` đổi sang `-`, `links.ts` đổi
+ * sang `.`, các lớp cache đổi sang `_`. `sec.ts` là chỗ DUY NHẤT chưa từng
+ * đổi, nên `BRK/B` tra vào danh bạ SEC là trượt.
+ *
+ * ĐO ĐƯỢC Ở PRODUCTION (2026-09-17): `/api/secprobe?symbol=BRK%2FB` trả về
+ * `{"ok":false,"reason":"no-cik","missing":["BRK/B"]}`. Và lỗi này KHÔNG
+ * phải của tab Đầu tư dài hạn - nó có từ khi Form 4 ra mắt, vì
+ * `insiders.ts` ghi mọi mã trong `missing` thành `noFiler: true`, tức câu
+ * trả lời DỨT KHOÁT "SEC không có ai nộp Form 4 cho mã này" vốn chỉ dành
+ * cho ETF. Nói cách khác app đã khẳng định chắc nịch một điều sai về hai
+ * công ty thật đang niêm yết, và im lặng suốt - đúng hình dạng degradation
+ * idiom, chỉ khác là lần này nguyên nhân nằm ở phép chuẩn hoá của chính
+ * chúng ta chứ không ở dữ liệu của SEC.
+ *
+ * Danh bạ SEC dùng cách viết nào thì CHƯA ĐO ĐƯỢC (`www.sec.gov` bị sandbox
+ * chặn), nên KHÔNG đoán: thử cả thang, đúng lối "try the plausible
+ * spellings" mà Schwab ($SPX/$SPX.X/SPX) và CBOE (_SPX/SPX) đã dùng. Cách
+ * viết nào khớp cũng đúng; thứ tự chỉ để phá hoà.
+ */
+export function secTickerCandidates(symbol: string): string[] {
+  const s = symbol.trim().toUpperCase();
+  if (!s.includes('/')) return [s];
+  return [s.replace(/\//g, '-'), s.replace(/\//g, '.'), s.replace(/\//g, ''), s];
+}
+
+/**
+ * Tra CIK cho một danh sách mã. Mã không có trong danh bạ được trả riêng.
+ *
+ * `found` vẫn khoá theo mã GỐC (cách Schwab viết), vì đó là thứ mọi nơi gọi
+ * đang dùng làm khoá. `spelling` chỉ ghi lại những mã phải đổi cách viết mới
+ * tra được - để probe và nhật ký nói ra được, thay vì thành một phép biến
+ * đổi thầm lặng không ai thấy.
+ */
 export async function ciksFor(
   symbols: string[]
-): Promise<{ found: Record<string, string>; missing: string[] }> {
+): Promise<{
+  found: Record<string, string>;
+  missing: string[];
+  spelling: Record<string, string>;
+}> {
   const map = await cikMap();
   const found: Record<string, string> = {};
   const missing: string[] = [];
+  const spelling: Record<string, string> = {};
   for (const s of symbols) {
     const key = s.trim().toUpperCase();
-    const cik = map[key];
+    let hit: string | null = null;
+    for (const cand of secTickerCandidates(key)) {
+      if (map[cand]) {
+        hit = cand;
+        break;
+      }
+    }
     // Mã không tra được thì nói ra, đừng lặng lẽ bỏ: ETF (QQQ, SPY) không
     // có CIK kiểu này và cũng không có ai nộp Form 4, nên chúng phải hiện
     // ra là "không có dữ liệu" chứ không phải "không có sếp nào mua".
-    if (cik) found[key] = cik;
-    else missing.push(key);
+    if (hit) {
+      found[key] = map[hit];
+      if (hit !== key) spelling[key] = hit;
+    } else missing.push(key);
   }
-  return { found, missing };
+  return { found, missing, spelling };
 }
 
 /** Chỉ dùng cho kiểm thử. */
