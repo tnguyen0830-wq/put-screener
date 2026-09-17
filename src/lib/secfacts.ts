@@ -6,17 +6,19 @@
  * Module này CỐ Ý thuần logic - không mạng, không đĩa - để test bằng script
  * Node độc lập với một fixture dựng đúng hình dạng thật.
  *
- * HÌNH DẠNG CHƯA ĐO ĐƯỢC TỪ SANDBOX (`data.sec.gov` bị chặn 403 CONNECT lúc
- * viết). Cấu trúc dưới đây là cấu trúc công bố và rất phổ biến:
+ * HÌNH DẠNG ĐÃ ĐO Ở PRODUCTION (2026-09-17, AAPL qua /api/secprobe) - khớp
+ * cấu trúc dưới, và một fact thật mang đúng các khoá
+ * `start|end|val|accn|fy|fp|form|filed|frame` (`fy` là SỐ, `frame` kiểu
+ * "CY2018" cho cả năm và "CY2018Q3" cho quý). Hai lỗi thật lộ ra ở lần đo
+ * đó được ghi tại `pickSeries()` và `splitBreaks()`:
  *
  *   { cik, entityName, facts: { "us-gaap": { Revenues: { units: { USD: [
  *       { start, end, val, accn, fy, fp, form, filed, frame? } ] } } },
  *     dei: { EntityCommonStockSharesOutstanding: { units: { shares: [...] } } } } }
  *
- * nhưng repo này đã bị đốt nhiều lần vì code theo tài liệu nhớ được, nên mọi
- * chỗ đọc đều dung thứ, và `secDiagnosis()` in ra KHOÁ THẬT khi không bóc
- * được gì - lần chạy đầu ở production sẽ nói chỗ nào đoán sai thay vì hiện
- * bốn dấu gạch ngang. `/api/secprobe` làm đúng việc đó theo khuôn uwprobe.
+ * Mọi chỗ đọc vẫn dung thứ, và `secDiagnosis()` in ra KHOÁ THẬT khi không
+ * bóc được gì - công ty IFRS hay một thẻ lạ sẽ tự nói ra thay vì hiện bốn
+ * dấu gạch ngang. `/api/secprobe` giữ lại để đo mã khác.
  *
  * BA BẪY ĐÃ BIẾT của companyfacts, và cách xử:
  *
@@ -28,7 +30,9 @@
  *
  * 2. `fp: "FY"` KHÔNG ĐỦ ĐỂ NÓI "SỐ CẢ NĂM". Trong 10-K, cả số quý 4 lẫn số
  *    cả năm đều mang fp = FY. Thứ phân biệt là ĐỘ DÀI KỲ: start→end xấp xỉ
- *    một năm. Bỏ điều kiện này là cộng nhầm một quý thành một năm.
+ *    một năm. Bỏ điều kiện này là cộng nhầm một quý thành một năm. ĐÃ XÁC
+ *    NHẬN THẬT: AAPL 10-K FY2018 có fact `start 2018-07-01, end 2018-09-29,
+ *    fp FY, frame CY2018Q3` nằm cạnh fact cả năm `frame CY2018`.
  *
  * 3. MỘT KHÁI NIỆM, NHIỀU THẺ. "Doanh thu" là `Revenues` ở công ty này,
  *    `RevenueFromContractWithCustomerExcludingAssessedTax` ở công ty kia
@@ -140,18 +144,86 @@ export function annualSeries(
   return [...byEnd.values()].sort((a, b) => a.end.localeCompare(b.end));
 }
 
-/** Thử thang thẻ theo thứ tự, trả về chuỗi đầu tiên có dữ liệu và tên thẻ thắng. */
+/**
+ * Thử cả thang thẻ, trả về chuỗi có ngày kết thúc MỚI NHẤT (hoà thì dài hơn).
+ *
+ * ĐO ĐƯỢC Ở PRODUCTION (2026-09-17, AAPL), và đây là lỗi thật của bản đầu:
+ * bản đầu lấy thẻ ĐẦU TIÊN có dữ liệu. Với Apple, `Revenues` có dữ liệu -
+ * nhưng chỉ tới FY2018, vì khi ASC 606 có hiệu lực Apple chuyển sang
+ * `RevenueFromContractWithCustomerExcludingAssessedTax` và thẻ cũ ngừng
+ * được cập nhật. Kết quả: năm tài chính "gần nhất" là 2018, CAGR 3 năm
+ * null, biên FCF null - trong khi thẻ mới nằm ngay bên cạnh với đủ 2018-2025.
+ * Thứ tự trong thang giờ chỉ còn là thứ tự phá hoà; thứ quyết định là
+ * dữ liệu nào MỚI.
+ *
+ * Cố ý KHÔNG ghép hai thẻ thành một chuỗi dài: `Revenues` và
+ * `RevenuesNetOfInterestExpense` là hai định nghĩa khác nhau ở ngân hàng,
+ * nối chúng lại là vẽ một đường tăng trưởng qua một chỗ đổi định nghĩa.
+ */
 export function pickSeries(
   taxonomy: Record<string, { units?: Record<string, RawFact[]> }> | undefined,
   tags: readonly string[],
   duration = true
 ): { series: SecPoint[]; tag: string | null } {
   if (!taxonomy || typeof taxonomy !== 'object') return { series: [], tag: null };
+  let best: { series: SecPoint[]; tag: string | null } = { series: [], tag: null };
   for (const tag of tags) {
     const s = annualSeries(taxonomy[tag]?.units, duration);
-    if (s.length) return { series: s, tag };
+    if (!s.length) continue;
+    const bestEnd = best.series.length ? best.series[best.series.length - 1].end : '';
+    const thisEnd = s[s.length - 1].end;
+    if (thisEnd > bestEnd || (thisEnd === bestEnd && s.length > best.series.length)) {
+      best = { series: s, tag };
+    }
   }
-  return { series: [], tag: null };
+  return best;
+}
+
+/**
+ * Ngày kết thúc kỳ mà số cổ phiếu NHẢY so với năm liền trước - dấu hiệu
+ * chia tách (hoặc gộp) cổ phiếu.
+ *
+ * ĐO ĐƯỢC Ở PRODUCTION (AAPL): số cổ phiếu 2017 = 5.25 tỷ, 2018 = 20.0 tỷ.
+ * Không phải Apple phát hành gấp bốn: năm 2018 được 10-K FY2020 (nộp SAU
+ * split 4:1 tháng 8/2020) báo cáo lại đã điều chỉnh, còn 2017 thì bản cuối
+ * cùng nhắc tới nó là 10-K FY2019, TRƯỚC split. Mỗi 10-K chỉ mang ba năm so
+ * sánh, nên điều chỉnh split chỉ với ngược được ba năm - xa hơn là số cũ
+ * chưa điều chỉnh. Cùng vết gãy ở 2011→2012 (split 7:1 năm 2014).
+ *
+ * Hệ quả nếu không chặn: một công ty split 2 năm trước sẽ có CAGR 3 năm
+ * "pha loãng +300%" và bị cổng LOẠI OAN, còn EPS đọc thành rớt 75%. Nên
+ * mọi CAGR của chỉ tiêu TÍNH TRÊN MỖI CỔ PHIẾU (số cổ phiếu, EPS) bị vô
+ * hiệu khi khoảng tính có vết gãy - và màn hình nói vì sao. Doanh thu và
+ * FCF là tổng, không bị ảnh hưởng.
+ *
+ * Ngưỡng ×1.8 / ÷1.8: phát hành thêm 80% cổ phiếu trong MỘT năm gần như
+ * không xảy ra ngoài chia tách; ngưỡng thấp hơn sẽ bắt nhầm một đợt phát
+ * hành lớn thật (mà đó chính là pha loãng cần bắt).
+ */
+export function splitBreaks(shares: SecPoint[]): string[] {
+  const out: string[] = [];
+  for (let i = 1; i < shares.length; i++) {
+    const a = shares[i - 1].value;
+    const b = shares[i].value;
+    if (a > 0 && b > 0 && (b / a >= 1.8 || a / b >= 1.8)) out.push(shares[i].end);
+  }
+  return out;
+}
+
+/** `cagr()` nhưng trả null nếu khoảng (first, last] chứa một vết gãy split. */
+export function cagrAcrossBreaks(series: SecPoint[], k: number, breaks: string[]): number | null {
+  const v = cagr(series, k);
+  if (v === null || !breaks.length) return v;
+  const last = series[series.length - 1];
+  // Tìm lại điểm đầu đúng như cagr() đã chọn.
+  const targetEnd = Date.parse(last.end) - k * 365.25 * DAY;
+  let first = series[0];
+  let bestGap = Infinity;
+  for (const p of series) {
+    const gap = Math.abs(Date.parse(p.end) - targetEnd);
+    if (gap < bestGap) { bestGap = gap; first = p; }
+  }
+  return breaks.some((b) => b > first.end && b <= last.end) ? null : v;
 }
 
 /**
@@ -210,6 +282,9 @@ export type SecFundamentals = {
   latestFiled: string | null;
   /** Thẻ XBRL thắng cho từng chỉ tiêu - null = không thẻ nào có dữ liệu cả năm. */
   tagsUsed: Record<SecMetric, string | null>;
+  /** Năm số cổ phiếu nhảy ≥1.8× so với năm trước - chia tách chưa điều chỉnh
+   *  đồng nhất. CAGR của EPS và số cổ phiếu bị vô hiệu khi vắt qua đây. */
+  splitBreaks: string[];
 };
 
 export function secFundamentals(raw: any): SecFundamentals {
@@ -235,6 +310,8 @@ export function secFundamentals(raw: any): SecFundamentals {
       ? (lastFcf.value / lastRev.value) * 100
       : null;
 
+  const breaks = splitBreaks(shares.series);
+
   return {
     entityName: typeof raw?.entityName === 'string' ? raw.entityName : null,
     revenue: revenue.series,
@@ -246,10 +323,10 @@ export function secFundamentals(raw: any): SecFundamentals {
     fcf,
     revenueCagr3: cagr(revenue.series, 3),
     revenueCagr5: cagr(revenue.series, 5),
-    epsCagr3: cagr(eps.series, 3),
-    epsCagr5: cagr(eps.series, 5),
+    epsCagr3: cagrAcrossBreaks(eps.series, 3, breaks),
+    epsCagr5: cagrAcrossBreaks(eps.series, 5, breaks),
     fcfCagr3: cagr(fcf, 3),
-    sharesCagr3: cagr(shares.series, 3),
+    sharesCagr3: cagrAcrossBreaks(shares.series, 3, breaks),
     fcfLatest: lastFcf?.value ?? null,
     fcfMarginLatest: fcfMargin,
     latestFy: lastRev?.end ?? null,
@@ -262,6 +339,7 @@ export function secFundamentals(raw: any): SecFundamentals {
       capex: capex.tag,
       shares: shares.tag,
     },
+    splitBreaks: breaks,
   };
 }
 
