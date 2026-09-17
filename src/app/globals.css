@@ -3144,3 +3144,92 @@ body {
   font-size: 11px;
   word-break: break-word;
 }
+
+/* ---------------- Long-term Investment ---------------- */
+
+/* Thẻ chứa ngăn chi tiết, nằm ngay dưới bảng. */
+.ltdetailcard {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+}
+
+/* Hàng đang mở được đánh dấu, nếu không thì bảng và ngăn chi tiết phía dưới
+   trông như hai thứ rời nhau - nhất là sau khi cuộn. */
+.pftable tr.lt-open td {
+  background: var(--paper);
+}
+
+.ltdetail {
+  padding: 12px 10px 16px;
+  /* PHẢI viết ra, và lý do chỉ lộ khi render thật chứ không khi đọc CSS:
+     `.pftable td` đặt `white-space: nowrap` để các CỘT SỐ của bảng không bị
+     ngắt dòng. Ngăn kéo chi tiết này nằm trong một `td` của chính bảng đó,
+     nên mọi đoạn văn xuôi trong nó THỪA KẾ nowrap và chạy thành một dòng
+     dài rồi bị cắt cụt ở mép thẻ - đo được: đoạn dài 1462px trong khung
+     777px. Cái bị cắt lại đúng là mấy câu nói thật (giá mục tiêu không phải
+     cổng lọc, Finviz thiếu ô nào, kho P/E chưa đủ), tức là lời cảnh báo bị
+     xén mất đúng nửa sau. Cùng bài học với #102: chỗ một chuỗi bị cắt quyết
+     định người ta đọc được gì. */
+  white-space: normal;
+}
+
+.ltdetail h4 {
+  margin: 14px 0 6px;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ltdetail h4:first-child {
+  margin-top: 0;
+}
+
+/* Giờ đã xuống dòng được, đoạn văn lại dài tới cả nghìn pixel trên màn hình
+   rộng - đọc hết một dòng rồi tìm lại đầu dòng sau là mỏi mắt. Chặn theo ĐƠN
+   VỊ CHỮ (ch) chứ không theo pixel, để còn đúng khi cỡ chữ đổi. */
+.ltdetail p {
+  max-width: 80ch;
+}
+
+.ltmini {
+  border-collapse: collapse;
+  font-family: var(--data);
+  font-size: 12px;
+}
+
+.ltmini td {
+  padding: 3px 14px 3px 0;
+  vertical-align: top;
+}
+
+.ltmini td:first-child {
+  color: var(--muted);
+}
+
+/* Cảnh báo "đã thủng hỗ trợ" phải ĐỌC RA là cảnh báo. Dùng --warn (đã định
+   nghĩa ở cả ba khối theme) chứ không dùng --muted: một dòng nói "mức đỡ mà
+   bạn định mua theo thì đã mất rồi" mà trông như chú thích phụ là một cảnh
+   báo không ai đọc - đúng cái bẫy .cap.bad của #95. */
+.ltbroken {
+  margin-top: 3px;
+  font-family: var(--data);
+  font-size: 11px;
+  color: var(--warn);
+}
+
+/* Câu trả lời của Claude là văn xuôi nhiều đoạn: giữ xuống dòng, và chặn bề
+   ngang để dòng không dài quá mức đọc được trên màn hình rộng. */
+.ltwhy {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  max-width: 68ch;
+}

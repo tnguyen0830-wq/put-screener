@@ -976,6 +976,118 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colCost': { vi: 'Giá vốn', en: 'Cost' },
   'pf.colValue': { vi: 'Giá trị', en: 'Value' },
   'pf.colDayPl': { vi: 'Hôm nay', en: 'Today' },
+  /* ---------------- Long-term Investment ---------------- */
+  'tab.longterm': { vi: 'Đầu tư dài hạn', en: 'Long-term' },
+  'lt.lead': {
+    vi: 'Tìm mã ĐANG RỚT VỀ một vùng hỗ trợ mà công ty vẫn có lãi và định giá chưa đắt. Vùng hỗ trợ tự tính từ 3 năm nến ngày (đáy xoay đã được nến hai bên xác nhận, gom theo giá); cơ bản và định giá lấy từ Finviz.',
+    en: 'Finds stocks FALLING TOWARD a support zone while the company is still profitable and not expensively priced. Support zones are computed here from 3 years of daily bars (confirmed pivot lows, clustered by price); fundamentals and valuation come from Finviz.',
+  },
+  'lt.watchlist': { vi: 'Watchlist', en: 'Watchlist' },
+  'lt.sp500': { vi: 'Cả rổ S&P 500', en: 'Full S&P 500' },
+  'lt.scan': { vi: 'Quét', en: 'Scan' },
+  'lt.scanning': { vi: 'Đang quét…', en: 'Scanning…' },
+  'lt.phase.quotes': { vi: 'Đang lấy giá và đỉnh/đáy 52 tuần (gộp lô)…', en: 'Fetching quotes and 52-week range (batched)…' },
+  'lt.phase.support': { vi: 'Đang dựng vùng hỗ trợ từ nến ngày…', en: 'Building support zones from daily bars…' },
+  'lt.phase.fundamentals': { vi: 'Đang lấy cơ bản từ Finviz…', en: 'Fetching fundamentals from Finviz…' },
+  /* Phiên Schwab chết là lỗi HAY GẶP NHẤT của app (refresh token bị Schwab
+     chặn cứng 7 ngày, không gia hạn được), và cách sửa khác hẳn mọi lỗi
+     quét khác: bấm kết nối lại, chứ không phải quét lại. In nguyên chuỗi
+     `REAUTH_REQUIRED Schwab 401` ra màn hình thì đúng về kỹ thuật nhưng
+     không nói cho người đọc biết phải làm gì - nên nó được tách ra. */
+  'lt.errExpired': {
+    vi: 'Phiên Schwab đã hết hạn. Bấm ⚙ → Kết nối lại rồi quét lại.',
+    en: 'The Schwab session has expired. Open ⚙ → Reconnect, then scan again.',
+  },
+  'lt.error': { vi: (m: string) => `Lượt quét lỗi: ${m}`, en: (m: string) => `Scan failed: ${m}` },
+  'lt.summary': {
+    vi: (v: any) => `Đã xét ${v.scanned} mã, ${v.kept} mã qua hết cổng.`,
+    en: (v: any) => `Scanned ${v.scanned} symbols, ${v.kept} passed every gate.`,
+  },
+  'lt.empty': {
+    vi: 'Không mã nào qua hết cổng lần này. Bảng trống ở đây là một CÂU TRẢ LỜI, không phải lỗi: phần lớn thời gian không có mã nào vừa rớt đủ sâu, vừa còn trên vùng hỗ trợ, vừa còn lãi và chưa đắt.',
+    en: 'Nothing passed every gate this run. An empty table here is an ANSWER, not a failure: most of the time no stock is simultaneously down enough, still above a support zone, still profitable and not expensive.',
+  },
+  /* Không có câu này thì một bảng tên "công ty tốt đang rẻ" tự đọc thành
+     danh sách khuyến nghị mua. */
+  'lt.caveat': {
+    vi: 'Đây là bộ LỌC, không phải khuyến nghị. Vùng hỗ trợ là thống kê của quá khứ chứ không phải lời hứa của tương lai — giá thủng qua nó suốt. Cơ bản Finviz là số cào từ trang web, trễ tới một quý. Và cổng "đang có lãi" chỉ nói công ty CÓ lãi, không nói lãi đó bền.',
+    en: 'This is a FILTER, not a recommendation. A support zone is a statistic about the past, not a promise about the future — price breaks through them all the time. Finviz fundamentals are scraped and can lag by a quarter. And the "profitable" gate says a company IS profitable, not that it will stay so.',
+  },
+  'lt.col.symbol': { vi: 'Mã', en: 'Symbol' },
+  'lt.col.price': { vi: 'Giá', en: 'Price' },
+  'lt.col.offHigh': { vi: 'Rớt từ đỉnh 52T', en: 'Off 52w high' },
+  'lt.col.support': { vi: 'Hỗ trợ gần nhất', en: 'Nearest support' },
+  'lt.col.trend': { vi: 'Xu hướng', en: 'Trend' },
+  'lt.col.quality': { vi: 'Chất lượng', en: 'Quality' },
+  'lt.col.value': { vi: 'Định giá', en: 'Valuation' },
+  'lt.col.score': { vi: 'Điểm', en: 'Score' },
+  'lt.awayTouches': {
+    vi: (v: any) => `cách ${v.away} · đã chạm ${v.touches} lần`,
+    en: (v: any) => `${v.away} away · touched ${v.touches}×`,
+  },
+  'lt.brokenTag': { vi: (p: string) => `⚠ đã thủng ${p}`, en: (p: string) => `⚠ broke ${p}` },
+  'lt.aboveSma': { vi: 'Trên SMA200', en: 'Above SMA200' },
+  'lt.belowSma': { vi: 'Dưới SMA200', en: 'Below SMA200' },
+  'lt.slope': { vi: (v: string) => `dốc SMA200 ${v}`, en: (v: string) => `SMA200 slope ${v}` },
+  'lt.roe': { vi: 'ROE', en: 'ROE' },
+  'lt.margin': { vi: 'Biên LN', en: 'Margin' },
+  'lt.fwdPe': { vi: 'P/E dự phóng', en: 'Fwd P/E' },
+  'lt.pePct': { vi: (v: string) => `phân vị P/E ${v}`, en: (v: string) => `${v}th P/E pctile` },
+  'lt.peWarming': {
+    vi: (n: number) => `phân vị P/E: còn thiếu ${n} lần đọc`,
+    en: (n: number) => `P/E pctile: ${n} more readings needed`,
+  },
+  'lt.gates': { vi: 'Cổng cứng', en: 'Hard gates' },
+  'lt.gateUnknown': { vi: 'chưa có dữ liệu', en: 'no data' },
+  'lt.scoreHead': { vi: 'Điểm số chi tiết', en: 'Score breakdown' },
+  'lt.supportHead': { vi: 'Vùng hỗ trợ', en: 'Support zone' },
+  'lt.zoneDetail': {
+    vi: (v: any) => `Tâm vùng ${v.price} (dải ${v.low}–${v.high}). Đã chạm ${v.touches} lần, lần đầu ${v.first}, gần nhất ${v.last}.`,
+    en: (v: any) => `Zone centre ${v.price} (band ${v.low}–${v.high}). Touched ${v.touches} times, first ${v.first}, most recently ${v.last}.`,
+  },
+  'lt.noZone': {
+    vi: 'Không tìm thấy vùng hỗ trợ nào NẰM DƯỚI giá hiện tại trong 3 năm nến ngày. Nghĩa là dưới chân giá không có mức nào từng được bảo vệ hai lần trở lên.',
+    en: 'No support zone was found BELOW the current price in 3 years of daily bars. Nothing beneath this price has been defended twice or more.',
+  },
+  /* "Đã thủng" và "đang tới" trông giống nhau trên biểu đồ (giá nằm cạnh một
+     đường kẻ) nhưng hành động thì ngược nhau, nên chúng được nói tách hẳn. */
+  'lt.brokenDetail': {
+    vi: (p: string) => `Giá đã rơi xuống DƯỚI vùng ${p}. Một vùng đã thủng không phải là một vùng đang tới — mức đó giờ là kháng cự phía trên, không phải đỡ phía dưới.`,
+    en: (p: string) => `Price has already fallen BELOW the zone at ${p}. A broken zone is not an approaching one — that level is now resistance above, not a floor below.`,
+  },
+  'lt.zoneCount': {
+    vi: (n: number) => `Tìm được ${n} vùng hỗ trợ trong 3 năm (mỗi vùng phải có ít nhất 2 lần chạm; một đáy đơn độc không được tính là vùng).`,
+    en: (n: number) => `${n} support zones found over 3 years (each needs at least 2 touches; a single low is never counted as a zone).`,
+  },
+  'lt.faHead': { vi: 'Cơ bản (Finviz)', en: 'Fundamentals (Finviz)' },
+  'lt.target': { vi: 'Giá mục tiêu', en: 'Analyst target' },
+  'lt.targetNote': {
+    vi: 'Giá mục tiêu được HIỆN nhưng cố ý KHÔNG dùng làm cổng lọc: nó gần như luôn nằm trên giá hiện tại, nên lấy nó làm cổng là giao quyền lọc cho sự lạc quan nghề nghiệp của người khác. Nó chỉ góp một phần vào điểm số.',
+    en: 'The analyst target is shown but deliberately NOT used as a gate: it sits above the current price almost by default, so gating on it would hand the filtering over to someone else’s professional optimism. It only contributes to the score.',
+  },
+  'lt.faMissing': {
+    vi: (k: string) => `Finviz không trả số cho những ô này: ${k}. Cổng liên quan hiện dấu “?” chứ không phải ✓ — có thể là công ty thật sự không có chỉ số đó, cũng có thể Finviz đổi giao diện và bộ cào cần sửa.`,
+    en: (k: string) => `Finviz returned no value for: ${k}. The affected gates show “?” rather than ✓ — either the company genuinely has no such metric, or Finviz changed its layout and the scraper needs fixing.`,
+  },
+  'lt.peHead': { vi: 'Định giá so với chính mã này', en: 'Valuation vs its own history' },
+  'lt.peDetail': {
+    vi: (v: any) => `P/E hiện tại nằm ở phân vị ${v.pct} trong ${v.readings} lần đọc P/E của chính mã này. Trung vị ${v.median}; hiện lệch ${v.vs} so với trung vị đó.`,
+    en: (v: any) => `Current P/E sits at the ${v.pct}th percentile of ${v.readings} readings of this stock’s own P/E. Median ${v.median}; now ${v.vs} versus that median.`,
+  },
+  /* Vế "rẻ so với chính nó" phải tự tích luỹ, nên trong nhiều tuần đầu nó là
+     KHÔNG BIẾT chứ không phải "ở mức bình thường" - và màn hình nói rõ còn
+     thiếu bao nhiêu, chứ không chỉ hiện một dấu gạch ngang câm. */
+  'lt.peWarmingDetail': {
+    vi: (v: any) => `Chưa đủ dữ liệu: mới có ${v.have} lần đọc, cần thêm ${v.need} lần nữa. Không nguồn nào cho sẵn chuỗi P/E quá khứ nên app tự ghi mỗi lần quét một dòng. Tới lúc đó, đây là KHÔNG BIẾT — không phải “đang ở mức bình thường” — và nó không kéo điểm lên hay xuống.`,
+    en: (v: any) => `Not enough data yet: ${v.have} readings so far, ${v.need} more needed. No source provides a past P/E series, so this app records one reading per scan. Until then this is UNKNOWN — not “about average” — and it moves the score neither way.`,
+  },
+  'lt.whyHead': { vi: 'Tại sao rớt?', en: 'Why did it fall?' },
+  'lt.whyBtn': { vi: 'Kiểm tin tức và hỏi Claude', en: 'Check the news and ask Claude' },
+  'lt.whyBusy': { vi: 'Đang đọc…', en: 'Reading…' },
+  'lt.whyNote': {
+    vi: 'Lấy tin gần nhất của mã (Yahoo) rồi để Claude đọc cùng TA và FA ở trên. Mọi con số đều do code tính, Claude chỉ diễn giải — và được dặn phải NÓI THẲNG khi tin tức không giải thích được cú rớt, thay vì bịa một lý do nghe lọt tai.',
+    en: 'Fetches the stock’s recent headlines (Yahoo) and has Claude read them alongside the TA and FA above. Every number is computed in code; Claude only interprets — and is instructed to SAY SO when the news does not explain the fall, rather than inventing a plausible cause.',
+  },
   'pf.earnings': {
     vi: (d: string) => `earnings ${d}`,
     en: (d: string) => `earnings ${d}`,

@@ -17,6 +17,7 @@ import CongressPanel from '@/components/CongressPanel';
 import OptionFlowPanel from '@/components/OptionFlowPanel';
 import DarkpoolPanel from '@/components/DarkpoolPanel';
 import SettingsMenu from '@/components/SettingsMenu';
+import LongTermPanel from '@/components/LongTermPanel';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import Logo from '@/components/Logo';
@@ -50,7 +51,7 @@ type Status = {
   daysLeft?: number;
 };
 
-const TABS = ['screener', 'analyze', 'heatmap', 'portfolio', 'insider'] as const;
+const TABS = ['screener', 'analyze', 'heatmap', 'portfolio', 'insider', 'longterm'] as const;
 type Tab = (typeof TABS)[number];
 /** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
@@ -345,6 +346,12 @@ export default function Page() {
           >
             {t('tab.insider')}
           </button>
+          <button
+            className={tab === 'longterm' ? 'on' : undefined}
+            onClick={() => setTab('longterm')}
+          >
+            {t('tab.longterm')}
+          </button>
         </nav>
         <span className="spacer" />
         <SettingsMenu status={status} />
@@ -406,6 +413,10 @@ export default function Page() {
       ) : tab === 'portfolio' ? (
         <div className="shell solo">
           <PortfolioPanel />
+        </div>
+      ) : tab === 'longterm' ? (
+        <div className="shell solo">
+          <LongTermPanel />
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">

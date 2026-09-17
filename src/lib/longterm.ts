@@ -1,0 +1,264 @@
+import type { PeContext } from './pehistory';
+import type { SupportRead, SupportZone, TrendRead } from './support';
+
+/**
+ * Tab Long-term Investment: chấm một mã, từ dữ liệu ĐÃ LẤY SẴN.
+ *
+ * Cùng khuôn với `evaluate()` của screener.ts - module này không gọi mạng,
+ * không đọc đĩa, nên chạy được bằng script Node độc lập. Việc lấy dữ liệu
+ * nằm ở route.
+ *
+ * Câu hỏi của tab này: mã nào đang RỚT VỀ MỘT VÙNG HỖ TRỢ mà công ty vẫn
+ * làm ăn có lãi và định giá chưa đắt. Ba vế đó cần ba nguồn khác nhau, và
+ * vế nào thiếu dữ liệu thì phải NÓI RA chứ không được lặng lẽ tính là đạt.
+ */
+
+/* ---------------- đọc số của Finviz ---------------- */
+
+/**
+ * Finviz viết "-" cho ô trống, "15.20%" cho phần trăm, "1.23B" cho số lớn.
+ *
+ * `Number('-')` ra NaN (may), nhưng `Number('')` ra 0 - một ô TRỐNG sẽ thành
+ * một số 0 trông như thật, và với P/E hay biên lợi nhuận thì số 0 đó đọc
+ * thành "đang lỗ". Cùng cái bẫy `num()` trong gex.ts sinh ra để chặn.
+ */
+export function fvNum(raw: string | undefined | null): number | null {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  if (!s || s === '-' || s === 'N/A') return null;
+  const cleaned = s.replace(/[%,]/g, '').replace(/\s/g, '');
+  const mult = /B$/i.test(cleaned) ? 1e9 : /M$/i.test(cleaned) ? 1e6 : /K$/i.test(cleaned) ? 1e3 : 1;
+  const n = parseFloat(cleaned.replace(/[BMK]$/i, ''));
+  return Number.isFinite(n) ? n * mult : null;
+}
+
+export type LtFundamentals = {
+  eps: number | null;
+  epsNextY: number | null;
+  pe: number | null;
+  forwardPe: number | null;
+  peg: number | null;
+  pb: number | null;
+  roe: number | null;
+  roic: number | null;
+  profitMargin: number | null;
+  debtEq: number | null;
+  targetPrice: number | null;
+  /** Thang khuyến nghị của Finviz: 1 = mua mạnh, 5 = bán mạnh. */
+  recom: number | null;
+  marketCap: number | null;
+};
+
+/** Tên ô Finviz cho từng trường, giữ ở một chỗ để không gõ lệch hai nơi. */
+const FV_KEYS: Record<keyof LtFundamentals, string> = {
+  eps: 'EPS (ttm)',
+  epsNextY: 'EPS next Y',
+  pe: 'P/E',
+  forwardPe: 'Forward P/E',
+  peg: 'PEG',
+  pb: 'P/B',
+  roe: 'ROE',
+  roic: 'ROIC',
+  profitMargin: 'Profit Margin',
+  debtEq: 'Debt/Eq',
+  targetPrice: 'Target Price',
+  recom: 'Recom',
+  marketCap: 'Market Cap',
+};
+
+/**
+ * Trả về cả `missing` - tên THẬT của những ô Finviz không cho số.
+ *
+ * Đúng khuôn tự chẩn đoán của repo: Finviz là trang cào, đổi layout là mất ô
+ * mà không có lỗi nào nổ ra. Một danh sách ô trống hiện trên màn hình phân
+ * biệt được "Finviz đổi giao diện, cần sửa bộ cào" với "công ty này thật sự
+ * không có chỉ số đó" - hai chuyện cần hai cách sửa ngược nhau.
+ */
+export function parseFundamentals(metrics: Record<string, string>): {
+  fa: LtFundamentals;
+  missing: string[];
+} {
+  const fa = {} as LtFundamentals;
+  const missing: string[] = [];
+  for (const [field, key] of Object.entries(FV_KEYS) as [keyof LtFundamentals, string][]) {
+    const v = fvNum(metrics[key]);
+    (fa[field] as number | null) = v;
+    if (v === null) missing.push(key);
+  }
+  return { fa, missing };
+}
+
+/* ---------------- ngưỡng ---------------- */
+
+/** Giá còn cách tâm vùng hỗ trợ bao nhiêu % thì coi là "đang tới hỗ trợ". */
+export const NEAR_SUPPORT_PCT = 8;
+/** Phải còn cao hơn đáy 52 tuần ít nhất ngần này - chốt chặn bắt dao rơi. */
+export const MIN_ABOVE_52W_LOW_PCT = 5;
+/** Phải đã rớt khỏi đỉnh 52 tuần ít nhất ngần này, nếu không thì có "rớt" đâu. */
+export const MIN_OFF_HIGH_PCT = 10;
+/** Trần P/E dự phóng. Cùn nhưng thành thật - xem chú thích ở `gatesFor`. */
+export const MAX_FORWARD_PE = 30;
+
+export type LtGate = {
+  key: string;
+  label: string;
+  passed: boolean;
+  /** true = CHƯA CÓ DỮ LIỆU để xét, không phải "đã xét và đạt". */
+  unknown?: boolean;
+};
+
+export type LtInput = {
+  price: number;
+  trend: TrendRead;
+  support: SupportRead;
+  fa: LtFundamentals;
+};
+
+/**
+ * Năm cổng cứng.
+ *
+ * Luật chung của repo được giữ nguyên ở đây: THIẾU DỮ LIỆU THÌ ĐI QUA, nhưng
+ * mang cờ `unknown` và màn hình vẽ `?` chứ không vẽ ✓ (đúng cách #131 đã
+ * giải cho cổng earnings của Screener). Cho trượt khi thiếu dữ liệu sẽ loại
+ * hàng loạt mã chỉ vì một lần cào Finviz hụt, và trái luật "thiếu dữ liệu
+ * không phải bằng chứng có vấn đề". Nhưng vẽ ✓ cho thứ chưa ai xét thì là
+ * nói dối - nên có cờ.
+ *
+ * Cổng `value` CỐ Ý không dùng giá mục tiêu của giới phân tích. Giá mục tiêu
+ * gần như luôn nằm trên giá hiện tại, nên lấy nó làm cổng cứng là giao quyền
+ * lọc cho sự lạc quan nghề nghiệp của người khác. Nó vẫn được HIỆN và vẫn
+ * được tính điểm, chỉ là không được quyền loại/giữ một mã.
+ *
+ * Và trần P/E dự phóng là một cây thước CÙN - ngân hàng với phần mềm không
+ * cùng thang. Nó chỉ để chặn mấy trường hợp đắt lố; phần tinh tế do phân vị
+ * P/E so với CHÍNH mã đó gánh (cột riêng, và một phần điểm số).
+ */
+export function gatesFor(input: LtInput): LtGate[] {
+  const { price, trend, support, fa } = input;
+
+  const slope = trend.sma200SlopePct;
+  const nearest = support.nearest;
+  const dist = support.distancePct;
+  const profitKnown = fa.eps !== null && fa.profitMargin !== null;
+
+  return [
+    {
+      key: 'trend',
+      label: 'Xu hướng dài hạn còn hướng lên (SMA200 dốc lên)',
+      passed: slope === null ? true : slope > 0,
+      unknown: slope === null,
+    },
+    {
+      key: 'nearSupport',
+      label: `Đang ở trong ${NEAR_SUPPORT_PCT}% phía trên một vùng hỗ trợ`,
+      passed: nearest !== null && dist !== null && dist <= NEAR_SUPPORT_PCT,
+      unknown: support.zones.length === 0,
+    },
+    {
+      key: 'pullback',
+      label: `Đã rớt ít nhất ${MIN_OFF_HIGH_PCT}% từ đỉnh 52 tuần`,
+      passed: trend.offHighPct === null ? true : trend.offHighPct >= MIN_OFF_HIGH_PCT,
+      unknown: trend.offHighPct === null,
+    },
+    {
+      key: 'notFallingKnife',
+      label: `Còn cao hơn đáy 52 tuần ít nhất ${MIN_ABOVE_52W_LOW_PCT}%`,
+      passed:
+        trend.aboveLowPct === null ? true : trend.aboveLowPct >= MIN_ABOVE_52W_LOW_PCT,
+      unknown: trend.aboveLowPct === null,
+    },
+    {
+      key: 'profitable',
+      label: 'Công ty đang có lãi (EPS > 0 và biên lợi nhuận > 0)',
+      passed: !profitKnown ? true : fa.eps! > 0 && fa.profitMargin! > 0,
+      unknown: !profitKnown,
+    },
+    {
+      key: 'value',
+      label: `P/E dự phóng ≤ ${MAX_FORWARD_PE}`,
+      passed: fa.forwardPe === null ? true : fa.forwardPe > 0 && fa.forwardPe <= MAX_FORWARD_PE,
+      unknown: fa.forwardPe === null,
+    },
+  ];
+}
+
+/* ---------------- điểm số ---------------- */
+
+export type LtScoreParts = {
+  support: number;
+  quality: number;
+  value: number;
+  trend: number;
+};
+
+/* Tổng 100. Đây là quyết định sản phẩm, không phải công thức suy ra được -
+   cùng tinh thần với bảng trọng số của Screener trong README. */
+const W = { support: 30, quality: 30, value: 25, trend: 15 };
+
+/**
+ * Chuẩn hoá về 0..1, và THIẾU DỮ LIỆU RA 0.5 CHỨ KHÔNG RA 0.
+ *
+ * Cho 0 khi thiếu dữ liệu là dựng một bộ lọc NGẦM: mọi mã Finviz cào hụt sẽ
+ * chìm xuống đáy bảng và không ai biết vì sao. Điểm trung tính giữ chúng ở
+ * đúng chỗ "chưa biết", còn việc cảnh báo là của cờ `unknown` trên cổng.
+ */
+function band(v: number | null, good: number, bad: number): number {
+  if (v === null || !Number.isFinite(v)) return 0.5;
+  if (good === bad) return 0.5;
+  const t = (v - bad) / (good - bad);
+  return Math.max(0, Math.min(1, t));
+}
+
+export function scoreComponents(input: LtInput, pe: PeContext | null): LtScoreParts {
+  const { trend, support, fa } = input;
+
+  // Càng sát hỗ trợ càng tốt: 0% = đủ điểm, NEAR_SUPPORT_PCT = hết điểm.
+  const proximity =
+    support.distancePct === null ? 0.5 : band(support.distancePct, 0, NEAR_SUPPORT_PCT);
+  // Vùng được chạm nhiều lần thì đáng tin hơn; 4 lần trở lên coi là đầy.
+  const strength = support.nearest ? band(support.nearest.touches, 4, 1) : 0.5;
+
+  const quality =
+    (band(fa.roe, 25, 0) + band(fa.roic, 15, 0) + band(fa.profitMargin, 20, 0) +
+      band(fa.debtEq, 0, 2)) / 4;
+
+  /* Ba vế định giá, đúng như chủ app chốt: bội số tuyệt đối, PEG, và phân vị
+     so với chính lịch sử của mã. Vế thứ ba trả 0.5 cho tới khi kho đủ dữ
+     liệu - tức là nó KHÔNG kéo điểm lên hay xuống trong mấy tuần đầu, thay
+     vì giả vờ có ý kiến. */
+  const ownHistory = pe?.percentile === null || !pe ? 0.5 : band(pe.percentile, 0, 100);
+  const value = (band(fa.forwardPe, 8, MAX_FORWARD_PE) + band(fa.peg, 0.5, 3) + ownHistory) / 3;
+
+  const trendScore =
+    (band(trend.sma200SlopePct, 15, 0) + band(trend.aboveLowPct, 40, MIN_ABOVE_52W_LOW_PCT)) / 2;
+
+  return {
+    support: (proximity * 0.7 + strength * 0.3) * W.support,
+    quality: quality * W.quality,
+    value: value * W.value,
+    trend: trendScore * W.trend,
+  };
+}
+
+export const scoreOf = (p: LtScoreParts) => p.support + p.quality + p.value + p.trend;
+
+export type LtCandidate = {
+  symbol: string;
+  name: string;
+  sector: string;
+  price: number;
+  trend: TrendRead;
+  nearestSupport: SupportZone | null;
+  distancePct: number | null;
+  /** Vùng đã bị thủng - trạng thái KHÁC HẲN "đang tới hỗ trợ", không gộp. */
+  brokenSupport: SupportZone | null;
+  zoneCount: number;
+  fa: LtFundamentals;
+  /** Tên thật các ô Finviz không trả số. */
+  faMissing: string[];
+  pe: PeContext | null;
+  targetUpsidePct: number | null;
+  gates: LtGate[];
+  score: number;
+  scoreBreakdown: LtScoreParts;
+};
