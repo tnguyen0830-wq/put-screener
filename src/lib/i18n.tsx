@@ -1176,9 +1176,22 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'an.avgVol1y': { vi: (v: string) => `1 năm ${v}`, en: (v: string) => `1 year ${v}` },
   'an.lastEarnings': { vi: 'Earnings gần nhất', en: 'Last earnings' },
   'an.nextEarnings': { vi: 'Earnings kế tiếp', en: 'Next earnings' },
+  /* Câu này từng nói SAI hai chuyện, và chuyện thứ hai nặng hơn.
+     (1) Sau #135 nguồn không còn là một file: `loadEarnings()` HỢP
+         `data/earnings.json` với lịch tastytrade.
+     (2) Nó hứa "phân biệt rõ ngày đã công bố với ngày ước tính" - nhưng
+         sự phân biệt đó nằm trong `_comment` của file (văn xuôi cho
+         người đọc) và trong cờ `estimated` của tastytrade, còn DÒNG TRÊN
+         MÀN HÌNH chỉ in một ngày trơ, không mang nhãn nào. Hứa một sự
+         chắc chắn mà màn hình không hề thể hiện là đúng thứ degradation
+         idiom của repo này cấm - nên câu mới nói thẳng rằng nhãn đó chỉ
+         có ở Hard gates bên tab Screener.
+     Dấu — cũng được nói rõ là GỘP "chưa biết gì" với "đã kiểm, không có",
+     vì `nextEarnings` là `find(d => d >= today) ?? null`: mã vắng mặt, mã
+     mang mảng rỗng (ETF) và mã chỉ còn ngày trong quá khứ đều ra null. */
   'an.earningsNote': {
-    vi: 'Ngày earnings kế tiếp lấy từ data/earnings.json, được làm mới tự động hằng tuần qua GitHub Actions. File phân biệt rõ ngày công ty đã công bố với ngày ước tính.',
-    en: 'The next-earnings date comes from data/earnings.json, refreshed automatically each week by a GitHub Action. The file distinguishes dates a company has announced from estimated ones.',
+    vi: 'Ngày earnings kế tiếp là HỢP của hai nguồn: data/earnings.json (dựng bằng tay cho mã trong watchlist, làm mới hằng tuần qua GitHub Actions) và lịch tastytrade (phủ mọi mã, nhưng chỉ ngày kế tiếp). Dòng trên in ngày sớm nhất còn ở phía trước và KHÔNG nói ngày đó công ty đã xác nhận hay mới chỉ là ước tính — nhãn "ngày ước tính" chỉ có ở phần Hard gates bên tab Screener. Dấu — nghĩa là không nguồn nào có ngày ở phía trước, và nó gộp chung "chưa biết gì về mã này" với "đã kiểm, mã này không có earnings".',
+    en: 'The next-earnings date is the UNION of two sources: data/earnings.json (hand-built for watchlist symbols, refreshed weekly by a GitHub Action) and tastytrade\'s calendar (covers every symbol, but only the next date). The row above prints the earliest date still ahead and does NOT say whether the company confirmed it or it is an estimate — that "estimated date" tag only appears under Hard gates on the Screener tab. A — means neither source has a future date, and it collapses "nothing is known about this symbol" together with "checked, this symbol has no earnings".',
   },
   'an.finviz': { vi: 'Giới phân tích & vị thế (Finviz)', en: 'Analysts & positioning (Finviz)' },
   'an.targetPrice': { vi: 'Giá mục tiêu', en: 'Target price' },
