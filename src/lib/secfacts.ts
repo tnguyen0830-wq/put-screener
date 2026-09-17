@@ -114,7 +114,8 @@ const num = (v: unknown): number | null => {
  */
 export function annualSeries(
   units: Record<string, RawFact[]> | undefined,
-  duration = true
+  duration = true,
+  positiveOnly = false
 ): SecPoint[] {
   if (!units || typeof units !== 'object') return [];
   // Lấy đơn vị đầu tiên có dữ liệu (USD / shares / USD-per-shares) - một thẻ
@@ -131,14 +132,39 @@ export function annualSeries(
     if (f.fp !== 'FY') continue;
     const value = num(f.val);
     if (value === null) continue;
+    if (positiveOnly && value <= 0) continue;
     if (duration) {
       if (!f.start) continue;
       const d = days(f.start, f.end);
       if (!(d >= 340 && d <= 380)) continue; // bẫy 2: loại số quý mang fp=FY
     }
     const prev = byEnd.get(f.end);
-    if (!prev || f.filed > prev.filed) {
-      byEnd.set(f.end, { end: f.end, value, filed: f.filed, form: f.form }); // bẫy 1
+    if (!prev) {
+      byEnd.set(f.end, { end: f.end, value, filed: f.filed, form: f.form });
+    } else if (f.filed > prev.filed) {
+      /* Bẫy 1 (giữ bản nộp mới nhất) có một NGOẠI LỆ, đo được ở production.
+       *
+       * AMT / American Tower, số cổ phiếu bình quân pha loãng năm 2015 có
+       * HAI fact cho cùng `end`:
+       *   10-K FY2015 (nộp 2016-02-26): 423,015,000
+       *   10-K FY2016 (nộp 2017-02-27):     423,000   <-- lệch đúng 1000x
+       * Hồ sơ năm sau khai lại con số đó bằng đơn vị NGHÌN. Luật "bản nộp
+       * mới nhất thắng" - vốn đúng và cần thiết để hấp thụ số điều chỉnh -
+       * đã trung thành nhặt đúng con số sai, và chuỗi thành 400M → 0.4M →
+       * 429M, sinh hai vết gãy split giả rồi làm câm luôn cổng pha loãng.
+       *
+       * Phân biệt được vì một bản ĐIỀU CHỈNH THẬT gần như không bao giờ đổi
+       * con số tới 100 lần - nó sửa vài phần trăm. Lệch từ 100 lần trở lên
+       * là sai ĐƠN VỊ, không phải sửa số liệu. Khi gặp, giữ bản CŨ: nó do
+       * chính những người lập báo cáo cho kỳ đó tính ra, ngay sau kỳ đó.
+       *
+       * Ngưỡng 100 cố ý rộng hơn 1000 thật: đơn vị hay gặp là nghìn và
+       * triệu, và không có phép điều chỉnh hợp lệ nào nhân số cũ lên 100. */
+      const ratio = prev.value !== 0 ? Math.abs(value / prev.value) : Infinity;
+      const unitSlip = ratio >= 100 || (ratio > 0 && ratio <= 0.01);
+      if (!unitSlip) {
+        byEnd.set(f.end, { end: f.end, value, filed: f.filed, form: f.form });
+      }
     }
   }
   return [...byEnd.values()].sort((a, b) => a.end.localeCompare(b.end));
@@ -163,12 +189,13 @@ export function annualSeries(
 export function pickSeries(
   taxonomy: Record<string, { units?: Record<string, RawFact[]> }> | undefined,
   tags: readonly string[],
-  duration = true
+  duration = true,
+  positiveOnly = false
 ): { series: SecPoint[]; tag: string | null } {
   if (!taxonomy || typeof taxonomy !== 'object') return { series: [], tag: null };
   let best: { series: SecPoint[]; tag: string | null } = { series: [], tag: null };
   for (const tag of tags) {
-    const s = annualSeries(taxonomy[tag]?.units, duration);
+    const s = annualSeries(taxonomy[tag]?.units, duration, positiveOnly);
     if (!s.length) continue;
     const bestEnd = best.series.length ? best.series[best.series.length - 1].end : '';
     const thisEnd = s[s.length - 1].end;
@@ -290,13 +317,27 @@ export type SecFundamentals = {
 export function secFundamentals(raw: any): SecFundamentals {
   const gaap = raw?.facts?.['us-gaap'];
   const pick = (m: SecMetric) => pickSeries(gaap, TAGS[m]);
+  /**
+   * SỐ CỔ PHIẾU phải DƯƠNG, và đây là một lỗi thật đo được ở production.
+   *
+   * Một công ty đang niêm yết không thể có 0 cổ phiếu bình quân, nên một số
+   * 0 ở đây là fact rác chứ không phải phép đo. Đây là LỚP PHÒNG THỨ HAI:
+   * nguyên nhân thật của chuỗi hỏng ở AMT là sai đơn vị giữa hai lần nộp
+   * (xem chú thích trong `annualSeries`), nhưng một số 0 lọt vào vẫn sinh
+   * vết gãy giả và làm câm cổng pha loãng, nên chặn luôn ở đây cho rẻ.
+   *
+   * Lọc CỐ Ý chỉ áp cho số cổ phiếu, không áp cho doanh thu / EPS / FCF:
+   * EPS bằng 0 là hoà vốn thật, FCF âm là đốt tiền thật, và cả hai đều là
+   * thứ cổng cần nhìn thấy. Chỉ số cổ phiếu mới có tính chất "0 là bất khả".
+   */
+  const pickPositive = (m: SecMetric) => pickSeries(gaap, TAGS[m], true, true);
 
   const revenue = pick('revenue');
   const netIncome = pick('netIncome');
   const eps = pick('epsDiluted');
   const ocf = pick('ocf');
   const capex = pick('capex');
-  const shares = pick('shares');
+  const shares = pickPositive('shares');
 
   const capexByEnd = new Map(capex.series.map((p) => [p.end, p.value]));
   const fcf: SecPoint[] = ocf.series
