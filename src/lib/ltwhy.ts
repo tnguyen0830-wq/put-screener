@@ -113,6 +113,27 @@ export function whyFacts(
   }
   lines.push('');
 
+  lines.push('MULTI-YEAR FINANCIALS (SEC 10-K filings, XBRL)');
+  const sec = row.sec;
+  if (sec && sec.revenue.length) {
+    lines.push(`- fiscal years on file: ${sec.revenue.length} (latest FY ends ${sec.latestFy ?? 'n/a'}, filed ${sec.latestFiled ?? 'n/a'})`);
+    lines.push(`- revenue CAGR: 3y ${pct(sec.revenueCagr3)}, 5y ${pct(sec.revenueCagr5)}`);
+    lines.push(`- diluted EPS CAGR: 3y ${pct(sec.epsCagr3)}, 5y ${pct(sec.epsCagr5)}`);
+    lines.push(`- free cash flow (OCF - CapEx) latest FY: ${sec.fcfLatest === null ? 'n/a' : sec.fcfLatest.toExponential(3)} USD, FCF margin ${pct(sec.fcfMarginLatest)}, FCF CAGR 3y ${pct(sec.fcfCagr3)}`);
+    lines.push(`- diluted share count CAGR 3y: ${pct(sec.sharesCagr3)} (positive = DILUTION, negative = buybacks)`);
+    const last = sec.revenue.slice(-5);
+    lines.push(`- revenue by fiscal year end: ${last.map((p) => `${p.end.slice(0, 4)}=${p.value.toExponential(3)}`).join(', ')}`);
+    if (sec.epsCagr3 !== null && sec.sharesCagr3 !== null && sec.sharesCagr3 > 3) {
+      lines.push('- NOTE: EPS growth alongside a rising share count means per-share growth is being diluted; weigh the EPS figure accordingly.');
+    }
+  } else {
+    lines.push(
+      `- NOT AVAILABLE${row.secReason ? ` (${row.secReason.slice(0, 160)})` : ''}. ` +
+        'Do not describe multi-year revenue, EPS or cash-flow trends for this company; the only fundamentals you have are the single-period Finviz numbers above.'
+    );
+  }
+  lines.push('');
+
   lines.push('VALUATION VS ITS OWN HISTORY');
   if (row.pe && row.pe.percentile !== null) {
     lines.push(`- current P/E sits at the ${row.pe.percentile.toFixed(0)}th percentile of ${row.pe.readings} readings of this stock's own P/E`);

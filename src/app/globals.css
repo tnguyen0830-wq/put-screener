@@ -3233,3 +3233,18 @@ body {
   line-height: 1.6;
   max-width: 68ch;
 }
+
+/* Bảng 5 năm SEC trong ngăn chi tiết: có thead, số canh phải cho cột thẳng. */
+.ltsec th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 3px 14px 3px 0;
+  white-space: nowrap;
+}
+
+.ltsec td:not(:first-child),
+.ltsec th:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

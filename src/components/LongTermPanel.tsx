@@ -27,9 +27,29 @@ type Row = {
   faMissing: string[];
   pe: { readings: number; needed: number; median: number | null; percentile: number | null; vsMedianPct: number | null } | null;
   targetUpsidePct: number | null;
+  sec: Sec | null;
+  secReason: string | null;
   gates: Gate[];
   score: number;
-  scoreBreakdown: { support: number; quality: number; value: number; trend: number };
+  scoreBreakdown: { support: number; quality: number; value: number; trend: number; growth: number };
+};
+type SecPoint = { end: string; value: number; filed: string; form: string };
+type Sec = {
+  entityName: string | null;
+  revenue: SecPoint[]; epsDiluted: SecPoint[]; fcf: SecPoint[]; shares: SecPoint[];
+  revenueCagr3: number | null; revenueCagr5: number | null;
+  epsCagr3: number | null; epsCagr5: number | null; fcfCagr3: number | null;
+  sharesCagr3: number | null; fcfLatest: number | null; fcfMarginLatest: number | null;
+  latestFy: string | null; latestFiled: string | null;
+  tagsUsed: Record<string, string | null>;
+};
+
+/* Tiền tỷ đọc thành "1.23B", không phải "1234567890". */
+const big = (v: number | null | undefined) => {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '—';
+  const a = Math.abs(v);
+  const s = a >= 1e12 ? `${(v / 1e12).toFixed(2)}T` : a >= 1e9 ? `${(v / 1e9).toFixed(2)}B` : a >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v.toFixed(0);
+  return s;
 };
 
 const n2 = (v: number | null | undefined, d = 2) =>
@@ -143,6 +163,7 @@ export default function LongTermPanel() {
                 <th>{t('lt.col.trend')}</th>
                 <th>{t('lt.col.quality')}</th>
                 <th>{t('lt.col.value')}</th>
+                <th>{t('lt.col.growth')}</th>
                 <th>{t('lt.col.score')}</th>
               </tr>
             </thead>
@@ -194,6 +215,18 @@ export default function LongTermPanel() {
                           ? t('lt.pePct', r.pe.percentile!.toFixed(0))
                           : t('lt.peWarming', r.pe?.needed ?? 0)}
                       </div>
+                    </td>
+                    <td>
+                      {r.sec ? (
+                        <>
+                          {t('lt.revCagr', pc(r.sec.revenueCagr3))}
+                          <div className="pfsub">{t('lt.sharesCagr', pc(r.sec.sharesCagr3))}</div>
+                        </>
+                      ) : (
+                        /* "Không có" và "chưa hỏi" đều là chưa biết; chi tiết
+                           bên dưới nói rõ vì sao. */
+                        <span className="pfsub">{t('lt.secNone')}</span>
+                      )}
                     </td>
                     <td><strong>{r.score.toFixed(0)}</strong></td>
                   </tr>
@@ -279,10 +312,11 @@ function Detail({ row }: { row: Row }) {
       <h4>{t('lt.scoreHead')}</h4>
       <table className="ltmini">
         <tbody>
-          <tr><td>{t('lt.col.support')}</td><td>{b.support.toFixed(1)} / 30</td></tr>
-          <tr><td>{t('lt.col.quality')}</td><td>{b.quality.toFixed(1)} / 30</td></tr>
-          <tr><td>{t('lt.col.value')}</td><td>{b.value.toFixed(1)} / 25</td></tr>
+          <tr><td>{t('lt.col.support')}</td><td>{b.support.toFixed(1)} / 25</td></tr>
+          <tr><td>{t('lt.col.quality')}</td><td>{b.quality.toFixed(1)} / 25</td></tr>
+          <tr><td>{t('lt.col.value')}</td><td>{b.value.toFixed(1)} / 20</td></tr>
           <tr><td>{t('lt.col.trend')}</td><td>{b.trend.toFixed(1)} / 15</td></tr>
+          <tr><td>{t('lt.col.growth')}</td><td>{(b.growth ?? 0).toFixed(1)} / 15</td></tr>
         </tbody>
       </table>
 
@@ -326,6 +360,19 @@ function Detail({ row }: { row: Row }) {
         <p className="hint hint-warn">{t('lt.faMissing', row.faMissing.join(', '))}</p>
       )}
 
+      <h4>{t('lt.secHead')}</h4>
+      {row.sec ? (
+        <SecBlock sec={row.sec} />
+      ) : (
+        <p className="hint hint-warn">
+          {row.secReason === 'no-cik'
+            ? t('lt.secNoCik')
+            : row.secReason?.startsWith('no-data')
+              ? t('lt.secNoData', row.secReason.slice('no-data: '.length))
+              : t('lt.secError', row.secReason ?? '?')}
+        </p>
+      )}
+
       <h4>{t('lt.peHead')}</h4>
       {row.pe && row.pe.percentile !== null ? (
         <p className="hint">
@@ -349,5 +396,62 @@ function Detail({ row }: { row: Row }) {
       <p className="hint">{t('lt.whyNote')}</p>
       {why && <div className="ltwhy">{why}</div>}
     </div>
+  );
+}
+
+/** Bảng 5 năm gần nhất + CAGR. Hiện NGUỒN và ngày nộp ngay cạnh số. */
+function SecBlock({ sec }: { sec: Sec }) {
+  const { t } = useLang();
+  const ends = sec.revenue.slice(-5).map((p) => p.end);
+  const at = (arr: SecPoint[], end: string) => arr.find((p) => p.end === end)?.value ?? null;
+  const dilutedEps = sec.epsCagr3 !== null && sec.sharesCagr3 !== null && sec.sharesCagr3 > 3;
+  return (
+    <>
+      <p className="hint">
+        {t('lt.secLead', {
+          years: sec.revenue.length,
+          fy: sec.latestFy ?? '—',
+          filed: sec.latestFiled ?? '—',
+          tag: sec.tagsUsed.revenue ?? '—',
+        })}
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="ltmini ltsec">
+          <thead>
+            <tr>
+              <th>{t('lt.secFy')}</th>
+              <th>{t('lt.secRevenue')}</th>
+              <th>{t('lt.secEps')}</th>
+              <th>{t('lt.secFcf')}</th>
+              <th>{t('lt.secShares')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ends.map((end) => (
+              <tr key={end}>
+                <td>{end.slice(0, 7)}</td>
+                <td>{big(at(sec.revenue, end))}</td>
+                <td>{n2(at(sec.epsDiluted, end))}</td>
+                <td>{big(at(sec.fcf, end))}</td>
+                <td>{big(at(sec.shares, end))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="hint">
+        {t('lt.secCagr', {
+          rev: pc(sec.revenueCagr3),
+          eps: pc(sec.epsCagr3),
+          fcf: pc(sec.fcfCagr3),
+          margin: pc(sec.fcfMarginLatest),
+          shares: pc(sec.sharesCagr3),
+        })}
+        {sec.revenueCagr5 !== null || sec.epsCagr5 !== null
+          ? ' ' + t('lt.secCagr5', { rev: pc(sec.revenueCagr5), eps: pc(sec.epsCagr5) })
+          : ''}
+      </p>
+      {dilutedEps && <p className="hint hint-warn">{t('lt.secDilutionWarn')}</p>}
+    </>
   );
 }
