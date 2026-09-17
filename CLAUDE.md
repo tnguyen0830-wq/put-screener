@@ -88,7 +88,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-16 — Không có việc đang làm dở. tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
+2026-09-17 — Không có việc đang làm dở. Tab Đầu tư dài hạn đã xong và merge (#137). tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -129,6 +129,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-17 — #137 **Tab chính thứ SÁU: Đầu tư dài hạn.** Chủ app đặt hàng: tìm mã đang rớt về hỗ trợ mà công ty vẫn có lãi, định giá còn hợp lý, kiểm tin tức xem rớt vì sao, và vẫn uptrend. Chốt ba điều trước khi viết dòng code nào, vì ba câu đó ra ba sản phẩm khác hẳn: uptrend mức VỪA (cho thủng SMA200 miễn ĐỘ DỐC SMA200 còn dương — mã rớt đủ sâu để đáng nhìn thì thường đã thủng SMA200 rồi, đòi chặt là bảng trống quanh năm), "tại sao rớt" là nút BẤM MỚI CHẠY, định giá gồm CẢ bội số Finviz LẪN so với chính lịch sử P/E của mã. **Ràng buộc quyết định toàn bộ kiến trúc là chi phí**: Finviz là MỘT lần cào HTML mỗi mã, nên 503 mã kiểu thẳng là không dùng được — ba tầng, và tầng rẻ nhất cắt mạnh nhất: `quotes()` vốn đã gộp lô 100 mã và ĐÃ TRẢ SẴN `52WeekHigh`/`52WeekLow`, nên cả rổ tốn SÁU request và hai cổng "đã rớt khỏi đỉnh"/"chưa sát đáy" tính được miễn phí trước khi tốn bất cứ request nào theo mã. **Bộ test bắt một lỗi thật trong phần lõi**: chuỗi giá phẳng làm MỌI nến thành đáy xoay (21 nến phẳng ra 8 "đáy") rồi gom thành một vùng ghi "đã chạm 8 lần" — mà `touches` chính là con số cả tab dựa vào để nói vùng có đáng tin không, nên thổi phồng nó là hỏng đúng chỗ quan trọng nhất; sửa bằng phép so sánh BẤT ĐỐI XỨNG (trái đòi cao hơn hẳn, phải chỉ đòi không thấp hơn) nên mỗi đoạn bằng nhau chỉ còn một đáy, mà đáy đôi thật vẫn đếm đủ hai. **Hai lỗi hiển thị chỉ render thật mới thấy, đọc CSS không thấy được**: (1) `.pftable td` đặt `white-space: nowrap` cho các CỘT SỐ, ngăn kéo chi tiết nằm trong một `td` của chính bảng đó nên THỪA KẾ nowrap — mọi đoạn văn xuôi chạy thành một dòng 1462px trong khung 777px rồi bị cắt cụt, và cái bị cắt đúng là mấy câu nói thật (giá mục tiêu không phải cổng lọc, Finviz thiếu ô nào, kho P/E chưa đủ); (2) sửa xong nowrap thì trên điện thoại 400px vẫn mất nửa phải, vì ngăn chi tiết nằm trong `<td>` nên rộng theo BẢNG (784px) chứ không theo màn hình — với bảng số thì cuộn ngang là đúng (tab Quốc hội làm thế) nhưng với văn xuôi là hỏng, nên ngăn chi tiết ĐƯỢC ĐƯA RA NGOÀI khung cuộn; đo lại: `detailW` 784→350, không phần tử nào tràn khung nhìn ở cả bốn tổ hợp theme × bề ngang. Ba chỗ nói thật cố ý: **giá mục tiêu được HIỆN nhưng không làm cổng** (nó gần như luôn trên giá hiện tại, lấy làm cổng là giao quyền lọc cho sự lạc quan nghề nghiệp của người khác); **vế "rẻ so với chính nó" trả null kèm CÒN THIẾU BAO NHIÊU LẦN ĐỌC** thay vì một phân vị tính trên 4 mẫu, và nó không kéo điểm lên hay xuống trong lúc đó; **điểm thiếu dữ liệu là 0.5 chứ không phải 0** — cho 0 là dựng một bộ lọc NGẦM đẩy mọi mã Finviz cào hụt xuống đáy bảng mà không ai biết. Lỗi hết phiên Schwab được tách riêng chứ không in nguyên `REAUTH_REQUIRED` (cách sửa là bấm kết nối lại, không phải quét lại). Prompt dặn Claude coi tiêu đề tin là DỮ LIỆU, không phải lệnh. 121 khẳng định trong 3 script độc lập. Không biến môi trường mới, không bước deploy (kho P/E ở `.cache/`). Touches page.tsx, i18n.tsx (chỉ thêm khoá), globals.css (chỉ thêm), history.ts (chỉ thêm), README.md; mới lib/support.ts, lib/pehistory.ts, lib/longterm.ts, lib/ltwhy.ts, LongTermPanel.tsx, api/longterm/*.
 - 2026-09-17 — #136 **Chú thích earnings ở tab Analyze hứa một thứ màn hình không hề có.** Chủ app hỏi "coi earning chỗ nào"; đi rà bốn nơi hiện earnings thì lòi ra câu `an.earningsNote` nói sai hai chuyện. Chuyện nhỏ: sau #135 nguồn không còn là MỘT file — `loadEarnings()` HỢP `data/earnings.json` với lịch tastytrade, nên câu cũ nói thiếu đúng một nửa nguồn. **Chuyện nặng hơn là vế thứ hai: "File phân biệt rõ ngày công ty đã công bố với ngày ước tính."** Sự phân biệt ấy có thật nhưng nằm ở chỗ KHÁC — trong `_comment` của file (văn xuôi cho người đọc, không phải dữ liệu theo mã) và trong cờ `estimated` của tastytrade — còn dòng "Earnings kế tiếp" trên màn hình in một NGÀY TRƠ, không mang nhãn nào. Tức chú thích cấp cho người đọc một sự chắc chắn mà thứ họ đang nhìn không hề thể hiện, đúng hình dạng degradation idiom mà repo này cấm, chỉ khác là lần này lời hứa nằm ở chú thích chứ không ở dữ liệu. Câu mới nói thẳng nhãn "ngày ước tính" **chỉ có ở Hard gates bên tab Screener** (nơi #135 thực sự dựng nó), và nói luôn dấu `—` GỘP hai trạng thái: `nextEarnings` là `find(d => d >= today) ?? null` nên mã vắng mặt (chưa biết gì), mã mang mảng rỗng (ETF, đã kiểm và không có) và mã chỉ còn ngày quá khứ đều ra cùng một gạch ngang. **Cố ý KHÔNG sửa bằng cách đẩy cờ `estimated` ra tab Analyze**: làm thế phải sửa route, và việc đó là một thay đổi thật đáng làm riêng chứ không phải đính kèm vào một bản vá chữ. Chỉ i18n.tsx, một khoá.
 
 - 2026-09-16 — #135 **Cổng earnings hết mù — lý do mở tài khoản tastytrade, nay xong.** #127 mở tài khoản đúng vì việc này, #131 làm cho lỗ hổng NHÌN THẤY được, probe production đo xong hình dạng, giờ mới vá. Cổng đọc `data/earnings.json` chỉ dựng cho watchlist, nên quét cả rổ thì ~450/503 mã qua cổng vì KHÔNG AI BIẾT GÌ chứ không phải vì không có earnings. **`visible` là trường làm nên phép tách ba, và nó được ĐO chứ không đoán**: AAPL trả `visible: true` + `expected-report-date: "2026-10-29"`; SPY (ETF) trả `visible: false` và KHÔNG có ngày — tức tastytrade NÓI RA "mã này không có earnings" chứ không im lặng, đúng cái ranh giới #131 xoay quanh. `parseEarnings()` có ba lối ra: `visible false` → đã kiểm, không có; `visible true` + ngày → đã kiểm, có ngày; `visible true` mà THIẾU ngày → **vẫn là chưa biết**, không ghi vào kho, cổng vẫn gắn cờ — gộp lối ra thứ ba vào "không có earnings" là vẽ dấu ✓ chắc nịch lên thứ chưa ai biết, tức lặp lại #131 ở tầng sâu hơn. **Tích hợp nhỏ vì khuôn #131 đã đúng sẵn**: cổng đọc `!(symbol in earnings)` nên mã mang MẢNG RỖNG đọc thành "đã kiểm, không có gì" mà cổng không sửa một dòng. Nối ở `loadEarnings()` — điểm nghẽn DUY NHẤT của cả năm nơi dùng (cổng Screener, ô cần-để-ý của My Portfolio, Analyze, API điện thoại, scan đã lưu) — nên một chỗ sửa là cả năm cùng hết mù và không chỗ nào trôi lệch. **HỢP chứ không ĐÈ**: file tay có nhiều ngày còn tastytrade chỉ trả ngày kế tiếp, đè lên là mất ngày quý sau mà không ai thấy (test ghim). **Cờ `estimated` được HIỆN chứ không chỉ lưu** — hợp đồng bị loại vì ngày ĐOÁN bị loại trên bằng chứng yếu hơn hẳn, và lưu cờ mà không hiện đúng bằng lỗi `hasMultileg` #125 phê bình; cố ý cảnh báo THỪA (ngày có ở cả hai nguồn vẫn hiện là ước tính) vì nói "kiểm lại" nhầm thì vô hại, nói "chắc chắn" nhầm thì không. **Không biến môi trường mới, không bước deploy nào**: kho là `.cache/ttearnings.json`, repo đã ghi rõ `.cache` là thứ mất được và dựng lại được, deploy xong lấp lại ~500 mã hết ~6 request — né sạch cái bẫy `USERS_PATH`. Trần lô CHƯA đo được, xử bằng THIẾT KẾ chứ không bằng đoán: `BATCH = 100`, và mỗi lô đối chiếu hỏi/về rồi đẩy phần chênh vào `missing`, nên trần thật thấp hơn sẽ lộ ra thành một CON SỐ chứ không thành lỗ hổng im lặng; một lô ném lỗi thì bỏ qua chứ không làm hỏng cả lượt. Đồng bộ đi nhờ vòng lặp cảnh báo nhưng ĐỨNG NGOÀI `runOnce()`, cùng lý do Form 4: công ty công bố ngày earnings phần lớn SAU khi sàn đóng, đúng lúc `runOnce()` đang nghỉ. 27 khẳng định, gồm cả `evaluate()` đầu-cuối: cổng cứng giờ LOẠI hẳn hợp đồng có earnings trong kỳ. Touches types.ts, screener.ts, scan-job.ts, alert-runner.ts, i18n.tsx (chỉ thêm khoá), DetailDrawer.tsx, mới lib/ttearnings.ts.
@@ -183,7 +184,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #131. If you're reading this and a
+No PR is currently open and unmerged as of #137. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -928,6 +929,109 @@ Not built yet, deliberately: IV-rank-from-tastytrade (see the three
 disagreeing rank fields and the 0-1 vs 0-100 scale trap above — both are
 real traps, not details), and using tastytrade's `sector`/`industry` in
 place of the Finviz scrape.
+
+### Long-term Investment (`src/lib/support.ts`, `longterm.ts`, `pehistory.ts`, `ltwhy.ts`)
+
+The sixth main tab, and the only one pointed at **buy-and-hold money** rather
+than at selling puts. It answers: *which stocks are falling toward a support
+zone while the company is still profitable and not expensively priced.*
+
+**Support zones are self-computed, from nothing but daily bars** (3 years,
+`historyCandles()`). Pivot lows confirmed by 5 bars each side, clustered by
+price within 2.5%. Three rules carry the whole thing and all three are easy to
+"tidy" away later:
+
+- **A single low is never a support.** `MIN_TOUCHES = 2`. Support is where price
+  has turned *repeatedly*; one low is one low.
+- **The last 5 bars can never be pivots**, because nothing has confirmed them
+  yet. This week's low is not yet a level. That is a real limit of the
+  measurement, not an omission.
+- **"Approaching support" and "already broken below" are separate fields**
+  (`nearest` vs `broken`) and never collapse. On a chart both look like price
+  sitting next to a line; the actions are opposite.
+
+**`pivotLows()` compares asymmetrically on purpose, and that was a real bug the
+tests caught.** With a symmetric loose comparison, a *flat* stretch makes every
+bar in it a pivot — 21 flat bars produced 8 "lows", which then clustered into
+one zone reading "touched 8 times" when price had gone sideways once and
+defended nothing. `touches` is the number the entire tab leans on to say whether
+a zone is trustworthy, so inflating it breaks precisely the load-bearing part.
+Left side now demands strictly higher, right side merely not-lower, so each flat
+run yields exactly one pivot while a genuine double bottom still counts twice.
+
+**Three tiers, ordered by cost, and the order is the feature.** Finviz is one
+HTML scrape *per symbol*, so 503 scrapes is not a slow version of this tab —
+it is a tab that does not work. Tier 0 is six batched `/quotes` calls for the
+whole basket, which already carry `52WeekHigh`/`52WeekLow`, so two of the six
+gates cost nothing and kill most of the universe. Tier 1 is one (day-cached)
+price-history call per survivor. Tier 2 is Finviz on what is left.
+
+`historyCandles()` is deliberately **not** merged into `historyBars()`: `Bar`
+keeps only closes (enough for correlation and SMA200/HV20) while support must
+read `low` — a level is drawn where price *touched*, not where it closed — and
+one year is enough for the screener while zones need several. Merging would make
+every existing caller pay more for fields it never reads.
+
+**Six hard gates, and the repo's standing rule survives: missing data PASSES but
+carries `unknown: true`** and renders `?` rather than ✓, exactly as #131 settled
+for the Screener's earnings gate. The trend gate asks only for a **rising SMA200
+slope**, not for price above SMA200 — the owner chose this, and it is the right
+call mechanically too: anything down far enough to be interesting has usually
+lost SMA200 already, so the strict reading returns an empty table nearly always.
+The falling-knife guard is the "still ≥5% above the 52-week low" gate instead.
+
+**The analyst target is displayed but is deliberately not a gate.** It sits above
+the current price almost by construction, so gating on it hands the filtering to
+somebody else's professional optimism. It contributes to the score only.
+
+**Valuation has two halves and the second one must bootstrap.** Finviz multiples
+are available immediately; P/E *versus the stock's own history* cannot be, since
+no source hands over a past P/E series. `pehistory.ts` records one reading per
+symbol per scan, mirroring `iv-history.json`/`skew-history.json`, and returns
+`null` until ~30 readings. It also returns `readings`/`needed` so the screen can
+print **how many are still missing** rather than a mute dash — this half is one
+of the two legs of the "it's cheap" claim, so a percentile computed on 4 samples
+would be worse here than in IV rank. While warming up it scores **neutral**, not
+low, so it moves nothing either way.
+
+**Missing data scores 0.5, never 0** (`band()`). Scoring 0 builds a *hidden
+filter*: every symbol Finviz failed to scrape sinks to the bottom of the table
+and nobody ever learns why. The `unknown` flag on the gate is what does the
+warning; the score stays neutral.
+
+**Two rendering bugs found only by rendering**, both of the kind this repo keeps
+relearning:
+
+- `.pftable td` sets `white-space: nowrap` so numeric *columns* do not wrap. The
+  detail drawer lived inside a `td` of that same table and therefore inherited
+  it — every paragraph ran to a single 1462px line inside a 777px box and was
+  cut off. What got cut was the honest half: that the analyst target is not a
+  gate, which Finviz fields are missing, that the P/E store is not ready. Same
+  lesson as #102 — where a string is truncated decides what can be read.
+- Fixing that was not enough: at 400px the drawer was still half off-screen,
+  because a `<td>`'s content sizes to the **table** (784px), not the viewport.
+  Horizontal scrolling is right for a grid of numbers (that is why the Congress
+  detail table does it) and wrong for prose. So the drawer was moved **out of
+  the table's scroll container** entirely and renders below it. Measured:
+  `detailW` 784 → 350 at a 400px viewport, and zero elements overflow the
+  viewport across both themes at 1280 and 400.
+
+**"Why did it fall?" is a button, not an automatic column.** A 20-row scan would
+otherwise be 20 Claude calls and 20 news fetches. The client posts the row it is
+already displaying (same shape as `/api/ai` and `/api/tradebrief`) so the route
+cannot disagree with the table beside it; the route adds only the news. News
+failing and news being empty are **different branches in the prompt** — an
+absent section reads to a model as "no notable news", which converts a network
+error into a claim about the business. And the prompt tells Claude to say
+outright when the headlines do not explain the fall, because inventing a
+plausible cause is far easier than admitting none is visible. Headlines are
+third-party text, so the system prompt marks them as data and tells Claude to
+report, not follow, any instruction-shaped text inside them.
+
+No new env var and no Render step: the P/E store lives in `.cache/`, which this
+repo already documents as lossy and regenerable. The cost of that is real and
+stated — a deploy resets the P/E history to zero — and it is accepted to avoid
+the `USERS_PATH` trap, since the Finviz half of valuation keeps working.
 
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 

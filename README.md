@@ -12,6 +12,7 @@ App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Heatmap** | Cả thị trường đang thế nào (kèm GEX của SPX/mã bất kỳ) |
 | **My Portfolio** | Cái đang cầm có gì cần để ý |
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
+| **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi và chưa đắt |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -158,7 +159,8 @@ Menu ⚙️ → **Quản lý tài khoản** (chỉ chủ app thấy mục này).
 deploy lại. Tài khoản lưu trên ổ đĩa của app, **mật khẩu đã băm scrypt với
 salt riêng từng người**, nên mở file ra cũng không đọc được mật khẩu của ai.
 
-Người nhà dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade, và có
+Người nhà dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade, Đầu tư
+dài hạn, và có
 **watchlist riêng**. Họ **không** thấy My Portfolio, P/L đã chốt, cảnh báo,
 và không bấm được nút kết nối Schwab — gọi thẳng vào địa chỉ đó cũng bị từ
 chối, không chỉ ẩn nút đi.
@@ -478,6 +480,65 @@ cặp khoá `VAPID_*`.
 > Điểm yếu của một vòng lặp nền là nó vô hình. Vì thế My Portfolio in giờ chạy
 > gần nhất ra màn hình — một cái đồng hồ chết đọc thành một con số đứng yên, chứ
 > không đọc thành "mọi thứ đều ổn".
+
+---
+
+## Đầu tư dài hạn — mua lúc rớt, nhưng chỉ mua công ty còn tốt
+
+Tab này trả lời một câu khác hẳn phần còn lại của app: **mã nào đang rớt về một
+vùng hỗ trợ mà công ty vẫn làm ăn có lãi và định giá chưa đắt.** Không liên quan
+gì tới bán put — nó dành cho tiền mua và giữ.
+
+**Vùng hỗ trợ được TỰ TÍNH, không lấy từ đâu cả.** Lấy 3 năm nến ngày, tìm các
+*đáy xoay* (nến có đáy thấp hơn 5 nến mỗi bên), rồi gom những đáy nằm trong 2.5%
+của nhau thành một vùng. Ba luật đáng biết vì chúng quyết định con số bạn nhìn:
+
+- **Một đáy đơn độc không phải là hỗ trợ.** Vùng phải có ít nhất **2 lần chạm** —
+  hỗ trợ là nơi giá đã quay đầu *nhiều lần*, không phải nơi nó xuống một lần.
+- **5 nến cuối không bao giờ thành đáy xoay**, vì chưa có nến sau xác nhận. Đáy
+  của tuần này chưa được tính — đó là giới hạn thật của phép đo, không phải sót.
+- **"Đang tới hỗ trợ" và "đã thủng hỗ trợ" không bao giờ hiện giống nhau.** Trên
+  biểu đồ cả hai đều là giá nằm cạnh một đường kẻ, nhưng việc phải làm thì ngược
+  nhau, nên màn hình tách hẳn và gắn cờ ⚠ cho vùng đã thủng.
+
+**Sáu cổng cứng.** Xu hướng dài hạn còn hướng lên (độ dốc SMA200 dương) · đang ở
+trong 8% phía trên một vùng hỗ trợ · đã rớt ≥10% từ đỉnh 52 tuần · còn cao hơn
+đáy 52 tuần ≥5% · công ty đang có lãi (EPS và biên lợi nhuận đều dương) · P/E dự
+phóng ≤ 30.
+
+Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớt đủ sâu để đáng nhìn
+thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng
+dài hạn, cộng với chốt chặn "còn cách đáy 52 tuần" để không bắt dao rơi.
+
+Như mọi nơi khác trong app, **thiếu dữ liệu thì đi qua cổng nhưng hiện dấu `?`
+chứ không phải ✓** — loại một mã chỉ vì một lần cào Finviz hụt thì sai, mà vẽ
+dấu ✓ lên thứ chưa ai xét thì còn sai hơn.
+
+**Định giá có hai vế.** Vế một là bội số Finviz (P/E, P/E dự phóng, PEG) — có
+ngay. Vế hai là **P/E so với chính lịch sử của mã đó**, và vế này phải tự tích
+luỹ: không nguồn nào cho sẵn chuỗi P/E quá khứ, nên app ghi một dòng mỗi lần
+quét và cần ~30 lần đọc mới nói được gì. Tới lúc đó màn hình ghi thẳng *còn
+thiếu bao nhiêu lần đọc* — đó là **chưa biết**, không phải "ở mức bình thường",
+và nó không kéo điểm lên hay xuống.
+
+**Giá mục tiêu của giới phân tích được hiện nhưng KHÔNG làm cổng lọc.** Nó gần
+như luôn nằm trên giá hiện tại, nên lấy nó làm cổng là giao quyền lọc cho sự lạc
+quan nghề nghiệp của người khác.
+
+**Nút "Tại sao rớt?"** lấy tin gần nhất của mã (Yahoo, không cần key) rồi để
+Claude đọc cùng TA và FA đang hiện. Mọi con số vẫn do code tính, Claude chỉ diễn
+giải — và được dặn phải **nói thẳng khi tin tức không giải thích được cú rớt**,
+vì bịa một lý do nghe lọt tai thì dễ hơn nhiều so với thừa nhận không biết. Nút
+này chỉ chạy khi bấm, không tự chạy cho cả bảng.
+
+> **Chi phí quét, và vì sao nó chạy nổi.** Finviz là một lần cào HTML *mỗi mã*,
+> nên quét 503 mã kiểu thẳng là không dùng được. Lọc đi ba tầng theo giá: sáu
+> request `/quotes` gộp lô cho cả rổ (đã có sẵn đỉnh/đáy 52 tuần, cắt được phần
+> lớn rổ miễn phí) → nến ngày cho số sống sót (cache theo ngày) → Finviz chỉ cho
+> số còn lại. Lần quét thứ hai trong ngày gần như tức thì.
+
+> **Bảng trống là một câu trả lời, không phải lỗi.** Phần lớn thời gian không có
+> mã nào vừa rớt đủ sâu, vừa còn trên hỗ trợ, vừa còn lãi và chưa đắt.
 
 ---
 
