@@ -21,7 +21,7 @@ There is no test runner configured. **Network from this sandbox is an allowlist,
 
 **The practical rule still holds for the keyed hosts** — anything needing a credential can only be verified in production, which is why the self-diagnosing idiom below matters and why real numbers from the owner's own accounts have repeatedly caught bugs the tests missed. Credentials pasted into a session live in that session's transcript, so Schwab / UW / tastytrade stay measured by the production probes (`/api/uwprobe`, `/api/ttprobe`).
 
-For the keyless hosts that rule is now lifted, and it paid for itself the same hour: opening `data.sec.gov` turned four guesses into measurements and exposed two further real bugs (#142). The CBOE chain shape (#109) and the portrait URLs (#133) are now directly verifiable too and remain unmeasured only because nobody has looked yet.
+For the keyless hosts that rule is now lifted, and it paid for itself the same hour: opening `data.sec.gov` turned four guesses into measurements and exposed two further real bugs (#142). **The CBOE chain shape (#109) and the portrait URLs (#133) have since been measured too (#143) — both guesses were right, and the exercise still found a comment that would have led a later reader to break the CBOE ladder.**
 
 Verification in this repo has historically meant: `npx tsc --noEmit`, `npm run build`, small standalone Node scripts (compile a single `src/lib/*.ts` with `npx tsc <file> --outDir <tmp> --module commonjs --target es2020 --skipLibCheck --esModuleInterop`, then `require()` it from a plain `.js` test script) for pure logic, and Playwright (`playwright-core`, launched with `executablePath: '/opt/pw-browsers/chromium-*/chrome-linux/chrome'` in the sandbox) against `next start` for UI changes — check both themes (`colorScheme: 'light'|'dark'`) and both languages where relevant.
 
@@ -135,6 +135,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-17 — #143 **Hai phỏng đoán cuối được đo: cả hai ĐÚNG, và vẫn lòi ra một chú thích sẽ làm người sau phá hỏng thang CBOE.** Với host đã mở, đo nốt hai chỗ #142 ghi là "chưa ai nhìn". **CBOE (#109) đúng từng chi tiết**: payload `{timestamp,data,symbol}`, mỗi option có `option`/`bid`/`ask`/`iv`/`open_interest`/`gamma` và **toàn là SỐ**; 29.914 hợp đồng vào, giữ 15.586 qua 32 kỳ sau bộ lọc 60 ngày, spot 7637,76, tổng OI 25,9 triệu; `computeGex()` chạy nguyên si trên chuỗi đã chuyển và ra mức hợp lý (put wall 7500, call wall 7800, abs gamma 7600). **Tôi nghi sai một lần và dữ liệu chỉnh lại**: mấy giá trị `iv` khác 0 ĐẦU TIÊN trong file là 7,99 / 7,71 — trông y như đã là phần trăm, làm tôi tưởng phép ×100 là lỗi đơn vị kiểu AMT; nhưng đó là hợp đồng rác ở strike 200 trên chỉ số 7637. Gần tiền `iv = 0,1362` → ×100 = 13,62%, khớp `iv30 = 12,155` CBOE tự công bố. **Bài học lấy mẫu: lấy mẫu QUANH SPOT, đừng lấy từ đầu mảng.** **`zeroGamma: null` của SPX là ĐÚNG, không phải lỗ hổng**: tích luỹ gamma ròng âm ở cả 498 strike và không bao giờ cắt 0 — dealer âm gamma toàn dải; từng strike vẫn có thể ròng dương (nên mới có call wall 7800) trong khi tổng chạy vẫn âm. Phép quét giao cắt cố ý MỘT CHIỀU (âm→dương) vì đó chính là định nghĩa gamma flip. File chứa cả gốc `SPX` (10.040) lẫn `SPXW` (19.874), giữ cả hai là đúng. **Ảnh nghị sĩ (#133) cũng đúng**: `P000197`/`S000148`/`M000355` đều 200 `image/jpeg`, mã Bioguide đúng dạng nhưng không tồn tại (`X999999`) trả 404 — mẫu URL chuẩn và id sai hỏng sạch sẽ; vế CHƯA xác nhận là nửa app không kiểm soát được: `politician_id` của UW có phải Bioguide hay không. **Thứ duy nhất phải sửa là một chú thích**, và nó load-bearing: đo được `_SPX.json` → 200 nhưng `SPX.json` → **403** (không phải 404), `_VIX` → 200, `AAPL` → 200. Code vốn đã `continue` với MỌI mã lỗi nên hành vi đúng; nhưng chú thích cạnh đó viết "404 = tên sai, mã khác đổi tên cũng không cứu được, thử cho hết vì rẻ" — tức người sau "dọn" lại thành chỉ-404 là giết hẳn đường CBOE cho mọi mã đoán hụt tên, đúng hình dạng #100. Chú thích giờ mang chính phép đo. Docs + một chú thích; không đổi hành vi.
 - 2026-09-17 — #142 **Mở được `data.sec.gov`, và bốn phỏng đoán thành phép đo — kèm hai lỗi thật nữa.** Chủ app đặt Network access = `Custom` với 4 host keyless; đo ngay: SEC/GitHub/npm 200, `cdn.cboe.com` 403 ở `/` nhưng **200 + 13.3 MB** ở đường dữ liệu thật (CDN không phục vụ trang gốc, proxy từ chối 0 lần). **Và `fetch` trần của Node KHÔNG dùng `HTTPS_PROXY`** — cùng URL, cùng giây: curl 200, fetch 403; 33 mã "SEC từ chối" trong phép đo đầu của tôi là lỗi của chính bộ đo, đúng hình dạng #130 lần thứ ba. **Bốn thứ nay đã ĐO chứ không đoán**: (1) SEC viết mã nhiều lớp bằng GẠCH NGANG — `BRK-B`=1067983, `BF-B`=14693; trong 10.422 mã có 543 dùng `-` và đúng 1 dùng `.`, nên nấc đầu thang #141 là nấc đúng. (2) **Độ phủ trên 33 mã lấy mẫu phân tầng 11 ngành**: doanh thu cả năm **100%**, EPS 97%, FCF 91%, số cổ phiếu 97%, CAGR 3 năm 100%. (3) **Cả bốn nấc thang doanh thu đều được dùng thật**: `Revenues` 17, ASC606-Excluding 12, ASC606-Including 3, và `RevenuesNetOfInterestExpense` đúng 1 lần — ở MS, tức nấc tôi thêm theo phỏng đoán "ngân hàng" hoá ra có thật. (4) **Ngân hàng không có CapEx**: BAC, MS, JPM đều không có MỘT thẻ `Payments*` vốn nào, nên FCF rỗng — không phải lỗi, và cổng hiện `?` là đúng; EOG (dầu khí) cũng vậy. **Hai lỗi thật**: (a) **AMT sai ĐƠN VỊ giữa hai lần nộp** — cùng `end` 2015-12-31 có hai fact, 10-K FY2015 khai 423.015.000 còn 10-K FY2016 khai 423.000 (đơn vị nghìn); luật "bản nộp mới nhất thắng" trung thành nhặt con số sai, chuỗi thành 400M→0,4M→429M, sinh hai vết gãy split giả rồi làm câm cổng pha loãng. Phân biệt được vì **một bản điều chỉnh thật gần như không bao giờ đổi con số tới 100 lần** — lệch ≥100× là sai đơn vị, giữ bản CŨ; test ghim cả chiều ngược (điều chỉnh 3,5% và 90% vẫn nhận bản mới). Sau vá, AMT đọc 399M→400M→423M→429M, vết gãy 2→0, còn 9 vết gãy THẬT của 9 mã khác không đụng tới. (b) Lớp phòng thứ hai: số cổ phiếu ≤ 0 bị loại (công ty niêm yết không thể có 0 cổ phiếu bình quân) — `splitBreaks` vốn đã có chốt `a>0&&b>0` nên số 0 không sinh vết gãy, nhưng `cagr()` trả null khi điểm đầu ≤0 nên một số 0 rác trong cửa sổ 3 năm làm CÂM phép đo; lọc chỉ áp cho số cổ phiếu, KHÔNG áp cho EPS (0 = hoà vốn thật) hay FCF (âm = đốt tiền thật), test ghim. **Berkshire xác nhận bộ lọc độ dài kỳ đáng giá**: `EarningsPerShareBasic` có 32 fact 10-K/`fp=FY` nhưng TOÀN LÀ quý (89-91 ngày), không một fact cả năm — tin `fp=FY` mà bỏ kiểm độ dài là cộng EPS quý thành EPS năm. 242 khẳng định trong 5 script. Touches secfacts.ts, CLAUDE.md.
 - 2026-09-17 — #141 **`BRK/B` không tra được CIK — và lỗi này CÓ TỪ TRƯỚC, nằm ở Form 4 chứ không ở tab mới.** Chủ app chạy `/api/secprobe?symbol=BRK%2FB` ở production: `{"ok":false,"reason":"no-cik"}`. Nguyên nhân: Schwab viết cổ phiếu nhiều lớp bằng GẠCH CHÉO (`BRK/B`, `BF/B`), và **sáu module khác trong repo đã xử chuyện này từ lâu** — `finviz.ts` và `news.ts` đổi sang `-`, `links.ts` sang `.`, ba lớp cache sang `_` — chỉ `sec.ts` là chưa bao giờ đổi. **Hậu quả không nằm ở tab mới**: `insiders.ts` ghi mọi mã trong `missing` thành `noFiler: true`, tức câu trả lời DỨT KHOÁT "SEC không có ai nộp Form 4 cho mã này" vốn chỉ dành cho ETF — nên từ khi Form 4 ra mắt, app đã khẳng định chắc nịch một điều SAI về hai công ty thật đang niêm yết, và im lặng suốt. Đúng hình dạng degradation idiom, chỉ khác là nguyên nhân nằm ở phép chuẩn hoá của CHÍNH CHÚNG TA chứ không ở dữ liệu của SEC — và đó là lý do nó sống lâu: mọi phép tự chẩn đoán đều soi dữ liệu bên ngoài, không soi đầu vào của mình. **Danh bạ SEC dùng cách viết nào thì CHƯA ĐO được** (`www.sec.gov` bị chặn), nên không đoán: `secTickerCandidates()` thử cả thang `BRK-B` → `BRK.B` → `BRKB` → `BRK/B`, đúng lối Schwab ($SPX/$SPX.X/SPX) và CBOE (_SPX/SPX) đã dùng; test ghim CẢ BA quy ước nên kết quả đúng bất kể SEC chọn cái nào, tức câu chưa đo được không còn chặn tính đúng đắn. `found` vẫn khoá theo mã gốc (mọi nơi gọi đang dùng khoá đó), `spelling` ghi riêng mã phải đổi để probe nói ra được thay vì biến đổi thầm lặng. Đường `no-cik` giờ in `triedSpellings` — không có nó thì `no-cik` của một ETF (đúng) và của một mã chuẩn hoá sai (lỗi) trông y hệt nhau, bài học #102. **Không cần di trú dữ liệu**: `syncInsiders` có `maxAge` 24 giờ nên bản ghi `noFiler` sai tự được kiểm lại trong một ngày sau deploy — khác hẳn #134, nơi bản ghi cũ phải chờ 90 ngày mới hết hạn. 17 khẳng định mới.
 - 2026-09-17 — #139 **Probe SEC trả lời, và hai lỗi thật lộ ra — cả hai fixture tự dựng không thể bắt.** Chủ app chạy `/api/secprobe?symbol=AAPL` ở production. Hình dạng KHỚP (top `cik,entityName,facts`; taxonomy `dei,us-gaap`; fact mang `start|end|val|accn|fy|fp|form|filed|frame`, `fy` là SỐ, `frame` "CY2018"/"CY2018Q3"), bẫy quý-4-mang-`fp=FY` **được xác nhận thật** (`start 2018-07-01 end 2018-09-29 fp FY frame CY2018Q3` nằm cạnh fact cả năm) và bộ lọc độ dài kỳ đã chặn đúng. **Lỗi 1 — thang thẻ chọn thẻ ĐẦU TIÊN có dữ liệu chứ không phải thẻ MỚI NHẤT**: `Revenues` của Apple chỉ tới FY2018 (ASC 606 chuyển sang `RevenueFromContractWithCustomerExcludingAssessedTax`), nên `latestFy` = 2018, CAGR 3 năm null, biên FCF null, trong khi thẻ mới đủ 2018-2025 nằm ngay cạnh. `pickSeries()` giờ chọn theo ngày kết thúc mới nhất (hoà → dài hơn); cố ý KHÔNG ghép hai thẻ thành một chuỗi vì ở ngân hàng `Revenues` và `RevenuesNetOfInterestExpense` là hai định nghĩa. **Lỗi 2 — chia tách cổ phiếu làm chuỗi per-share gãy khúc**: số cổ phiếu 2017 = 5.25B, 2018 = 20.0B — không phải phát hành gấp bốn, mà năm 2018 được 10-K FY2020 (sau split 4:1) báo cáo lại đã điều chỉnh, còn bản cuối nhắc tới 2017 là 10-K FY2019, TRƯỚC split. Mỗi 10-K chỉ mang 3 năm so sánh nên điều chỉnh split chỉ với ngược 3 năm; cùng vết ở 2011→2012 (split 7:1 2014) và ở EPS (9.21→2.98). Hệ quả nếu không chặn: công ty split 2 năm trước ra CAGR 3 năm "pha loãng +300%" và bị cổng LOẠI OAN — test ghim đúng cảnh đó (`cagr()` trần in +40%+, `cagrAcrossBreaks()` ra null). `splitBreaks()` bắt bước nhảy ≥1.8× của số cổ phiếu (ngưỡng đủ cao để KHÔNG bắt nhầm một đợt phát hành 70% thật — đó chính là pha loãng cần bắt), CAGR của EPS và số cổ phiếu vắt qua vết gãy ra null, màn hình và prompt nói vì sao; doanh thu/FCF là tổng nên không đụng. **ĐÃ XÁC NHẬN sau deploy** (probe lần 2, AAPL): `tagsUsed.revenue` = thẻ ASC 606, `latestFy` 2025-09-27 (nộp 2025-10-31), doanh thu CAGR 3 năm **1.81%** / 5 năm 8.67%, biên FCF 23.7% (= 98.8/416.2 tỷ), số cổ phiếu −2.77%/năm, EPS +6.86%/năm, `splitBreaks` đúng `[2012-09-29, 2018-09-29]`; fact mẫu giờ là 10-Q 2026 kể cả một số luỹ kế 9 tháng, đều bị lọc đúng. Khoảng trống nhỏ chưa sửa: chuỗi FCF thiếu FY2014 (CapEx không khớp kỳ năm đó), không ảnh hưởng CAGR 3 năm. 212 khẳng định. Touches secfacts.ts, LongTermPanel.tsx, ltwhy.ts, secprobe, i18n (chỉ thêm).
@@ -194,7 +195,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #142. If you're reading this and a
+No PR is currently open and unmerged as of #143. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -492,8 +493,13 @@ rather than in buys.
 #### Photos: the format check *is* the measurement
 
 Portraits come from the public-domain `unitedstates/images` repository, which
-is keyed by **Bioguide ID**. UW's `politician_id` *may* be one — unverified,
-since the sandbox has no network. So `politicianPhoto()` does not guess: it
+is keyed by **Bioguide ID**. **Measured 2026-09-17** (`unitedstates.github.io`
+is now on the allowlist): `P000197`, `S000148` and `M000355` all return **200
+`image/jpeg`** at `/images/congress/225x275/<id>.jpg`, and a Bioguide-shaped
+but non-existent id (`X999999`) returns **404** — so the URL template is right
+and a wrong id fails cleanly rather than serving something else. What is still
+unconfirmed is the half this app does not control: whether UW's
+`politician_id` *is* a Bioguide ID. So `politicianPhoto()` does not guess: it
 returns a URL only when the id matches `^[A-Z]\d{6}$`, and `null` otherwise,
 and the panel draws an initials circle for every `null` **and** for every
 image that fails to load. There is no path that renders a broken image, which
@@ -1309,7 +1315,45 @@ Whether another spelling carries real open interest is still unproven — but "w
 
 Structure, because #96/#99 taught that two parallel ladders drift: `loadGexChain()` in `gexchain.ts` owns the Schwab→CBOE rungs (all three index spellings, then CBOE), returns `{source, chain, window, profile, schwabDetail?, cboeAsOf?}` or throws `GexChainError` carrying **both** sources' real reasons plus a `reauth` flag, and **both** `/api/gex` and `/api/tradebrief` call it — the earlier layout had the briefing route calling Schwab directly, so SPX would have shown a chart with a briefing button that still 404'd. `/api/gex` keeps UW→disk→error. Session expiry stops the ladder before CBOE (401, never papered over — #101).
 
-`cboeToChain()` converts the CBOE payload into the exact Schwab shape (`callExpDateMap`/`putExpDateMap`, `"YYYY-MM-DD:dte"` keys, Schwab field names, IV as percent not decimal) so `computeGex()`, `flattenPuts()`/`flattenCalls()` and the briefing read it unchanged — one calculator, not two. It filters to 60 days to match the Schwab window. **The CBOE shape is unverified from this sandbox** (`cdn.cboe.com` is egress-blocked like everything else), so the conversion reads every field tolerantly and, when it yields no contracts or no spot, throws with the **real top-level, `data`, and per-option keys** — the first production run will print where the guess is wrong instead of four dashes. Two file names are tried (`_SPX`, then `SPX`) on 404, same "try the plausible spellings" posture as Schwab.
+`cboeToChain()` converts the CBOE payload into the exact Schwab shape (`callExpDateMap`/`putExpDateMap`, `"YYYY-MM-DD:dte"` keys, Schwab field names, IV as percent not decimal) so `computeGex()`, `flattenPuts()`/`flattenCalls()` and the briefing read it unchanged — one calculator, not two. It filters to 60 days to match the Schwab window. The conversion still reads every field tolerantly and, when it yields no contracts or no spot, throws with the **real top-level, `data`, and per-option keys**.
+
+**MEASURED END TO END, 2026-09-17** (`cdn.cboe.com` is now on the allowlist), and the guess written in #109 was right in every particular:
+
+- Payload is `{timestamp, data, symbol}`; `data` carries `options` plus
+  `current_price`, `iv30`, `security_type: "index"`. Each option has
+  `option` (an OSI symbol), `bid`, `ask`, `iv`, `open_interest`, `gamma`,
+  `delta`, `vega`, `theta` — all **numbers**, not strings.
+- 29,914 contracts in, **15,586 kept** over **32 expirations** after the
+  60-day filter; spot 7637.76; total open interest 25.9M.
+- `computeGex()` runs on the converted chain unchanged and returns sensible
+  SPX levels: put wall 7500, call wall 7800, abs gamma 7600.
+- **The ×100 on IV is correct**, and a first look suggested otherwise: the
+  first nonzero `iv` values in file order are 7.99, 7.71 — which look like
+  percentages already. They are junk contracts at absurd strikes (a
+  200-strike call on a 7637 index). Near the money `iv` is `0.1362`, so
+  ×100 gives 13.62%, matching CBOE's own published `iv30: 12.155`. Sample
+  near spot, not from the head of the array.
+- **`zeroGamma: null` for SPX is correct, not a gap.** Cumulative net gamma
+  is negative at all 498 populated strikes and never crosses zero — dealers
+  are net short gamma across the whole range in that snapshot. Individual
+  strikes can still be net positive (hence a call wall at 7800) while the
+  running total stays negative. The crossing scan is deliberately
+  one-directional (negative → positive): that *is* the definition of the
+  gamma flip, and reporting a positive → negative crossing under the same
+  name would invert its meaning.
+- Both `SPX` (10,040 contracts) and `SPXW` (19,874) roots are in the file
+  and both are kept. That is right: they are the same index, and total
+  dealer gamma is what the chart is about.
+
+**The file-name ladder is load-bearing and its comment was wrong.** Measured:
+`_SPX.json` → 200, `SPX.json` → **403**, `_VIX.json` → 200, `AAPL.json` → 200.
+So indices take the underscore and equities do not, exactly as guessed — but
+a wrong file name earns a **403, not a 404**. The code already advanced on any
+non-OK status, so behaviour was correct; the comment beside it said 404 was the
+name-is-wrong signal and that other codes were merely cheap to retry. A later
+reader tidying that into "only advance on 404" would have killed the CBOE path
+for every symbol whose first spelling misses — the #100 bug exactly. The
+comment now carries the measurement.
 
 What the screen says when CBOE is in use: source and CBOE timestamp under the chart, why Schwab was unusable, `App (CBOE)` as the comparison table's left column, and a warning above the AI briefing that bid/ask are 15 minutes stale. History records CBOE-derived levels in a separate `cboe` slot, never in `schwab` — the log exists to show which source died when.
 
