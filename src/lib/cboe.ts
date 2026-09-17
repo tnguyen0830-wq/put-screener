@@ -273,8 +273,16 @@ export async function fetchCboeChain(
     }
     if (!res.ok) {
       errors.push(`${cs}→${res.status}`);
-      // 404 = tên file sai, thử cách viết tiếp theo. Mã khác (5xx, 403) thì
-      // đổi tên cũng không cứu được - nhưng vẫn rẻ, nên cứ thử cho hết.
+      /* Thử NẤC TIẾP THEO với MỌI mã lỗi, không riêng 404 — và đây không
+         phải bảo hiểm rẻ tiền, nó là cơ chế làm cả cái thang chạy.
+         ĐO ĐƯỢC (2026-09-17, trực tiếp từ sandbox):
+           _SPX.json → 200 (13,3 MB)   SPX.json → 403
+           _VIX.json → 200             AAPL.json → 200
+         Tức CBOE trả **403 cho tên file sai**, không phải 404. Một bản
+         "dọn dẹp" chỉ nhảy nấc khi gặp 404 sẽ dừng ngay ở nấc đầu và làm
+         chết hẳn đường CBOE cho mọi mã đoán sai tên — đúng hình dạng lỗi
+         #100, nơi vòng lặp chỉ tiến khi gặp 400 và không bao giờ thử tiếp
+         hai cách viết sinh ra chính vì việc đó. Đừng thu hẹp điều kiện. */
       continue;
     }
     let payload: any;
