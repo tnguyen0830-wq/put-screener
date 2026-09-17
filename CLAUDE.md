@@ -88,7 +88,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-17 — Không có việc đang làm dở. SEC 10-K đã nối vào tab Đầu tư dài hạn (#138), CHƯA ĐO được hình dạng thật vì `data.sec.gov` bị sandbox chặn — chủ app chạy `/api/secprobe?symbol=AAPL` ở production một lần rồi báo lại, hoặc mở host trong network settings. Tab Đầu tư dài hạn đã xong và merge (#137). tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
+2026-09-17 — Không có việc đang làm dở. SEC 10-K trong tab Đầu tư dài hạn ĐÃ ĐO thật ở production (AAPL qua `/api/secprobe`) và hai lỗi lộ ra đã vá (#139). `data.sec.gov` vẫn bị sandbox chặn; chủ app đã được hướng dẫn mở host (cách 2). Tab Đầu tư dài hạn đã xong và merge (#137). tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -129,6 +129,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-17 — #139 **Probe SEC trả lời, và hai lỗi thật lộ ra — cả hai fixture tự dựng không thể bắt.** Chủ app chạy `/api/secprobe?symbol=AAPL` ở production. Hình dạng KHỚP (top `cik,entityName,facts`; taxonomy `dei,us-gaap`; fact mang `start|end|val|accn|fy|fp|form|filed|frame`, `fy` là SỐ, `frame` "CY2018"/"CY2018Q3"), bẫy quý-4-mang-`fp=FY` **được xác nhận thật** (`start 2018-07-01 end 2018-09-29 fp FY frame CY2018Q3` nằm cạnh fact cả năm) và bộ lọc độ dài kỳ đã chặn đúng. **Lỗi 1 — thang thẻ chọn thẻ ĐẦU TIÊN có dữ liệu chứ không phải thẻ MỚI NHẤT**: `Revenues` của Apple chỉ tới FY2018 (ASC 606 chuyển sang `RevenueFromContractWithCustomerExcludingAssessedTax`), nên `latestFy` = 2018, CAGR 3 năm null, biên FCF null, trong khi thẻ mới đủ 2018-2025 nằm ngay cạnh. `pickSeries()` giờ chọn theo ngày kết thúc mới nhất (hoà → dài hơn); cố ý KHÔNG ghép hai thẻ thành một chuỗi vì ở ngân hàng `Revenues` và `RevenuesNetOfInterestExpense` là hai định nghĩa. **Lỗi 2 — chia tách cổ phiếu làm chuỗi per-share gãy khúc**: số cổ phiếu 2017 = 5.25B, 2018 = 20.0B — không phải phát hành gấp bốn, mà năm 2018 được 10-K FY2020 (sau split 4:1) báo cáo lại đã điều chỉnh, còn bản cuối nhắc tới 2017 là 10-K FY2019, TRƯỚC split. Mỗi 10-K chỉ mang 3 năm so sánh nên điều chỉnh split chỉ với ngược 3 năm; cùng vết ở 2011→2012 (split 7:1 2014) và ở EPS (9.21→2.98). Hệ quả nếu không chặn: công ty split 2 năm trước ra CAGR 3 năm "pha loãng +300%" và bị cổng LOẠI OAN — test ghim đúng cảnh đó (`cagr()` trần in +40%+, `cagrAcrossBreaks()` ra null). `splitBreaks()` bắt bước nhảy ≥1.8× của số cổ phiếu (ngưỡng đủ cao để KHÔNG bắt nhầm một đợt phát hành 70% thật — đó chính là pha loãng cần bắt), CAGR của EPS và số cổ phiếu vắt qua vết gãy ra null, màn hình và prompt nói vì sao; doanh thu/FCF là tổng nên không đụng. AAPL sau vá: CAGR 3 năm 2022→2025 không vắt qua 2018 nên vẫn tính (âm = mua lại). 212 khẳng định. Touches secfacts.ts, LongTermPanel.tsx, ltwhy.ts, secprobe, i18n (chỉ thêm).
 - 2026-09-17 — #138 **SEC 10-K vào tab Đầu tư dài hạn — chưa đo được, và nói rõ thế.** Chủ app đưa một tài liệu "Professional Long-Term Screener" (SEC → Alpha Vantage → Nasdaq Data Link → AI chấm moat/TAM/risk → DCF ba kịch bản). Ý kiến đã nói: phần triết lý (cấm NULL→0, hiện nguồn cạnh số, hard filter trước điểm) là NGUYÊN VĂN degradation idiom của repo; phần kiến trúc quá tay; **hai chỗ đi ngược kỷ luật repo**: AI sinh `MOAT_SCORE` là LLM *tạo ra* con số (repo chỉ cho Claude diễn giải số code tính), và DCF ba kịch bản với input giả định cho ra ba fair value giả định trông rất chắc chắn. Không mua Alpha Vantage (hạn mức free ~25 req/ngày, và nó chắt từ chính SEC) hay Sharadar. **Cái đáng làm và đã làm**: Finviz là ảnh chụp ttm, không trả lời được "doanh thu/EPS/FCF có tăng 3-5 năm không" và "số cổ phiếu có phình không" — SEC XBRL `companyfacts` trả lời cả hai, miễn phí, và `sec.ts` đã có sẵn client tới `data.sec.gov`. `secfacts.ts` thuần logic, xử ba bẫy đã biết của companyfacts: (1) cùng một kỳ xuất hiện trong nhiều 10-K (số so sánh) nên gom theo `end` và giữ `filed` mới nhất — cũng chính là cách hấp thụ restatement; (2) `fp=FY` KHÔNG đủ nói "cả năm" vì số quý 4 trong 10-K cũng mang FY, phải đòi start→end ≈ 1 năm; (3) một khái niệm nhiều thẻ (`Revenues` / `RevenueFromContractWithCustomerExcludingAssessedTax` / `SalesRevenueNet`) nên có THANG thẻ và `tagsUsed` ghi thẻ thắng. CAGR tính từ hai điểm THẬT cách nhau ~k năm theo khoảng ngày thật (test bắt đúng: 366 ngày nhuận ra 9.98% chứ không 10.00% — code đúng, test phải nới), điểm đầu ≤ 0 ra null. Ba cổng mới (doanh thu không co lại / FCF dương / pha loãng ≤ 5%/năm) đi qua với `unknown` khi thiếu, đúng luật #131; điểm có thêm `growth` 15 và bốn phần kia nhường lại (25/25/20/15/15). **`data.sec.gov` vẫn bị chặn 403 CONNECT** nên hình dạng chưa đo — xử theo khuôn CBOE #109: đọc dung thứ, `secDiagnosis()` in khoá thật khi bóc hụt, và `/api/secprobe?symbol=X` in taxonomy/thẻ có mặt/3 fact nguyên văn/chuỗi đã bóc. Ba lý do thiếu SEC tách riêng trên màn hình (`no-cik` / `no-data`+diagnosis / lỗi mạng) vì ba cách sửa khác nhau. 194 khẳng định trong 4 script. Touches longterm.ts, route longterm, ltwhy.ts, sec.ts (chỉ thêm `companyFacts`), i18n.tsx (chỉ thêm), globals.css (chỉ thêm), LongTermPanel.tsx, README; mới lib/secfacts.ts, api/secprobe.
 - 2026-09-17 — #137 **Tab chính thứ SÁU: Đầu tư dài hạn.** Chủ app đặt hàng: tìm mã đang rớt về hỗ trợ mà công ty vẫn có lãi, định giá còn hợp lý, kiểm tin tức xem rớt vì sao, và vẫn uptrend. Chốt ba điều trước khi viết dòng code nào, vì ba câu đó ra ba sản phẩm khác hẳn: uptrend mức VỪA (cho thủng SMA200 miễn ĐỘ DỐC SMA200 còn dương — mã rớt đủ sâu để đáng nhìn thì thường đã thủng SMA200 rồi, đòi chặt là bảng trống quanh năm), "tại sao rớt" là nút BẤM MỚI CHẠY, định giá gồm CẢ bội số Finviz LẪN so với chính lịch sử P/E của mã. **Ràng buộc quyết định toàn bộ kiến trúc là chi phí**: Finviz là MỘT lần cào HTML mỗi mã, nên 503 mã kiểu thẳng là không dùng được — ba tầng, và tầng rẻ nhất cắt mạnh nhất: `quotes()` vốn đã gộp lô 100 mã và ĐÃ TRẢ SẴN `52WeekHigh`/`52WeekLow`, nên cả rổ tốn SÁU request và hai cổng "đã rớt khỏi đỉnh"/"chưa sát đáy" tính được miễn phí trước khi tốn bất cứ request nào theo mã. **Bộ test bắt một lỗi thật trong phần lõi**: chuỗi giá phẳng làm MỌI nến thành đáy xoay (21 nến phẳng ra 8 "đáy") rồi gom thành một vùng ghi "đã chạm 8 lần" — mà `touches` chính là con số cả tab dựa vào để nói vùng có đáng tin không, nên thổi phồng nó là hỏng đúng chỗ quan trọng nhất; sửa bằng phép so sánh BẤT ĐỐI XỨNG (trái đòi cao hơn hẳn, phải chỉ đòi không thấp hơn) nên mỗi đoạn bằng nhau chỉ còn một đáy, mà đáy đôi thật vẫn đếm đủ hai. **Hai lỗi hiển thị chỉ render thật mới thấy, đọc CSS không thấy được**: (1) `.pftable td` đặt `white-space: nowrap` cho các CỘT SỐ, ngăn kéo chi tiết nằm trong một `td` của chính bảng đó nên THỪA KẾ nowrap — mọi đoạn văn xuôi chạy thành một dòng 1462px trong khung 777px rồi bị cắt cụt, và cái bị cắt đúng là mấy câu nói thật (giá mục tiêu không phải cổng lọc, Finviz thiếu ô nào, kho P/E chưa đủ); (2) sửa xong nowrap thì trên điện thoại 400px vẫn mất nửa phải, vì ngăn chi tiết nằm trong `<td>` nên rộng theo BẢNG (784px) chứ không theo màn hình — với bảng số thì cuộn ngang là đúng (tab Quốc hội làm thế) nhưng với văn xuôi là hỏng, nên ngăn chi tiết ĐƯỢC ĐƯA RA NGOÀI khung cuộn; đo lại: `detailW` 784→350, không phần tử nào tràn khung nhìn ở cả bốn tổ hợp theme × bề ngang. Ba chỗ nói thật cố ý: **giá mục tiêu được HIỆN nhưng không làm cổng** (nó gần như luôn trên giá hiện tại, lấy làm cổng là giao quyền lọc cho sự lạc quan nghề nghiệp của người khác); **vế "rẻ so với chính nó" trả null kèm CÒN THIẾU BAO NHIÊU LẦN ĐỌC** thay vì một phân vị tính trên 4 mẫu, và nó không kéo điểm lên hay xuống trong lúc đó; **điểm thiếu dữ liệu là 0.5 chứ không phải 0** — cho 0 là dựng một bộ lọc NGẦM đẩy mọi mã Finviz cào hụt xuống đáy bảng mà không ai biết. Lỗi hết phiên Schwab được tách riêng chứ không in nguyên `REAUTH_REQUIRED` (cách sửa là bấm kết nối lại, không phải quét lại). Prompt dặn Claude coi tiêu đề tin là DỮ LIỆU, không phải lệnh. 121 khẳng định trong 3 script độc lập. Không biến môi trường mới, không bước deploy (kho P/E ở `.cache/`). Touches page.tsx, i18n.tsx (chỉ thêm khoá), globals.css (chỉ thêm), history.ts (chỉ thêm), README.md; mới lib/support.ts, lib/pehistory.ts, lib/longterm.ts, lib/ltwhy.ts, LongTermPanel.tsx, api/longterm/*.
 - 2026-09-17 — #136 **Chú thích earnings ở tab Analyze hứa một thứ màn hình không hề có.** Chủ app hỏi "coi earning chỗ nào"; đi rà bốn nơi hiện earnings thì lòi ra câu `an.earningsNote` nói sai hai chuyện. Chuyện nhỏ: sau #135 nguồn không còn là MỘT file — `loadEarnings()` HỢP `data/earnings.json` với lịch tastytrade, nên câu cũ nói thiếu đúng một nửa nguồn. **Chuyện nặng hơn là vế thứ hai: "File phân biệt rõ ngày công ty đã công bố với ngày ước tính."** Sự phân biệt ấy có thật nhưng nằm ở chỗ KHÁC — trong `_comment` của file (văn xuôi cho người đọc, không phải dữ liệu theo mã) và trong cờ `estimated` của tastytrade — còn dòng "Earnings kế tiếp" trên màn hình in một NGÀY TRƠ, không mang nhãn nào. Tức chú thích cấp cho người đọc một sự chắc chắn mà thứ họ đang nhìn không hề thể hiện, đúng hình dạng degradation idiom mà repo này cấm, chỉ khác là lần này lời hứa nằm ở chú thích chứ không ở dữ liệu. Câu mới nói thẳng nhãn "ngày ước tính" **chỉ có ở Hard gates bên tab Screener** (nơi #135 thực sự dựng nó), và nói luôn dấu `—` GỘP hai trạng thái: `nextEarnings` là `find(d => d >= today) ?? null` nên mã vắng mặt (chưa biết gì), mã mang mảng rỗng (ETF, đã kiểm và không có) và mã chỉ còn ngày quá khứ đều ra cùng một gạch ngang. **Cố ý KHÔNG sửa bằng cách đẩy cờ `estimated` ra tab Analyze**: làm thế phải sửa route, và việc đó là một thay đổi thật đáng làm riêng chứ không phải đính kèm vào một bản vá chữ. Chỉ i18n.tsx, một khoá.
@@ -185,7 +186,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #138. If you're reading this and a
+No PR is currently open and unmerged as of #139. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -1050,14 +1051,42 @@ The rest was declined on the record: paid APIs that re-serve SEC data, LLM-
 produced scores (this repo lets Claude interpret numbers, never produce them),
 and a DCF whose three fair values are three assumptions wearing a suit.
 
-**The shape is unmeasured.** `data.sec.gov` was 403-on-CONNECT from the sandbox
-when this was written, so `secfacts.ts` reads the documented structure
-tolerantly, `secDiagnosis()` prints the real top-level keys, taxonomies, which
-revenue tags exist and one fact's field names when extraction yields nothing,
-and `/api/secprobe?symbol=X` reports taxonomy, tag presence per metric, three
-raw revenue facts verbatim and the parsed annual series — the `/api/uwprobe`
-idiom. Run it once in production and fix the tag ladder against what it says,
-never against memory. It is not `OWNER_ONLY`: SEC data is public and keyless.
+**The shape was measured in production (2026-09-17, AAPL via
+`/api/secprobe`)**, since `data.sec.gov` is 403-on-CONNECT from the sandbox.
+The documented structure held: top-level `cik,entityName,facts`, taxonomies
+`dei` and `us-gaap`, and a fact carries exactly
+`start|end|val|accn|fy|fp|form|filed|frame` — `fy` is a **number**, `frame` is
+`"CY2018"` for a full year and `"CY2018Q3"` for a quarter. The probe stays (not
+`OWNER_ONLY`: SEC data is public and keyless) to measure other issuers.
+
+That one reading exposed **two real bugs the hand-built fixtures could not**,
+which is the whole argument for the probe idiom:
+
+- **The tag ladder took the first tag with data, not the most recent.**
+  Apple's `Revenues` stops at FY2018 — when ASC 606 arrived it moved to
+  `RevenueFromContractWithCustomerExcludingAssessedTax` and the old tag was
+  never updated — so `latestFy` read 2018, the 3-year CAGR was `null` and FCF
+  margin was `null`, with the current tag sitting right beside it.
+  `pickSeries()` now takes the series with the latest `end` (tie → longer).
+  It deliberately does **not** splice two tags into one series: at a bank,
+  `Revenues` and `RevenuesNetOfInterestExpense` are different definitions,
+  and stitching them draws a growth line across a definition change.
+- **Stock splits break per-share series, and a filing only restates three
+  years back.** Diluted shares read 5.25B for FY2017 and **20.0B** for FY2018.
+  Apple did not issue 4× stock: FY2018 was last reported by the FY2020 10-K,
+  filed *after* the August 2020 4:1 split and therefore split-adjusted, while
+  FY2017 was last reported by the FY2019 10-K, *before* it. A 10-K carries
+  three comparative years, so adjustment reaches back three years and no
+  further; the same seam sits at 2011→2012 (the 2014 7:1 split) and in EPS
+  (9.21 → 2.98). Unchecked, a company that split two years ago reads as
+  "+300%/yr dilution" and **fails the dilution gate for splitting**, while
+  its EPS reads as a 75% collapse. `splitBreaks()` flags a ≥1.8× year-on-year
+  jump in the share count (high enough not to catch a genuine 70% issuance —
+  that *is* the dilution the gate exists for), `cagrAcrossBreaks()` returns
+  `null` for any EPS or share-count span crossing a break, and both the drawer
+  and the prompt say why. Revenue and FCF are totals, not per-share, and are
+  untouched. For Apple the 2022→2025 window does not cross 2018, so the
+  buyback CAGR still computes.
 
 **Three known traps in `companyfacts`, each handled and each pinned by a test:**
 

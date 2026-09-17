@@ -517,6 +517,12 @@ loãng trên 5%/năm bị loại. ETF và công ty nước ngoài (IFRS) không 
 cổng này hiện `?` và màn hình nói rõ vì sao (không có CIK / có hồ sơ nhưng không
 bóc được / lỗi mạng), ba lý do ba cách sửa.
 
+Một bẫy đo được trên chính Apple: **10-K chỉ điều chỉnh chia tách cổ phiếu
+ngược 3 năm**, nên số cổ phiếu và EPS của các năm xa hơn là số *chưa* điều
+chỉnh (Apple 2017 = 5.25 tỷ cổ phiếu, 2018 = 20 tỷ — split 4:1, không phải phát
+hành). CAGR của EPS và số cổ phiếu vắt qua chỗ gãy đó được **để trống và nói
+lý do** thay vì in "pha loãng +300%"; doanh thu và FCF là tổng nên không bị.
+
 Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớt đủ sâu để đáng nhìn
 thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng
 dài hạn, cộng với chốt chặn "còn cách đáy 52 tuần" để không bắt dao rơi.

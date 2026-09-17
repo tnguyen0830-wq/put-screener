@@ -77,6 +77,7 @@ export async function GET(req: NextRequest) {
         fcfMarginLatest: f.fcfMarginLatest,
         latestFy: f.latestFy,
         latestFiled: f.latestFiled,
+        splitBreaks: f.splitBreaks,
       },
     });
   } catch (e: any) {

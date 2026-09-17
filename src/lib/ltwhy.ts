@@ -121,6 +121,12 @@ export function whyFacts(
     lines.push(`- diluted EPS CAGR: 3y ${pct(sec.epsCagr3)}, 5y ${pct(sec.epsCagr5)}`);
     lines.push(`- free cash flow (OCF - CapEx) latest FY: ${sec.fcfLatest === null ? 'n/a' : sec.fcfLatest.toExponential(3)} USD, FCF margin ${pct(sec.fcfMarginLatest)}, FCF CAGR 3y ${pct(sec.fcfCagr3)}`);
     lines.push(`- diluted share count CAGR 3y: ${pct(sec.sharesCagr3)} (positive = DILUTION, negative = buybacks)`);
+    if (sec.splitBreaks?.length) {
+      lines.push(
+        `- NOTE: share count jumps at ${sec.splitBreaks.join(', ')} - a stock split that filings restate only three years back. ` +
+          'Per-share CAGRs spanning that point are deliberately n/a; do not infer dilution or an EPS collapse from raw per-share figures across it.'
+      );
+    }
     const last = sec.revenue.slice(-5);
     lines.push(`- revenue by fiscal year end: ${last.map((p) => `${p.end.slice(0, 4)}=${p.value.toExponential(3)}`).join(', ')}`);
     if (sec.epsCagr3 !== null && sec.sharesCagr3 !== null && sec.sharesCagr3 > 3) {

@@ -42,6 +42,7 @@ type Sec = {
   sharesCagr3: number | null; fcfLatest: number | null; fcfMarginLatest: number | null;
   latestFy: string | null; latestFiled: string | null;
   tagsUsed: Record<string, string | null>;
+  splitBreaks?: string[];
 };
 
 /* Tiền tỷ đọc thành "1.23B", không phải "1234567890". */
@@ -452,6 +453,11 @@ function SecBlock({ sec }: { sec: Sec }) {
           : ''}
       </p>
       {dilutedEps && <p className="hint hint-warn">{t('lt.secDilutionWarn')}</p>}
+      {/* `?.` vì một payload cũ (scan đã lưu, cache) có thể thiếu trường này -
+          ngăn chi tiết không được chết vì một dòng cảnh báo. */}
+      {(sec.splitBreaks?.length ?? 0) > 0 && (sec.sharesCagr3 === null || sec.epsCagr3 === null) && (
+        <p className="hint hint-warn">{t('lt.secSplit', (sec.splitBreaks ?? []).map((d) => d.slice(0, 7)).join(', '))}</p>
+      )}
     </>
   );
 }

@@ -1121,6 +1121,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (e: string) => `Không lấy được dữ liệu SEC: ${e}. Ba cổng SEC hiện “?”; lần quét sau sẽ thử lại.`,
     en: (e: string) => `Could not fetch SEC data: ${e}. The three SEC gates show “?”; the next scan retries.`,
   },
+  /* Đo được ở AAPL: 10-K chỉ mang 3 năm so sánh nên điều chỉnh split chỉ với
+     ngược 3 năm; xa hơn là số chưa điều chỉnh, và CAGR EPS/số cổ phiếu vắt
+     qua chỗ gãy sẽ ra một con số sai trông như thật. */
+  'lt.secSplit': {
+    vi: (y: string) => `Số cổ phiếu nhảy bậc tại ${y} — dấu hiệu chia tách cổ phiếu mà SEC chỉ điều chỉnh ngược 3 năm. CAGR của EPS và số cổ phiếu vắt qua mốc này bị bỏ trống thay vì in một con số sai; cổng pha loãng hiện “?”.`,
+    en: (y: string) => `Share count jumps at ${y} — a stock split that SEC filings only restate three years back. EPS and share-count CAGRs spanning that point are left blank rather than printed wrong; the dilution gate shows “?”.`,
+  },
   'lt.secDilutionWarn': {
     vi: 'EPS tăng nhưng số cổ phiếu cũng tăng — phần tăng EPS đang bị pha loãng, đọc con số EPS với sự dè dặt.',
     en: 'EPS is growing but so is the share count — per-share growth is being diluted; read the EPS figure with caution.',
