@@ -979,8 +979,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   /* ---------------- Long-term Investment ---------------- */
   'tab.longterm': { vi: 'Đầu tư dài hạn', en: 'Long-term' },
   'lt.lead': {
-    vi: 'Tìm mã ĐANG RỚT VỀ một vùng hỗ trợ mà công ty vẫn có lãi và định giá chưa đắt. Vùng hỗ trợ tự tính từ 3 năm nến ngày (đáy xoay đã được nến hai bên xác nhận, gom theo giá); cơ bản và định giá lấy từ Finviz.',
-    en: 'Finds stocks FALLING TOWARD a support zone while the company is still profitable and not expensively priced. Support zones are computed here from 3 years of daily bars (confirmed pivot lows, clustered by price); fundamentals and valuation come from Finviz.',
+    vi: 'Tìm mã ĐANG RỚT VỀ một vùng hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và định giá chưa đắt. Vùng hỗ trợ tự tính từ 3 năm nến ngày (đáy xoay đã được nến hai bên xác nhận, gom theo giá); bội số và giá mục tiêu từ Finviz; doanh thu/EPS/FCF nhiều năm và pha loãng cổ phiếu bóc từ 10-K trên SEC EDGAR.',
+    en: 'Finds stocks FALLING TOWARD a support zone while the company is still profitable, still growing and not expensively priced. Support zones are computed here from 3 years of daily bars (confirmed pivot lows, clustered by price); multiples and the analyst target come from Finviz; multi-year revenue/EPS/FCF and share dilution are parsed from 10-K filings on SEC EDGAR.',
   },
   'lt.watchlist': { vi: 'Watchlist', en: 'Watchlist' },
   'lt.sp500': { vi: 'Cả rổ S&P 500', en: 'Full S&P 500' },
@@ -1080,6 +1080,50 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'lt.peWarmingDetail': {
     vi: (v: any) => `Chưa đủ dữ liệu: mới có ${v.have} lần đọc, cần thêm ${v.need} lần nữa. Không nguồn nào cho sẵn chuỗi P/E quá khứ nên app tự ghi mỗi lần quét một dòng. Tới lúc đó, đây là KHÔNG BIẾT — không phải “đang ở mức bình thường” — và nó không kéo điểm lên hay xuống.`,
     en: (v: any) => `Not enough data yet: ${v.have} readings so far, ${v.need} more needed. No source provides a past P/E series, so this app records one reading per scan. Until then this is UNKNOWN — not “about average” — and it moves the score neither way.`,
+  },
+  /* ---- SEC 10-K trong tab Đầu tư dài hạn ---- */
+  'lt.col.growth': { vi: 'Tăng trưởng', en: 'Growth' },
+  'lt.revCagr': { vi: (v: string) => `DT ${v}/năm`, en: (v: string) => `Rev ${v}/yr` },
+  'lt.sharesCagr': {
+    vi: (v: string) => `cổ phiếu ${v}/năm`,
+    en: (v: string) => `shares ${v}/yr`,
+  },
+  'lt.secNone': { vi: 'SEC: không có', en: 'SEC: none' },
+  'lt.secHead': { vi: 'Tài chính nhiều năm (SEC 10-K)', en: 'Multi-year financials (SEC 10-K)' },
+  'lt.secLead': {
+    vi: (v: any) => `Bóc từ XBRL của ${v.years} năm 10-K trên SEC EDGAR. Năm tài chính gần nhất kết thúc ${v.fy}, nộp ${v.filed}. Thẻ doanh thu: ${v.tag}.`,
+    en: (v: any) => `Parsed from XBRL of ${v.years} fiscal years of 10-K filings on SEC EDGAR. Latest fiscal year ended ${v.fy}, filed ${v.filed}. Revenue tag: ${v.tag}.`,
+  },
+  'lt.secFy': { vi: 'Năm TC', en: 'FY' },
+  'lt.secRevenue': { vi: 'Doanh thu', en: 'Revenue' },
+  'lt.secEps': { vi: 'EPS pha loãng', en: 'Diluted EPS' },
+  'lt.secFcf': { vi: 'FCF', en: 'FCF' },
+  'lt.secShares': { vi: 'Số CP (BQ pha loãng)', en: 'Shares (wtd. diluted)' },
+  'lt.secCagr': {
+    vi: (v: any) => `CAGR 3 năm — doanh thu ${v.rev}, EPS ${v.eps}, FCF ${v.fcf}. Biên FCF năm gần nhất ${v.margin}. Số cổ phiếu ${v.shares}/năm (dương = pha loãng, âm = mua lại).`,
+    en: (v: any) => `3-year CAGR — revenue ${v.rev}, EPS ${v.eps}, FCF ${v.fcf}. Latest FCF margin ${v.margin}. Share count ${v.shares}/yr (positive = dilution, negative = buybacks).`,
+  },
+  'lt.secCagr5': {
+    vi: (v: any) => `CAGR 5 năm — doanh thu ${v.rev}, EPS ${v.eps}.`,
+    en: (v: any) => `5-year CAGR — revenue ${v.rev}, EPS ${v.eps}.`,
+  },
+  /* Ba lý do khác nhau cần ba cách sửa khác nhau, nên không gộp thành một
+     câu "SEC không có dữ liệu". */
+  'lt.secNoCik': {
+    vi: 'SEC không có hồ sơ cho mã này (ETF, hoặc mã chưa có trong danh bạ CIK của SEC). Ba cổng SEC hiện dấu “?”, không phải ✓.',
+    en: 'SEC has no filer record for this symbol (an ETF, or a ticker missing from the SEC CIK directory). The three SEC gates show “?”, not ✓.',
+  },
+  'lt.secNoData': {
+    vi: (d: string) => `SEC có hồ sơ nhưng app không bóc được doanh thu cả năm. Đây là hình dạng THẬT của dữ liệu — nếu bạn thấy dòng này, thang thẻ XBRL cần sửa: ${d}`,
+    en: (d: string) => `SEC has a filer record but the app could not extract full-year revenue. This is the REAL shape of the data — if you see this line, the XBRL tag ladder needs fixing: ${d}`,
+  },
+  'lt.secError': {
+    vi: (e: string) => `Không lấy được dữ liệu SEC: ${e}. Ba cổng SEC hiện “?”; lần quét sau sẽ thử lại.`,
+    en: (e: string) => `Could not fetch SEC data: ${e}. The three SEC gates show “?”; the next scan retries.`,
+  },
+  'lt.secDilutionWarn': {
+    vi: 'EPS tăng nhưng số cổ phiếu cũng tăng — phần tăng EPS đang bị pha loãng, đọc con số EPS với sự dè dặt.',
+    en: 'EPS is growing but so is the share count — per-share growth is being diluted; read the EPS figure with caution.',
   },
   'lt.whyHead': { vi: 'Tại sao rớt?', en: 'Why did it fall?' },
   'lt.whyBtn': { vi: 'Kiểm tin tức và hỏi Claude', en: 'Check the news and ask Claude' },

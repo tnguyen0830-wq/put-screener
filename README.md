@@ -12,7 +12,7 @@ App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Heatmap** | Cả thị trường đang thế nào (kèm GEX của SPX/mã bất kỳ) |
 | **My Portfolio** | Cái đang cầm có gì cần để ý |
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
-| **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi và chưa đắt |
+| **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -501,10 +501,21 @@ của nhau thành một vùng. Ba luật đáng biết vì chúng quyết địn
   biểu đồ cả hai đều là giá nằm cạnh một đường kẻ, nhưng việc phải làm thì ngược
   nhau, nên màn hình tách hẳn và gắn cờ ⚠ cho vùng đã thủng.
 
-**Sáu cổng cứng.** Xu hướng dài hạn còn hướng lên (độ dốc SMA200 dương) · đang ở
+**Chín cổng cứng.** Xu hướng dài hạn còn hướng lên (độ dốc SMA200 dương) · đang ở
 trong 8% phía trên một vùng hỗ trợ · đã rớt ≥10% từ đỉnh 52 tuần · còn cao hơn
 đáy 52 tuần ≥5% · công ty đang có lãi (EPS và biên lợi nhuận đều dương) · P/E dự
-phóng ≤ 30.
+phóng ≤ 30 · **doanh thu không co lại** (CAGR 3 năm ≥ 0) · **dòng tiền tự do
+dương** năm gần nhất · **không pha loãng nặng** (số cổ phiếu tăng ≤ 5%/năm).
+
+Ba cổng cuối đọc từ **10-K trên SEC EDGAR** (API XBRL `companyfacts`, miễn phí,
+không cần key) — thứ Finviz không trả lời được, vì Finviz là ảnh chụp một thời
+điểm còn ba câu này cần *chuỗi nhiều năm*. Ngăn chi tiết in bảng 5 năm gần nhất
+(doanh thu, EPS pha loãng, FCF, số cổ phiếu), CAGR 3 và 5 năm, kèm **ngày nộp và
+thẻ XBRL đã dùng** ngay cạnh số. Câu đáng giá nhất ở đây: *EPS tăng mà số cổ phiếu
+cũng tăng mạnh thì phần "tăng" đó của ai?* — mua lại cho CAGR âm và đi qua, pha
+loãng trên 5%/năm bị loại. ETF và công ty nước ngoài (IFRS) không có 10-K: ba
+cổng này hiện `?` và màn hình nói rõ vì sao (không có CIK / có hồ sơ nhưng không
+bóc được / lỗi mạng), ba lý do ba cách sửa.
 
 Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớt đủ sâu để đáng nhìn
 thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng

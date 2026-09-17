@@ -88,7 +88,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-17 — Không có việc đang làm dở. Tab Đầu tư dài hạn đã xong và merge (#137). tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
+2026-09-17 — Không có việc đang làm dở. SEC 10-K đã nối vào tab Đầu tư dài hạn (#138), CHƯA ĐO được hình dạng thật vì `data.sec.gov` bị sandbox chặn — chủ app chạy `/api/secprobe?symbol=AAPL` ở production một lần rồi báo lại, hoặc mở host trong network settings. Tab Đầu tư dài hạn đã xong và merge (#137). tastytrade đã chạy thật: cổng earnings vá xong (#135). Còn MỘT phép đo chưa có, không chặn gì: một lượt ~120 mã có về đủ 120 không - `BATCH = 100` là chọn thận trọng, và mỗi lô đã tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing` chứ không thành lỗ hổng im lặng.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -129,6 +129,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-17 — #138 **SEC 10-K vào tab Đầu tư dài hạn — chưa đo được, và nói rõ thế.** Chủ app đưa một tài liệu "Professional Long-Term Screener" (SEC → Alpha Vantage → Nasdaq Data Link → AI chấm moat/TAM/risk → DCF ba kịch bản). Ý kiến đã nói: phần triết lý (cấm NULL→0, hiện nguồn cạnh số, hard filter trước điểm) là NGUYÊN VĂN degradation idiom của repo; phần kiến trúc quá tay; **hai chỗ đi ngược kỷ luật repo**: AI sinh `MOAT_SCORE` là LLM *tạo ra* con số (repo chỉ cho Claude diễn giải số code tính), và DCF ba kịch bản với input giả định cho ra ba fair value giả định trông rất chắc chắn. Không mua Alpha Vantage (hạn mức free ~25 req/ngày, và nó chắt từ chính SEC) hay Sharadar. **Cái đáng làm và đã làm**: Finviz là ảnh chụp ttm, không trả lời được "doanh thu/EPS/FCF có tăng 3-5 năm không" và "số cổ phiếu có phình không" — SEC XBRL `companyfacts` trả lời cả hai, miễn phí, và `sec.ts` đã có sẵn client tới `data.sec.gov`. `secfacts.ts` thuần logic, xử ba bẫy đã biết của companyfacts: (1) cùng một kỳ xuất hiện trong nhiều 10-K (số so sánh) nên gom theo `end` và giữ `filed` mới nhất — cũng chính là cách hấp thụ restatement; (2) `fp=FY` KHÔNG đủ nói "cả năm" vì số quý 4 trong 10-K cũng mang FY, phải đòi start→end ≈ 1 năm; (3) một khái niệm nhiều thẻ (`Revenues` / `RevenueFromContractWithCustomerExcludingAssessedTax` / `SalesRevenueNet`) nên có THANG thẻ và `tagsUsed` ghi thẻ thắng. CAGR tính từ hai điểm THẬT cách nhau ~k năm theo khoảng ngày thật (test bắt đúng: 366 ngày nhuận ra 9.98% chứ không 10.00% — code đúng, test phải nới), điểm đầu ≤ 0 ra null. Ba cổng mới (doanh thu không co lại / FCF dương / pha loãng ≤ 5%/năm) đi qua với `unknown` khi thiếu, đúng luật #131; điểm có thêm `growth` 15 và bốn phần kia nhường lại (25/25/20/15/15). **`data.sec.gov` vẫn bị chặn 403 CONNECT** nên hình dạng chưa đo — xử theo khuôn CBOE #109: đọc dung thứ, `secDiagnosis()` in khoá thật khi bóc hụt, và `/api/secprobe?symbol=X` in taxonomy/thẻ có mặt/3 fact nguyên văn/chuỗi đã bóc. Ba lý do thiếu SEC tách riêng trên màn hình (`no-cik` / `no-data`+diagnosis / lỗi mạng) vì ba cách sửa khác nhau. 194 khẳng định trong 4 script. Touches longterm.ts, route longterm, ltwhy.ts, sec.ts (chỉ thêm `companyFacts`), i18n.tsx (chỉ thêm), globals.css (chỉ thêm), LongTermPanel.tsx, README; mới lib/secfacts.ts, api/secprobe.
 - 2026-09-17 — #137 **Tab chính thứ SÁU: Đầu tư dài hạn.** Chủ app đặt hàng: tìm mã đang rớt về hỗ trợ mà công ty vẫn có lãi, định giá còn hợp lý, kiểm tin tức xem rớt vì sao, và vẫn uptrend. Chốt ba điều trước khi viết dòng code nào, vì ba câu đó ra ba sản phẩm khác hẳn: uptrend mức VỪA (cho thủng SMA200 miễn ĐỘ DỐC SMA200 còn dương — mã rớt đủ sâu để đáng nhìn thì thường đã thủng SMA200 rồi, đòi chặt là bảng trống quanh năm), "tại sao rớt" là nút BẤM MỚI CHẠY, định giá gồm CẢ bội số Finviz LẪN so với chính lịch sử P/E của mã. **Ràng buộc quyết định toàn bộ kiến trúc là chi phí**: Finviz là MỘT lần cào HTML mỗi mã, nên 503 mã kiểu thẳng là không dùng được — ba tầng, và tầng rẻ nhất cắt mạnh nhất: `quotes()` vốn đã gộp lô 100 mã và ĐÃ TRẢ SẴN `52WeekHigh`/`52WeekLow`, nên cả rổ tốn SÁU request và hai cổng "đã rớt khỏi đỉnh"/"chưa sát đáy" tính được miễn phí trước khi tốn bất cứ request nào theo mã. **Bộ test bắt một lỗi thật trong phần lõi**: chuỗi giá phẳng làm MỌI nến thành đáy xoay (21 nến phẳng ra 8 "đáy") rồi gom thành một vùng ghi "đã chạm 8 lần" — mà `touches` chính là con số cả tab dựa vào để nói vùng có đáng tin không, nên thổi phồng nó là hỏng đúng chỗ quan trọng nhất; sửa bằng phép so sánh BẤT ĐỐI XỨNG (trái đòi cao hơn hẳn, phải chỉ đòi không thấp hơn) nên mỗi đoạn bằng nhau chỉ còn một đáy, mà đáy đôi thật vẫn đếm đủ hai. **Hai lỗi hiển thị chỉ render thật mới thấy, đọc CSS không thấy được**: (1) `.pftable td` đặt `white-space: nowrap` cho các CỘT SỐ, ngăn kéo chi tiết nằm trong một `td` của chính bảng đó nên THỪA KẾ nowrap — mọi đoạn văn xuôi chạy thành một dòng 1462px trong khung 777px rồi bị cắt cụt, và cái bị cắt đúng là mấy câu nói thật (giá mục tiêu không phải cổng lọc, Finviz thiếu ô nào, kho P/E chưa đủ); (2) sửa xong nowrap thì trên điện thoại 400px vẫn mất nửa phải, vì ngăn chi tiết nằm trong `<td>` nên rộng theo BẢNG (784px) chứ không theo màn hình — với bảng số thì cuộn ngang là đúng (tab Quốc hội làm thế) nhưng với văn xuôi là hỏng, nên ngăn chi tiết ĐƯỢC ĐƯA RA NGOÀI khung cuộn; đo lại: `detailW` 784→350, không phần tử nào tràn khung nhìn ở cả bốn tổ hợp theme × bề ngang. Ba chỗ nói thật cố ý: **giá mục tiêu được HIỆN nhưng không làm cổng** (nó gần như luôn trên giá hiện tại, lấy làm cổng là giao quyền lọc cho sự lạc quan nghề nghiệp của người khác); **vế "rẻ so với chính nó" trả null kèm CÒN THIẾU BAO NHIÊU LẦN ĐỌC** thay vì một phân vị tính trên 4 mẫu, và nó không kéo điểm lên hay xuống trong lúc đó; **điểm thiếu dữ liệu là 0.5 chứ không phải 0** — cho 0 là dựng một bộ lọc NGẦM đẩy mọi mã Finviz cào hụt xuống đáy bảng mà không ai biết. Lỗi hết phiên Schwab được tách riêng chứ không in nguyên `REAUTH_REQUIRED` (cách sửa là bấm kết nối lại, không phải quét lại). Prompt dặn Claude coi tiêu đề tin là DỮ LIỆU, không phải lệnh. 121 khẳng định trong 3 script độc lập. Không biến môi trường mới, không bước deploy (kho P/E ở `.cache/`). Touches page.tsx, i18n.tsx (chỉ thêm khoá), globals.css (chỉ thêm), history.ts (chỉ thêm), README.md; mới lib/support.ts, lib/pehistory.ts, lib/longterm.ts, lib/ltwhy.ts, LongTermPanel.tsx, api/longterm/*.
 - 2026-09-17 — #136 **Chú thích earnings ở tab Analyze hứa một thứ màn hình không hề có.** Chủ app hỏi "coi earning chỗ nào"; đi rà bốn nơi hiện earnings thì lòi ra câu `an.earningsNote` nói sai hai chuyện. Chuyện nhỏ: sau #135 nguồn không còn là MỘT file — `loadEarnings()` HỢP `data/earnings.json` với lịch tastytrade, nên câu cũ nói thiếu đúng một nửa nguồn. **Chuyện nặng hơn là vế thứ hai: "File phân biệt rõ ngày công ty đã công bố với ngày ước tính."** Sự phân biệt ấy có thật nhưng nằm ở chỗ KHÁC — trong `_comment` của file (văn xuôi cho người đọc, không phải dữ liệu theo mã) và trong cờ `estimated` của tastytrade — còn dòng "Earnings kế tiếp" trên màn hình in một NGÀY TRƠ, không mang nhãn nào. Tức chú thích cấp cho người đọc một sự chắc chắn mà thứ họ đang nhìn không hề thể hiện, đúng hình dạng degradation idiom mà repo này cấm, chỉ khác là lần này lời hứa nằm ở chú thích chứ không ở dữ liệu. Câu mới nói thẳng nhãn "ngày ước tính" **chỉ có ở Hard gates bên tab Screener** (nơi #135 thực sự dựng nó), và nói luôn dấu `—` GỘP hai trạng thái: `nextEarnings` là `find(d => d >= today) ?? null` nên mã vắng mặt (chưa biết gì), mã mang mảng rỗng (ETF, đã kiểm và không có) và mã chỉ còn ngày quá khứ đều ra cùng một gạch ngang. **Cố ý KHÔNG sửa bằng cách đẩy cờ `estimated` ra tab Analyze**: làm thế phải sửa route, và việc đó là một thay đổi thật đáng làm riêng chứ không phải đính kèm vào một bản vá chữ. Chỉ i18n.tsx, một khoá.
 
@@ -184,7 +185,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #137. If you're reading this and a
+No PR is currently open and unmerged as of #138. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -1032,6 +1033,75 @@ No new env var and no Render step: the P/E store lives in `.cache/`, which this
 repo already documents as lossy and regenerable. The cost of that is real and
 stated — a deploy resets the P/E history to zero — and it is accepted to avoid
 the `USERS_PATH` trap, since the Finviz half of valuation keeps working.
+
+#### SEC 10-K financials (`src/lib/secfacts.ts`, `companyFacts()` in `sec.ts`, `/api/secprobe`)
+
+Finviz is a **snapshot** (trailing twelve months). It cannot answer the two
+questions that matter most for buy-and-hold money: has revenue / EPS / free
+cash flow grown for several years, and is the share count inflating? SEC's
+XBRL `companyfacts` API answers both — free, keyless, ten years deep — and
+`sec.ts` already had a working client to `data.sec.gov` (User-Agent,
+`padCik()`, rate limiter) from the Form 4 work, so this is an extension of code
+that has run in production, not a new integration. The owner brought a
+"professional long-term screener" document proposing SEC → Alpha Vantage →
+Nasdaq Data Link → AI-scored moat/TAM/risk → three-scenario DCF; this is the
+one piece of it that is free, already wired, and not available from Finviz.
+The rest was declined on the record: paid APIs that re-serve SEC data, LLM-
+produced scores (this repo lets Claude interpret numbers, never produce them),
+and a DCF whose three fair values are three assumptions wearing a suit.
+
+**The shape is unmeasured.** `data.sec.gov` was 403-on-CONNECT from the sandbox
+when this was written, so `secfacts.ts` reads the documented structure
+tolerantly, `secDiagnosis()` prints the real top-level keys, taxonomies, which
+revenue tags exist and one fact's field names when extraction yields nothing,
+and `/api/secprobe?symbol=X` reports taxonomy, tag presence per metric, three
+raw revenue facts verbatim and the parsed annual series — the `/api/uwprobe`
+idiom. Run it once in production and fix the tag ladder against what it says,
+never against memory. It is not `OWNER_ONLY`: SEC data is public and keyless.
+
+**Three known traps in `companyfacts`, each handled and each pinned by a test:**
+
+- **One period appears in several filings.** A 10-K carries the prior two years
+  as comparatives, all tagged with the *filing's* `fy`. Grouping by `fy` counts
+  one year three times. `annualSeries()` groups by `end` and keeps the latest
+  `filed` — which is also how restated figures are absorbed without ever
+  detecting a restatement.
+- **`fp: "FY"` does not mean "full year".** Q4 figures inside a 10-K carry
+  `fp: FY` too. What separates them is duration: `start → end` must be 340–380
+  days. Drop that check and a quarter is silently summed as a year.
+- **One concept, many tags.** Revenue is `Revenues` at one company,
+  `RevenueFromContractWithCustomerExcludingAssessedTax` at another (post ASC
+  606), `SalesRevenueNet` in older filings. Each metric has a tag **ladder**,
+  tried in order, and `tagsUsed` records the winner — the `TOKEN_VARIANTS`
+  try-then-remember shape from tastytrade, applied to XBRL.
+
+`cagr()` takes the **two real points** roughly `k` years apart (±120 days) and
+divides by the actual day gap, so a company missing one annual filing is not
+miscomputed and a two-year series asked for a 5-year CAGR returns `null` rather
+than borrowing two years. A first point ≤ 0 returns `null`: going from a loss
+to a profit is not "−200% growth". The test caught its own assumption here —
+2023-09-30 → 2024-09-30 is 366 days, so a 10% step reads 9.98%; the code was
+right and the test tolerance was wrong.
+
+FCF is `OCF − CapEx` matched by fiscal-year end. A company with OCF but no
+CapEx tag yields an **empty** FCF series, never FCF = OCF; FCF margin is `null`
+unless FCF and revenue share the same year-end.
+
+**Three new gates** — revenue CAGR 3y ≥ 0, latest-FY FCF > 0, diluted share
+count CAGR 3y ≤ 5%/yr — pass-with-`unknown` when SEC has nothing, per the
+standing #131 rule. The dilution gate is the single best idea in the owner's
+document: EPS growth alongside a rising share count is growth being handed to
+new shareholders, and buybacks (negative CAGR) pass freely. The score gained a
+`growth` component (15) and the other four gave ground (25/25/20/15/15). With
+no SEC data all four growth sub-scores are neutral, so `growth` = 7.5 and the
+ranking is undisturbed.
+
+Three reasons for "no SEC data" render as three different sentences because
+they need three different fixes: `no-cik` (ETF, or a ticker missing from SEC's
+directory — nothing to do), `no-data` with the diagnosis string (the tag
+ladder needs a new rung), and a network error (retry next scan). `companyFacts`
+is cached **7 days**, not one: annual figures move only on a new 10-K, and a
+large filer's file is tens of MB.
 
 ### The one background loop (`src/lib/alert-runner.ts`, `alerts.ts`, `notify.ts`)
 

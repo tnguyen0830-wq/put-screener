@@ -6,6 +6,8 @@ import { requireUser } from '@/lib/userstore';
 import { readWatchlist } from '@/lib/watchlist';
 import { historyCandles } from '@/lib/history';
 import { finvizQuote } from '@/lib/finviz';
+import { ciksFor, companyFacts } from '@/lib/sec';
+import { secDiagnosis, secFundamentals, type SecFundamentals } from '@/lib/secfacts';
 import { peContext, recordPe, flushPe } from '@/lib/pehistory';
 import { pivotLows, readSupport, readTrend, supportZones } from '@/lib/support';
 import {
@@ -34,7 +36,10 @@ export const dynamic = 'force-dynamic';
  *    Đây là tầng cắt mạnh nhất và rẻ nhất - phần lớn rổ chết ở đây.
  *  Tầng 1 - một request nến mỗi mã sống sót, có cache theo ngày. Dựng vùng
  *    hỗ trợ và độ dốc SMA200, lọc tiếp bằng hai cổng đó.
- *  Tầng 2 - một lần cào Finviz mỗi mã còn lại. Cơ bản và định giá.
+ *  Tầng 2 - một lần cào Finviz + một file `companyfacts` của SEC mỗi mã còn
+ *    lại, gọi song song. Finviz cho bội số và giá mục tiêu (ảnh chụp ttm);
+ *    SEC cho chuỗi 10-K nhiều năm - doanh thu/EPS/FCF có tăng không, số cổ
+ *    phiếu có phình không. SEC cache 7 ngày nên chỉ lần đầu là tốn.
  *
  * Trả về NDJSON để bảng hiện dần từng dòng thay vì ngồi nhìn màn hình trắng,
  * cùng kiểu với /api/screen.
@@ -150,21 +155,56 @@ export async function GET(req: NextRequest) {
           }
         });
 
-        /* ---- tầng 2: Finviz (đắt nhất, ít mã nhất) ---- */
+        /* ---- tầng 2: Finviz + SEC (đắt nhất, ít mã nhất) ---- */
         send({ type: 'phase', phase: 'fundamentals', total: tier2.length });
         const rows: LtCandidate[] = [];
         let done2 = 0;
+
+        /* Một lần tra danh bạ CIK cho cả tầng (danh bạ cache 1 ngày). Mã
+           không có CIK - ETF, hoặc chưa có trong file SEC - được NÓI RA là
+           `no-cik`, không lặng lẽ thành "SEC không có gì". */
+        let ciks: Record<string, string> = {};
+        let cikMissing = new Set<string>();
+        try {
+          const r = await ciksFor(tier2.map((t) => t.c.symbol));
+          ciks = r.found;
+          cikMissing = new Set(r.missing);
+        } catch (e: any) {
+          /* Danh bạ hỏng thì cả tầng chạy không có SEC, với lý do thật trên
+             từng dòng - không phải chết cả lượt quét. */
+          for (const t of tier2) cikMissing.add(t.c.symbol);
+          send({ type: 'skip', symbol: '*', reason: `cik-map: ${String(e?.message ?? e).slice(0, 100)}` });
+        }
+
+        /* Số 10-K của một mã. Trả về cả LÝ DO khi không có, vì "SEC không
+           trả lời" và "SEC trả lời mà không có doanh thu cả năm" cần hai
+           cách sửa khác nhau (mạng vs thang thẻ), và cả hai khác "ETF". */
+        const secFor = async (symbol: string): Promise<{ sec: SecFundamentals | null; reason: string | null }> => {
+          if (cikMissing.has(symbol) || !ciks[symbol]) return { sec: null, reason: 'no-cik' };
+          try {
+            const raw = await companyFacts(ciks[symbol]);
+            const f = secFundamentals(raw);
+            if (!f.revenue.length) return { sec: null, reason: `no-data: ${secDiagnosis(raw)}`.slice(0, 400) };
+            return { sec: f, reason: null };
+          } catch (e: any) {
+            return { sec: null, reason: String(e?.message ?? e).slice(0, 200) };
+          }
+        };
         /* Song song 3 thôi: đây là trang web của người ta, không phải API có
            hạn mức công bố. Nhanh hơn nữa cũng chẳng để làm gì khi tầng này
            chỉ còn vài chục mã. */
         await pooled(tier2, 3, async ({ c, support, trend }) => {
           try {
-            const fv = await finvizQuote(c.symbol);
+            /* Finviz và SEC là hai host khác nhau - chạy song song, và một
+               bên hỏng không kéo bên kia: SEC hỏng thì ba cổng SEC ra `?`,
+               Finviz hỏng thì ném lỗi như trước (không có Finviz thì không
+               có định giá, mã không xét được). */
+            const [fv, secRes] = await Promise.all([finvizQuote(c.symbol), secFor(c.symbol)]);
             const { fa, missing } = parseFundamentals(fv.metrics);
             if (fa.pe !== null) await recordPe(c.symbol, fa.pe);
             const pe = await peContext(c.symbol, fa.pe);
 
-            const input = { price: c.price, trend, support, fa };
+            const input = { price: c.price, trend, support, fa, sec: secRes.sec };
             const gates = gatesFor(input);
             if (gates.some((g) => !g.passed)) return;
 
@@ -182,6 +222,8 @@ export async function GET(req: NextRequest) {
               fa,
               faMissing: missing,
               pe,
+              sec: secRes.sec,
+              secReason: secRes.reason,
               targetUpsidePct:
                 fa.targetPrice && c.price > 0
                   ? ((fa.targetPrice - c.price) / c.price) * 100

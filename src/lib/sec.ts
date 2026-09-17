@@ -263,3 +263,35 @@ export function form4sSince(filings: Filing[], days: number, now = Date.now()): 
       Date.parse(f.filingDate + 'T00:00:00Z') >= cutoff
   );
 }
+
+/* ---------------- XBRL companyfacts (tab Đầu tư dài hạn) ----------------
+ *
+ * Toàn bộ số liệu XBRL SEC đã trích từ 10-K/10-Q của một công ty, một file
+ * JSON mỗi CIK. File của một công ty lớn nặng hàng chục MB và chứa hàng trăm
+ * thẻ; phần bóc tách nằm ở secfacts.ts, đây chỉ là lấy-và-cache.
+ *
+ * Cache 7 NGÀY, không phải 1 ngày như danh bạ CIK: số cả năm chỉ đổi khi có
+ * 10-K mới (một lần/năm) hoặc 10-K/A, còn 10-Q hằng quý không thêm điểm nào
+ * vào chuỗi cả năm. Lấy lại mỗi ngày là tốn hàng chục MB cho không gì cả.
+ */
+const FACTS_DIR = path.resolve('./.cache/secfacts');
+const FACTS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export async function companyFacts(cik: string | number): Promise<any> {
+  const padded = padCik(cik);
+  const file = path.join(FACTS_DIR, `${padded}.json`);
+  try {
+    const cached = JSON.parse(await fs.readFile(file, 'utf8'));
+    if (cached && Date.now() - Number(cached.at) < FACTS_TTL_MS) return cached.data;
+  } catch {
+    /* cache miss */
+  }
+  const data = await getJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${padded}.json`);
+  try {
+    await fs.mkdir(FACTS_DIR, { recursive: true });
+    await fs.writeFile(file, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* Ghi cache hỏng thì lần sau gọi lại; không được làm chết lượt quét. */
+  }
+  return data;
+}

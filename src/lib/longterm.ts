@@ -1,4 +1,5 @@
 import type { PeContext } from './pehistory';
+import type { SecFundamentals } from './secfacts';
 import type { SupportRead, SupportZone, TrendRead } from './support';
 
 /**
@@ -98,6 +99,8 @@ export const MIN_ABOVE_52W_LOW_PCT = 5;
 export const MIN_OFF_HIGH_PCT = 10;
 /** Trần P/E dự phóng. Cùn nhưng thành thật - xem chú thích ở `gatesFor`. */
 export const MAX_FORWARD_PE = 30;
+/** Số cổ phiếu tăng quá ngần này %/năm (CAGR 3 năm) là pha loãng NẶNG. */
+export const MAX_DILUTION_PCT = 5;
 
 export type LtGate = {
   key: string;
@@ -112,6 +115,9 @@ export type LtInput = {
   trend: TrendRead;
   support: SupportRead;
   fa: LtFundamentals;
+  /** null = chưa hỏi SEC hoặc SEC không có gì cho mã này (ETF, công ty
+   *  nước ngoài dùng IFRS). Ba cổng SEC ra `unknown` khi null. */
+  sec?: SecFundamentals | null;
 };
 
 /**
@@ -134,7 +140,7 @@ export type LtInput = {
  * P/E so với CHÍNH mã đó gánh (cột riêng, và một phần điểm số).
  */
 export function gatesFor(input: LtInput): LtGate[] {
-  const { price, trend, support, fa } = input;
+  const { price, trend, support, fa, sec } = input;
 
   const slope = trend.sma200SlopePct;
   const nearest = support.nearest;
@@ -179,6 +185,31 @@ export function gatesFor(input: LtInput): LtGate[] {
       passed: fa.forwardPe === null ? true : fa.forwardPe > 0 && fa.forwardPe <= MAX_FORWARD_PE,
       unknown: fa.forwardPe === null,
     },
+    /* Ba cổng từ SEC 10-K - thứ Finviz (ảnh chụp ttm) không trả lời được.
+       Cả ba đọc CHUỖI NHIỀU NĂM, nên "chưa biết" ở đây nghĩa là SEC không có
+       đủ năm (công ty mới niêm yết, IFRS, ETF) - và vẫn đi qua với cờ, đúng
+       luật chung. */
+    {
+      key: 'revenueTrend',
+      label: 'Doanh thu không co lại (CAGR 3 năm ≥ 0, theo 10-K)',
+      passed: sec?.revenueCagr3 == null ? true : sec.revenueCagr3 >= 0,
+      unknown: sec?.revenueCagr3 == null,
+    },
+    {
+      key: 'fcfPositive',
+      label: 'Dòng tiền tự do dương năm gần nhất (OCF − CapEx, theo 10-K)',
+      passed: sec?.fcfLatest == null ? true : sec.fcfLatest > 0,
+      unknown: sec?.fcfLatest == null,
+    },
+    {
+      /* Đây là ý hay nhất trong tài liệu chủ app đưa: EPS tăng mà số cổ phiếu
+         cũng tăng mạnh thì EPS "tăng" đó là của ai? Mua lại ra CAGR ÂM và
+         đi qua thoải mái. */
+      key: 'dilution',
+      label: `Không pha loãng nặng (số cổ phiếu tăng ≤ ${MAX_DILUTION_PCT}%/năm, 3 năm)`,
+      passed: sec?.sharesCagr3 == null ? true : sec.sharesCagr3 <= MAX_DILUTION_PCT,
+      unknown: sec?.sharesCagr3 == null,
+    },
   ];
 }
 
@@ -189,11 +220,16 @@ export type LtScoreParts = {
   quality: number;
   value: number;
   trend: number;
+  /** Tăng trưởng nhiều năm theo 10-K: doanh thu, EPS, FCF, và pha loạng. */
+  growth: number;
 };
 
 /* Tổng 100. Đây là quyết định sản phẩm, không phải công thức suy ra được -
-   cùng tinh thần với bảng trọng số của Screener trong README. */
-const W = { support: 30, quality: 30, value: 25, trend: 15 };
+   cùng tinh thần với bảng trọng số của Screener trong README.
+   Bản đầu (#137) là 30/30/25/15 không có growth; nối SEC vào thì tăng trưởng
+   nhiều năm là thứ ĐÁNG ĐIỂM nhất cho tiền dài hạn, nên nó lấy 15 và bốn
+   phần kia mỗi phần nhường một ít. */
+const W = { support: 25, quality: 25, value: 20, trend: 15, growth: 15 };
 
 /**
  * Chuẩn hoá về 0..1, và THIẾU DỮ LIỆU RA 0.5 CHỨ KHÔNG RA 0.
@@ -232,15 +268,27 @@ export function scoreComponents(input: LtInput, pe: PeContext | null): LtScorePa
   const trendScore =
     (band(trend.sma200SlopePct, 15, 0) + band(trend.aboveLowPct, 40, MIN_ABOVE_52W_LOW_PCT)) / 2;
 
+  /* Không có SEC thì cả bốn vế ra 0.5 -> growth = 7.5, trung tính. Doanh thu
+     +15%/năm là đầy điểm; EPS +20%; FCF margin 20%; pha loãng: mua lại -3%/năm
+     là đầy, +5%/năm là hết điểm (trùng ngưỡng cổng). */
+  const sec = input.sec ?? null;
+  const growth =
+    (band(sec?.revenueCagr3 ?? null, 15, 0) +
+      band(sec?.epsCagr3 ?? null, 20, 0) +
+      band(sec?.fcfMarginLatest ?? null, 20, 0) +
+      band(sec?.sharesCagr3 ?? null, -3, MAX_DILUTION_PCT)) / 4;
+
   return {
     support: (proximity * 0.7 + strength * 0.3) * W.support,
     quality: quality * W.quality,
     value: value * W.value,
     trend: trendScore * W.trend,
+    growth: growth * W.growth,
   };
 }
 
-export const scoreOf = (p: LtScoreParts) => p.support + p.quality + p.value + p.trend;
+export const scoreOf = (p: LtScoreParts) =>
+  p.support + p.quality + p.value + p.trend + p.growth;
 
 export type LtCandidate = {
   symbol: string;
@@ -258,6 +306,11 @@ export type LtCandidate = {
   faMissing: string[];
   pe: PeContext | null;
   targetUpsidePct: number | null;
+  /** Số liệu 10-K từ SEC. null kèm `secReason` nói vì sao. */
+  sec: SecFundamentals | null;
+  /** 'no-cik' (ETF / không có trong danh bạ SEC) · 'no-data' (có CIK nhưng
+   *  không bóc được doanh thu cả năm - kèm secDiagnosis) · lỗi mạng thật. */
+  secReason: string | null;
   gates: LtGate[];
   score: number;
   scoreBreakdown: LtScoreParts;
