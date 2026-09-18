@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 
 /* Hình dạng khớp với LtCandidate của src/lib/longterm.ts. Khai báo lại ở đây
@@ -69,10 +69,52 @@ export default function LongTermPanel() {
   const [scannedAt, setScannedAt] = useState<string | null>(null);
   const [summary, setSummary] = useState<{ scanned: number; kept: number } | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  /* Bảng đang hiện đến từ kho chứ không phải từ lượt quét vừa rồi. Phải nói
+     ra: một bảng số nhìn y hệt nhau dù nó là số sống hay ảnh chụp bốn tiếng
+     trước. Cùng lý do `res.saved` của tab Screener. */
+  const [restored, setRestored] = useState(false);
   const openRow = rows.find((r) => r.symbol === open) ?? null;
 
+  /* Ref chứ không phải state `running`: hàm nạp lại chạy bất đồng bộ, và cái
+     nó cần biết là "ĐẾN LÚC NÀY đã có lượt quét mới chưa", chứ không phải
+     giá trị `running` lúc effect được tạo. Đọc state cũ ở đây sẽ đè kết quả
+     đang quét bằng ảnh chụp cũ. */
+  const runningRef = useRef(false);
+
+  /* Mở tab lên là có ngay kết quả lần quét trước, và chạy lại mỗi khi đổi
+     phạm vi vì hai phạm vi lưu riêng: gạt từ watchlist sang cả rổ mà vẫn
+     thấy bảng của watchlist là đọc nhầm kết quả. Không có bản lưu thì XOÁ
+     bảng - giữ lại bảng của phạm vi kia dưới cái nút đang sáng của phạm vi
+     này là nói dối một cách im lặng. */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/longterm/last?universe=${universe}`, { cache: 'no-store' });
+        const j = await res.json();
+        if (!alive || runningRef.current) return;
+        if (j.scan) {
+          setRows(j.scan.rows ?? []);
+          setScannedAt(j.scan.at ?? null);
+          setSummary({ scanned: j.scan.scanned, kept: j.scan.kept });
+          setRestored(true);
+        } else {
+          setRows([]); setScannedAt(null); setSummary(null); setRestored(false);
+          /* Đọc kho HỎNG khác hẳn CHƯA QUÉT LẦN NÀO: một bên sửa ở đĩa,
+             một bên chỉ cần bấm quét. */
+          if (j.error) setErr(j.error);
+        }
+      } catch {
+        /* Không hỏi được thì coi như chưa có gì - nút quét vẫn dùng được. */
+      }
+    })();
+    return () => { alive = false; };
+  }, [universe]);
+
   const scan = useCallback(async () => {
+    runningRef.current = true;
     setRunning(true); setErr(null); setRows([]); setSummary(null);
+    setRestored(false); setScannedAt(null); setOpen(null);
     setPhase('quotes'); setProg(null);
     try {
       const res = await fetch(`/api/longterm?universe=${universe}`, { cache: 'no-store' });
@@ -100,6 +142,7 @@ export default function LongTermPanel() {
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally {
+      runningRef.current = false;
       setRunning(false); setPhase(null); setProg(null);
     }
   }, [universe]);
@@ -145,6 +188,13 @@ export default function LongTermPanel() {
           {t('lt.summary', { scanned: summary.scanned, kept: summary.kept })}
           {scannedAt ? ` · ${new Date(scannedAt).toLocaleString()}` : ''}
         </p>
+      )}
+
+      {/* Ảnh chụp, không phải giá sống - và câu này phải là CẢNH BÁO chứ
+          không phải chú thích mờ, vì thứ nó cảnh báo (giá đã cũ) không có
+          dấu hiệu nào khác trên màn hình. */}
+      {restored && scannedAt && !running && (
+        <p className="hint hint-warn">{t('lt.saved', Date.parse(scannedAt))}</p>
       )}
 
       {/* Nói thẳng cái bảng này KHÔNG nói được, trước khi người đọc kịp suy ra

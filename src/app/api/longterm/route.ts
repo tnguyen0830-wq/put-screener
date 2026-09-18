@@ -9,6 +9,7 @@ import { finvizQuote } from '@/lib/finviz';
 import { ciksFor, companyFacts } from '@/lib/sec';
 import { secDiagnosis, secFundamentals, type SecFundamentals } from '@/lib/secfacts';
 import { peContext, recordPe, flushPe } from '@/lib/pehistory';
+import { saveLtScan } from '@/lib/lt-store';
 import { pivotLows, readSupport, readTrend, supportZones } from '@/lib/support';
 import {
   gatesFor,
@@ -45,12 +46,16 @@ export const dynamic = 'force-dynamic';
  * cùng kiểu với /api/screen.
  *
  * KHÁC /api/screen một điểm, và nói ra để người sau không tưởng là bỏ sót:
- * lần quét này KHÔNG có bộ máy job chạy nền. Lý do là chi phí khác hẳn -
- * quét put mất 4-8 phút nên đóng tab giữa chừng là mất trắng, còn lần quét
- * này bị chặn trên bởi tầng 0 và mọi thứ đắt đều được cache theo ngày, nên
- * lần chạy thứ hai gần như tức thì. Cái duy nhất mất khi đóng tab sớm là
- * dòng P/E của hôm nay - nên nó được GHI NGAY sau tầng 2, trước khi phát
- * kết quả ra, chứ không để tới cuối.
+ * lần quét này KHÔNG có bộ máy job chạy nền. Đóng tab GIỮA CHỪNG vẫn mất
+ * lượt quét, và đó là đánh đổi có ý thức: quét put mất 4-8 phút nên đáng
+ * một bộ máy job, còn lượt này bị chặn trên bởi tầng 0 và mọi thứ đắt đều
+ * cache theo ngày nên chạy lại rẻ hơn hẳn.
+ *
+ * Nhưng kết quả ĐÃ QUÉT XONG thì được LƯU (`lt-store.ts`), và #137 bỏ sót
+ * đúng chỗ đó: cache theo ngày chỉ làm rẻ phần mạng, người dùng vẫn phải
+ * bấm quét lại và ngồi nhìn ba tầng chạy hết. Ghi kho P/E và lưu kết quả
+ * đều nằm TRƯỚC khi phát dòng nào ra: tới đây mọi thứ đắt đã xong, nên
+ * client ngắt giữa lúc đang đọc bảng cũng không làm mất lượt quét.
  */
 
 type Event =
@@ -244,13 +249,23 @@ export async function GET(req: NextRequest) {
         await flushPe();
 
         rows.sort((a, b) => b.score - a.score);
+        const at = new Date().toISOString();
+
+        /* Lưu cũng TRƯỚC khi phát, cùng một lý do: từ đây trở đi mọi việc
+           đắt đã làm xong, nên một client ngắt kết nối không được phép làm
+           mất lượt quét vừa chạy. Lưu hỏng thì nói ra thành một dòng skip
+           chứ không ném - mất chỗ lưu không đáng làm hỏng bảng đang có. */
+        try {
+          await saveLtScan(
+            { universe, at, scanned: list.length, kept: rows.length, rows },
+            user
+          );
+        } catch (e: any) {
+          send({ type: 'skip', symbol: '*', reason: `save: ${String(e?.message ?? e).slice(0, 100)}` });
+        }
+
         for (const row of rows) send({ type: 'candidate', row });
-        send({
-          type: 'done',
-          scanned: list.length,
-          kept: rows.length,
-          at: new Date().toISOString(),
-        });
+        send({ type: 'done', scanned: list.length, kept: rows.length, at });
       } catch (e: any) {
         const msg = String(e?.message ?? e);
         send({ type: 'error', message: msg.slice(0, 400) });
