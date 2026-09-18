@@ -96,7 +96,7 @@ function toSeries(r: ChartableRaw): Series {
   };
 }
 
-async function chartableSeries(): Promise<Series[]> {
+async function chartableSeries(): Promise<{ series: Series[]; q: Record<string, any> }> {
   /* Con số đầu thẻ đọc từ `/quotes` `lastPrice` - ĐÚNG trường thanh ticker
      (`/api/tape`) đang in trên cùng màn hình - chứ không phải giá đóng của
      nến 5 phút cuối. Chủ app đo được hai con số "chưa khớp" khi thẻ lấy
@@ -107,7 +107,9 @@ async function chartableSeries(): Promise<Series[]> {
      phiên) thì rơi về giá đóng nến và NÓI RA qua `currentSource`. */
   const [raw, q] = await Promise.all([
     Promise.all(CHARTABLE.map(fetchChartable)),
-    quotes(CHARTABLE.map((c) => c.symbol)).catch((e) => {
+    // Cùng MỘT request quotes lấy luôn hai mã NASDAQ volume cho badge tỉ lệ
+    // (#180) - chúng không có nến nên không nằm trong CHARTABLE.
+    quotes([...CHARTABLE.map((c) => c.symbol), ...NASDAQ_VOLUME_SYMBOLS]).catch((e) => {
       if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
       return {} as Record<string, any>;
     }),
@@ -145,14 +147,21 @@ async function chartableSeries(): Promise<Series[]> {
     });
   }
 
-  return out;
+  return { series: out, q };
 }
 
 /* ------------------------------------------------------------------ *
- *  Ba chỉ báo tự lấy mẫu.
+ *  Các chỉ báo tự lấy mẫu.
  * ------------------------------------------------------------------ */
 
-const SAMPLED_SYMBOLS = ['$TICKQ', '$ADV', '$DECL', '$PCCE'];
+/* `$UVOLQ`/`$DVOLQ` thêm ở #180: probe #178 đo được cả hai QUOTE ĐƯỢC
+   (`lastPrice`, assetMainType EQUITY) nhưng `candleCount: 0` - cùng lớp với
+   $TICKQ/$ADV/$DECL/$PCCE: chỉ có con số hiện tại, nên tự lấy mẫu. Cách viết
+   `$UVOL.NQ`/`UVOLQ` bị Schwab liệt vào invalidSymbols. Chú ý: `DVOL` và
+   `DECN` trần cũng "quote được" nhưng mang `lastMICId` - đó là CỔ PHIẾU trùng
+   tên, không phải chỉ báo; thang `$X` đứng trước là đúng. */
+const SAMPLED_SYMBOLS = ['$TICKQ', '$ADV', '$DECL', '$PCCE', '$UVOLQ', '$DVOLQ'];
+export const NASDAQ_VOLUME_SYMBOLS = ['$UVOLQ', '$DVOLQ'] as const;
 
 type StoredPoint = {
   t: number;
@@ -163,6 +172,8 @@ type StoredPoint = {
   /** Put/Call toàn thị trường từ UW - endpoint chỉ trả ảnh chụp luỹ kế của
    *  hôm nay (1 dòng), nên muốn có đường thì phải tự lấy mẫu như ba cái trên. */
   pccTotal: number | null;
+  /** NASDAQ up volume − down volume, từ hai quote `$UVOLQ`/`$DVOLQ` (#180). */
+  uvolDvolNasdaq?: number | null;
 };
 type Store = { date: string; points: StoredPoint[] };
 
@@ -208,6 +219,7 @@ export async function sampleInternals(now = new Date()): Promise<void> {
   const decl = numField(q, '$DECL');
   const pccEquity = numField(q, '$PCCE');
   const advDeclNyse = diffOrNull(adv, decl);
+  const uvolDvolNasdaq = diffOrNull(numField(q, '$UVOLQ'), numField(q, '$DVOLQ'));
 
   /* Hai nguồn phụ, hỏng ĐỘC LẬP với nhau và với Schwab: UW chết không được
      làm mất mẫu TICK/ADV-DECL vừa lấy được, và ngược lại. Một lượt lấy mẫu
@@ -223,7 +235,7 @@ export async function sampleInternals(now = new Date()): Promise<void> {
   const day = tradingDay(now);
   let store = await readStore();
   if (store.date !== day) store = { date: day, points: [] };
-  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity, avgIvRank, pccTotal });
+  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity, avgIvRank, pccTotal, uvolDvolNasdaq });
   await writeStore(store);
 }
 
@@ -248,7 +260,7 @@ function sampledSeries(store: Store): Series[] {
   const build = (
     key: string,
     label: string,
-    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity' | 'avgIvRank' | 'pccTotal'
+    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity' | 'avgIvRank' | 'pccTotal' | 'uvolDvolNasdaq'
   ): Series => {
     // typeof, không phải !== null: điểm cũ lưu trước khi trường này tồn tại
     // (ví dụ avgIvRank) đọc ra `undefined`, và `undefined !== null` là true -
@@ -269,6 +281,7 @@ function sampledSeries(store: Store): Series[] {
   return [
     build('nasdaqTick', 'NASDAQ TICK', 'tickNasdaq'),
     build('advDeclNyse', 'NYSE ADV − DECL', 'advDeclNyse'),
+    build('uvolDvolDiffQ', 'NASDAQ UVOL − DVOL', 'uvolDvolNasdaq'),
     build('pccEquity', 'Put/Call Ratio (Equity)', 'pccEquity'),
     build('pccTotal', 'Put/Call Ratio (Total, UW)', 'pccTotal'),
     build('avgIvRank', 'IV Rank trung bình (tastytrade)', 'avgIvRank'),
@@ -347,10 +360,11 @@ export type Internals = {
   unavailable: Unavailable[];
   /** Sàn đang trong phiên 09:30–16:00 New York không (ngày lễ không xét). */
   marketOpen: boolean;
-  /** Tỉ lệ khối lượng tăng/giảm NYSE (UVOL:DVOL), quy ước "-2.94:1" của
-   *  trang mẫu. NASDAQ KHÔNG có: `$UVOLQ`/`$DVOLQ` chưa được đo ở Schwab
-   *  (#165 chỉ đo bốn mã), nên không bịa một badge thứ hai. */
+  /** Tỉ lệ khối lượng tăng/giảm (UVOL:DVOL), quy ước "-2.94:1" của trang
+   *  mẫu - NYSE từ nến+quote, NASDAQ từ quote `$UVOLQ`/`$DVOLQ` (đo #178:
+   *  quote được, không có nến). Cả hai là quote SỐNG lúc mở trang. */
   nyseUpDown: number | null;
+  nasdaqUpDown: number | null;
   tables: InternalsTables;
 };
 
@@ -370,10 +384,10 @@ export async function marketInternals(now = new Date()): Promise<Internals> {
      báo giá, cache 60s chung với bản đồ nhiệt) hỏng cũng không kéo bốn nến
      theo. Riêng REAUTH_REQUIRED của Schwab vẫn phải nổi lên thành 401 thật
      (xem chartableSeries), nên nhánh đó KHÔNG bị nuốt ở đây. */
-  const [chartSettled, store, tideSettled, tables] = await Promise.all([
+  const [chart, store, tideSettled, tables] = await Promise.all([
     chartableSeries().catch((e) => {
       if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
-      return [] as Series[];
+      return { series: [] as Series[], q: {} as Record<string, any> };
     }),
     readStore(),
     // marketTideSeries tự bắt lỗi thành một chuỗi rỗng KÈM lý do, nên
@@ -382,6 +396,7 @@ export async function marketInternals(now = new Date()): Promise<Internals> {
     breadthTables(),
   ]);
 
+  const chartSettled = chart.series;
   const uvol = chartSettled.find((s) => s.key === 'nyseUvol');
   const dvol = chartSettled.find((s) => s.key === 'nyseDvol');
 
@@ -390,6 +405,7 @@ export async function marketInternals(now = new Date()): Promise<Internals> {
     unavailable: UNAVAILABLE,
     marketOpen: sessionOpenAt(now),
     nyseUpDown: upDownRatio(uvol?.current ?? null, dvol?.current ?? null),
+    nasdaqUpDown: upDownRatio(numField(chart.q, '$UVOLQ'), numField(chart.q, '$DVOLQ')),
     tables,
   };
 }

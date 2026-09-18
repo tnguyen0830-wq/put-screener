@@ -80,7 +80,7 @@ const tv = (symbol: string): Source => ({ id: `tv:${symbol}`, kind: 'tv', symbol
 const app = (series: string): Source => ({ id: `app:${series}`, kind: 'app', series });
 
 const BOXES: Box[] = [
-  { key: 'uvolDvol', label: 'NYSE UVOL − DVOL', sources: [app('uvolDvolDiff'), tv('USI:VOLD'), tv('USI:UVOL-USI:DVOL')], interval: '15', style: '1' },
+  { key: 'uvolDvol', label: 'NYSE UVOL − DVOL', sources: [app('uvolDvolDiff'), tv('USI:VOLD'), tv('USI:UVOL-USI:DVOL'), app('uvolDvolDiffQ')], interval: '15', style: '1' },
   { key: 'advDecl', label: 'NYSE $ADV − $DECL', sources: [tv('USI:ADD'), tv('USI:ADV-USI:DECL'), app('advDeclNyse')], interval: '5', style: '2' },
   { key: 'advDeclQ', label: 'NASDAQ $ADVQ − $DECLQ', sources: [tv('USI:ADDQ'), tv('USI:ADVQ-USI:DECLQ')], interval: '5', style: '2' },
   { key: 'pcc', label: 'Put/Call Ratio', sources: [tv('USI:PCC'), app('pccTotal')], interval: '5', style: '2' },
@@ -203,7 +203,9 @@ function AppSlot({ load, series, label, t, badge }: { load: Load; series: string
       </div>
     );
   }
-  return <Card s={{ ...s, label }} t={t} tall badge={badge} className="tvcard tvcard-app" />;
+  /* Nhãn của CHÍNH chuỗi, không phải nhãn ô: ô "NYSE UVOL − DVOL" có nút
+     đổi sang chuỗi NASDAQ (#180), giữ nhãn ô là in "NYSE" lên số NASDAQ. */
+  return <Card s={s} t={t} tall badge={badge} className="tvcard tvcard-app" />;
 }
 
 export default function TradingViewInternals({ load, t }: { load: Load; t: (k: string, ...a: any[]) => string }) {
@@ -211,15 +213,19 @@ export default function TradingViewInternals({ load, t }: { load: Load; t: (k: s
   const theme = useResolvedTheme();
   const { chosen, choose } = useChosenSources();
 
-  const ratio = load.state === 'ok' ? load.data.nyseUpDown : null;
+  const nyse = load.state === 'ok' ? load.data.nyseUpDown : null;
+  const nasd = load.state === 'ok' ? load.data.nasdaqUpDown : null;
+  const badge = (r: number | null, mkt: string) => (
+    <span className={r === null ? 'tvbadge tvbadge-muted' : 'tvbadge'} style={r === null ? undefined : { color: r >= 0 ? 'var(--credit)' : 'var(--risk)' }}>
+      {fmtRatio(r)} {mkt}
+    </span>
+  );
+  /* NASDAQ từ quote $UVOLQ/$DVOLQ (đo #178: quote được, không có nến) -
+     null (Schwab không trả) in "—:1", không in một con số đoán. */
   const ratioBadge = (
     <span className="tvbadges">
-      <span className="tvbadge" style={ratio === null ? undefined : { color: ratio >= 0 ? 'var(--credit)' : 'var(--risk)' }}>
-        {fmtRatio(ratio)} NYSE
-      </span>
-      {/* NASDAQ up/down volume: $UVOLQ/$DVOLQ CHƯA ĐO ở Schwab (#165 chỉ
-          đo bốn mã) - một badge trống có nhãn thật hơn một badge bịa. */}
-      <span className="tvbadge tvbadge-muted">{t('int.nasdaqRatioUnknown')}</span>
+      {badge(nyse, 'NYSE')}
+      {badge(nasd, 'NASD')}
     </span>
   );
 
