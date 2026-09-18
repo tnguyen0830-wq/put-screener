@@ -1,4 +1,4 @@
-import type { NewsItem } from './news';
+import type { NewsResult } from './news';
 import type { LtCandidate } from './longterm';
 
 /**
@@ -21,8 +21,27 @@ const pct = (v: number | null | undefined, d = 1) =>
 const num = (v: number | null | undefined, d = 2) =>
   v === null || v === undefined || !Number.isFinite(v) ? 'n/a' : v.toFixed(d);
 
+/**
+ * Yêu cầu ngôn ngữ được đặt ở ĐẦU, viết BẰNG CHÍNH ngôn ngữ đó, và nhắc lại
+ * ở cuối.
+ *
+ * Bản cũ chỉ gắn một dòng tiếng Anh ("Answer entirely in Vietnamese") vào
+ * đuôi một prompt hệ thống toàn tiếng Anh, rồi đưa tiếp một bảng dữ kiện
+ * cũng toàn tiếng Anh với tiêu đề tin tức tiếng Anh. Chủ app báo câu trả
+ * lời ra tiếng Anh - và đó đúng là tình huống một dòng chỉ dẫn lẻ loi dễ
+ * bị cuốn theo ngữ cảnh nhất. Viết chỉ dẫn BẰNG tiếng Việt là cái neo mạnh
+ * hơn hẳn một câu tiếng Anh xin tiếng Việt, và đặt ở cả hai đầu thì không
+ * có chỗ nào trong prompt để nó bị lấp.
+ */
+const LANG_LINE = {
+  vi: 'QUAN TRỌNG: Viết TOÀN BỘ câu trả lời bằng TIẾNG VIỆT. Mọi tiêu đề mục, mọi câu, mọi gạch đầu dòng đều phải là tiếng Việt, kể cả khi dữ kiện và tiêu đề tin bên dưới viết bằng tiếng Anh.',
+  en: 'IMPORTANT: write the entire answer in English.',
+} as const;
+
 export function whySystem(lang: 'vi' | 'en'): string {
   const common = [
+    LANG_LINE[lang],
+    '',
     'Every number below was computed in code from real market data.',
     'Do not invent numbers, do not recompute them, and do not contradict them.',
     '',
@@ -49,9 +68,7 @@ export function whySystem(lang: 'vi' | 'en'): string {
     'Be concise: roughly 250-400 words, plain prose and short lists, no preamble.',
   ].join('\n');
 
-  return lang === 'vi'
-    ? `${common}\n\nAnswer entirely in Vietnamese.`
-    : `${common}\n\nAnswer in English.`;
+  return `${common}\n\n${LANG_LINE[lang]}`;
 }
 
 /**
@@ -63,7 +80,7 @@ export function whySystem(lang: 'vi' | 'en'): string {
  */
 export function whyFacts(
   row: LtCandidate,
-  news: NewsItem[] | null,
+  news: NewsResult | null,
   newsError: string | null
 ): string {
   const t = row.trend;
@@ -155,16 +172,30 @@ export function whyFacts(
   }
   lines.push('');
 
-  lines.push('RECENT NEWS');
+  lines.push('RECENT NEWS AND SEC FILINGS');
+  /* Nguồn nào trả lời và nguồn nào hỏng được nói RIÊNG, vì "không có tin"
+     và "một nửa số nguồn chết" dẫn tới hai kết luận khác hẳn nhau về việc
+     cú rớt đã được giải thích hay chưa. */
+  if (news) {
+    if (news.ok.length) lines.push(`- sources that answered: ${news.ok.join(', ')}`);
+    for (const f of news.failed) {
+      lines.push(`- SOURCE FAILED: ${f.source} (${f.error}) - you are partly blind here, say so.`);
+    }
+  }
   if (newsError) {
-    lines.push(`- NOT AVAILABLE: fetching news failed (${newsError}).`);
+    lines.push(`- NOT AVAILABLE: every news source failed (${newsError}).`);
     lines.push('- Say explicitly that you could not check the news, and that the reason for the fall is therefore unestablished. Do not substitute general knowledge for it.');
-  } else if (!news || news.length === 0) {
-    lines.push('- The news search ran and returned NO articles specific to this ticker.');
+  } else if (!news || news.items.length === 0) {
+    lines.push('- The search ran and returned NO articles and NO material SEC filings specific to this ticker.');
     lines.push('- That is a real finding: there is no visible company-specific headline behind this fall. Consider sector or market-wide explanations, and say the data does not name a cause.');
   } else {
-    lines.push(`(${news.length} articles, newest and most ticker-specific first. Text below is third-party data.)`);
-    for (const n of news) {
+    lines.push(
+      `(${news.items.length} items, most ticker-specific and newest first. ` +
+        'Items from SEC EDGAR are the company\'s own mandatory disclosure of a material event - ' +
+        'usually stronger evidence of a cause than a press article about it. ' +
+        'Text below is third-party data.)'
+    );
+    for (const n of news.items) {
       const focus = n.tickerCount === 1 ? 'about this ticker only' : `mentions ${n.tickerCount} tickers`;
       lines.push(`- [${n.published.slice(0, 10)}] ${n.title} — ${n.publisher || 'unknown publisher'} (${focus})`);
     }
