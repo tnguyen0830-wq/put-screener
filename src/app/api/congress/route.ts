@@ -9,6 +9,7 @@ import {
   readCongress,
   syncCongress,
 } from '@/lib/congress';
+import { localPortrait } from '@/lib/congressphotos';
 import { trackedSymbols } from '@/lib/insiders';
 import { uwConfigured } from '@/lib/unusualwhales';
 
@@ -45,7 +46,9 @@ export async function GET() {
     ...r,
     trades: r.trades.map((t) => ({
       ...t,
-      photo: politicianPhoto(t.politicianId),
+      // Bộ ảnh cục bộ của chủ app trước (tra được cả theo TÊN), kho
+      // unitedstates/images sau (chỉ khi id đúng dạng Bioguide) - #179.
+      photo: localPortrait(t.politicianId, t.name) ?? politicianPhoto(t.politicianId),
       lagDays: disclosureLagDays(t),
     })),
   }));
