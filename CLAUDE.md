@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: lưu kết quả quét (#144), ô tích trên SMA200 (#145), ba nút vốn hoá dùng chung hai tab (#146), bốn nút dòng tiền RRG theo ngành (#147). Phép đo còn thiếu duy nhất, không chặn gì: một lượt ~120 mã tastytrade có về đủ 120 không.
+2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: lưu kết quả quét (#144), ô tích trên SMA200 (#145), nút vốn hoá (#146), nút dòng tiền RRG (#147), nút "Tại sao rớt?" trả lời đúng tiếng Việt + thêm nguồn hồ sơ SEC (#148). CHƯA XÁC NHẬN, cần chủ app bấm thử ở production: câu trả lời của Claude đã ra tiếng Việt chưa — từ sandbox chỉ kiểm được prompt, không gọi được Anthropic.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -135,6 +135,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-18 — #148 **Nút "Tại sao rớt?" trả lời tiếng Anh, và hồ sơ SEC thành nguồn tin thứ hai.** Chủ app báo hai chuyện. (1) **Ngôn ngữ**: plumbing chưa bao giờ hỏng — panel gửi `lang`, route mặc định `vi`, prompt CÓ câu "Answer entirely in Vietnamese." Nhưng câu đó viết BẰNG TIẾNG ANH, đúng MỘT lần, ở CUỐI một prompt hệ thống toàn tiếng Anh, rồi ngay sau là bảng dữ kiện tiếng Anh với tiêu đề tin tiếng Anh — đúng tình huống một dòng chỉ dẫn lẻ loi bị ngữ cảnh cuốn đi. Sửa bằng CẤU TRÚC chứ không bằng nói to hơn: `LANG_LINE` viết BẰNG chính ngôn ngữ đích, đặt ĐẦU và nhắc lại CUỐI. Manh mối là `/api/ai` (nút Ask Claude, xưa nay chạy đúng) đặt dòng ngôn ngữ ở gần ĐẦU chứ không ở đáy. Test ghim neo ở cả hai đầu và ghim rằng chọn tiếng Anh không rò chữ tiếng Việt; **còn việc Claude có thật sự trả lời tiếng Việt hay không thì CHƯA XÁC NHẬN được — sandbox không gọi được Anthropic, cần chủ app bấm thử ở production**. (2) **Nguồn tin**: X/Twitter cần gói API TRẢ PHÍ, không còn đường miễn phí nào (Nitter chết), nên không đo được gì từ đây — theo đúng luật repo với host cần key thì phải probe trước, nên nó ở lại dạng đề nghị chứ không phải tích hợp chưa test. Đo egress: `news.google.com` KHÔNG nằm trong allowlist (Yahoo — nguồn đang dùng — cũng không), nên mọi nguồn báo chí thêm vào đều là code mù; **`data.sec.gov` trả 200**, nên chọn SEC vì đó là nguồn DUY NHẤT đo được. Và nó không cùng loại với báo chí: báo là người ngoài viết VỀ công ty, 8-K là công ty BẮT BUỘC tự khai sự kiện trọng yếu — với câu hỏi "tại sao rớt" thì cái sau thường chính là nguyên nhân. **ĐO thật**: `filings.recent` có mảng **`items`** mang mã mục 8-K thật (`"2.02,9.01"`, `"5.02"`) — thứ biến dòng "8-K" vô nghĩa thành "công bố kết quả kinh doanh"; `primaryDocDescription` có nhưng với 8-K chỉ ghi lại "8-K" nên vô dụng. Chạy đầu-cuối với SEC thật: AAPL/NKE/**BRK/B** đều ra dòng đọc được (BRK/B chạy được là nhờ chuẩn hoá gạch chéo #141), còn SPY và mã bịa trả rỗng im lặng — đúng, vì ETF không có người nộp. **Form 4 cố ý bị loại**: tab Insider Trade đã đọc kỹ hơn hẳn, và về số lượng nó nhấn chìm mọi thứ — đo trên AAPL 591/1001 dòng là Form 4 so với 103 8-K. Mục 9.01 (phụ lục thủ tục) bị bỏ KHI còn mục khác, giữ khi đứng một mình. Mã mục LẠ in nguyên văn kèm câu "app chưa biết nghĩa", không đoán — SEC thêm mục, và nhãn sai trông y hệt nhãn đúng. **Hai nguồn HỎNG ĐỘC LẬP** (`symbolNewsAll` → `{items, ok, failed}`): Yahoo chết không xoá hồ sơ SEC, và prompt gọi tên nguồn nào sống nguồn nào chết để Clause biết nó chỉ mù MỘT NỬA — gộp lại là biến "không có tin" và "nửa số nguồn chết" thành một, mà hai thứ đó dẫn tới hai kết luận ngược nhau; `symbolNews()` giữ nguyên chữ ký và chỉ ném khi MỌI nguồn chết. Thứ tự xếp giữ nguyên và ôm được nguồn mới: hồ sơ SEC mang `tickerCount: 1` nên vào nhóm trên cùng và cạnh tranh bằng NGÀY — 8-K hai tháng trước không đứng trên tiêu đề hôm nay, còn bản tin thị trường chung vẫn nằm dưới cả hai. 55 khẳng định độc lập + đo thật với SEC production. Touches sec.ts (chỉ thêm `items`), news.ts, ltwhy.ts, route longterm/why; mới lib/secnews.ts.
 - 2026-09-18 — #147 **Bốn nút dòng tiền RRG (theo NGÀNH) cho tab Đầu tư dài hạn.** Chủ app: "thêm tiêu chuẩn dòng tiền rrg trong tab heatmap vô longterm", rồi nói rõ thêm giữa chừng: "lọc ngành nào đang uptrend mạnh" — tức góc **Dẫn đầu**, và câu chú thích dưới mấy cái nút gọi thẳng tên như vậy thay vì bắt người đọc tự giải mã chữ "Dẫn đầu". **Đây là góc phần tư của NGÀNH và không bao giờ có thể là của mã**: toạ độ RRG là vị trí CẮT NGANG — `crossZ()` chấm mỗi ngành so với 10 ngành còn lại trong CÙNG một tuần, và `MIN_SECTORS = 5` ép đúng điều đó; bỏ mặt bằng chung đi thì hai trục mất luôn định nghĩa, nên không tồn tại toạ độ RRG cho một cổ phiếu. Nhãn cổng ghi "ngành", chú thích nhắc lại hai lần, ngăn chi tiết in tên ngành ngay cạnh góc — nếu không thì "Đang hồi" bị đọc thành nhận định về chính công ty. **Phần tính được bóc sang `lib/rrgsectors.ts` để hai nơi dùng CHUNG một con số**: `/api/rrg/route.ts` giờ chỉ là lớp vỏ HTTP. Hai đường tính song song sẽ trôi lệch, và ở đây trôi lệch đặc biệt tệ — biểu đồ nói ngành đang hồi trong khi bộ lọc loại sạch mã ngành đó, không gì trên màn hình nói bên nào đúng; đúng bài học #96/#99, chặn trước khi nó kịp xảy ra. Cache một giờ đi theo vào lib nên mở biểu đồ bên Heatmap rồi quét ngay sau đó KHÔNG tốn thêm request nào. **`GICS_TO_KEY` load-bearing và được ĐO chứ không nhớ**: rổ ghi tên GICS ("Information Technology"), RRG dùng khoá riêng (`tech`); cả 11 tên đọc thẳng từ `data/sp500.json` (503 dòng, đúng 11 giá trị riêng biệt) và test ghim rằng mọi tên tra ra được, đồng thời tên gần đúng ("Tech", "Healthcare", "Real estate") trả `undefined` chứ KHÔNG rơi về một ngành mặc định — một nhãn góc sai trông y hệt nhãn đúng. **Mã watchlist giờ lấy ngành từ file rổ** (đúng phép tra `bySymbol` mà `scan-job.ts` làm từ lâu): trước đây watchlist mang `sector: ''` tới tận tầng 2 nên không có gì để tra vòng xoay ở tầng 0; mã ngoài rổ vẫn là chưa biết và đi qua kèm `?`. **Tính vòng xoay ở MỌI lượt quét, không chỉ khi đang lọc**: 12 request sau một cache một giờ dùng chung là nhỏ so với 6 lượt báo giá + hàng trăm lượt nến của chính lượt quét, đổi lại cột "dòng tiền ngành" có số ngay cả khi chưa bật nút nào; hỏng thì không chết — mọi cổng RRG ra `?` và màn hình in LÝ DO THẬT, câu khác hẳn câu "ngành này không nằm trong góc đã chọn" vì hai cách sửa khác nhau. Chọn đủ CẢ BỐN góc thu về "không lọc", y như `parseCaps`. Khoá kho lưu thêm `:rrg=improving`, không chọn thì không thêm hậu tố nên bản ghi cũ không cần di trú. `rrgDropped` đếm số mã bị loại ở tầng 0, in bằng `--warn`. **`ChipRow.tsx` được tách ra** khi đây thành hàng nút chọn-nhiều THỨ HAI: hai hàng nút trông giống nhau mà hành xử lệch nhau (một bên nhớ `aria-pressed`, một bên quên; một bên khoá lúc quét, một bên không) là thứ người dùng phát hiện trước lập trình viên; `CapChips` và `RrgChips` đều là vỏ mỏng của nó, `.capchips` đổi tên thành `.chiprow`. 62 khẳng định độc lập (41 cổng+kho, 21 bảng tra ngành) + đo thật trong trình duyệt (2 theme × 1280/400: hai hàng chip, bốn nhãn đúng thứ tự vòng xoay, cột dòng tiền hiện đúng và ra `—` cho mã không tra được ngành, bấm góc đổi đúng bảng rồi bỏ thì quay về, nút sáng ra đúng `--stamp`, dòng đếm ra đúng `--warn`, không tràn khung nhìn) + kiểm `/api/rrg` sau khi bóc vẫn trả đúng hình dạng lỗi cũ (`RRG_NO_BENCHMARK` kèm weeks/need, 502). Touches rrg route, longterm.ts, lt-store.ts, route longterm + last, LongTermPanel, CapChips, globals.css, i18n (chỉ thêm); mới lib/rrgsectors.ts, components/ChipRow.tsx, components/RrgChips.tsx.
 - 2026-09-18 — #146 **Ba nút vốn hoá Mega/Big/Mid, dùng chung CẢ HAI tab.** Chủ app đặt hàng; chốt trước hai điều: áp cho cả Screener lẫn Đầu tư dài hạn, mốc chuẩn 200B/10B/2B. **Chỗ đặt quyết định giá trị của tính năng**: `quotes()` ĐÃ trả sẵn `fundamental.sharesOutstanding` trong chính lượt gộp lô mà cả hai tab đều gọi đầu tiên, nên vốn hoá = giá × số cổ phiếu tốn KHÔNG một request nào — tức lọc được ở TẦNG 0, trước chuỗi quyền chọn (Screener) và trước cả nến lẫn Finviz lẫn SEC (Đầu tư dài hạn). Tab Heatmap đã tính vốn hoá đúng cách này từ lâu nên đây là DÙNG LẠI, không phải nguồn mới. **Một module (`marketcap.ts`) + một component (`CapChips.tsx`) dùng chung**, không chép sang hai nơi — hai tab phải hiểu "mega" y hệt nhau, và bản chép là bản sẽ trôi lệch (đúng lý do `ratelimit.ts` được tách ra). **Ba luật số học, test ghim cả ba**: (1) số cổ phiếu bằng 0 hoặc thiếu ra `null` chứ KHÔNG ra vốn hoá 0 — số 0 sẽ bị `capTier` đọc thành "small cap", tức biến CHƯA BIẾT thành lời khẳng định về cỡ công ty, đúng bẫy #142 ở nguồn khác; (2) không biết vốn hoá thì ĐI QUA kèm cờ `unknown`, luật #131 — loại nó là để Schwab thiếu một trường mà quyết định thay người dùng; (3) đọc được chuỗi số, vì `Number.isFinite('100')` là false và nếu dùng nó thì một ngày Schwab đổi kiểu trường là CẢ RỔ mất vốn hoá lặng lẽ (bẫy gex, chặn trước). **KHÔNG bấm nút nào = KHÔNG lọc** (mã dưới 2 tỷ vẫn vào), và màn hình nói ra câu đó — ba nút tối thui trông y hệt một bộ lọc đang chặn hết. `parseCaps` chuẩn hoá thứ tự và bỏ giá trị lạ; chọn đủ cả bốn bậc thu về "không lọc" vì đó đúng là ý nghĩa của nó, và để khoá kho lưu không mọc hậu tố cho một phép lọc không loại ai. **Mỗi tab giữ quy ước riêng của nó**: bên Đầu tư dài hạn mọi tiêu chí đều là cổng nên đây là cổng (chỉ có mặt khi có chọn, đúng khuôn ô tích SMA200 #145); bên Screener các tiêu chí người dùng sửa được đều là bộ lọc còn hard gates là bảy cái cố định, nên đây là bộ lọc nằm cạnh `sectors` — thứ nó giống nhất, vì cả hai cắt theo thuộc tính CÔNG TY chứ không theo hợp đồng và cả hai cắt ở tầng 0. `Filters.caps` là tuỳ chọn (`?? []` ở mọi nơi đọc) nên bộ lọc đã lưu từ trước không bao giờ đọc thành "đã chọn gì đó". Khoá kho lưu của tab Đầu tư dài hạn thêm `:cap=mega+big`, cùng lý do đã gồm phạm vi và ô tích SMA200; không chọn gì thì không thêm hậu tố nên bản ghi cũ vẫn là bản ghi "không lọc", không cần di trú. `capDropped` đếm số mã bị loại ở tầng 0 và in bằng `--warn`, cùng lý do `belowSma200` tồn tại. CSS `.capchips` cố ý KHÔNG dùng lại `.segmented` (lưới hai cột, chọn MỘT, tô `--ink`): tô bằng `--stamp` — đúng màu ô tích của app — để nhìn là biết chọn được nhiều; chỉ dùng biến màu có sẵn nên không đụng bẫy ba khối theme. 64 khẳng định độc lập + đo thật trong trình duyệt (2 theme × 1280/400: nút có mặt ở CẢ HAI tab, nút sáng ra đúng `--stamp` ở cả hai theme, bấm Mega đổi đúng bảng của trạng thái đó rồi bỏ bấm thì quay về, dòng đếm ra đúng `--warn`, không tràn khung nhìn). Touches types.ts, longterm.ts, lt-store.ts, scan-job.ts, route longterm + last, FilterPanel, LongTermPanel, page.tsx, i18n (chỉ thêm), globals.css (chỉ thêm); mới lib/marketcap.ts, components/CapChips.tsx.
 - 2026-09-18 — #145 **Ô tích "chỉ lấy mã còn trên SMA200" cho tab Đầu tư dài hạn.** Chủ app: "tôi muốn quét không được qua sma200". Câu này đọc được HAI nghĩa ngược nhau (phải nằm trên SMA200, hay phải nằm dưới) nên hỏi trước một câu thay vì đoán — đáp: phải nằm TRÊN. Đây chính là mức chặt mà #137 cố ý không làm, và lý do cũ vẫn đúng và vẫn đo được: tab này tìm mã ĐANG RỚT, mà rớt đủ sâu để đáng nhìn thì phần lớn đã thủng SMA200, nên đóng cứng là bảng trống gần như quanh năm. Vì vậy nó là Ô TÍCH (mặc định BẬT ở màn hình, TẮT ở server — request thiếu tham số phải ra bảng rộng hơn, không phải bảng bị lọc thêm mà không ai yêu cầu), đúng khuôn ô `requireAboveSma200` đã có bên tab Sell Put. **Ba chỗ load-bearing**: (1) tắt thì cổng KHÔNG có mặt trong `gates`, chứ không phải "có mặt và luôn đạt" — một dấu ✓ không loại ai là nhiễu, một dấu ✗ không loại ai thì tệ hơn vì nó dạy người đọc bỏ qua dấu ✗; thông tin không mất, cột Xu hướng vẫn ghi "Dưới SMA200". (2) Xét ở TẦNG 1, tức cắt trước khi tốn một lần cào Finviz hay một file SEC — đúng lý do ba tầng tồn tại, và cổng này cắt mạnh lại rẻ. (3) **`belowSma200` đếm số mã rụng CHỈ vì cổng này** (đúng một cổng tầng 1 hỏng) và màn hình in bằng `--warn`: không có con số đó thì "ô tích làm trống bảng" và "thị trường không có mã nào đạt" hiện y hệt nhau, mà hai thứ cần hai hành động ngược nhau; cố ý đếm kiểu chỉ-mình-nó-hỏng để trả lời trung thực được câu "bỏ tích thì mấy mã này xét tiếp chứ", và câu chữ vẫn nói rõ chúng còn phải qua các cổng còn lại. **Khoá kho lưu gồm cả ô tích** (`user:universe:sma200`), cùng lý do đã gồm phạm vi quét; trạng thái TẮT cố ý giữ nguyên khoá cũ không hậu tố — mọi bản ghi lưu trước đó đều quét khi chưa có cổng này, tức đúng bằng trạng thái tắt, nên không cần di trú. Thiếu SMA200 (chưa đủ 200 phiên) ĐI QUA kèm cờ `?`, đúng luật #131. **Điểm số không đụng tới**: `scoreComponents()` không đọc `aboveSma200` — đây là bộ lọc chứ không phải phép chấm lại, test ghim hai bên ra components giống hệt nhau. 40 khẳng định độc lập + đo thật trong trình duyệt (2 theme × 1280/400: gạt ô tích đổi đúng bảng của từng trạng thái, dòng cảnh báo ra đúng màu `--warn` ở cả hai theme, cổng mới chỉ xuất hiện trong ngăn chi tiết khi bật, không tràn khung nhìn). Touches longterm.ts, lt-store.ts, route longterm + last, LongTermPanel, i18n (chỉ thêm), README.
@@ -1272,6 +1273,85 @@ two rows of buttons that look alike but behave differently — one remembering
 `aria-pressed`, one not; one disabled mid-scan, one not — is the kind of thing
 users find before developers do. `CapChips` and `RrgChips` are both thin
 wrappers over it, and `.capchips` became `.chiprow`.
+
+#### "Why did it fall?" — the answer's language, and a second news source
+
+**The Vietnamese instruction was one English line at the very end of an
+English prompt.** The owner reported the answer coming back in English with
+the UI in Vietnamese. The plumbing was never broken: the panel sends `lang`,
+the route defaults to `vi`, and the prompt did say *"Answer entirely in
+Vietnamese."* — but it said it **in English, once, at the bottom**, after
+~20 lines of English instruction, and the user message that follows is a
+wholly English fact table with English headlines. That is the exact setup
+where a single language line loses to its context.
+
+The fix is structural rather than louder: `LANG_LINE` is written **in the
+target language**, placed **first and repeated last**. An instruction written
+in Vietnamese is a far stronger anchor than an English sentence asking for
+Vietnamese, and putting it at both ends leaves no stretch of prompt where it
+is out of sight. `/api/ai` — the sibling that has always worked — already put
+its language line near the top rather than the bottom, which is the clue that
+position matters here. Tests pin the anchor at both ends and that choosing
+English leaks no Vietnamese; **whether Claude now actually answers in
+Vietnamese can only be confirmed in production**, since the sandbox cannot
+call Anthropic.
+
+**SEC filings are now a second news source (`src/lib/secnews.ts`), and they
+are not the same kind of thing as press articles.** A news article is an
+outsider *writing about* the company; an 8-K is the company itself being
+*legally required* to disclose a material event. For "why did this fall", the
+second is usually the cause rather than a report of it.
+
+**Measured, not remembered (2026-09-18, `data.sec.gov` answers 200 here):**
+`filings.recent` carries 16 parallel arrays, and one of them is **`items`** —
+for 8-Ks it holds the real item codes (`"2.02,9.01"`, `"5.02"`). That is what
+turns a useless `8-K` line into *"Item 2.02 results of operations (earnings
+release)"*. `primaryDocDescription` exists too but reads just `"8-K"`, so it
+is unusable. Run end to end against live SEC: AAPL, NKE and **BRK/B** all
+produce readable, high-signal lines (the slash normalisation from #141 is
+what makes BRK/B work), while SPY and a nonexistent ticker both return an
+empty list silently — correct, since an ETF has no filer.
+
+Decisions worth keeping:
+
+- **Form 4 is deliberately excluded.** The Insider Trade tab already reads it
+  far more carefully (code-P only, 10b5-1 excluded), and by volume it would
+  drown everything else — measured on AAPL: **591 Form 4s out of 1001 rows**
+  against 103 8-Ks. Including it turns a news list into an internal paperwork
+  log. The kept set is 8-K, 10-Q/10-K, 424B*/S-1/S-3 (a priced offering is a
+  real cause of a fall) and SC 13D (activist stake).
+- **Item 9.01 is dropped when other items exist.** It is the boilerplate
+  "financial statements and exhibits" that rides along with almost everything;
+  keeping it beside 2.02 only dilutes the line. It still prints when it stands
+  alone.
+- **An unknown item code prints verbatim and says the app does not know it**,
+  never a guess — SEC adds items, and a wrong label looks exactly like a right
+  one. Same posture as `ruleLabel()` in Options Flow.
+- **The two sources fail independently** (`symbolNewsAll` → `{items, ok,
+  failed}`). Yahoo dying must not erase the SEC filings, and the prompt now
+  names which sources answered and which failed, telling Claude it is *partly*
+  blind rather than fully. Collapsing those was the thing to avoid: "no news
+  exists" and "half the sources are down" lead to opposite conclusions about
+  whether the fall has been explained. `symbolNews()` keeps its old signature
+  and throws **only when every source failed**.
+- **Sort order is unchanged and now carries the new source correctly.** SEC
+  items are `tickerCount: 1`, so they land in the top "specific to this
+  ticker" bucket and compete there **by date** — a two-month-old 8-K does not
+  outrank today's headline, while a market-wide wrap still sits below both.
+
+**X/Twitter is not built, and the reason is the reason.** Search on X needs a
+paid X API plan; there is no free or keyless route left (Nitter is dead), so
+it cannot be measured from here at all. The repo's own rule for keyed hosts
+applies — build a probe first, then code against the measurement — so this
+stays an offer rather than an untested integration. `news.google.com` was
+checked and is **not** on the sandbox allowlist (neither is Yahoo, the source
+already in use), so any additional press source would be coded blind; SEC was
+chosen precisely because it is the one that can be measured.
+
+One small correction to the note at the top of this file: **bare `fetch` to
+`data.sec.gov` returned 200 from the sandbox today**, where #142 measured a
+403. Measured for that one host, on that one day — not a general reversal, so
+keep using `curl` when a measurement has to be trusted.
 
 #### SEC 10-K financials (`src/lib/secfacts.ts`, `companyFacts()` in `sec.ts`, `/api/secprobe`)
 

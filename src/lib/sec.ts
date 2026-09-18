@@ -259,6 +259,13 @@ export type Filing = {
   filingDate: string;
   reportDate: string;
   primaryDocument: string;
+  /**
+   * Mã mục của 8-K, ví dụ "2.02,9.01". ĐO được 2026-09-18 trên AAPL: `items`
+   * là một trong 16 mảng song song của `filings.recent`, và với 8-K nó mang
+   * mã thật. Rỗng với hầu hết loại hồ sơ khác - đó là bình thường, không
+   * phải thiếu dữ liệu.
+   */
+  items: string;
 };
 
 /**
@@ -286,12 +293,14 @@ export function parseRecentFilings(raw: any): Filing[] {
   const filingDate: string[] = r.filingDate ?? [];
   const reportDate: string[] = r.reportDate ?? [];
   const primaryDocument: string[] = r.primaryDocument ?? [];
+  const items: string[] = r.items ?? [];
   return acc.map((accessionNumber, i) => ({
     accessionNumber,
     form: form[i] ?? '',
     filingDate: filingDate[i] ?? '',
     reportDate: reportDate[i] ?? '',
     primaryDocument: primaryDocument[i] ?? '',
+    items: items[i] ?? '',
   }));
 }
 

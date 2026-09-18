@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { symbolNews } from '@/lib/news';
+import { symbolNewsAll, type NewsResult } from '@/lib/news';
 import { whyFacts, whySystem } from '@/lib/ltwhy';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +43,16 @@ export async function POST(req: Request) {
   /* Tin hỏng KHÔNG làm hỏng cả câu trả lời: prompt có nhánh riêng nói rằng
      không kiểm được tin, và Claude được dặn phải nói ra điều đó. Nuốt lỗi
      rồi im lặng sẽ biến một lỗi mạng thành kết luận "không có tin gì xấu". */
-  let news = null as Awaited<ReturnType<typeof symbolNews>> | null;
+  let news: NewsResult | null = null;
   let newsError: string | null = null;
   try {
-    news = await symbolNews(String(row.symbol), 10);
+    news = await symbolNewsAll(String(row.symbol), 10);
+    /* Mọi nguồn cùng chết mới là "không kiểm được tin". Một nguồn chết thì
+       `news.failed` đã nói rõ trong prompt, và phần còn lại vẫn đọc được -
+       gộp hai chuyện đó lại là tự bịt mắt mình một nửa. */
+    if (!news.ok.length && news.failed.length) {
+      newsError = news.failed.map((f) => `${f.source}: ${f.error}`).join(' | ');
+    }
   } catch (e: any) {
     newsError = String(e?.message ?? e).slice(0, 200);
   }
@@ -106,7 +112,8 @@ export async function GET(req: Request) {
   const symbol = new URL(req.url).searchParams.get('symbol');
   if (!symbol) return Response.json({ error: 'Missing symbol' }, { status: 400 });
   try {
-    return Response.json({ news: await symbolNews(symbol, 8) });
+    const r = await symbolNewsAll(symbol, 8);
+    return Response.json({ news: r.items, sources: r.ok, failed: r.failed });
   } catch (e: any) {
     /* 200 kèm lý do THẬT, không phải 500 trống: màn hình cần phân biệt
        "không có tin" với "không lấy được tin". */
