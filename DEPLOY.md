@@ -379,8 +379,11 @@ theo tài liệu.
 
 ## X (Twitter) — đọc tin cho mã đang nắm
 
-**Hiện mới chỉ có probe. Chưa có tính năng nào đọc X**, và đó là chủ ý: X là
-host CÓ KEY, nên luật của repo là đo ở production trước rồi mới viết code.
+**Đo xong ở production ngày 2026-09-19, tầng cảnh báo đã CHẠY THẬT.** X là
+host CÓ KEY, nên luật của repo là đo ở production trước rồi mới viết code -
+và probe đã trả lời đủ ba câu quyết định (cashtag dùng được, since_id được
+tôn trọng, trần 512 ký tự đúng như đoán) nên tính năng viết theo đúng những
+con số đó, không phải theo tài liệu nhớ được.
 
 **Bước 0 — biết mình mua gì trước khi trả tiền.**
 
@@ -464,6 +467,13 @@ lời. Bốn dòng đáng đọc, theo thứ tự:
 
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
+
+**Bước 3 — không cần làm gì thêm.** Tầng cảnh báo X tự bật ngay khi thấy
+`X_BEARER_TOKEN`, chạy chung nhịp với hồ sơ 8-K (mỗi 15 phút, bất kể giờ giao
+dịch) — khác tầng báo chí (Yahoo) vốn phải giãn nhịp vì tốn một request MỖI
+MÃ, X gộp cả watchlist vào vài lô trong một request nên không cần giãn. Đặt
+thêm `X_SINCE_PATH` là tuỳ chọn: bỏ trống thì rơi vào `.cache/x-since.json`,
+mất được và dựng lại được — không cần `/var/data`.
 
 ### Những gì cổng này gác, và không gác
 

@@ -918,8 +918,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Outside market hours: portfolio alerts (ITM, earnings, skew) pause because prices do not move. SEC 8-K filings are STILL checked — most 8-Ks are filed after the close.',
   },
   'al.watching': {
-    vi: (n: number) => `Đang theo dõi ${n} mã (vị thế đang nắm + watchlist): hồ sơ 8-K trọng yếu, giá chạy quá 7%, và tiêu đề báo chí.`,
-    en: (n: number) => `Watching ${n} symbols (open positions + watchlist) for material 8-K filings, moves over 7%, and press headlines.`,
+    vi: (n: number) => `Đang theo dõi ${n} mã (vị thế đang nắm + watchlist): hồ sơ 8-K trọng yếu, giá chạy quá 7%, tiêu đề báo chí, và bài đăng trên X.`,
+    en: (n: number) => `Watching ${n} symbols (open positions + watchlist) for material 8-K filings, moves over 7%, press headlines, and X posts.`,
   },
   /* "Lượt này chưa hỏi tin" phải KHÁC hẳn "đã hỏi và không có gì": tầng báo
      chí chạy ~60 phút một lần, nên nếu không nói ra thì mấy con số 0 đọc
@@ -952,6 +952,27 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'al.pressErr': {
     vi: (m: string) => `Không lấy được tin báo chí: ${m}`,
     en: (m: string) => `Could not fetch press headlines: ${m}`,
+  },
+  /* Tầng X - thứ tư, và tự tắt như UW/Telegram khi chưa đặt X_BEARER_TOKEN. */
+  'al.xIdle': {
+    vi: 'X (Twitter) chưa được cấu hình - đặt X_BEARER_TOKEN trên Render để bật tầng cảnh báo nhanh nhất (bài đăng trên X về mã đang nắm).',
+    en: 'X (Twitter) is not configured - set X_BEARER_TOKEN on Render to enable the fastest alert tier (X posts about held symbols).',
+  },
+  'al.x': {
+    vi: (v: any) => `X: đã hỏi ${v.checked} mã trong ${v.batches} lô.`,
+    en: (v: any) => `X: checked ${v.checked} symbols in ${v.batches} batches.`,
+  },
+  'al.xQuiet': {
+    vi: (n: number) => `Trong 90 phút qua: ${n} bài khớp mã nhưng không khớp từ khoá đáng báo - ĐƯỢC ĐẾM chứ không gửi.`,
+    en: (n: number) => `In the last 90 minutes: ${n} posts matched a symbol but no alert keyword - counted, not sent.`,
+  },
+  'al.xOverflow': {
+    vi: (n: number) => `${n} cảnh báo X nữa bị cắt vì chạm trần mỗi lượt (5). Bài nặng nhất và mới nhất được giữ.`,
+    en: (n: number) => `${n} more X alerts were cut by the per-run ceiling (5). The most severe and most recent were kept.`,
+  },
+  'al.xErr': {
+    vi: (m: string) => `Không lấy được bài trên X: ${m}`,
+    en: (m: string) => `Could not fetch X posts: ${m}`,
   },
   'al.evHeldErr': {
     vi: 'Không đọc được danh mục nên chỉ đang theo dõi watchlist. Nếu phiên Schwab hết hạn thì bấm Kết nối lại.',

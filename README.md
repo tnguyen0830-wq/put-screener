@@ -500,6 +500,7 @@ của bằng chứng**:
 | **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào | 15 phút |
 | **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch | 15 phút |
 | **Tiêu đề báo chí** | Yahoo Finance | bất kể giờ nào | ~60 phút |
+| **Bài đăng trên X** | X (Twitter) | bất kể giờ nào | mỗi 15 phút |
 
 **8-K là nguồn gốc, không phải bài viết về nguồn gốc** — đó là chính công ty bị
 luật bắt buộc phải khai một sự kiện trọng yếu. Miễn phí, không cần key. Bốn mục
@@ -555,37 +556,37 @@ gì"** — hai chuyện khác nhau, mà nếu gộp thì mấy con số 0 sẽ n
 > này từng đốt sạch hạn mức của một nhà cung cấp khác đúng vì gọi từng mã ở nhịp
 > 15 phút. Cửa sổ cảnh báo là 90 phút nên nhịp giãn này **không bỏ sót bài nào**.
 
-##### X (Twitter) — CHƯA CHẠY, mới chỉ có phép đo
+##### X (Twitter) — tầng thứ TƯ, nhanh nhất
 
 Chủ app đặt hàng tin từ X cho mã đang nắm, và **đây đúng là chỗ X đáng tiền**:
 ưu thế duy nhất của X là nhanh hơn báo chí vài chục phút, thứ không đổi được
 quyết định mua-và-giữ nhưng đổi được quyết định trên một vị thế đang mở.
 
-Nhưng X **không có bậc miễn phí cho việc tìm kiếm**, và luật của repo với host
-cần key là đo ở production trước rồi mới viết code — đúng cách tastytrade đã
-làm (#127), và lý do không phải sự cẩn thận suông: repo này đã ba lần viết code
-theo tài liệu nhớ được rồi sai. Nên hiện tại chỉ có `/api/xprobe`, **không có
-cảnh báo nào đọc X**.
+**Đo xong ở production 2026-09-19, cả ba câu quyết định kiến trúc đều trả lời
+CÓ**: toán tử `$AAPL` (cashtag) dùng được — hỏi thẳng theo mã, không cần bám
+danh sách tài khoản; `since_id` được tôn trọng; trần câu truy vấn thật đúng là
+512 ký tự, khớp con số đã đặt sẵn. Từ đó tầng X hoạt động thật.
 
-**Và trang giá của X đã đổi hẳn mô hình so với thứ tôi nhớ** (ảnh chụp
-`developer.x.com`, 2026-09-18): giờ là **trả theo lượng dùng, mua tín dụng,
-không cam kết**, cộng một bậc Enterprise. Tức không còn phải quyết "có đáng
-tiền hằng tháng không" trước khi đo được gì — nạp một ít tín dụng, chạy probe,
-đọc chi phí thật, rồi mới mở rộng. **Cảnh báo một con số dễ đọc nhầm**:
-$0.001/tài nguyên trên trang đó là giá **Owned Reads**, tức đọc dữ liệu của
-CHÍNH MÌNH — đọc bài người khác, thứ tính năng này cần, là một mức giá khác.
+**Một câu truy vấn cho NHIỀU mã, không phải một request mỗi mã.** X cho gộp
+`$A OR $B OR $C` trong một request, nên cả watchlist chỉ tốn vài lô — khác hẳn
+tầng báo chí, nơi Yahoo bắt hỏi từng mã. `since_id` là **một con số toàn cục**
+(ID của X tăng dần theo thời gian trên toàn nền tảng), lưu ở đĩa để lượt hỏi
+lại không trả tiền đọc lại bài cũ; mất file đó (redeploy) chỉ khiến lượt kế
+tiếp bị coi là lượt đầu — an toàn, vì cửa sổ 90 phút vẫn chặn không cho tràn
+bài cũ dù không có since_id.
 
-Probe trả lời bốn câu, và câu đầu quyết định kiến trúc chứ không phải chi tiết:
+**Cùng bảng từ khoá với tầng báo chí (`pressSeverity()`), không viết bảng
+mới** — bảng đó đã được đo và sửa ba lỗi im lặng (chia động từ, rụng `e` câm,
+từ đệm), viết một bảng riêng cho X là lặp lại đúng ba lỗi đó từ đầu.
 
-| Câu hỏi | Vì sao nó quyết định |
-|---|---|
-| Toán tử `$AAPL` có dùng được ở gói này không | Có → tìm thẳng theo mã. Không → phải bám **danh sách tài khoản** rồi lọc mã trong app, tức một tính năng khác |
-| `since_id` có được tôn trọng không | **Cơ chế** giữ chi phí xuống: hỏi lại mà không có bài mới phải ra 0 bài. Với cách tính theo lượng dùng thì càng quan trọng — đọc lại bài cũ là tiền chảy ra liên tục, không có trần tháng nào tự chặn |
-| Trần độ dài câu truy vấn | Bao nhiêu mã nhét vừa một lượt hỏi |
-| Mức đã dùng | Probe hỏi endpoint của mô hình cũ tính theo tháng; với gói trả-theo-lượng-dùng nó có thể từ chối, và probe in nguyên trạng thái thật thay vì đoán |
+**Yếu hơn cả tầng báo chí, và màn hình nói ra điều đó.** 8-K là công ty tự
+khai bắt buộc; báo chí là người ngoài viết, có biên tập; một bài trên X là
+người dùng bất kỳ gõ, không ai kiểm chứng trước khi đăng — nên mỗi cảnh báo
+mang nhãn `[X]` và thân nói thẳng đây là bài đăng chưa kiểm chứng.
 
-Cách chạy nằm ở `DEPLOY.md`. Token **phải** là app-only (chỉ đọc, không đăng
-được bài) — lộ token người dùng là người lạ đăng bài dưới tên bạn.
+Token **phải** là app-only (chỉ đọc, không đăng được bài) — lộ token người
+dùng là người lạ đăng bài dưới tên bạn. Cách lấy token nằm ở `DEPLOY.md`. Bỏ
+trống `X_BEARER_TOKEN` thì tầng này tự tắt, y như UW/Telegram/web push.
 
 
 ---
