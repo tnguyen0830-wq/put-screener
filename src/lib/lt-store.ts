@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { LtCandidate } from './longterm';
+import { capsKey, type CapTier } from './marketcap';
 
 /**
  * Giữ lại kết quả quét Long-term gần nhất.
@@ -50,6 +51,10 @@ export type SavedLtScan = {
   aboveSma200?: boolean;
   /** Số mã bị loại CHỈ vì cổng SMA200 - để bảng trống nói được vì sao. */
   belowSma200?: number;
+  /** Bậc vốn hoá đã chọn lúc quét. Xem `keyOf`. */
+  caps?: CapTier[];
+  /** Số mã bị bộ lọc vốn hoá loại ở tầng 0 - cùng lý do như `belowSma200`. */
+  capDropped?: number;
   rows: LtCandidate[];
 };
 
@@ -64,9 +69,22 @@ type Store = Record<string, SavedLtScan>;
  * Trạng thái TẮT cố ý giữ nguyên khoá cũ (không có hậu tố). Mọi bản ghi lưu
  * trước #145 đều được quét khi chưa hề có cổng này, tức đúng bằng trạng thái
  * tắt - nên chúng đọc lại được y nguyên và không cần bước di trú nào.
+ *
+ * Bộ lọc vốn hoá vào khoá theo đúng lối đó: KHÔNG chọn bậc nào là không lọc,
+ * và không lọc thì không thêm hậu tố - nên bản ghi cũ vẫn là bản ghi của
+ * trạng thái "không lọc", vẫn đọc lại được, vẫn không phải di trú gì.
+ * `capsKey` chuẩn hoá thứ tự nên bấm mega-rồi-big và big-rồi-mega ra cùng
+ * một ô nhớ chứ không thành hai.
  */
-const keyOf = (user: string, universe: LtUniverse, aboveSma200: boolean) =>
-  `${user}:${universe}${aboveSma200 ? ':sma200' : ''}`;
+const keyOf = (
+  user: string,
+  universe: LtUniverse,
+  aboveSma200: boolean,
+  caps: readonly CapTier[] = []
+) => {
+  const c = capsKey(caps);
+  return `${user}:${universe}${aboveSma200 ? ':sma200' : ''}${c ? `:cap=${c}` : ''}`;
+};
 
 async function readStore(): Promise<Store> {
   try {
@@ -78,7 +96,7 @@ async function readStore(): Promise<Store> {
 
 export async function saveLtScan(scan: SavedLtScan, user: string): Promise<void> {
   const store = await readStore();
-  store[keyOf(user, scan.universe, scan.aboveSma200 === true)] = scan;
+  store[keyOf(user, scan.universe, scan.aboveSma200 === true, scan.caps ?? [])] = scan;
   await fs.mkdir(path.dirname(FILE()), { recursive: true });
   /* Ghi tạm rồi đổi tên: sập giữa chừng thì file cũ còn nguyên, chứ không
      để lại một file JSON cụt mà `readStore()` sẽ đọc thành "chưa quét lần
@@ -91,10 +109,11 @@ export async function saveLtScan(scan: SavedLtScan, user: string): Promise<void>
 export async function readLtScan(
   universe: LtUniverse,
   user: string,
-  aboveSma200: boolean
+  aboveSma200: boolean,
+  caps: readonly CapTier[] = []
 ): Promise<SavedLtScan | null> {
   const store = await readStore();
-  return store[keyOf(user, universe, aboveSma200)] ?? null;
+  return store[keyOf(user, universe, aboveSma200, caps)] ?? null;
 }
 
 /* Không có nhánh "định dạng khoá cũ" như scan-store.ts: kho này sinh ra sau

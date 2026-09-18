@@ -2,6 +2,8 @@
 
 import { DEFAULT_OFF, isOn, type FilterKey, type Filters } from '@/lib/types';
 import { useLang } from '@/lib/i18n';
+import CapChips from './CapChips';
+import type { CapTier } from '@/lib/marketcap';
 
 const SECTORS = [
   'Communication Services',
@@ -250,6 +252,15 @@ export default function FilterPanel({
             ))}
           </select>
         </div>
+
+        {/* Ngay dưới bộ lọc ngành, vì cùng loại: cả hai cắt theo THUỘC TÍNH
+            của công ty chứ không theo hợp đồng, và cả hai đều lọc được ở
+            tầng 0 trước khi tốn chuỗi quyền chọn. */}
+        <CapChips
+          value={value.caps ?? []}
+          onChange={(caps: CapTier[]) => set('caps', caps)}
+          disabled={running}
+        />
 
         <label className="check">
           <input

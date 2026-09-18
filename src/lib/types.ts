@@ -1,3 +1,4 @@
+import type { CapTier } from './marketcap';
 export type Universe = 'sp500' | 'watchlist';
 
 /**
@@ -34,6 +35,14 @@ export type Filters = {
   minIv: number;
   requireAboveSma200: boolean;
   excludeEarnings: boolean;
+  /**
+   * Bậc vốn hoá được giữ lại. Rỗng hoặc thiếu = KHÔNG lọc theo vốn hoá, cùng
+   * quy ước `sectors` ngay dưới: một bộ lọc chưa ai chạm vào phải rộng nhất,
+   * không được âm thầm loại mã. Bản lọc đã lưu từ trước không có trường này
+   * nên `?? []` ở mọi nơi đọc - thiếu trường không bao giờ được đọc thành
+   * "đã chọn gì đó".
+   */
+  caps?: CapTier[];
   /**
    * Bundle of five fixed pass/fail checks (VRP, earnings, liquidity, spread,
    * falling-knife) that, when on, drop a contract outright regardless of

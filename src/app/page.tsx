@@ -39,6 +39,9 @@ const DEFAULTS: Filters = {
   minIv: 35,
   requireAboveSma200: true,
   excludeEarnings: true,
+  /* Rỗng = không lọc theo vốn hoá. Mặc định phải là trạng thái RỘNG nhất:
+     một bộ lọc bật sẵn mà người dùng chưa từng chạm vào là một bộ lọc ngầm. */
+  caps: [],
   hardGates: true,
   sectors: [],
   limit: 0,

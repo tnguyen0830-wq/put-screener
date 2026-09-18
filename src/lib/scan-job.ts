@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { capPasses, marketCapOf } from './marketcap';
 import { quotes, fullChain } from './schwab';
 import {
   evaluate,
@@ -186,6 +187,18 @@ export function startScan(filters: Filters, user: string): ScanJob | null {
         }
         if (spot < 5) {
           send({ type: 'skip', symbol: c.symbol, reason: 'giá quá thấp' });
+          continue;
+        }
+        /* Cùng mẹo với ngân sách vốn: vốn hoá đi kèm CHÍNH lượt `quotes()`
+           này (`fundamental.sharesOutstanding`), nên lọc ở đây không tốn
+           thêm request nào và cắt trước khi phải trả tiền chuỗi quyền chọn.
+           Schwab không trả số cổ phiếu thì ĐI QUA - `capPasses` lo, và lý do
+           là luật chung của repo: thiếu dữ liệu không phải bằng chứng có
+           vấn đề. Lý do skip nói rõ là "vốn hoá" chứ không gộp vào một câu
+           chung, vì một mã biến mất mà không nói vì sao trông y hệt một mã
+           không có hợp đồng nào đạt. */
+        if (!capPasses(marketCapOf(row), filters.caps ?? []).passed) {
+          send({ type: 'skip', symbol: c.symbol, reason: 'ngoài nhóm vốn hoá' });
           continue;
         }
         survivors.push({ ...c, quote: row });

@@ -527,6 +527,15 @@ Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớ
 thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng
 dài hạn, cộng với chốt chặn "còn cách đáy 52 tuần" để không bắt dao rơi.
 
+**Ba nút vốn hoá: Mega ≥200 tỷ · Big 10–200 tỷ · Mid 2–10 tỷ.** Bấm được nhiều
+nút cùng lúc; **không bấm nút nào là không lọc** (mã nhỏ hơn 2 tỷ vẫn vào) chứ
+không phải loại sạch — màn hình nói thẳng câu đó, vì ba nút tối thui trông y hệt
+một bộ lọc đang chặn hết. Vốn hoá tính từ dữ liệu Schwab (giá × số cổ phiếu lưu
+hành) nên là số sống, và nó đi kèm sẵn trong lượt lấy giá gộp lô — tức lọc theo
+vốn hoá **không tốn thêm request nào** và cắt trước cả nến, Finviz lẫn SEC. Mã
+Schwab không trả số cổ phiếu thì vẫn đi qua và được đánh dấu `?`. Ba nút này có
+ở **cả tab Sell Put Screener**, nằm dưới ô chọn ngành.
+
 **Muốn chặt hơn thì có ô tích "Chỉ lấy mã còn trên SMA200".** Bật là bỏ hẳn mọi mã
 đã thủng SMA200. Cái giá phải trả được nói ngay cạnh ô tích chứ không giấu: bảng sẽ
 ngắn hơn nhiều, có lúc trống. Và khi nó thật sự làm trống bảng thì màn hình in **số

@@ -1352,6 +1352,41 @@ table.results tbody tr.clickable {
   color: var(--card);
 }
 
+/* Ba nút vốn hoá (CapChips). Chọn NHIỀU được, nên cố ý khác `.segmented`
+   (lưới hai cột, chọn một, tô `--ink`): đây là flex bọc dòng và tô bằng
+   `--stamp` - đúng màu ô tích của app - để nhìn là biết kiểu điều khiển
+   khác nhau. Chỉ dùng biến màu đã có sẵn, nên không phải sửa cả ba khối
+   theme. */
+.capchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.capchips button {
+  padding: 6px 10px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.capchips button.on {
+  background: var(--stamp);
+  border-color: var(--stamp);
+  color: var(--card);
+  font-weight: 700;
+}
+
+.capchips button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .saving {
   font-family: var(--body);
   font-size: 10.5px;

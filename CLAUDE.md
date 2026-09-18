@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: kết quả quét được LƯU và tự nạp lại (#144), và có thêm ô tích "chỉ lấy mã còn trên SMA200" (#145). Phép đo còn thiếu duy nhất, không chặn gì: một lượt ~120 mã tastytrade có về đủ 120 không (`BATCH = 100` là chọn thận trọng, mỗi lô tự đối chiếu hỏi/về nên trần thấp hơn sẽ lộ ra ở `missing`).
+2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: kết quả quét được LƯU và tự nạp lại (#144), ô tích "chỉ lấy mã còn trên SMA200" (#145). Ba nút vốn hoá Mega/Big/Mid dùng chung CẢ HAI tab Screener và Đầu tư dài hạn (#146). Phép đo còn thiếu duy nhất, không chặn gì: một lượt ~120 mã tastytrade có về đủ 120 không.
 
 **SPX: the "entitlement" conclusion was WRONG and has been corrected (#108).** The owner's thinkorswim screen, same account, 26 minutes after the API reading, shows **real open interest** on the same contracts (7800C = 5,671 while the API said 0). Open interest is exchange data, not computed locally — so the account has the data and `/marketdata/v1/chains` is not returning it. This is a Schwab **API defect** for `assetMainType=INDEX`, reported to `traderapi@schwab.com`, not something to buy. Do not restart the symbol-spelling hunt; the measurement was never the problem, the interpretation was. Full correction at the top of the GEX section.
 
@@ -135,6 +135,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-18 — #146 **Ba nút vốn hoá Mega/Big/Mid, dùng chung CẢ HAI tab.** Chủ app đặt hàng; chốt trước hai điều: áp cho cả Screener lẫn Đầu tư dài hạn, mốc chuẩn 200B/10B/2B. **Chỗ đặt quyết định giá trị của tính năng**: `quotes()` ĐÃ trả sẵn `fundamental.sharesOutstanding` trong chính lượt gộp lô mà cả hai tab đều gọi đầu tiên, nên vốn hoá = giá × số cổ phiếu tốn KHÔNG một request nào — tức lọc được ở TẦNG 0, trước chuỗi quyền chọn (Screener) và trước cả nến lẫn Finviz lẫn SEC (Đầu tư dài hạn). Tab Heatmap đã tính vốn hoá đúng cách này từ lâu nên đây là DÙNG LẠI, không phải nguồn mới. **Một module (`marketcap.ts`) + một component (`CapChips.tsx`) dùng chung**, không chép sang hai nơi — hai tab phải hiểu "mega" y hệt nhau, và bản chép là bản sẽ trôi lệch (đúng lý do `ratelimit.ts` được tách ra). **Ba luật số học, test ghim cả ba**: (1) số cổ phiếu bằng 0 hoặc thiếu ra `null` chứ KHÔNG ra vốn hoá 0 — số 0 sẽ bị `capTier` đọc thành "small cap", tức biến CHƯA BIẾT thành lời khẳng định về cỡ công ty, đúng bẫy #142 ở nguồn khác; (2) không biết vốn hoá thì ĐI QUA kèm cờ `unknown`, luật #131 — loại nó là để Schwab thiếu một trường mà quyết định thay người dùng; (3) đọc được chuỗi số, vì `Number.isFinite('100')` là false và nếu dùng nó thì một ngày Schwab đổi kiểu trường là CẢ RỔ mất vốn hoá lặng lẽ (bẫy gex, chặn trước). **KHÔNG bấm nút nào = KHÔNG lọc** (mã dưới 2 tỷ vẫn vào), và màn hình nói ra câu đó — ba nút tối thui trông y hệt một bộ lọc đang chặn hết. `parseCaps` chuẩn hoá thứ tự và bỏ giá trị lạ; chọn đủ cả bốn bậc thu về "không lọc" vì đó đúng là ý nghĩa của nó, và để khoá kho lưu không mọc hậu tố cho một phép lọc không loại ai. **Mỗi tab giữ quy ước riêng của nó**: bên Đầu tư dài hạn mọi tiêu chí đều là cổng nên đây là cổng (chỉ có mặt khi có chọn, đúng khuôn ô tích SMA200 #145); bên Screener các tiêu chí người dùng sửa được đều là bộ lọc còn hard gates là bảy cái cố định, nên đây là bộ lọc nằm cạnh `sectors` — thứ nó giống nhất, vì cả hai cắt theo thuộc tính CÔNG TY chứ không theo hợp đồng và cả hai cắt ở tầng 0. `Filters.caps` là tuỳ chọn (`?? []` ở mọi nơi đọc) nên bộ lọc đã lưu từ trước không bao giờ đọc thành "đã chọn gì đó". Khoá kho lưu của tab Đầu tư dài hạn thêm `:cap=mega+big`, cùng lý do đã gồm phạm vi và ô tích SMA200; không chọn gì thì không thêm hậu tố nên bản ghi cũ vẫn là bản ghi "không lọc", không cần di trú. `capDropped` đếm số mã bị loại ở tầng 0 và in bằng `--warn`, cùng lý do `belowSma200` tồn tại. CSS `.capchips` cố ý KHÔNG dùng lại `.segmented` (lưới hai cột, chọn MỘT, tô `--ink`): tô bằng `--stamp` — đúng màu ô tích của app — để nhìn là biết chọn được nhiều; chỉ dùng biến màu có sẵn nên không đụng bẫy ba khối theme. 64 khẳng định độc lập + đo thật trong trình duyệt (2 theme × 1280/400: nút có mặt ở CẢ HAI tab, nút sáng ra đúng `--stamp` ở cả hai theme, bấm Mega đổi đúng bảng của trạng thái đó rồi bỏ bấm thì quay về, dòng đếm ra đúng `--warn`, không tràn khung nhìn). Touches types.ts, longterm.ts, lt-store.ts, scan-job.ts, route longterm + last, FilterPanel, LongTermPanel, page.tsx, i18n (chỉ thêm), globals.css (chỉ thêm); mới lib/marketcap.ts, components/CapChips.tsx.
 - 2026-09-18 — #145 **Ô tích "chỉ lấy mã còn trên SMA200" cho tab Đầu tư dài hạn.** Chủ app: "tôi muốn quét không được qua sma200". Câu này đọc được HAI nghĩa ngược nhau (phải nằm trên SMA200, hay phải nằm dưới) nên hỏi trước một câu thay vì đoán — đáp: phải nằm TRÊN. Đây chính là mức chặt mà #137 cố ý không làm, và lý do cũ vẫn đúng và vẫn đo được: tab này tìm mã ĐANG RỚT, mà rớt đủ sâu để đáng nhìn thì phần lớn đã thủng SMA200, nên đóng cứng là bảng trống gần như quanh năm. Vì vậy nó là Ô TÍCH (mặc định BẬT ở màn hình, TẮT ở server — request thiếu tham số phải ra bảng rộng hơn, không phải bảng bị lọc thêm mà không ai yêu cầu), đúng khuôn ô `requireAboveSma200` đã có bên tab Sell Put. **Ba chỗ load-bearing**: (1) tắt thì cổng KHÔNG có mặt trong `gates`, chứ không phải "có mặt và luôn đạt" — một dấu ✓ không loại ai là nhiễu, một dấu ✗ không loại ai thì tệ hơn vì nó dạy người đọc bỏ qua dấu ✗; thông tin không mất, cột Xu hướng vẫn ghi "Dưới SMA200". (2) Xét ở TẦNG 1, tức cắt trước khi tốn một lần cào Finviz hay một file SEC — đúng lý do ba tầng tồn tại, và cổng này cắt mạnh lại rẻ. (3) **`belowSma200` đếm số mã rụng CHỈ vì cổng này** (đúng một cổng tầng 1 hỏng) và màn hình in bằng `--warn`: không có con số đó thì "ô tích làm trống bảng" và "thị trường không có mã nào đạt" hiện y hệt nhau, mà hai thứ cần hai hành động ngược nhau; cố ý đếm kiểu chỉ-mình-nó-hỏng để trả lời trung thực được câu "bỏ tích thì mấy mã này xét tiếp chứ", và câu chữ vẫn nói rõ chúng còn phải qua các cổng còn lại. **Khoá kho lưu gồm cả ô tích** (`user:universe:sma200`), cùng lý do đã gồm phạm vi quét; trạng thái TẮT cố ý giữ nguyên khoá cũ không hậu tố — mọi bản ghi lưu trước đó đều quét khi chưa có cổng này, tức đúng bằng trạng thái tắt, nên không cần di trú. Thiếu SMA200 (chưa đủ 200 phiên) ĐI QUA kèm cờ `?`, đúng luật #131. **Điểm số không đụng tới**: `scoreComponents()` không đọc `aboveSma200` — đây là bộ lọc chứ không phải phép chấm lại, test ghim hai bên ra components giống hệt nhau. 40 khẳng định độc lập + đo thật trong trình duyệt (2 theme × 1280/400: gạt ô tích đổi đúng bảng của từng trạng thái, dòng cảnh báo ra đúng màu `--warn` ở cả hai theme, cổng mới chỉ xuất hiện trong ngăn chi tiết khi bật, không tràn khung nhìn). Touches longterm.ts, lt-store.ts, route longterm + last, LongTermPanel, i18n (chỉ thêm), README.
 - 2026-09-18 — #144 **Quét Long-term xong, ra khỏi tab là mất sạch — và lý do #137 không lưu là một phép đo nhầm đối tượng.** Chủ app báo: "screener longterm rồi out vô lại bị mất những con stock, phải screen lại". #137 cố ý không lưu, lập luận: lượt quét này bị chặn trên bởi tầng 0 và mọi thứ đắt đều cache theo ngày nên chạy lại gần như tức thì, khác hẳn quét put 4-8 phút vốn đáng một bộ máy job. Lập luận ấy đúng về MẠNG và sai về NGƯỜI: cache không làm người dùng khỏi phải bấm quét rồi ngồi nhìn ba tầng chạy hết 503 mã — và tệ hơn, bảng trống lúc quay lại trông y hệt "lần trước không ra mã nào", tức lại đúng cái lỗi "chưa nạp hiện giống không có gì" mà cả repo này cấm. `lt-store.ts` theo đúng khuôn `scan-store.ts` và cùng ba lý do: lưu phía SERVER (quét ở máy tính, mở lại ở điện thoại vẫn thấy), RIÊNG theo người (mỗi người một watchlist nên kết quả khác nhau), RIÊNG theo phạm vi (một lượt watchlist vài chục giây không được xoá lượt cả rổ vài phút). **KHÔNG có biến môi trường mới**: đường dẫn suy ra từ THƯ MỤC của `SCAN_PATH` (`last-longterm.json` nằm cạnh `last-scan.json`), nên tự rơi vào `/var/data` mà không có bước tay nào — né đúng bẫy `USERS_PATH`, nơi Render không tự thêm biến vào service đã tạo và dữ liệu lặng lẽ rơi vào thư mục build. File RIÊNG chứ không nhét chung một khoá vào `last-scan.json`: hai bảng có hình dạng hàng khác hẳn, và hai tiến trình ghi chung một file là một phép đọc-sửa-ghi đè được lên nhau. **Lưu TRƯỚC khi phát dòng `candidate` đầu tiên**, cạnh `flushPe()` sẵn có và vì đúng lý do đã ghi ở đó: tới điểm ấy mọi thứ đắt đã xong, nên client ngắt giữa lúc đang đọc bảng không được phép làm mất lượt quét. Lượt quét vẫn KHÔNG có job nền — đóng tab GIỮA CHỪNG vẫn mất, đánh đổi có ý thức — nhưng lượt ĐÃ XONG thì sống. **Đổi phạm vi thì NẠP LẠI bản lưu của phạm vi đó, thay bảng**, chứ không giữ lại như tab Screener (`prev.length ? prev : …`): giữ là để bảng cả rổ nằm dưới cái nút watchlist đang sáng, một lời nói dối im lặng. Bảng khôi phục in `lt.saved` bằng `--warn` và cố ý y NGUYÊN VĂN câu `res.saved` của tab Screener — một bảng số nhìn giống hệt nhau dù là số sống hay ảnh chụp bốn tiếng trước, nói giống nhau ở hai tab thì học một lần là hiểu cả hai. Đọc kho HỎNG tách khỏi CHƯA QUÉT LẦN NÀO (500 + lý do thật vs `{scan:null}`) vì hai cách sửa khác nhau; ghi tạm-rồi-đổi-tên nên sập giữa chừng không để lại JSON cụt. 19 khẳng định độc lập + đo thật trong trình duyệt (2 theme × 1280/400: bảng khôi phục đúng, `--warn` ra đúng màu ở cả hai theme, gạt phạm vi xoá bảng đúng, mở chi tiết từ payload đã lưu render nguyên vẹn, ngăn chi tiết 350px không tràn ở 400px). Touches route longterm, LongTermPanel, i18n (chỉ thêm), render.yaml (chỉ chú thích); mới lib/lt-store.ts, api/longterm/last.
 - 2026-09-17 — #143 **Hai phỏng đoán cuối được đo: cả hai ĐÚNG, và vẫn lòi ra một chú thích sẽ làm người sau phá hỏng thang CBOE.** Với host đã mở, đo nốt hai chỗ #142 ghi là "chưa ai nhìn". **CBOE (#109) đúng từng chi tiết**: payload `{timestamp,data,symbol}`, mỗi option có `option`/`bid`/`ask`/`iv`/`open_interest`/`gamma` và **toàn là SỐ**; 29.914 hợp đồng vào, giữ 15.586 qua 32 kỳ sau bộ lọc 60 ngày, spot 7637,76, tổng OI 25,9 triệu; `computeGex()` chạy nguyên si trên chuỗi đã chuyển và ra mức hợp lý (put wall 7500, call wall 7800, abs gamma 7600). **Tôi nghi sai một lần và dữ liệu chỉnh lại**: mấy giá trị `iv` khác 0 ĐẦU TIÊN trong file là 7,99 / 7,71 — trông y như đã là phần trăm, làm tôi tưởng phép ×100 là lỗi đơn vị kiểu AMT; nhưng đó là hợp đồng rác ở strike 200 trên chỉ số 7637. Gần tiền `iv = 0,1362` → ×100 = 13,62%, khớp `iv30 = 12,155` CBOE tự công bố. **Bài học lấy mẫu: lấy mẫu QUANH SPOT, đừng lấy từ đầu mảng.** **`zeroGamma: null` của SPX là ĐÚNG, không phải lỗ hổng**: tích luỹ gamma ròng âm ở cả 498 strike và không bao giờ cắt 0 — dealer âm gamma toàn dải; từng strike vẫn có thể ròng dương (nên mới có call wall 7800) trong khi tổng chạy vẫn âm. Phép quét giao cắt cố ý MỘT CHIỀU (âm→dương) vì đó chính là định nghĩa gamma flip. File chứa cả gốc `SPX` (10.040) lẫn `SPXW` (19.874), giữ cả hai là đúng. **Ảnh nghị sĩ (#133) cũng đúng**: `P000197`/`S000148`/`M000355` đều 200 `image/jpeg`, mã Bioguide đúng dạng nhưng không tồn tại (`X999999`) trả 404 — mẫu URL chuẩn và id sai hỏng sạch sẽ; vế CHƯA xác nhận là nửa app không kiểm soát được: `politician_id` của UW có phải Bioguide hay không. **Thứ duy nhất phải sửa là một chú thích**, và nó load-bearing: đo được `_SPX.json` → 200 nhưng `SPX.json` → **403** (không phải 404), `_VIX` → 200, `AAPL` → 200. Code vốn đã `continue` với MỌI mã lỗi nên hành vi đúng; nhưng chú thích cạnh đó viết "404 = tên sai, mã khác đổi tên cũng không cứu được, thử cho hết vì rẻ" — tức người sau "dọn" lại thành chỉ-404 là giết hẳn đường CBOE cho mọi mã đoán hụt tên, đúng hình dạng #100. Chú thích giờ mang chính phép đo. Docs + một chú thích; không đổi hành vi.
@@ -1148,6 +1149,64 @@ which *is* the off state — so there is nothing to migrate.
 Scoring is untouched: `scoreComponents()` never reads `aboveSma200`. This is a
 filter, not a re-scoring, and a test pins that the two produce identical
 components.
+
+#### Market-cap buttons (`src/lib/marketcap.ts`, `CapChips.tsx`)
+
+Three toggle buttons — **Mega ≥$200B / Big $10–200B / Mid $2–10B** — on the
+Sell Put Screener **and** the Long-term tab. Multi-select; **nothing selected
+means no filter at all**, not "reject everything", because a filter nobody has
+touched must be the widest state rather than a silent one.
+
+**The market cap is Schwab's, and it is free at tier 0.** `quotes()` already
+returns `fundamental.sharesOutstanding` in the very batched call both tabs
+make first, so cap = price × shares costs **zero extra requests** — and that
+is the whole reason this lands where it does. On the Screener it cuts before
+the option chain is fetched; on the Long-term tab it cuts before the daily
+bars, the Finviz scrape and the SEC file. The Heatmap has computed market cap
+this way since it was written, so this is reuse, not a new source.
+
+**One module and one component, deliberately.** `marketcap.ts` owns the
+thresholds and the pass rule; `CapChips.tsx` owns the three buttons. Two tabs
+asking the same question with two copies of the answer is how the copy nobody
+looks at drifts — the same argument that put `ratelimit.ts` in one place.
+
+Rules the maths follows, each pinned by a test:
+
+- **Zero or missing shares yields `null`, never a cap of 0.** A 0 would be
+  read by `capTier()` as "small cap" — turning *not known* into a confident
+  claim about the size of a company. Same shape as the non-positive share
+  counts in `secfacts.ts` (#142), different source.
+- **Unknown cap PASSES, carrying `unknown: true`**, per the standing #131
+  rule. Dropping it would let one missing Schwab field decide for the user.
+- **Numeric strings are read.** `Number.isFinite('100')` is `false`, so a
+  naive check would silently blank the whole basket if Schwab ever typed the
+  field as a string — the `gex.ts` trap, pre-empted.
+- **`parseCaps()` normalises order and drops unknown values**, and selecting
+  *all four* tiers collapses to "no filter": that is what it means, and it
+  keeps the saved-scan key from growing a suffix for a filter that rejects
+  nobody.
+
+**Each tab keeps its own convention, which is why it renders differently in
+each.** On the Long-term tab every criterion is a gate row, so this is a gate
+(present only while a selection is active, exactly like the SMA200 tickbox).
+On the Screener, user-editable criteria are plain filters and the hard gates
+are the fixed seven, so this is a filter beside `sectors` — which it most
+resembles: both cut on a property of the *company* rather than the contract,
+and both cut at tier 0. `Filters.caps` is optional (`?? []` everywhere) so a
+saved filter set from before this shipped can never read as "something was
+selected".
+
+The Long-term saved-scan key gains `:cap=mega+big`, same reasoning as the
+universe and the SMA200 tickbox; no selection adds no suffix, so old records
+are still the no-filter records and nothing needs migrating. `capDropped`
+counts what the filter removed at tier 0 and the panel prints it in `--warn`,
+for the same reason `belowSma200` exists: "the buttons emptied the table" and
+"nothing qualifies" need opposite responses.
+
+Not changed, and worth knowing: **the Screener's saved scan is keyed by user
+and universe only**, so it does not vary by filter — true of every Screener
+filter since it was written, and covered by the `res.saved` snapshot warning
+already on screen.
 
 #### SEC 10-K financials (`src/lib/secfacts.ts`, `companyFacts()` in `sec.ts`, `/api/secprobe`)
 
