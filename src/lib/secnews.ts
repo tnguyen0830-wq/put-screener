@@ -48,6 +48,10 @@ export const EIGHT_K_ITEMS: Record<string, string> = {
   '5.07': 'submission of matters to a shareholder vote',
   '7.01': 'Regulation FD disclosure',
   '8.01': 'other events',
+  /* Có nghĩa rõ ràng, và `BOILERPLATE` ngay dưới đã gọi đúng tên nó - nên
+     in "app chưa biết nghĩa" khi nó ĐỨNG MỘT MÌNH là app nói dối về chính
+     bảng tra của nó. Vẫn bị bỏ khi có mục khác đi kèm. */
+  '9.01': 'financial statements and exhibits (procedural attachment)',
 };
 
 /**
@@ -92,11 +96,58 @@ const FORM_MEANING: Record<string, string> = {
   'S-3ASR': 'automatic shelf registration (allows selling shares later)',
 };
 
-/** 424B* là bản cáo bạch cuối - tức đợt bán cổ phiếu đã CHỐT GIÁ. */
-const prospectus = (form: string) =>
-  form.toUpperCase().startsWith('424B')
-    ? 'final prospectus - a share offering has been priced (dilution)'
-    : null;
+/**
+ * 424B* = bản cáo bạch cuối theo Rule 424(b).
+ *
+ * **Bản #149 GHI SAI ở đây, và chính Claude ở production bắt được** khi trả
+ * lời chủ app: "nhãn pha loãng này do công cụ tự suy ra, không được kiểm
+ * chứng; các bản 424B thường cũng được dùng cho phát hành nợ." Nó đúng.
+ * Câu cũ viết thẳng "a share offering has been priced (dilution)" - tức
+ * KHẲNG ĐỊNH một sự thật tài chính mà hồ sơ không hề nói.
+ *
+ * **ĐO 2026-09-18, không đoán** (`data.sec.gov`, ba nhà phát hành):
+ *
+ * | Nhà phát hành | tổng dòng | 424B* | tỷ lệ | mô tả tài liệu |
+ * |---|---|---|---|---|
+ * | Bank of America | 11.416 | 10.626 | **93%** | PRICING/PRODUCT SUPPLEMENT |
+ * | Morgan Stanley  | 19.909 | 16.716 | **84%** | "PRICING SUPPLEMENT NO. 18.867" |
+ * | NVIDIA          |  1.001 |      4 |  0,4% | chỉ ghi "424B5" |
+ *
+ * Morgan Stanley đánh số tới **phiếu 18.867** - đó là một chương trình
+ * phát hành trái phiếu trung hạn, không phải 18.867 đợt bán cổ phiếu. Nhãn
+ * cũ sẽ gọi TỪNG cái trong số đó là pha loãng cổ đông.
+ *
+ * Nên: không khẳng định nữa. Nói đúng thứ BIẾT được - đã có một đợt chào
+ * bán chốt giá - và nói thẳng rằng bảng kê hồ sơ KHÔNG cho biết đó là cổ
+ * phiếu hay trái phiếu. Cùng luật với mã mục 8-K lạ ở ngay dưới: in ra và
+ * thú nhận không biết, tuyệt đối không đoán.
+ */
+const prospectus = (form: string, desc: string) => {
+  if (!form.toUpperCase().startsWith('424B')) return null;
+  const d = (desc ?? '').toUpperCase();
+  // Chữ ký đo được của một lượt rút vốn từ chương trình trái phiếu.
+  if (/PRICING SUPPLEMENT|PRODUCT SUPPLEMENT/.test(d))
+    return (
+      `${form} pricing supplement - a takedown from a debt/note programme, ` +
+      'NOT a share issue; this is routine funding, not news about the business'
+    );
+  return (
+    `${form} prospectus - a securities offering has been priced. ` +
+    'The SEC filing index does NOT say whether this is equity (dilution) or ' +
+    'debt, so do not call it dilution without checking the document itself'
+  );
+};
+
+/**
+ * Trần số bản cáo bạch giữ lại.
+ *
+ * Đây CHÍNH LÀ cái bẫy Form 4 mà #148 đã tránh được rồi lại dẫm phải ở cửa
+ * bên cạnh: Form 4 bị loại vì chiếm 591/1001 dòng của AAPL (59%), trong khi
+ * 424B chiếm **93% của Bank of America và 84% của Morgan Stanley** - tệ hơn
+ * hẳn. Không có trần này thì với mọi mã ngân hàng, mục tin tức là một bức
+ * tường phiếu chào giá và MỌI 8-K thật đều bị đẩy ra khỏi 4 chỗ.
+ */
+const MAX_PROSPECTUS = 1;
 
 const activist = (form: string) =>
   form.toUpperCase().startsWith('SC 13D')
@@ -115,7 +166,9 @@ export function describeFiling(f: Filing): string {
        nói rõ đây là bản sửa, chứ không để nó rơi xuống nhánh "không rõ". */
     const base = f.form.replace(/\/A$/i, '');
     const meaning =
-      FORM_MEANING[base.toUpperCase()] ?? prospectus(base) ?? activist(base);
+      FORM_MEANING[base.toUpperCase()] ??
+      prospectus(base, f.primaryDocDescription ?? '') ??
+      activist(base);
     const amended = base !== f.form ? ' (amended)' : '';
     return meaning
       ? `SEC ${f.form}: ${meaning}${amended}`
@@ -166,6 +219,16 @@ export async function secFilingNews(
       return Number.isFinite(t) && t >= cutoff;
     })
     .sort((a, b) => b.filingDate.localeCompare(a.filingDate))
+    /* Chặn lụt TRƯỚC khi cắt `limit`, nếu không thì với một ngân hàng cả 4
+       chỗ đều là phiếu chào giá và không 8-K nào lọt vào. Giữ bản MỚI NHẤT
+       vì mảng đã xếp giảm dần theo ngày. */
+    .filter(
+      (() => {
+        let seen = 0;
+        return (f: Filing) =>
+          !f.form.toUpperCase().startsWith('424B') || ++seen <= MAX_PROSPECTUS;
+      })()
+    )
     .slice(0, limit)
     .map((f) => ({
       title: describeFiling(f),
