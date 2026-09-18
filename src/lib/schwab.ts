@@ -498,3 +498,17 @@ export async function dailyHistory(symbol: string, years = 1) {
     needExtendedHoursData: 'false',
   });
 }
+
+/** Một phiên, nến phút - dùng để dò xem một mã có lịch sử TRONG NGÀY hay
+ *  không (market internals kiểu $TICK/$ADD chỉ có nghĩa vẽ theo phút; nến
+ *  ngày không nói lên gì). */
+export async function intradayHistory(symbol: string, minutes = 5) {
+  return get('/pricehistory', {
+    symbol,
+    periodType: 'day',
+    period: '1',
+    frequencyType: 'minute',
+    frequency: String(minutes),
+    needExtendedHoursData: 'false',
+  });
+}
