@@ -1901,7 +1901,8 @@ table.results tbody tr.clickable {
    nhất quán trên Safari iOS (không cho requestFullscreen một element tuỳ ý),
    và cách này chạy giống nhau trên mọi trình duyệt. z-index 40 đứng trên
    .scrim/.drawer (30/31), z-index cao nhất từng dùng trong app trước đó. */
-.rrgfullscreen {
+.rrgfullscreen,
+.panelfull {
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -1959,9 +1960,12 @@ table.results tbody tr.clickable {
 /* Lưới 8 biểu đồ TradingView nhúng. Rộng tối thiểu 360px vì dưới mức đó
    biểu đồ nến của TradingView chen chúc không đọc nổi - thà một cột rộng
    còn hơn bốn cột không đọc được. */
+/* minmax 280: ĐO được ở 1280px thân panel chỉ còn ~1200px, minmax 300 ra
+   BA cột (300 là đủ cho 4×300 + 3×12 = 1236, quá 1200 vài chục px); 280 ra
+   bốn cột như trang mẫu. Dưới 280 thì nến TradingView chen chúc. */
 .tvgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
   margin-top: 10px;
 }
@@ -1981,6 +1985,67 @@ table.results tbody tr.clickable {
   display: block;
   border-radius: var(--r-sm);
   background: var(--paper);
+}
+
+/* Thẻ app đứng trong lưới TradingView: cùng khung .tvcard, và Card in
+   .intvalue/.intmeta của nó bên trong. */
+.tvcard-app .intvalue {
+  margin: 2px 0;
+}
+.tvslot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tvslot > .tvcard {
+  flex: 1;
+}
+.tvchips {
+  margin-top: 4px;
+}
+.tvbadges {
+  display: inline-flex;
+  gap: 6px;
+  font-family: var(--data);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.tvbadge {
+  padding: 1px 6px;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-weight: 700;
+}
+.tvbadge-muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+.intclosed {
+  margin: 6px 0 2px;
+  font-weight: 700;
+}
+/* Hai bảng ngành / top vốn hoá dưới lưới. */
+.inttables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.inttable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--data);
+  font-size: 12px;
+}
+.inttable td {
+  padding: 2px 4px;
+  border-top: 1px solid var(--rule-soft);
+}
+.inttable td:last-child {
+  text-align: right;
+  font-weight: 700;
 }
 
 @media (max-width: 640px) {

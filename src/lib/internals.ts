@@ -12,9 +12,15 @@ import {
   diffSeries,
   meanOf,
   numField,
+  sectorChanges,
+  sessionOpenAt,
+  topCaps,
+  upDownRatio,
+  type SectorChange,
   type Series,
   type SeriesPoint,
 } from './internals-pure';
+import { sp500Rows } from './sp500rows';
 
 export type { Series, SeriesPoint } from './internals-pure';
 
@@ -90,57 +96,52 @@ function toSeries(r: ChartableRaw): Series {
   };
 }
 
-/**
- * Riêng VIX, cho khung TradingView (#175). Widget nhúng KHÔNG vẽ được chỉ
- * số VIX tiền mặt: `CBOE:VIX` bị giữ cho trang chính ("chỉ có trên
- * TradingView"), còn nguồn duy nhất vẽ được (`CAPITALCOM:VIX`) là một CFD
- * của nhà môi giới định giá theo HỢP ĐỒNG TƯƠNG LAI VIX - chủ app đo được
- * 18 trong ô đó khi chỉ số tiền mặt đang 14,82. Cùng nhãn "VIX", hai con số
- * khác nhau 3 điểm trên cùng một màn hình. Schwab lại có đúng chỉ số tiền
- * mặt `$VIX` kèm nến 5 phút (#165), nên ô VIX bên khung TradingView lấy từ
- * đây - MỘT request, không kéo theo ba mã còn lại.
- */
-export async function vixSeries(): Promise<Series & { currentSource: 'quote' | 'candle' }> {
-  const c = CHARTABLE.find((x) => x.key === 'vix')!;
+async function chartableSeries(): Promise<Series[]> {
   /* Con số đầu thẻ đọc từ `/quotes` `lastPrice` - ĐÚNG trường thanh ticker
      (`/api/tape`) đang in trên cùng màn hình - chứ không phải giá đóng của
      nến 5 phút cuối. Chủ app đo được hai con số "chưa khớp" khi thẻ lấy
-     nến: nến cuối có thể cũ tới 5 phút trong phiên, và sau giờ thì giá
-     đóng nến cuối lệch vài xu so với lần in cuối của chỉ số. Một màn hình,
-     một con số cho một thứ - nên cùng nguồn, cùng trường. Nến chỉ vẽ ĐƯỜNG.
-     Quote hỏng (không phải hết phiên) thì rơi về giá đóng nến và NÓI RA qua
-     `currentSource`, không im lặng. */
+     nến (#176): nến cuối có thể cũ tới 5 phút trong phiên, và sau giờ thì
+     giá đóng nến cuối lệch vài xu so với lần in cuối của chỉ số. Một màn
+     hình, một con số cho một thứ - nên cùng nguồn, cùng trường; nến chỉ vẽ
+     ĐƯỜNG. MỘT request quotes cho cả bốn mã. Quote hỏng (không phải hết
+     phiên) thì rơi về giá đóng nến và NÓI RA qua `currentSource`. */
   const [raw, q] = await Promise.all([
-    fetchChartable(c),
-    quotes([c.symbol]).catch((e) => {
+    Promise.all(CHARTABLE.map(fetchChartable)),
+    quotes(CHARTABLE.map((c) => c.symbol)).catch((e) => {
       if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
       return {} as Record<string, any>;
     }),
   ]);
-  const s = toSeries(raw);
-  const quote = q?.[c.symbol]?.quote;
-  const last = quote?.lastPrice;
-  if (typeof last !== 'number') return { ...s, currentSource: 'candle' };
-  const qt = [quote?.quoteTime, quote?.tradeTime].find((v) => typeof v === 'number') as number | undefined;
-  return { ...s, current: last, asOf: qt ?? s.asOf, currentSource: 'quote' };
-}
 
-async function chartableSeries(): Promise<Series[]> {
-  const raw = await Promise.all(CHARTABLE.map(fetchChartable));
+  const out: Series[] = raw.map((r) => {
+    const s = toSeries(r);
+    const quote = q?.[r.symbol]?.quote;
+    const last = quote?.lastPrice;
+    if (typeof last !== 'number') return { ...s, currentSource: 'candle' as const };
+    const qt = [quote?.quoteTime, quote?.tradeTime].find((v) => typeof v === 'number') as
+      | number
+      | undefined;
+    return { ...s, current: last, asOf: qt ?? s.asOf, currentSource: 'quote' as const };
+  });
 
-  const out = raw.map(toSeries);
-
-  const uvol = raw.find((r) => r.key === 'nyseUvol');
-  const dvol = raw.find((r) => r.key === 'nyseDvol');
+  const uvol = out.find((r) => r.key === 'nyseUvol');
+  const dvol = out.find((r) => r.key === 'nyseDvol');
   if (uvol && dvol && uvol.points.length && dvol.points.length) {
     const points = diffSeries(uvol.points, dvol.points);
+    // Hiệu số của hai giá cuối (cùng trường quote) - cùng luật như trên; cả
+    // hai cùng rơi về nến thì hiệu số cũng là của nến, và nói ra như thế.
+    const fromQuote = uvol.currentSource === 'quote' && dvol.currentSource === 'quote';
+    const current = fromQuote
+      ? diffOrNull(uvol.current, dvol.current)
+      : points[points.length - 1].v;
     out.push({
       key: 'uvolDvolDiff',
       label: 'NYSE UVOL − DVOL',
       points,
-      current: points.length ? points[points.length - 1].v : null,
+      current,
       source: 'schwab',
-      asOf: points.length ? points[points.length - 1].t : null,
+      asOf: fromQuote ? uvol.asOf : points[points.length - 1].t,
+      currentSource: fromQuote ? 'quote' : 'candle',
     });
   }
 
@@ -331,12 +332,45 @@ async function marketTideSeries(): Promise<Series[]> {
   }
 }
 
-export async function marketInternals(): Promise<{ series: Series[]; unavailable: Unavailable[] }> {
-  /* Ba nguồn, hỏng độc lập: Schwab hết phiên không được che mất market tide
-     của UW, và UW chết không được làm mất nến Schwab. Riêng
-     REAUTH_REQUIRED của Schwab vẫn phải nổi lên thành 401 thật (xem
-     chartableSeries), nên nhánh đó KHÔNG bị nuốt ở đây. */
-  const [chartSettled, store, tideSettled] = await Promise.all([
+export type InternalsTables = {
+  /** Biến động 1 ngày theo ngành, trọng số vốn hoá, từ rổ S&P 500. */
+  sectors: SectorChange[];
+  /** 14 mã vốn hoá lớn nhất RỔ S&P 500 (không phải NASDAQ 100 - app không
+   *  có danh sách thành phần đó, và nhãn màn hình nói đúng rổ). */
+  topCaps: { symbol: string; change: number }[];
+  /** Vì sao hai bảng rỗng, khi rỗng. */
+  note?: string;
+};
+
+export type Internals = {
+  series: Series[];
+  unavailable: Unavailable[];
+  /** Sàn đang trong phiên 09:30–16:00 New York không (ngày lễ không xét). */
+  marketOpen: boolean;
+  /** Tỉ lệ khối lượng tăng/giảm NYSE (UVOL:DVOL), quy ước "-2.94:1" của
+   *  trang mẫu. NASDAQ KHÔNG có: `$UVOLQ`/`$DVOLQ` chưa được đo ở Schwab
+   *  (#165 chỉ đo bốn mã), nên không bịa một badge thứ hai. */
+  nyseUpDown: number | null;
+  tables: InternalsTables;
+};
+
+async function breadthTables(): Promise<InternalsTables> {
+  try {
+    const { rows } = await sp500Rows();
+    return { sectors: sectorChanges(rows), topCaps: topCaps(rows, 14) };
+  } catch (e: any) {
+    if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
+    return { sectors: [], topCaps: [], note: String(e?.message ?? e).slice(0, 160) };
+  }
+}
+
+export async function marketInternals(now = new Date()): Promise<Internals> {
+  /* Bốn nguồn, hỏng độc lập: Schwab hết phiên không được che mất market tide
+     của UW, và UW chết không được làm mất nến Schwab; bảng ngành (6 request
+     báo giá, cache 60s chung với bản đồ nhiệt) hỏng cũng không kéo bốn nến
+     theo. Riêng REAUTH_REQUIRED của Schwab vẫn phải nổi lên thành 401 thật
+     (xem chartableSeries), nên nhánh đó KHÔNG bị nuốt ở đây. */
+  const [chartSettled, store, tideSettled, tables] = await Promise.all([
     chartableSeries().catch((e) => {
       if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
       return [] as Series[];
@@ -345,10 +379,17 @@ export async function marketInternals(): Promise<{ series: Series[]; unavailable
     // marketTideSeries tự bắt lỗi thành một chuỗi rỗng KÈM lý do, nên
     // .catch ở đây chỉ là lưới an toàn cuối cùng.
     marketTideSeries().catch(() => [] as Series[]),
+    breadthTables(),
   ]);
+
+  const uvol = chartSettled.find((s) => s.key === 'nyseUvol');
+  const dvol = chartSettled.find((s) => s.key === 'nyseDvol');
 
   return {
     series: [...chartSettled, ...sampledSeries(store), ...tideSettled],
     unavailable: UNAVAILABLE,
+    marketOpen: sessionOpenAt(now),
+    nyseUpDown: upDownRatio(uvol?.current ?? null, dvol?.current ?? null),
+    tables,
   };
 }
