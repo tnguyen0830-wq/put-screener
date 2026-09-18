@@ -16,6 +16,17 @@ type Status = {
     sent: number;
     channels: string[];
     errors: string[];
+    marketOpen: boolean;
+    events: {
+      symbols: number;
+      heldError: string | null;
+      noCik: string[];
+      secError: string | null;
+      quoteError: string | null;
+      skippedRoutine: number;
+      unknownItems: string[];
+      windowShort: boolean;
+    } | null;
   } | null;
 };
 
@@ -194,7 +205,28 @@ export default function AlertSettings() {
         </div>
       </dl>
 
-      {lr?.skipped === 'market-closed' && <p className="cap">{t('al.closed')}</p>}
+      {/* Điều kiện đổi từ `skipped` sang `marketOpen`: ngoài giờ KHÔNG còn
+          nghĩa là bỏ qua cả lượt chạy, nên đọc `skipped` ở đây sẽ không bao
+          giờ đúng nữa. */}
+      {lr && !lr.marketOpen && <p className="cap">{t('al.closed')}</p>}
+      {lr?.events && (
+        <>
+          <p className="cap">{t('al.watching', lr.events.symbols)}</p>
+          {lr.events.heldError && <p className="cap warnline">{t('al.evHeldErr')}</p>}
+          {lr.events.secError && (
+            <p className="cap warnline">{t('al.evSecErr', lr.events.secError)}</p>
+          )}
+          {lr.events.quoteError && (
+            <p className="cap warnline">{t('al.evQuoteErr', lr.events.quoteError)}</p>
+          )}
+          {lr.events.windowShort && <p className="cap warnline">{t('al.evWindowShort')}</p>}
+          {lr.events.unknownItems.length > 0 && (
+            <p className="cap warnline">
+              {t('al.evUnknown', lr.events.unknownItems.join(', '))}
+            </p>
+          )}
+        </>
+      )}
       {nothingOn && <p className="cap warnline">{t('al.nothingOn')}</p>}
       {lr && lr.errors.length > 0 && (
         <p className="cap warnline">

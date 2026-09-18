@@ -471,7 +471,12 @@ trước ngày đáo hạn, backwardation hoặc skew cao, giới hạn kích th
 Chống spam quan trọng hơn bản thân luật báo: mỗi loại cảnh báo chỉ gửi tối đa một
 lần mỗi phiên giao dịch New York, trạng thái lưu xuống đĩa nên deploy lại không
 bắn lại từ đầu, và chỉ đánh dấu đã gửi khi kênh thật sự nhận — kênh chết thì lần
-sau thử lại chứ không nuốt mất. Ngoài giờ giao dịch thì không kiểm tra.
+sau thử lại chứ không nuốt mất.
+
+**Ngoài giờ giao dịch, cảnh báo danh mục tạm nghỉ nhưng cảnh báo sự kiện thì
+không** — và đó là chủ đích, không phải sơ suất. Giá và greek ngoài giờ chỉ lặp
+lại con số đóng cửa, nhưng **8-K phần lớn nộp SAU khi sàn đóng**, nên gắn chúng
+vào cổng giờ giao dịch là bỏ lỡ đúng thứ cần bắt.
 
 Không cấu hình biến môi trường thì cả hai kênh **tự tắt**, app chạy y như cũ chứ
 không báo lỗi. Xem `DEPLOY.md` cho `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` và
@@ -480,6 +485,35 @@ cặp khoá `VAPID_*`.
 > Điểm yếu của một vòng lặp nền là nó vô hình. Vì thế My Portfolio in giờ chạy
 > gần nhất ra màn hình — một cái đồng hồ chết đọc thành một con số đứng yên, chứ
 > không đọc thành "mọi thứ đều ổn".
+
+#### Cảnh báo sự kiện: có chuyện gì đang xảy ra với mã của bạn
+
+Mọi cảnh báo ở trên đều tính từ **giá, greek và ngày tháng**. Không cái nào đọc
+được sự kiện doanh nghiệp — nên app từng không thể nói với bạn rằng CEO vừa nghỉ
+hay công ty vừa tuyên bố báo cáo tài chính cũ không còn đáng tin.
+
+Theo dõi **vị thế đang nắm + watchlist**, hai loại sự kiện:
+
+| Sự kiện | Nguồn | Khi nào |
+|---|---|---|
+| **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào |
+| **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch |
+
+**8-K là nguồn gốc, không phải bài viết về nguồn gốc** — đó là chính công ty bị
+luật bắt buộc phải khai một sự kiện trọng yếu. Miễn phí, không cần key. Bốn mục
+được xếp **khẩn**: phá sản (1.03), **báo cáo tài chính cũ không còn đáng tin
+(4.02)**, sự cố an ninh mạng (1.05), thông báo huỷ niêm yết (3.01).
+
+Mục thủ tục **cố ý không báo** — 5.07 (kết quả bỏ phiếu), 9.01 (phụ lục), 7.01
+và 8.01 (hai cái sọt rác rộng nhất của biểu mẫu). Mã mục app **chưa biết** cũng
+không báo, nhưng **hiện ra thành một con số** trên màn hình cảnh báo chứ không
+biến mất im lặng — "yên tĩnh" không bao giờ được trông giống "hỏng".
+
+> **Một request cho cả thị trường.** SEC có feed 8-K mới nhất của *mọi* công ty,
+> nên app lấy một lần rồi lọc ra mã của bạn — đúng khuôn tab Quốc hội, và rẻ hơn
+> hẳn việc hỏi SEC từng mã một. Đo thật: 100 dòng phủ 17,5 giờ, nhịp kiểm 15
+> phút nên thừa biên an toàn; nếu có ngày feed không phủ hết thì màn hình **nói
+> ra** rằng có thể đã bỏ sót.
 
 ---
 

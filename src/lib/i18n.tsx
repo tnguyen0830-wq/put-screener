@@ -910,9 +910,36 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'al.lastRun': { vi: 'Kiểm tra lúc', en: 'Last checked' },
   'al.enablePush': { vi: 'Bật thông báo trên máy này', en: 'Enable on this device' },
   'al.test': { vi: 'Gửi thử ngay', en: 'Send a test now' },
+  /* Câu cũ ghi "ngoài giờ nên không kiểm tra" - giờ SAI: cảnh báo 8-K chạy
+     bất kể giờ. Một chú thích hứa sai về thứ màn hình đang làm đúng là bẫy
+     #136, nên nó phải nói đúng hai nửa. */
   'al.closed': {
-    vi: 'Ngoài giờ giao dịch nên không kiểm tra - chuỗi quyền chọn không đổi, kiểm tra chỉ tốn hạn mức request.',
-    en: 'Outside market hours, so no check runs - the option chain does not move and checking only burns rate limit.',
+    vi: 'Ngoài giờ giao dịch: cảnh báo danh mục (ITM, earnings, skew) tạm nghỉ vì giá không đổi. Hồ sơ 8-K VẪN được kiểm — phần lớn 8-K nộp sau khi sàn đóng.',
+    en: 'Outside market hours: portfolio alerts (ITM, earnings, skew) pause because prices do not move. SEC 8-K filings are STILL checked — most 8-Ks are filed after the close.',
+  },
+  'al.watching': {
+    vi: (n: number) => `Đang theo dõi ${n} mã (vị thế đang nắm + watchlist): hồ sơ 8-K trọng yếu và giá chạy quá 7%.`,
+    en: (n: number) => `Watching ${n} symbols (open positions + watchlist) for material 8-K filings and moves over 7%.`,
+  },
+  'al.evHeldErr': {
+    vi: 'Không đọc được danh mục nên chỉ đang theo dõi watchlist. Nếu phiên Schwab hết hạn thì bấm Kết nối lại.',
+    en: 'Could not read the portfolio, so only the watchlist is being watched. If the Schwab session expired, press Reconnect.',
+  },
+  'al.evSecErr': {
+    vi: (m: string) => `Không lấy được hồ sơ SEC: ${m}`,
+    en: (m: string) => `Could not fetch SEC filings: ${m}`,
+  },
+  'al.evQuoteErr': {
+    vi: (m: string) => `Không lấy được giá nên phần cảnh báo giá chạy mạnh đang tắt: ${m}`,
+    en: (m: string) => `Could not fetch quotes, so the big-move alert is off: ${m}`,
+  },
+  'al.evWindowShort': {
+    vi: 'SEC đang có quá nhiều hồ sơ nên danh sách trả về không phủ hết 90 phút — có thể đã bỏ sót một vài hồ sơ.',
+    en: 'SEC filing volume is high enough that the feed no longer covers the full 90-minute window — some filings may have been missed.',
+  },
+  'al.evUnknown': {
+    vi: (c: string) => `Mã mục 8-K app chưa biết, nên KHÔNG báo: ${c}. Nếu mục nào trong đó đáng báo, nói tôi thêm vào.`,
+    en: (c: string) => `8-K item codes this app does not know, so they did NOT alert: ${c}. Say the word if any of them should.`,
   },
   'al.nothingOn': {
     vi: 'Chưa kênh nào được cấu hình, nên sẽ không có thông báo nào được gửi. Đặt TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID hoặc VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY trên Render.',
