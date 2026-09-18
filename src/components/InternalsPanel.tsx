@@ -13,6 +13,7 @@ export type Internals = {
   unavailable: Unavailable[];
   marketOpen: boolean;
   nyseUpDown: number | null;
+  nasdaqUpDown: number | null;
   tables: { sectors: SectorChange[]; topCaps: { symbol: string; change: number }[]; note?: string };
 };
 export type Load =
@@ -38,7 +39,7 @@ export type Load =
  * kiệm được gì mà chỉ thành hai lượt gọi cho cùng một dữ liệu.
  */
 const ORDER = [
-  'uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick',
+  'uvolDvolDiff', 'uvolDvolDiffQ', 'advDeclNyse', 'nyseTick', 'nasdaqTick',
   'vix', 'pccEquity', 'pccTotal', 'marketTide', 'avgIvRank',
 ];
 
