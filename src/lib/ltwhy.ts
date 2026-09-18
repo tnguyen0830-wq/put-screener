@@ -1,5 +1,6 @@
 import type { NewsResult } from './news';
 import type { LtCandidate } from './longterm';
+import type { TechnicalSnapshot } from './technical';
 
 /**
  * Prompt cho nút "Tại sao rớt?" của tab Long-term Investment.
@@ -53,6 +54,14 @@ export function whySystem(lang: 'vi' | 'en'): string {
     'and inventing a plausible-sounding cause is worse than saying the cause is',
     'not visible in this data. Never present a guess as a finding.',
     '',
+    'You are also given a live technical & volatility snapshot (RSI, MACD,',
+    'Bollinger, ATR, realized and implied vol) for this stock, the same numbers',
+    'shown on the Analyze tab. Use it only to describe what the price action and',
+    'options market are currently saying - momentum stabilising, oversold,',
+    'elevated implied vol - never as a CAUSE of the fall by itself. Fundamentals',
+    'and news remain the primary evidence for why; technical readings are',
+    'supporting colour for the two-sided weighing below.',
+    '',
     'Then weigh the evidence both ways in two short lists: what supports the',
     'case that this is a good company on sale, and what argues against it.',
     'End with the single most important thing a human should check by hand',
@@ -81,7 +90,17 @@ export function whySystem(lang: 'vi' | 'en'): string {
 export function whyFacts(
   row: LtCandidate,
   news: NewsResult | null,
-  newsError: string | null
+  newsError: string | null,
+  /**
+   * Ảnh chụp kỹ thuật/IV của tab Analyze cho ĐÚNG mã này, lấy bằng cách
+   * gọi lại `technicalSnapshot()` - cùng hàm, cùng con số tab Analyze đang
+   * hiện, không phải một đường tính riêng có thể trôi lệch (#96/#99).
+   * `null` = đã thử lấy và hỏng (Schwab hết phiên, mã không có dữ liệu...),
+   * khác hẳn "chưa từng gọi" - route luôn gọi, nên ở đây `null` luôn kèm
+   * `techError` thật.
+   */
+  tech: TechnicalSnapshot | null,
+  techError: string | null
 ): string {
   const t = row.trend;
   const s = row.nearestSupport;
@@ -100,6 +119,38 @@ export function whyFacts(
   lines.push(`- SMA50: ${num(t.sma50)}, SMA200: ${num(t.sma200)}`);
   lines.push(`- price vs SMA200: ${t.aboveSma200 === null ? 'n/a' : t.aboveSma200 ? 'above' : 'BELOW'}`);
   lines.push(`- SMA200 slope over ~21 sessions: ${pct(t.sma200SlopePct, 2)} (positive = long-term trend still rising)`);
+  lines.push('');
+
+  /* Cùng con số tab Analyze đang hiện cho mã này, không phải một lần tính
+     riêng: RSI/MACD/Bollinger/ATR/HV/IV mà tab Đầu tư dài hạn tự nó không
+     có (nó chỉ tính SMA200 + vùng hỗ trợ). Hỏng thì NÓI RA lý do thật thay
+     vì bỏ trống - một mục vắng mặt bị đọc thành "không có gì đáng nói",
+     đúng bẫy gexError trong airead.ts. */
+  lines.push('TECHNICAL & VOLATILITY (from the Analyze tab, live)');
+  if (tech) {
+    const te = tech.technical;
+    const o = tech.options;
+    lines.push(`- RSI14: ${num(te.rsi14, 1)}`);
+    lines.push(
+      `- MACD: ${num(te.macd?.macd, 3)}, signal ${num(te.macd?.signal, 3)}, histogram ${num(te.macd?.hist, 3)}`
+    );
+    lines.push(
+      `- Bollinger(20,2): lower ${num(te.bollinger?.lower)}, mid ${num(te.bollinger?.mid)}, upper ${num(te.bollinger?.upper)}, %B ${num(te.bollinger?.pctB)}`
+    );
+    lines.push(`- ATR14: ${num(te.atr14)} (${pct(te.atrPct !== null ? te.atrPct * 100 : null)} of price)`);
+    lines.push(
+      `- Realized vol: HV20 ${pct(te.hv20 !== null ? te.hv20 * 100 : null)}, HV60 ${pct(te.hv60 !== null ? te.hv60 * 100 : null)}, ratio HV20/HV60 ${num(te.volRatio)}`
+    );
+    lines.push(
+      `- Implied vol (near-the-money put, ~30 delta): ${pct(o.iv !== null ? o.iv * 100 : null)}, IV/HV20 ${num(o.ivHv)}`
+    );
+    lines.push(`- bid ${num(tech.price.bid)} / ask ${num(tech.price.ask)}, session volume ${tech.price.volume ?? 'n/a'}`);
+  } else {
+    lines.push(
+      `- NOT AVAILABLE${techError ? ` (${techError.slice(0, 160)})` : ''}. ` +
+        'Do not describe RSI, MACD, Bollinger bands, ATR, realized volatility or implied volatility for this stock.'
+    );
+  }
   lines.push('');
 
   lines.push('SUPPORT');

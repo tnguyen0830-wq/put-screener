@@ -570,11 +570,18 @@ và nó không kéo điểm lên hay xuống.
 như luôn nằm trên giá hiện tại, nên lấy nó làm cổng là giao quyền lọc cho sự lạc
 quan nghề nghiệp của người khác.
 
-**Nút "Tại sao rớt?"** lấy tin gần nhất của mã rồi để Claude đọc cùng TA và FA
-đang hiện. Mọi con số vẫn do code tính, Claude chỉ diễn giải — và được dặn phải
-**nói thẳng khi tin tức không giải thích được cú rớt**, vì bịa một lý do nghe
-lọt tai thì dễ hơn nhiều so với thừa nhận không biết. Nút này chỉ chạy khi bấm,
-không tự chạy cho cả bảng.
+**Nút "Tại sao rớt?"** lấy tin gần nhất của mã, cộng thêm một ảnh chụp kỹ
+thuật/biến động **CÙNG con số tab Analyze đang hiện cho mã đó** (RSI, MACD,
+Bollinger, ATR, biến động thực tế và ẩn ý — thứ mà bản thân tab Đầu tư dài hạn
+không tính, nó chỉ có SMA200 và vùng hỗ trợ), rồi để Claude đọc cùng TA và FA
+đang hiện. Mọi con số vẫn do code tính, Claude chỉ diễn giải, và được dặn dùng
+phần kỹ thuật làm **màu sắc bổ sung chứ không phải nguyên nhân** — tin tức và
+nền tảng doanh nghiệp mới là bằng chứng chính cho câu "vì sao rớt". Claude được
+dặn phải **nói thẳng khi tin tức không giải thích được cú rớt**, vì bịa một lý
+do nghe lọt tai thì dễ hơn nhiều so với thừa nhận không biết. Nút này chỉ chạy
+khi bấm, không tự chạy cho cả bảng, và **không** dùng lại Finviz/tin tức đã có
+sẵn trên hàng đó — gọi lại chỉ tốn thêm và có thể ra một con số lệch với con số
+đang hiện trên bảng.
 
 Tin đến từ **ba nguồn miễn phí, không cần key, và hỏng độc lập nhau**:
 

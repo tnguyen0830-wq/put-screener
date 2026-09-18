@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { symbolNewsAll, type NewsResult } from '@/lib/news';
+import { technicalSnapshot, type TechnicalSnapshot } from '@/lib/technical';
 import { whyFacts, whySystem } from '@/lib/ltwhy';
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +23,18 @@ const MAX_TOKENS = 16_000;
  *
  * Client GỬI LÊN chính dòng nó đang hiện (cùng khuôn /api/ai và
  * /api/tradebrief), nên route này không quét lại và không thể bất đồng với
- * bảng ngay bên cạnh. Route chỉ thêm đúng một thứ nó có mà client không có:
- * tin tức.
+ * bảng chính - Long-term chỉ tính SMA200 + vùng hỗ trợ, không có RSI/MACD/
+ * Bollinger/ATR/IV. Route thêm HAI thứ client không có: tin tức, và ảnh
+ * chụp kỹ thuật/IV của tab Analyze cho đúng mã này (`technicalSnapshot()`
+ * trong lib/technical.ts - CÙNG hàm tab Analyze dùng, không phải một lần
+ * tính riêng có thể trôi lệch, đúng bài học #96/#99). Chủ app hỏi thẳng:
+ * "khi longterm kiếm ra được stock nào thì khi tôi bấm vô nút hỏi claude
+ * thì lấy thêm thông tin bên tab analysis nữa" - đây là câu trả lời.
+ *
+ * Cố ý KHÔNG gọi lại Finviz hay tin tức của tab Analyze (`/api/analyze`
+ * cũng có cả hai): Long-term đã có Finviz riêng từ chính lượt quét
+ * (`row.fa`) và tin tức riêng từ `news.ts` - gọi lại là tốn thêm và có
+ * thể ra một con số LỆCH với con số đã hiện trên bảng bên cạnh.
  */
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -42,22 +53,37 @@ export async function POST(req: Request) {
 
   /* Tin hỏng KHÔNG làm hỏng cả câu trả lời: prompt có nhánh riêng nói rằng
      không kiểm được tin, và Claude được dặn phải nói ra điều đó. Nuốt lỗi
-     rồi im lặng sẽ biến một lỗi mạng thành kết luận "không có tin gì xấu". */
+     rồi im lặng sẽ biến một lỗi mạng thành kết luận "không có tin gì xấu".
+     Cùng lý do, kỹ thuật/IV cũng chạy song song và hỏng riêng: một request
+     Schwab lỗi không được phép làm mất phần tin tức đã lấy được, và ngược
+     lại. */
+  const [newsSettled, techSettled] = await Promise.allSettled([
+    symbolNewsAll(String(row.symbol), 10, row.name ? String(row.name) : null),
+    // Đúng con số tab Analyze đang hiện cho mã này (lib/technical.ts) -
+    // không phải một lần tính riêng có thể lệch với tab kia (#96/#99).
+    technicalSnapshot(String(row.symbol)),
+  ]);
+
   let news: NewsResult | null = null;
   let newsError: string | null = null;
-  try {
-    /* Tên công ty đi kèm vì Google News tìm theo CHỮ: "Nike" ra tin Nike,
-       còn mã trần thì ALL/ON/IT/KEY/CAR/NOW ra một trang tin rác trông y
-       như tin thật. Dòng client gửi lên đã có sẵn tên, không tốn gì thêm. */
-    news = await symbolNewsAll(String(row.symbol), 10, row.name ? String(row.name) : null);
+  if (newsSettled.status === 'fulfilled') {
+    news = newsSettled.value;
     /* Mọi nguồn cùng chết mới là "không kiểm được tin". Một nguồn chết thì
        `news.failed` đã nói rõ trong prompt, và phần còn lại vẫn đọc được -
        gộp hai chuyện đó lại là tự bịt mắt mình một nửa. */
     if (!news.ok.length && news.failed.length) {
       newsError = news.failed.map((f) => `${f.source}: ${f.error}`).join(' | ');
     }
-  } catch (e: any) {
-    newsError = String(e?.message ?? e).slice(0, 200);
+  } else {
+    newsError = String(newsSettled.reason?.message ?? newsSettled.reason).slice(0, 200);
+  }
+
+  let tech: TechnicalSnapshot | null = null;
+  let techError: string | null = null;
+  if (techSettled.status === 'fulfilled') {
+    tech = techSettled.value;
+  } else {
+    techError = String(techSettled.reason?.message ?? techSettled.reason).slice(0, 200);
   }
 
   const client = new Anthropic();
@@ -66,7 +92,7 @@ export async function POST(req: Request) {
     max_tokens: MAX_TOKENS,
     system: whySystem(body?.lang === 'en' ? 'en' : 'vi'),
     thinking: { type: 'adaptive' as const },
-    messages: [{ role: 'user' as const, content: whyFacts(row, news, newsError) }],
+    messages: [{ role: 'user' as const, content: whyFacts(row, news, newsError, tech, techError) }],
   };
 
   const encoder = new TextEncoder();
