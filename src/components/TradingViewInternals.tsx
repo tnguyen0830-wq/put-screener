@@ -38,15 +38,32 @@ import { useLang } from '@/lib/i18n';
  * lại khác hẳn.
  *
  * ============================================================
- * MÃ CHƯA XÁC NHẬN - NHƯNG HỎNG THÌ HỎNG TO, KHÔNG HỎNG THẦM
+ * MÃ CHƯA XÁC NHẬN - VÀ MÃ SAI THÌ HỎNG THẦM, KHÔNG HỎNG TO
  * ============================================================
  *
  * Các chuỗi `USI:*` dưới đây đọc từ chính tiêu đề trong ảnh mẫu, CHƯA gọi
- * thử được từ sandbox (không có mạng). Khác với đoán tên trường của một API
- * JSON - chỗ đó đoán sai ra một con số sai trông y như số đúng - ở đây mã
- * sai thì TradingView tự in "invalid symbol" NGAY TRONG khung, nhìn là
- * thấy. Mỗi ô còn in luôn chuỗi mã của nó, nên nếu ô nào hỏng thì chủ app
- * đọc đúng chuỗi cần sửa cho tôi, không phải mò.
+ * thử được từ sandbox (s.tradingview.com bị proxy từ chối 403 ở CONNECT,
+ * đo lại 2026-09-18). Bản đầu tiên của file này viết rằng mã sai thì
+ * TradingView "tự in invalid symbol ngay trong khung, nhìn là thấy" - và
+ * chủ app đo được điều đó SAI: ô VIX (khi đó là `TVC:VIX`) hiện biểu đồ
+ * APPLE. Widget nhúng KHÔNG báo lỗi với mã nó không nhận ra, nó lặng lẽ
+ * rơi về mã mặc định của chính nó (NASDAQ:AAPL) và vẽ một biểu đồ hoàn
+ * chỉnh, đúng theme, đúng khung giờ - trông y như một ô đang chạy tốt.
+ *
+ * Tức đây đúng là cái bẫy "đoán sai ra một thứ sai trông y như thứ đúng"
+ * mà đoạn cũ tưởng mình đã né được. Hai thứ giữ nó khỏi im lặng lần nữa:
+ *
+ *   - Dòng mã in dưới mỗi ô (`p.symbol`) là DẤU HIỆU DUY NHẤT: khi biểu đồ
+ *     trong khung không khớp với nhãn (một cổ phiếu hiện dưới nhãn "VIX"),
+ *     chuỗi đó là thứ phải sửa - app không có cách nào tự so, vì iframe
+ *     khác origin không cho đọc vào trong.
+ *   - `int.tvFallback` nói thẳng với người dùng rằng "một ô hiện cổ phiếu
+ *     thay vì chỉ báo" nghĩa là mã bên dưới sai, để họ báo đúng chuỗi
+ *     thay vì nghĩ TradingView hay app bị lỗi.
+ *
+ * VIX giờ là `CBOE:VIX` (sàn niêm yết VIX, tên nguồn TradingView hay dùng
+ * nhất cho nó) - vẫn là một phỏng đoán chưa đo, chỉ là phỏng đoán khác;
+ * nếu ô này vẫn ra cổ phiếu thì đổi chuỗi này, đừng đổi gì khác.
  */
 
 type Panel = {
@@ -69,7 +86,7 @@ const PANELS: Panel[] = [
   { key: 'pcc', label: 'Put/Call Ratio', symbol: 'USI:PCC', interval: '5', style: '2' },
   { key: 'tick', label: 'NYSE TICK', symbol: 'USI:TICK', interval: '5', style: '1' },
   { key: 'tickq', label: 'NASDAQ TICK', symbol: 'USI:TICKQ', interval: '5', style: '1' },
-  { key: 'vix', label: 'VIX', symbol: 'TVC:VIX', interval: '5', style: '2' },
+  { key: 'vix', label: 'VIX', symbol: 'CBOE:VIX', interval: '5', style: '2' },
   { key: 'pcce', label: 'Put/Call Ratio (Equity)', symbol: 'USI:PCCE', interval: '5', style: '2' },
 ];
 
@@ -142,6 +159,7 @@ export default function TradingViewInternals() {
           chặn để mà báo. Tám ô xám im lặng trông y như "app hỏng" - đúng
           bẫy "chưa tải xong nhìn giống không có gì" mà repo này cấm. */}
       <p className="hint hint-warn">{t('int.tvBlocked')}</p>
+      <p className="hint hint-warn">{t('int.tvFallback')}</p>
 
       {theme === null ? (
         <p className="cap">{t('int.loading')}</p>
@@ -163,9 +181,11 @@ export default function TradingViewInternals() {
                 loading={i < 4 ? 'eager' : 'lazy'}
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              {/* In chuỗi mã ra màn hình: ô nào TradingView không nhận ra sẽ
-                  tự báo "invalid symbol" bên trong khung, và dòng này cho
-                  biết chính xác chuỗi nào cần sửa. */}
+              {/* In chuỗi mã ra màn hình. Đây KHÔNG phải trang trí: mã
+                  TradingView không nhận ra thì nó lặng lẽ vẽ AAPL thay vì
+                  báo lỗi (đo được ở ô VIX), nên dòng này là thứ duy nhất
+                  cho biết chính xác chuỗi nào cần sửa khi biểu đồ trong
+                  khung không khớp với nhãn. */}
               <p className="cap intmeta">{p.symbol}</p>
             </div>
           ))}
