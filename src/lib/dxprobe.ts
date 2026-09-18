@@ -38,8 +38,12 @@ export type DxProbeResult = {
   /** Có nhận được AUTH_STATE: AUTHORIZED không - cổng chính của cả phép đo. */
   authorized: boolean;
   channelOpened: boolean;
-  /** Mã có dữ liệu chảy về, theo đúng tên mã đã hỏi. */
+  /** Mã có dữ liệu chảy về, theo đúng tên mã đã hỏi. CÓ DỮ LIỆU KHÔNG có
+   *  nghĩa là đúng chỉ báo cần tìm - xem `observations`. */
   symbolsWithData: string[];
+  /** Từng mã có dữ liệu, kèm căn cứ để phân biệt CHỈ SỐ với CỔ PHIẾU trùng
+   *  tên: bid/ask là số thật thì giao dịch được, tức không phải chỉ số. */
+  observations: SymbolObservation[];
   /** Mọi thông điệp hai chiều, đã cắt ngắn. Đây mới là phần đáng đọc khi
    *  cuộc bắt tay hỏng: lời từ chối của DXLink nói ra định dạng đúng. */
   messages: DxMessage[];
@@ -157,6 +161,73 @@ export function symbolsInFeed(raw: string, asked: string[]): string[] {
 }
 
 /**
+ * Có dữ liệu chảy về KHÔNG ĐỦ để kết luận "đây là chỉ báo bề rộng" - và
+ * phép đo ngày 2026-09-18 chứng minh điều đó bằng chính dữ liệu của nó.
+ *
+ * Hỏi 25 cách viết thì `ADV` và `DVOL` có dữ liệu, và probe khi ấy dán nhãn
+ * "mã bề rộng DÙNG ĐƯỢC". Sai. Nhìn vào giá trị:
+ *
+ *   VIX  (chỉ số thật)  bidPrice "NaN", askPrice "NaN", Trade price 14.81
+ *   ADV                 bidPrice 32.47, askPrice 41.79
+ *   DVOL                bidPrice 17.75, askPrice 53.23
+ *
+ * Một chỉ số KHÔNG giao dịch được nên KHÔNG có giá chào mua/bán - dxFeed
+ * trả `NaN`, đúng như VIX. Có bid/ask bằng số thật nghĩa là công cụ đó
+ * giao dịch được, tức một CỔ PHIẾU trùng tên (ADV là Advantage Solutions),
+ * không phải "số mã tăng giá của NYSE" - đại lượng đó là một SỐ ĐẾM cỡ
+ * hàng nghìn, không thể có giá 32,47 đô.
+ *
+ * Đúng cái bẫy probe Schwab (#165) đã bắt được với `DECN`/`DVOL` và ghi
+ * lại; lần này probe tự vấp vào vì chỉ khớp TÊN. Nên phép phân loại phải
+ * dựa trên DỮ LIỆU: bid/ask là số → giao dịch được → không phải chỉ số.
+ */
+export type SymbolObservation = {
+  symbol: string;
+  /** Thấy Quote với bid/ask là SỐ THẬT (không phải NaN) - công cụ giao
+   *  dịch được, gần như chắc chắn là cổ phiếu trùng tên. */
+  tradeableQuote: boolean;
+  /** Giá từ Trade event. Chỉ số (như VIX) chỉ có trường này. */
+  tradePrice: number | null;
+};
+
+/** `"NaN"` về dưới dạng CHUỖI trong JSON - `Number("NaN")` ra NaN, nên
+ *  kiểm bằng Number.isFinite sau khi ép kiểu là đủ cho cả hai dạng. */
+function finiteNum(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Gộp quan sát từ một thông điệp FEED_DATA vào bảng đang có. */
+export function observeFeed(raw: string, into: Map<string, SymbolObservation>): void {
+  let msg: any;
+  try {
+    msg = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (msg?.type !== 'FEED_DATA' || !Array.isArray(msg.data)) return;
+
+  for (const ev of msg.data) {
+    if (!ev || typeof ev !== 'object') continue;
+    const symbol = typeof ev.eventSymbol === 'string' ? ev.eventSymbol : null;
+    if (!symbol) continue;
+
+    const prev = into.get(symbol) ?? { symbol, tradeableQuote: false, tradePrice: null };
+    if (ev.eventType === 'Quote') {
+      // CẢ HAI vế phải là số thật mới coi là giao dịch được: một bên NaN
+      // là chưa đủ căn cứ.
+      if (finiteNum(ev.bidPrice) !== null && finiteNum(ev.askPrice) !== null) {
+        prev.tradeableQuote = true;
+      }
+    } else if (ev.eventType === 'Trade') {
+      const p = finiteNum(ev.price);
+      if (p !== null) prev.tradePrice = p;
+    }
+    into.set(symbol, prev);
+  }
+}
+
+/**
  * Chạy cuộc bắt tay thật. Trả về những gì quan sát được, KHÔNG BAO GIỜ
  * chứa token (thông điệp AUTH được ghi lại dưới dạng đã che).
  */
@@ -172,6 +243,7 @@ export async function dxHandshake(
     authorized: false,
     channelOpened: false,
     symbolsWithData: [],
+    observations: [],
     messages: [],
     error: null,
   };
@@ -192,6 +264,7 @@ export async function dxHandshake(
     let done = false;
     const state = { authorized: false, channelOpened: false, subscribed: false };
     const found = new Set<string>();
+    const seen = new Map<string, SymbolObservation>();
 
     const finish = (err?: string) => {
       if (done) return;
@@ -200,6 +273,8 @@ export async function dxHandshake(
       out.authorized = state.authorized;
       out.channelOpened = state.channelOpened;
       out.symbolsWithData = [...found];
+      // Chỉ giữ quan sát của những mã ĐÃ HỎI: dxFeed có thể gửi kèm mã khác.
+      out.observations = [...seen.values()].filter((o) => symbols.includes(o.symbol));
       try {
         ws?.close();
       } catch {
@@ -247,13 +322,19 @@ export async function dxHandshake(
       try {
         step(text, state, send, symbols);
         for (const s of symbolsInFeed(text, symbols)) found.add(s);
-        /* Chỉ dừng sớm khi đã có một mã KHÔNG PHẢI đối chứng - tức câu hỏi
-           thật đã có câu trả lời "có". Lần đo đầu dừng ngay khi hai mã đối
-           chứng về (237ms), nên kết luận "không có mã bề rộng" lúc đó là
-           một phép đo bị cắt ngắn chứ không phải một sự thật. Không có mã
-           bề rộng nào thì PHẢI nghe hết giờ mới được kết luận. */
-        const breadthFound = [...found].some((s) => !CONTROL_SYMBOLS.includes(s));
-        if (breadthFound) {
+        observeFeed(text, seen);
+        /* Chỉ dừng sớm khi tìm được thứ ĐANG TÌM: một mã không phải đối
+           chứng, VÀ trông như một chỉ số (có giá Trade nhưng không có
+           bid/ask thật - xem observeFeed).
+
+           Hai lần sửa, hai lần vì cùng một kiểu sai: lần đầu dừng ngay khi
+           mã đối chứng về (237ms). Lần hai suýt dừng vì `ADV`/`DVOL` có dữ
+           liệu - mà chúng là cổ phiếu trùng tên, không phải chỉ báo bề
+           rộng. Dừng vì một câu trả lời sai còn tệ hơn chờ hết giờ. */
+        const realFind = [...seen.values()].some(
+          (o) => !CONTROL_SYMBOLS.includes(o.symbol) && o.tradePrice !== null && !o.tradeableQuote
+        );
+        if (realFind) {
           clearTimeout(timer);
           finish();
         }
