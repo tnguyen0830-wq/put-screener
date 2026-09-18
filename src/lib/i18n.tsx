@@ -918,8 +918,40 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Outside market hours: portfolio alerts (ITM, earnings, skew) pause because prices do not move. SEC 8-K filings are STILL checked — most 8-Ks are filed after the close.',
   },
   'al.watching': {
-    vi: (n: number) => `Đang theo dõi ${n} mã (vị thế đang nắm + watchlist): hồ sơ 8-K trọng yếu và giá chạy quá 7%.`,
-    en: (n: number) => `Watching ${n} symbols (open positions + watchlist) for material 8-K filings and moves over 7%.`,
+    vi: (n: number) => `Đang theo dõi ${n} mã (vị thế đang nắm + watchlist): hồ sơ 8-K trọng yếu, giá chạy quá 7%, và tiêu đề báo chí.`,
+    en: (n: number) => `Watching ${n} symbols (open positions + watchlist) for material 8-K filings, moves over 7%, and press headlines.`,
+  },
+  /* "Lượt này chưa hỏi tin" phải KHÁC hẳn "đã hỏi và không có gì": tầng báo
+     chí chạy ~60 phút một lần, nên nếu không nói ra thì mấy con số 0 đọc
+     thành "báo chí im lặng" trong khi thật ra chưa ai hỏi. */
+  'al.pressIdle': {
+    vi: 'Tiêu đề báo chí (Yahoo Finance) được hỏi khoảng 60 phút một lần chứ không phải mỗi lượt — Yahoo tốn một request cho MỖI mã. Cửa sổ cảnh báo là 90 phút nên nhịp này không bỏ sót bài nào. Bấm "Chạy thử ngay" để kiểm tin luôn.',
+    en: 'Press headlines (Yahoo Finance) are checked about hourly, not every run — Yahoo costs one request per symbol. The alert window is 90 minutes, so nothing is missed. Press "Send a test now" to check them immediately.',
+  },
+  'al.press': {
+    vi: (v: any) => `Báo chí: đã hỏi tin ${v.checked} mã.`,
+    en: (v: any) => `Press: checked ${v.checked} symbols.`,
+  },
+  /* Yên tĩnh có chủ đích phải hiện thành CON SỐ, đúng khuôn `al.evUnknown`:
+     không có con số này thì "bộ lọc quá chặt" và "hôm nay không có tin gì"
+     trông y hệt nhau, mà hai thứ đó cần hai hành động ngược nhau. */
+  'al.pressQuiet': {
+    vi: (v: any) =>
+      `Trong 90 phút qua: ${v.routine} bài riêng về một mã nhưng không khớp từ khoá đáng báo, ${v.broad} bài gắn nhiều mã (bản tin thị trường) — đều ĐƯỢC ĐẾM chứ không gửi, để hộp thư không kêu suốt.`,
+    en: (v: any) =>
+      `In the last 90 minutes: ${v.routine} single-ticker articles matched no alert keyword and ${v.broad} were tagged with several tickers (market wraps) — both COUNTED, not sent, so the inbox stays quiet.`,
+  },
+  'al.pressOverflow': {
+    vi: (n: number) => `${n} cảnh báo báo chí nữa bị cắt vì chạm trần mỗi lượt (5). Mã nặng nhất và mới nhất được giữ.`,
+    en: (n: number) => `${n} more press alerts were cut by the per-run ceiling (5). The most severe and most recent were kept.`,
+  },
+  'al.pressSkipped': {
+    vi: (n: number) => `${n} mã chưa được hỏi tin vì vượt trần 60 mã mỗi lượt (vị thế đang nắm được ưu tiên trước).`,
+    en: (n: number) => `${n} symbols were not checked for news, over the 60-symbol per-run cap (open positions come first).`,
+  },
+  'al.pressErr': {
+    vi: (m: string) => `Không lấy được tin báo chí: ${m}`,
+    en: (m: string) => `Could not fetch press headlines: ${m}`,
   },
   'al.evHeldErr': {
     vi: 'Không đọc được danh mục nên chỉ đang theo dõi watchlist. Nếu phiên Schwab hết hạn thì bấm Kết nối lại.',

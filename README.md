@@ -492,12 +492,14 @@ Mọi cảnh báo ở trên đều tính từ **giá, greek và ngày tháng**. 
 được sự kiện doanh nghiệp — nên app từng không thể nói với bạn rằng CEO vừa nghỉ
 hay công ty vừa tuyên bố báo cáo tài chính cũ không còn đáng tin.
 
-Theo dõi **vị thế đang nắm + watchlist**, hai loại sự kiện:
+Theo dõi **vị thế đang nắm + watchlist**, ba loại sự kiện — xếp theo **độ mạnh
+của bằng chứng**:
 
-| Sự kiện | Nguồn | Khi nào |
-|---|---|---|
-| **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào |
-| **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch |
+| Sự kiện | Nguồn | Khi nào | Nhịp |
+|---|---|---|---|
+| **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào | 15 phút |
+| **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch | 15 phút |
+| **Tiêu đề báo chí** | Yahoo Finance | bất kể giờ nào | ~60 phút |
 
 **8-K là nguồn gốc, không phải bài viết về nguồn gốc** — đó là chính công ty bị
 luật bắt buộc phải khai một sự kiện trọng yếu. Miễn phí, không cần key. Bốn mục
@@ -514,6 +516,44 @@ biến mất im lặng — "yên tĩnh" không bao giờ được trông giống
 > hẳn việc hỏi SEC từng mã một. Đo thật: 100 dòng phủ 17,5 giờ, nhịp kiểm 15
 > phút nên thừa biên an toàn; nếu có ngày feed không phủ hết thì màn hình **nói
 > ra** rằng có thể đã bỏ sót.
+
+##### Tiêu đề báo chí — nhanh hơn 8-K, nhưng yếu hơn hẳn
+
+Phóng viên không phải chờ hết hạn nộp hồ sơ, nên báo chí thường kể chuyện trước
+SEC. Đổi lại đó là **bên thứ ba viết về công ty, chưa kiểm chứng** — có thể là
+tin đồn, có thể là bài suy diễn. Nên nó là một **tầng riêng**: mỗi cảnh báo mang
+nhãn `[Báo chí]` ngay đầu tiêu đề và thân nói thẳng đây không phải công ty tự
+khai.
+
+Mặc định của tin tức là **ồn**, nên có ba cổng lọc, và chúng là phần đáng đọc
+nhất của tính năng này:
+
+1. **Chỉ bài riêng về một mã.** Yahoo tự gắn danh sách mã cho mỗi bài, nên đây
+   là số *đo được* chứ không phải phỏng đoán. Bài gắn nhiều mã gần như luôn là
+   bản tin thị trường — đúng thứ tiếng ồn cần chặn.
+2. **Danh sách từ khoá CHO PHÉP**, không phải loại trừ — cùng cách làm với mã
+   mục 8-K. Khẩn là đúng bốn chuyện mà 8-K cũng xếp khẩn (phá sản, khai lại báo
+   cáo tài chính, sự cố an ninh mạng, huỷ niêm yết) cộng thêm **ngừng giao
+   dịch**. Cố ý **không** có: `plunge`/`soar` (tầng giá đã báo rồi — cho vào là
+   rung điện thoại hai lần cho cùng một chuyện), `upgrade`/`downgrade` (nhà phân
+   tích đổi khuyến nghị gần như mỗi ngày).
+3. **Trần 5 cảnh báo mỗi lượt, mỗi mã nhiều nhất một.** Một ngày tin dữ thật sự
+   thì 5 dòng là đúng; 40 dòng là một hộp thư bị tắt thông báo.
+
+Bài bị các cổng này chặn đều **được đếm và hiện lên màn hình** — cùng lý do với
+mã mục 8-K lạ: "yên tĩnh có chủ đích" không bao giờ được trông giống "hỏng". Và
+màn hình phân biệt rõ **"lượt này chưa hỏi tin"** với **"đã hỏi và không có
+gì"** — hai chuyện khác nhau, mà nếu gộp thì mấy con số 0 sẽ nói dối.
+
+> **Vì sao chỉ Yahoo, trong khi nút "Tại sao rớt?" đọc ba nguồn.** Hồ sơ SEC thì
+> tầng 8-K đã đọc rồi, bằng một feed chung rẻ hơn hẳn. Google News thì **không
+> gắn mã cho bài**, nên cổng số 1 ở trên không áp được — một tiêu đề khớp từ
+> khoá mà không ai xác nhận nó nói về công ty *này* là một thông báo có thể báo
+> nhầm công ty.
+>
+> **Nhịp ~60 phút, không phải 15.** Yahoo tốn một request cho *mỗi* mã, và app
+> này từng đốt sạch hạn mức của một nhà cung cấp khác đúng vì gọi từng mã ở nhịp
+> 15 phút. Cửa sổ cảnh báo là 90 phút nên nhịp giãn này **không bỏ sót bài nào**.
 
 ---
 
@@ -624,6 +664,16 @@ Tin đến từ **ba nguồn miễn phí, không cần key, và hỏng độc l�
 | Yahoo Finance | tìm kiếm tin tài chính | có, nên biết chắc bài nào riêng về mã |
 | Hồ sơ SEC (EDGAR) | 8-K, 10-Q/10-K, phát hành thêm cổ phiếu, SC 13D | theo định nghĩa là của đúng công ty đó |
 | Google News | bộ gom tin của hàng trăm toà báo | **không** — nên app ghi "chưa rõ" chứ không ghi "riêng mã này" |
+
+> **Google News đang trả 503 từ production.** Một cái 503 của Google có hai
+> nghĩa dẫn tới hai cách sửa ngược nhau: Google sập tạm (thử lại là xong) hay
+> Google chặn dải IP trung tâm dữ liệu (thử lại vô ích vĩnh viễn). App **đọc
+> thân phản hồi và tự phân loại**, vì trang chặn của Google tự xưng tên bằng
+> những chữ rất đặc trưng ("unusual traffic from your computer network"). Đo
+> được là *bị chặn* thì nó nghỉ hỏi 6 tiếng và nói thẳng trên màn hình rằng đó
+> là quyết định của app chứ không phải câu trả lời của Google — một dòng lỗi lặp
+> lại vô hạn là một dòng lỗi bị bỏ qua. Không khớp chữ nào thì vẫn coi là hỏng
+> tạm và vẫn thử lại; app **không đoán**. Hai nguồn kia không bị ảnh hưởng.
 
 Một nguồn chết **không** xoá hai nguồn kia, và prompt nói rõ nguồn nào trả lời
 nguồn nào hỏng — "không có tin" và "một nửa số nguồn chết" dẫn tới hai kết luận

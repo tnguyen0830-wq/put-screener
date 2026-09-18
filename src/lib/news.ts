@@ -65,7 +65,17 @@ export type NewsResult = {
   failed: { source: string; error: string }[];
 };
 
-async function yahooNews(symbol: string): Promise<NewsItem[]> {
+/**
+ * Tin Yahoo cho một mã.
+ *
+ * XUẤT RA ngoài (trước đây là hàm riêng tư) vì tầng cảnh báo báo chí
+ * (`pressalerts.ts`) cần ĐÚNG nguồn này và chỉ nguồn này: nó là nguồn duy
+ * nhất trong ba nguồn vừa đã chạy thật ở production, vừa gắn `relatedTickers`
+ * cho từng bài - mà cổng "chỉ bài riêng về một mã" của tầng đó dựa hẳn vào
+ * con số ấy. Chép lại thành bản thứ hai là để hai bản trôi lệch, đúng bài
+ * học #96/#99/#147.
+ */
+export async function yahooNews(symbol: string): Promise<NewsItem[]> {
   const y = toYahoo(symbol);
   const url =
     `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(y)}` +

@@ -85,7 +85,15 @@ export function prune(state: State, day: string): State {
   return { sent };
 }
 
-export async function runOnce(force = false): Promise<RunReport> {
+/**
+ * `pressDue` giãn riêng cho tầng tiêu đề báo chí: Yahoo tốn 1 request MỖI
+ * MÃ (không gộp lô được), nên gọi ở đúng nhịp 15 phút như mọi thứ khác là
+ * đi lại vết xe Dark Pool từng đốt sạch hạn mức UW. Mặc định theo `force`,
+ * để nút "Chạy thử ngay" luôn kiểm tin thật. Vòng lặp truyền
+ * `tick % 4 === 0` (~60 phút) - và cửa sổ 90 phút của cảnh báo khiến nhịp
+ * giãn đó KHÔNG làm mất bài nào.
+ */
+export async function runOnce(force = false, pressDue = force): Promise<RunReport> {
   const at = Date.now();
   const marketOpen = force || inMarketHours();
 
@@ -122,7 +130,7 @@ export async function runOnce(force = false): Promise<RunReport> {
      * Giờ nó không được phép làm mất cảnh báo 8-K, vốn không cần Schwab. */
     const [pfSettled, evSettled] = await Promise.allSettled([
       marketOpen ? collectAlerts() : Promise.resolve([] as Alert[]),
-      collectEventAlerts(marketOpen, day),
+      collectEventAlerts(marketOpen, day, Date.now(), pressDue),
     ]);
 
     const all: Alert[] = [];
@@ -162,9 +170,10 @@ export async function runOnce(force = false): Promise<RunReport> {
 }
 
 let timer: NodeJS.Timeout | null = null;
-/** Đếm số lần bộ đếm giờ 15 phút đã bắn, chỉ để giãn nhịp riêng cho
- *  syncDarkpool() (xem chú thích bên dưới) - không liên quan gì tới
- *  trading day hay bất kỳ trạng thái nào khác. */
+/** Đếm số lần bộ đếm giờ 15 phút đã bắn. Chỉ dùng để giãn nhịp cho HAI
+ *  thứ tốn 1 request mỗi mã: syncDarkpool() và tầng tiêu đề báo chí của
+ *  runOnce() (xem chú thích ở từng chỗ). Không liên quan gì tới trading
+ *  day hay bất kỳ trạng thái nào khác. */
 let tick = 0;
 
 
@@ -191,7 +200,10 @@ export function startAlertLoop() {
   if (timer) return;
   timer = setInterval(() => {
     tick++;
-    void runOnce().catch(() => {});
+    // 1 trong 4 tick (~60 phút) mới hỏi tin báo chí - xem chú thích
+    // `pressDue` ở `runOnce`. Cùng nhịp với syncDarkpool() bên dưới, nhưng
+    // là host khác nên không cộng dồn vào cùng một hạn mức.
+    void runOnce(false, tick % 4 === 0).catch(() => {});
     void syncTracked().catch(() => {});
     void syncCongress().catch(() => {});
     void syncEarningsCalendar().catch(() => {});

@@ -26,6 +26,13 @@ type Status = {
       skippedRoutine: number;
       unknownItems: string[];
       windowShort: boolean;
+      pressRan: boolean;
+      pressChecked: number;
+      pressSkipped: number;
+      pressRoutine: number;
+      pressBroad: number;
+      pressOverflow: number;
+      pressErrors: string[];
     } | null;
   } | null;
 };
@@ -224,6 +231,36 @@ export default function AlertSettings() {
             <p className="cap warnline">
               {t('al.evUnknown', lr.events.unknownItems.join(', '))}
             </p>
+          )}
+          {/* Tầng báo chí. `pressRan` tách "lượt này chưa hỏi" khỏi "đã hỏi
+              và không có gì" - nếu gộp thì mấy con số 0 bên dưới nói dối. */}
+          {lr.events.pressRan ? (
+            <>
+              <p className="cap">
+                {t('al.press', { checked: lr.events.pressChecked })}{' '}
+                {t('al.pressQuiet', {
+                  routine: lr.events.pressRoutine,
+                  broad: lr.events.pressBroad,
+                })}
+              </p>
+              {lr.events.pressSkipped > 0 && (
+                <p className="cap warnline">
+                  {t('al.pressSkipped', lr.events.pressSkipped)}
+                </p>
+              )}
+              {lr.events.pressOverflow > 0 && (
+                <p className="cap warnline">
+                  {t('al.pressOverflow', lr.events.pressOverflow)}
+                </p>
+              )}
+              {lr.events.pressErrors.length > 0 && (
+                <p className="cap warnline">
+                  {t('al.pressErr', lr.events.pressErrors.join(' · '))}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="cap">{t('al.pressIdle')}</p>
           )}
         </>
       )}
