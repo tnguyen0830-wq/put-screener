@@ -557,6 +557,14 @@ này chỉ chạy khi bấm, không tự chạy cho cả bảng.
 > **Bảng trống là một câu trả lời, không phải lỗi.** Phần lớn thời gian không có
 > mã nào vừa rớt đủ sâu, vừa còn trên hỗ trợ, vừa còn lãi và chưa đắt.
 
+**Kết quả quét được LƯU, mở lại tab là có ngay.** Lưu ở phía server nên quét trên
+máy tính rồi mở điện thoại vẫn thấy, và lưu riêng theo từng phạm vi — một lượt
+watchlist vài chục giây không xoá mất lượt cả rổ vừa chạy. Bảng khôi phục luôn in
+**giờ quét kèm câu "đây là ảnh chụp, giá đã cũ"**: một bảng số nhìn y hệt nhau dù
+nó là số sống hay ảnh chụp bốn tiếng trước. Gạt sang phạm vi khác thì bảng đổi
+theo phạm vi đó chứ không giữ lại bảng cũ. Đóng tab *giữa lúc đang quét* thì vẫn
+mất lượt quét — tab này cố ý không có bộ máy chạy nền như tab Screener.
+
 ---
 
 ## Cấu trúc

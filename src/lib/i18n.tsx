@@ -1003,6 +1003,25 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (v: any) => `Đã xét ${v.scanned} mã, ${v.kept} mã qua hết cổng.`,
     en: (v: any) => `Scanned ${v.scanned} symbols, ${v.kept} passed every gate.`,
   },
+  /* Ảnh chụp, không phải giá sống. Cùng câu chữ với `res.saved` của tab
+     Screener, vì đúng là cùng một sự thật - và nói y như nhau ở hai tab thì
+     người đọc học một lần là hiểu cả hai. */
+  'lt.saved': {
+    vi: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const gio = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const ngay = same ? 'hôm nay' : d.toLocaleDateString('vi-VN');
+      return `Kết quả của lần quét lúc ${gio} ${ngay} - đây là ảnh chụp, giá đã cũ. Bấm quét lại để lấy số mới.`;
+    },
+    en: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const day = same ? 'today' : d.toLocaleDateString('en-US');
+      return `From the scan at ${time} ${day} - a snapshot, so prices are stale. Run the scan again for fresh numbers.`;
+    },
+  },
   'lt.empty': {
     vi: 'Không mã nào qua hết cổng lần này. Bảng trống ở đây là một CÂU TRẢ LỜI, không phải lỗi: phần lớn thời gian không có mã nào vừa rớt đủ sâu, vừa còn trên vùng hỗ trợ, vừa còn lãi và chưa đắt.',
     en: 'Nothing passed every gate this run. An empty table here is an ANSWER, not a failure: most of the time no stock is simultaneously down enough, still above a support zone, still profitable and not expensive.',

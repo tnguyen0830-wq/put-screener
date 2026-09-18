@@ -41,6 +41,9 @@ services:
         value: /var/data/watchlist.json
       # Kết quả quét gần nhất. Quét cả rổ mất 4-8 phút, để trong thư mục
       # build thì mỗi lần deploy là mất, mở app lên lại thấy bảng trống.
+      # Kết quả quét Long-term nằm CẠNH file này (last-longterm.json, cùng
+      # thư mục) và KHÔNG có biến riêng - cố ý, vì Render không tự thêm biến
+      # mới vào service đã tạo, nên một biến mới là một bước tay dễ quên.
       - key: SCAN_PATH
         value: /var/data/last-scan.json
       # Trạng thái chống lặp của cảnh báo, và đăng ký thông báo trình duyệt.
