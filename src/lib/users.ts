@@ -108,6 +108,10 @@ const OWNER_ONLY = [
   // chủ app trả tiền cho X. Cùng lý do với ttprobe - người nhà không được là
   // người bấm nút tiêu tiền trên tài khoản của chủ app.
   '/api/xprobe',
+  // Probe bề rộng thị trường: gọi cả UW (hạn mức trả phí) LẪN tài khoản môi
+  // giới tastytrade, và còn mở hẳn một phiên streaming trên tài khoản đó.
+  // Cùng lý do với ttprobe/xprobe.
+  '/api/breadthprobe',
 ];
 
 /** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang
