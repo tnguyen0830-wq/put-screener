@@ -169,6 +169,21 @@ export async function gnewsSearch(
     headers: { 'User-Agent': UA },
     cache: 'no-store',
   });
-  if (!r.ok) throw new Error(`Google News ${r.status}`);
+  /* ĐỌC BODY CẢ KHI HỎNG. Bản #149 ném ngay ở đây và vứt body đi, nên
+     phép đo đầu tiên ở production chỉ nói được "Google News 503" - đúng
+     con số, sai chỗ cần biết. Một cái 503 của Google có ít nhất hai nghĩa
+     dẫn tới hai cách sửa NGƯỢC nhau: Google đang sập tạm (thử lại là xong)
+     hay Google chặn dải IP của trung tâm dữ liệu (thử lại vô ích suốt
+     đời, phải đổi cách hoàn toàn) - và chính BODY là thứ nói ra, vì trang
+     chặn của Google viết thẳng "unusual traffic from your computer
+     network". Đúng bài học #130: một mã lỗi không nói được lỗi của AI.
+     Trạng thái đứng TRƯỚC, trích body đứng SAU, vì chuỗi này bị cắt ở 200
+     ký tự khi lên prompt và màn hình - bài học #102 về thứ tự trường. */
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    throw new Error(
+      `Google News ${r.status}${body ? ` - ${shapeOf(body)}` : ' (thân rỗng)'}`
+    );
+  }
   return parseGnewsRss(await r.text()).slice(0, limit);
 }

@@ -266,6 +266,14 @@ export type Filing = {
    * phải thiếu dữ liệu.
    */
   items: string;
+  /**
+   * Mô tả tài liệu chính. ĐO 2026-09-18: với 8-K nó chỉ chép lại "8-K" nên
+   * VÔ DỤNG (#148 đã ghi), NHƯNG với 424B thì nó là thứ phân biệt được -
+   * "PRICING SUPPLEMENT" / "PRELIMINARY PRICING SUPPLEMENT" / "PRODUCT
+   * SUPPLEMENT" là chữ ký của một đợt rút vốn từ chương trình TRÁI PHIẾU.
+   * Cùng một trường, vô dụng ở loại hồ sơ này và load-bearing ở loại kia.
+   */
+  primaryDocDescription: string;
 };
 
 /**
@@ -294,6 +302,7 @@ export function parseRecentFilings(raw: any): Filing[] {
   const reportDate: string[] = r.reportDate ?? [];
   const primaryDocument: string[] = r.primaryDocument ?? [];
   const items: string[] = r.items ?? [];
+  const primaryDocDescription: string[] = r.primaryDocDescription ?? [];
   return acc.map((accessionNumber, i) => ({
     accessionNumber,
     form: form[i] ?? '',
@@ -301,6 +310,7 @@ export function parseRecentFilings(raw: any): Filing[] {
     reportDate: reportDate[i] ?? '',
     primaryDocument: primaryDocument[i] ?? '',
     items: items[i] ?? '',
+    primaryDocDescription: primaryDocDescription[i] ?? '',
   }));
 }
 
