@@ -1428,6 +1428,16 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Đo được ở production trước khi làm (#165): 4 chỉ báo dưới đây có nến phút thật từ Schwab, làm mới mỗi lần mở trang; 3 chỉ báo Schwab chỉ trả SỐ HIỆN TẠI chứ không có lịch sử trong ngày nên app tự lấy mẫu mỗi ~15 phút — đường THÔ hơn hẳn bản gốc, mỗi thẻ tự nói rõ đang dùng loại nào. IV Rank trung bình đọc từ tastytrade (cùng kho đã đồng bộ cho cổng earnings, không tốn thêm request). 2 chỉ báo còn lại (NASDAQ Advance-Decline, Put/Call Total) không mã nào Schwab quote được qua API, dù có trên thinkorswim.',
     en: 'Measured in production before building this (#165): the four indicators below have real minute-by-minute candles from Schwab, refreshed on every page load; three more only give a CURRENT NUMBER, no intraday history, so the app self-samples every ~15 minutes — a coarser line than the original, and each card names which kind it is. Average IV Rank comes from tastytrade (the same store already synced for the earnings gate, no extra request). Two indicators (NASDAQ Advance-Decline, Put/Call Total) have no symbol Schwab quotes through the API at all, even though they exist on thinkorswim.',
   },
+  'int.viewTv': { vi: 'TradingView', en: 'TradingView' },
+  'int.viewApp': { vi: 'Số liệu app', en: "App's own data" },
+  'int.tvNote': {
+    vi: 'Tám biểu đồ này nhúng thẳng từ TradingView (nguồn USI) — đầy đủ cả 8 chỉ báo kèm lịch sử, kể cả 2 cái Schwab không có mã nào để quote. ĐÁNH ĐỔI: đây là một KHUNG HÌNH của TradingView, app KHÔNG đọc được con số bên trong — không cảnh báo được, không đưa vào "Hỏi Claude" được. Muốn số liệu app tự đọc được thì gạt sang "Số liệu app".',
+    en: 'These eight charts are embedded straight from TradingView (USI source) — all eight indicators with full history, including the two Schwab has no symbol for. THE TRADE-OFF: this is a TradingView FRAME, the app cannot read the numbers inside it — no alerts, nothing for "Ask Claude". Switch to "App\'s own data" for numbers the app can actually read.',
+  },
+  'int.tvBlocked': {
+    vi: 'Nếu các ô dưới đây trống hoặc xám: trình duyệt, tiện ích chặn quảng cáo hoặc mạng đang chặn tradingview.com — app không tự biết được điều đó (khung của bên thứ ba, app không đọc được vào trong), nên dòng này nói trước.',
+    en: 'If the boxes below are empty or grey: your browser, an ad blocker, or the network is blocking tradingview.com — the app cannot detect that itself (a third-party frame is opaque to it), which is why this line says so up front.',
+  },
   'int.sourceSchwab': { vi: 'nến thật (Schwab)', en: 'real candles (Schwab)' },
   'int.sourceSampled': { vi: 'tự lấy mẫu ~15 phút', en: 'self-sampled ~15min' },
   'int.asOf': { vi: (t: any) => `lúc ${t}`, en: (t: any) => `as of ${t}` },
