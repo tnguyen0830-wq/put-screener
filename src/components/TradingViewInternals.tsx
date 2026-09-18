@@ -1,25 +1,24 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
-import { Sparkline, type Series } from './InternalsPanel';
-
-type VixSeries = Series & { currentSource?: 'quote' | 'candle' };
+import { Card, type Series } from './InternalsCard';
+import type { Load } from './InternalsPanel';
 
 /**
- * Tám biểu đồ market internals nhúng từ TradingView - đúng bố cục trang
- * tapchiphowall.com mà chủ app đưa ảnh mẫu.
+ * Tám ô market internals theo bố cục trang tapchiphowall.com mà chủ app đưa
+ * ảnh mẫu - từ #177 là lưới LAI: mỗi ô chọn được nguồn TradingView (iframe)
+ * hay nguồn của app (thẻ Schwab/UW), và mặc định là nguồn TỐT HƠN cho ô đó.
  *
  * ============================================================
  * VÌ SAO NHÚNG, TRONG KHI APP ĐÃ CÓ DỮ LIỆU SCHWAB
  * ============================================================
  *
  * #165 đo được: Schwab chỉ có nến trong ngày cho 4/8 chỉ báo, 3 chỉ báo
- * chỉ có SỐ HIỆN TẠI (không vẽ được đường), và 2 chỉ báo (NASDAQ
- * Advance-Decline, Put/Call Total) KHÔNG mã nào quote được. TradingView tự
- * tổng hợp cả họ mã `USI:*` nên có đủ cả 8 kèm lịch sử - đó là lý do trang
- * mẫu nhìn đầy đủ còn app thì không.
+ * chỉ có SỐ HIỆN TẠI (app tự lấy mẫu ~15 phút, đường thô), và NASDAQ
+ * Advance-Decline KHÔNG nguồn có key nào có. TradingView tự tổng hợp cả họ
+ * mã `USI:*` nên có đủ kèm lịch sử phút - đó là lý do trang mẫu nhìn đầy đủ.
  *
  * ============================================================
  * IFRAME THUẦN, KHÔNG DÙNG SCRIPT LOADER CỦA TRADINGVIEW
@@ -32,102 +31,76 @@ type VixSeries = Series & { currentSource?: 'quote' | 'candle' };
  * tiện nhỏ (phải tự dựng URL) để hạ hẳn một bậc rủi ro.
  *
  * ============================================================
- * ĐÂY LÀ MỘT KHUNG HÌNH, KHÔNG PHẢI DỮ LIỆU CỦA APP
+ * IFRAME LÀ KHUNG HÌNH: KHÔNG VẼ ĐÈ, KHÔNG ĐỌC SỐ
  * ============================================================
  *
- * App KHÔNG đọc được con số bên trong iframe. Nghĩa là không cảnh báo được,
- * không đưa vào "Hỏi Claude" được, không tính toán gì với nó - khác hẳn chế
- * độ "Số liệu app" bên cạnh, nơi mọi con số là của app và dùng được. Màn
- * hình phải nói ra điều đó, nếu không hai chế độ trông như nhau mà khả năng
- * lại khác hẳn.
+ * App KHÔNG đọc được con số bên trong iframe và KHÔNG vẽ được gì lên nó -
+ * kể cả các đường tham chiếu ±600/±300 mà trang mẫu kẻ (họ dùng thư viện
+ * biểu đồ TradingView chạy trong trang của họ, không phải widget nhúng).
+ * Nên đường tham chiếu chỉ có trên THẺ CỦA APP, và đó là lý do các ô có
+ * dữ liệu app tốt (NYSE TICK nến 5 phút, UVOL−DVOL, VIX) mặc định là thẻ
+ * app chứ không phải iframe. Ô nào app chỉ có mẫu 15 phút (NASDAQ TICK,
+ * ADV−DECL, Put/Call) thì mặc định TradingView, nhưng vẫn có nút chuyển
+ * sang thẻ app - đường thô hơn, đổi lấy đường tham chiếu.
  *
  * ============================================================
- * MÃ KHÔNG ĐO ĐƯỢC TỪ SANDBOX, NÊN NGƯỜI DÙNG ĐƯỢC ĐỔI MÃ NGAY TRÊN MÀN HÌNH
+ * MÃ TRADINGVIEW KHÔNG ĐO ĐƯỢC TỪ SANDBOX - NGƯỜI DÙNG ĐỔI TRÊN MÀN HÌNH
  * ============================================================
  *
- * `s.tradingview.com` bị proxy từ chối 403 ở CONNECT (đo lại 2026-09-18),
- * nên KHÔNG một chuỗi mã nào ở đây xác nhận được từ đây. Ba lần đo THẬT của
- * chủ app, mỗi lần một cách hỏng khác nhau, và cả ba đều KHÔNG phải "invalid
- * symbol" như bản đầu của file này khẳng định:
- *
- *   - `TVC:VIX` (#168): widget lặng lẽ vẽ biểu đồ APPLE - mã mặc định của
- *     chính nó - hoàn chỉnh, đúng theme, trông y như một ô đang chạy tốt.
- *   - `CBOE:VIX` (#173): widget NHẬN RA mã (tiêu đề in "CBOE:VIX · 5") rồi
- *     bật hộp thoại "Mã giao dịch này chỉ có trên TradingView" - dữ liệu
- *     CBOE bị giữ lại cho trang chính, widget nhúng không được vẽ.
- *   - `USI:UVOL-USI:DVOL` (phép trừ hai mã): vẽ được, nhưng KHÔNG xem được
- *     khung 1m/5m - biểu thức spread trong widget miễn phí không có nến
- *     trong ngày, mà trong ngày mới là toàn bộ lý do ô này tồn tại.
- *
- * Đúng cái bẫy "đoán sai ra một thứ sai trông y như thứ đúng" - và mỗi lần
- * đoán lại là một lượt deploy + một lượt chủ app chụp ảnh. Nên thay vì đoán
- * lần thứ tư, mỗi ô mang một DANH SÁCH mã ứng viên và một hàng nút để chủ
- * app tự đổi ngay trên màn hình; lựa chọn được nhớ theo từng ô
- * (`localStorage`, cùng cơ chế tab/ticker của #110). Phép đo diễn ra ở
- * đúng chỗ duy nhất đo được - trình duyệt của chủ app - và không tốn deploy.
- *
- * Thứ tự ứng viên là thứ tự KHẢ NĂNG, mã đầu là mặc định:
- *   - Chỉ báo hiệu số: TradingView có sẵn mã ĐƠN cho từng hiệu số
- *     (`USI:VOLD` = UVOL−DVOL, `USI:ADD` = ADV−DECL, `USI:ADDQ` bên
- *     NASDAQ) - một mã đơn có nến trong ngày như `USI:PCCE` đã đo được
- *     chạy tốt ở 5m; biểu thức trừ giữ lại làm đường lùi.
- *   - VIX: KHÔNG còn là iframe TradingView nữa - xem ngay dưới.
- *
- * Dòng mã in dưới mỗi ô là DẤU HIỆU DUY NHẤT khi biểu đồ không khớp với
- * nhãn: iframe khác origin không cho app tự so, nên app không thể tự đổi.
- *
- * ============================================================
- * Ô VIX LÀ CỦA SCHWAB, KHÔNG PHẢI CỦA TRADINGVIEW (#175)
- * ============================================================
- *
- * Bốn lần đo VIX trong widget nhúng: `TVC:VIX` vẽ Apple; `CBOE:VIX` bị
- * giữ cho trang chính; `CAPITALCOM:VIX` VẼ ĐƯỢC - và chủ app đọc được
- * **18** trong ô đó khi thanh ticker (Schwab `$VIX`) ghi **14,82**. Không
- * phải lỗi vẽ: CAPITALCOM là một CFD của nhà môi giới, định giá theo HỢP
- * ĐỒNG TƯƠNG LAI VIX (thường cao hơn chỉ số tiền mặt khi đường cong
- * contango), không phải chỉ số CBOE tính từ giá quyền chọn SPX. Cùng chữ
- * "VIX", hai công cụ khác nhau, lệch 3 điểm trên cùng một màn hình - một
- * con số sai trông y như con số đúng, và ở đây nó còn mang nhãn đúng.
- *
- * Widget nhúng không có cách nào vẽ chỉ số tiền mặt (dữ liệu CBOE bị giữ
- * lại), còn Schwab thì có đúng nó kèm nến 5 phút (#165). Nên ô VIX trong
- * khung này là thẻ của app, dựng từ `/api/internals/vix` - MỘT request
- * Schwab - và nói rõ vì sao. Không đặt CFD cạnh chỉ số thật với cùng một
- * nhãn: người đọc sẽ phải đoán cái nào là VIX.
+ * `s.tradingview.com` bị proxy từ chối 403 ở CONNECT. Ba lần đo THẬT của
+ * chủ app, ba cách hỏng khác nhau, không cái nào là "invalid symbol":
+ *   - `TVC:VIX` (#168): widget lặng lẽ vẽ biểu đồ APPLE - mã mặc định.
+ *   - `CBOE:VIX` (#173): nhận ra mã rồi bật hộp "chỉ có trên TradingView".
+ *   - `USI:UVOL-USI:DVOL`: vẽ được nhưng KHÔNG có khung 1m/5m.
+ *   - `CAPITALCOM:VIX` (#175): vẽ được, nhưng là CFD theo hợp đồng tương
+ *     lai VIX - đọc 18 khi chỉ số tiền mặt 14,82. Nên VIX chỉ còn thẻ app.
+ * Đã ĐO CHẠY TỐT ở 5m: `USI:VOLD`, `USI:ADD`, `USI:ADDQ`, `USI:PCC`,
+ * `USI:TICK`, `USI:TICKQ`, `USI:PCCE` (#174/#175). Mỗi ô vẫn mang danh sách
+ * nguồn + hàng nút, nhớ riêng từng ô; giá trị nhớ chỉ được nhận khi còn
+ * trong danh sách - nguồn đã bị gỡ vì đo được là hỏng không sống dậy từ
+ * bộ nhớ cũ.
  */
 
-type Panel = {
+type Source =
+  | { id: string; kind: 'tv'; symbol: string }
+  | { id: string; kind: 'app'; series: string };
+
+type Box = {
   key: string;
   label: string;
-  /** Các cách viết mã, thứ tự khả năng; phần tử đầu là mặc định. */
-  candidates: readonly string[];
-  /** Phút mỗi nến. Ảnh mẫu dùng 15 cho UVOL-DVOL, 5 cho phần còn lại. */
+  /** Nguồn theo thứ tự ưu tiên; phần tử đầu là mặc định. */
+  sources: readonly Source[];
+  /** Phút mỗi nến cho iframe. Ảnh mẫu dùng 15 cho UVOL-DVOL, 5 còn lại. */
   interval: string;
-  /** Kiểu vẽ của TradingView: '1' nến, '2' đường. Ảnh mẫu vẽ nến cho
-   *  TICK/UVOL-DVOL (thứ dao động hai chiều quanh 0) và đường cho các tỉ
-   *  lệ. Con số này cũng CHƯA xác nhận - sai thì chỉ là vẽ sai kiểu, dữ
-   *  liệu vẫn đúng. */
+  /** Kiểu vẽ TradingView: '1' nến, '2' đường. */
   style: string;
 };
 
-const PANELS: Panel[] = [
-  { key: 'uvolDvol', label: 'NYSE UVOL − DVOL', candidates: ['USI:VOLD', 'USI:UVOL-USI:DVOL'], interval: '15', style: '1' },
-  { key: 'advDecl', label: 'NYSE $ADV − $DECL', candidates: ['USI:ADD', 'USI:ADV-USI:DECL'], interval: '5', style: '2' },
-  { key: 'advDeclQ', label: 'NASDAQ $ADVQ − $DECLQ', candidates: ['USI:ADDQ', 'USI:ADVQ-USI:DECLQ'], interval: '5', style: '2' },
-  { key: 'pcc', label: 'Put/Call Ratio', candidates: ['USI:PCC'], interval: '5', style: '2' },
-  { key: 'tick', label: 'NYSE TICK', candidates: ['USI:TICK'], interval: '5', style: '1' },
-  { key: 'tickq', label: 'NASDAQ TICK', candidates: ['USI:TICKQ'], interval: '5', style: '1' },
-  { key: 'pcce', label: 'Put/Call Ratio (Equity)', candidates: ['USI:PCCE'], interval: '5', style: '2' },
+const tv = (symbol: string): Source => ({ id: `tv:${symbol}`, kind: 'tv', symbol });
+const app = (series: string): Source => ({ id: `app:${series}`, kind: 'app', series });
+
+const BOXES: Box[] = [
+  { key: 'uvolDvol', label: 'NYSE UVOL − DVOL', sources: [app('uvolDvolDiff'), tv('USI:VOLD'), tv('USI:UVOL-USI:DVOL')], interval: '15', style: '1' },
+  { key: 'advDecl', label: 'NYSE $ADV − $DECL', sources: [tv('USI:ADD'), tv('USI:ADV-USI:DECL'), app('advDeclNyse')], interval: '5', style: '2' },
+  { key: 'advDeclQ', label: 'NASDAQ $ADVQ − $DECLQ', sources: [tv('USI:ADDQ'), tv('USI:ADVQ-USI:DECLQ')], interval: '5', style: '2' },
+  { key: 'pcc', label: 'Put/Call Ratio', sources: [tv('USI:PCC'), app('pccTotal')], interval: '5', style: '2' },
+  { key: 'tick', label: 'NYSE TICK', sources: [app('nyseTick'), tv('USI:TICK')], interval: '5', style: '1' },
+  { key: 'tickq', label: 'NASDAQ TICK', sources: [tv('USI:TICKQ'), app('nasdaqTick')], interval: '5', style: '1' },
+  { key: 'vix', label: 'VIX', sources: [app('vix')], interval: '5', style: '2' },
+  { key: 'pcce', label: 'Put/Call Ratio (Equity)', sources: [tv('USI:PCCE'), app('pccEquity')], interval: '5', style: '2' },
 ];
 
-function embedUrl(symbol: string, p: Panel, theme: 'light' | 'dark', locale: string): string {
+function embedUrl(symbol: string, b: Box, theme: 'light' | 'dark', locale: string): string {
   const q = new URLSearchParams({
     symbol,
-    interval: p.interval,
+    interval: b.interval,
     theme,
-    style: p.style,
+    style: b.style,
     locale,
     timezone: 'America/New_York',
+    // Ẩn thanh công cụ trên (khung giờ/kiểu nến) như trang mẫu - ô nhỏ,
+    // thanh đó ăn mất một phần năm chiều cao.
+    hide_top_toolbar: '1',
     hide_side_toolbar: '1',
     allow_symbol_change: '0',
     save_image: '0',
@@ -145,9 +118,6 @@ function embedUrl(symbol: string, p: Panel, theme: 'light' | 'dark', locale: str
  * hỏi, mà URL iframe lại phụ thuộc theme - render một giá trị đoán ở server
  * rồi đổi ở client là một hydration mismatch. Cùng lý do ThemeToggle có cờ
  * `ready`.
- *
- * Không theo dõi thì đổi theme xong còn lại tám biểu đồ trắng toát nằm
- * trong một app nền đen cho tới khi tải lại trang.
  */
 function useResolvedTheme(): 'light' | 'dark' | null {
   const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
@@ -177,114 +147,88 @@ function useResolvedTheme(): 'light' | 'dark' | null {
   return theme;
 }
 
-/** Khoá nhớ theo từng ô - đổi mã ô VIX không được kéo ô khác theo. */
-const rememberKey = (p: Panel) => `tvsym:${p.key}`;
+/** Khoá nhớ theo từng ô - đổi nguồn ô này không được kéo ô khác theo. */
+const rememberKey = (b: Box) => `tvsrc:${b.key}`;
 
-/**
- * Mã đang chọn cho mỗi ô: mặc định là ứng viên đầu, đọc localStorage SAU
- * khi hydrate (cùng lý do `useResolvedTheme` trả null lúc đầu). Giá trị nhớ
- * chỉ được nhận nếu còn nằm trong danh sách ứng viên - một mã đã bị gỡ khỏi
- * danh sách ở bản sau (vì đo được là hỏng) mà vẫn lọt vào từ bộ nhớ cũ là
- * cái ô hỏng sống dậy sau chính bản vá gỡ nó.
- */
-function useChosenSymbols() {
+function useChosenSources() {
   const [chosen, setChosen] = useState<Record<string, string>>(() =>
-    Object.fromEntries(PANELS.map((p) => [p.key, p.candidates[0]]))
+    Object.fromEntries(BOXES.map((b) => [b.key, b.sources[0].id]))
   );
 
   useEffect(() => {
     setChosen((prev) => {
       const next = { ...prev };
-      for (const p of PANELS) {
-        const saved = readRememberedOneOf(rememberKey(p), p.candidates);
-        if (saved) next[p.key] = saved;
+      for (const b of BOXES) {
+        const saved = readRememberedOneOf(rememberKey(b), b.sources.map((s) => s.id));
+        if (saved) next[b.key] = saved;
       }
       return next;
     });
   }, []);
 
-  const choose = (p: Panel, symbol: string) => {
-    setChosen((prev) => ({ ...prev, [p.key]: symbol }));
-    remember(rememberKey(p), symbol);
+  const choose = (b: Box, id: string) => {
+    setChosen((prev) => ({ ...prev, [b.key]: id }));
+    remember(rememberKey(b), id);
   };
 
   return { chosen, choose };
 }
 
-/** Vị trí ô VIX trong lưới: đúng chỗ của nó trong ảnh mẫu (ô thứ 7), giữa
- *  NASDAQ TICK và Put/Call Equity. */
-const VIX_SLOT = 6;
+const fmtRatio = (r: number | null) => (r === null ? '—' : `${r < 0 ? '-' : ''}${Math.abs(r).toFixed(2)}:1`);
 
-function timeNy(t: number | null): string {
-  if (t === null) return '—';
-  return new Date(t).toLocaleTimeString('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-}
-
-/**
- * Ô VIX của app, đứng trong lưới TradingView. Bốn trạng thái, không trạng
- * thái nào để trống: đang tải / phiên Schwab hết hạn (cách sửa là kết nối
- * lại, khác hẳn) / lỗi khác kèm chữ thật / có dữ liệu.
- */
-function SchwabVixCard({ t }: { t: (k: string, ...a: any[]) => string }) {
-  const [s, setS] = useState<VixSeries | null>(null);
-  const [error, setError] = useState<{ expired: boolean; msg: string } | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/internals/vix')
-      .then(async (r) => {
-        const j = await r.json();
-        if (!alive) return;
-        if (!r.ok) setError({ expired: r.status === 401, msg: String(j?.error ?? r.status) });
-        else setS(j);
-      })
-      .catch((e) => alive && setError({ expired: false, msg: String(e?.message ?? e) }));
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const current = s?.current ?? null;
-  return (
-    <div className="tvcard">
-      <p className="cap intlabel">{t('int.vixTitle')}</p>
-      {error ? (
-        <p className="cap warnline">{error.expired ? t('int.vixExpired') : `${t('int.loadFailed')} ${error.msg}`}</p>
-      ) : !s ? (
+/** Thẻ app khi dữ liệu chưa về / lỗi / thiếu chuỗi - KHÔNG bao giờ trống. */
+function AppSlot({ load, series, label, t, badge }: { load: Load; series: string; label: string; t: (k: string, ...a: any[]) => string; badge?: React.ReactNode }) {
+  if (load.state === 'error') {
+    return (
+      <div className="tvcard">
+        <p className="cap intlabel">{label}</p>
+        <p className="cap warnline">{load.expired ? t('int.expired') : `${t('int.loadFailed')} ${load.msg}`}</p>
+      </div>
+    );
+  }
+  if (load.state === 'loading') {
+    return (
+      <div className="tvcard">
+        <p className="cap intlabel">{label}</p>
         <p className="cap">{t('int.loading')}</p>
-      ) : (
-        <>
-          <p className="intvalue">
-            {current === null ? '—' : current.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-          </p>
-          {s.points.length < 2 ? (
-            <p className="cap warnline">{s.note ?? t('int.noHistory')}</p>
-          ) : (
-            <Sparkline points={s.points} signed={false} tall />
-          )}
-          {/* Nói con số đầu thẻ là giá cuối (cùng trường với thanh ticker)
-              hay giá đóng nến cuối (quote hỏng) - hai thứ lệch nhau vài xu
-              và một thẻ không nói thì người đọc thấy "chưa khớp". */}
-          <p className="cap intmeta">
-            {t(s.currentSource === 'candle' ? 'int.vixFromCandle' : 'int.vixFromQuote')} · $VIX ·{' '}
-            {t('int.asOf', timeNy(s.asOf))}
-          </p>
-        </>
-      )}
-      <p className="hint hint-warn">{t('int.vixWhy')}</p>
-    </div>
-  );
+      </div>
+    );
+  }
+  const s: Series | undefined = load.data.series.find((x) => x.key === series);
+  if (!s) {
+    return (
+      <div className="tvcard">
+        <p className="cap intlabel">{label}</p>
+        <p className="cap warnline">{t('int.seriesMissing', series)}</p>
+      </div>
+    );
+  }
+  return <Card s={{ ...s, label }} t={t} tall badge={badge} className="tvcard tvcard-app" />;
 }
 
-export default function TradingViewInternals() {
-  const { t, lang } = useLang();
+export default function TradingViewInternals({ load, t }: { load: Load; t: (k: string, ...a: any[]) => string }) {
+  const { lang } = useLang();
   const theme = useResolvedTheme();
-  const { chosen, choose } = useChosenSymbols();
+  const { chosen, choose } = useChosenSources();
+
+  const ratio = load.state === 'ok' ? load.data.nyseUpDown : null;
+  const ratioBadge = (
+    <span className="tvbadges">
+      <span className="tvbadge" style={ratio === null ? undefined : { color: ratio >= 0 ? 'var(--credit)' : 'var(--risk)' }}>
+        {fmtRatio(ratio)} NYSE
+      </span>
+      {/* NASDAQ up/down volume: $UVOLQ/$DVOLQ CHƯA ĐO ở Schwab (#165 chỉ
+          đo bốn mã) - một badge trống có nhãn thật hơn một badge bịa. */}
+      <span className="tvbadge tvbadge-muted">{t('int.nasdaqRatioUnknown')}</span>
+    </span>
+  );
+
+  const srcLabel = (s: Source): string => {
+    if (s.kind === 'tv') return s.symbol;
+    const found = load.state === 'ok' ? load.data.series.find((x) => x.key === s.series) : undefined;
+    if (!found) return t('int.srcApp');
+    return found.source === 'schwab' ? t('int.srcAppSchwab') : found.source === 'uw' ? t('int.srcAppUw') : t('int.srcAppSampled');
+  };
 
   return (
     <>
@@ -300,63 +244,66 @@ export default function TradingViewInternals() {
         <p className="cap">{t('int.loading')}</p>
       ) : (
         <div className="tvgrid">
-          {PANELS.map((p, i) => {
-            const symbol = chosen[p.key];
+          {BOXES.map((b, i) => {
+            const src = b.sources.find((s) => s.id === chosen[b.key]) ?? b.sources[0];
+            /* MỘT phần tử lưới cho mỗi ô: thẻ + hàng nút nằm CHUNG một khung.
+               Bản đầu để hàng nút làm phần tử lưới riêng (Fragment) - lưới
+               coi nó là một ô nữa, kéo nó cao bằng thẻ bên cạnh: tám ô thành
+               mười lăm, nút cao 300px. Chỉ ảnh chụp thật mới thấy. */
             return (
-              <Fragment key={p.key}>
-              {i === VIX_SLOT && <SchwabVixCard t={t} />}
-              <div className="tvcard">
-                <p className="cap intlabel">{p.label}</p>
-                <iframe
-                  /* `key` theo mã: đổi mã là dựng iframe MỚI chứ không đổi
-                     `src` trên iframe cũ - widget giữ trạng thái của mã
-                     trước (kể cả hộp thoại "chỉ có trên TradingView") khi
-                     chỉ đổi src. */
-                  key={symbol}
-                  className="tvframe"
-                  title={`${p.label} — TradingView`}
-                  src={embedUrl(symbol, p, theme, lang === 'vi' ? 'vi_VN' : 'en')}
-                  /* Tám biểu đồ TradingView là tám ứng dụng vẽ đồ thị đầy đủ -
-                     nặng thật. Bốn ô đầu tải ngay, phần còn lại chờ cuộn tới.
-                     KHÁC bẫy #133 (ảnh chân dung nghị sĩ): ở đó có một nhánh
-                     dự phòng chỉ chạy khi ảnh lỗi, nên lazy làm nhánh đó không
-                     bao giờ tới lượt; ở đây không có nhánh nào bám vào sự kiện
-                     tải cả. */
-                  loading={i < 4 ? 'eager' : 'lazy'}
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-                {/* In chuỗi mã ra màn hình. Đây KHÔNG phải trang trí: mã
-                    TradingView không nhận ra thì nó lặng lẽ vẽ AAPL thay vì
-                    báo lỗi (đo được ở ô VIX), nên dòng này là thứ duy nhất
-                    cho biết chính xác chuỗi nào đang chạy khi biểu đồ trong
-                    khung không khớp với nhãn. */}
-                <p className="cap intmeta">{symbol}</p>
-                {p.candidates.length > 1 && (
+              <div key={b.key} className="tvslot">
+                {src.kind === 'app' ? (
+                  <AppSlot load={load} series={src.series} label={b.label} t={t} badge={b.key === 'uvolDvol' ? ratioBadge : undefined} />
+                ) : (
+                  <div className="tvcard">
+                    <p className="cap intlabel" style={b.key === 'uvolDvol' ? { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } : undefined}>
+                      <span>{b.label}</span>
+                      {b.key === 'uvolDvol' && ratioBadge}
+                    </p>
+                    <iframe
+                      /* `key` theo mã: đổi mã là dựng iframe MỚI chứ không đổi
+                         `src` trên iframe cũ - widget giữ trạng thái của mã
+                         trước (kể cả hộp thoại "chỉ có trên TradingView"). */
+                      key={src.symbol}
+                      className="tvframe"
+                      title={`${b.label} — TradingView`}
+                      src={embedUrl(src.symbol, b, theme, lang === 'vi' ? 'vi_VN' : 'en')}
+                      /* Bốn ô đầu tải ngay, phần còn lại chờ cuộn tới. KHÁC
+                         bẫy #133 (ảnh chân dung): ở đây không có nhánh dự
+                         phòng nào bám vào sự kiện tải cả. */
+                      loading={i < 4 ? 'eager' : 'lazy'}
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                    {/* Dòng mã in dưới ô là DẤU HIỆU DUY NHẤT khi biểu đồ không
+                        khớp với nhãn (widget lặng lẽ vẽ AAPL cho mã lạ). */}
+                    <p className="cap intmeta">{src.symbol}</p>
+                  </div>
+                )}
+                {b.sources.length > 1 && (
                   /* Chọn MỘT, nên KHÔNG dùng ChipRow (bộ nút chọn NHIỀU): hai
-                     hàng nút trông giống nhau mà một cái bật/tắt độc lập, một
-                     cái loại trừ nhau là đúng cái ChipRow được tách ra để
-                     tránh. Dùng lại CSS `.chiprow` cho đồng bộ hình thức. */
-                  <div className="chiprow" role="radiogroup" aria-label={t('int.tvPick')}>
-                    {p.candidates.map((c) => (
+                     hàng nút trông giống nhau mà hành xử khác là đúng cái
+                     ChipRow được tách ra để tránh. Dùng lại CSS `.chiprow`. */
+                  <div className="chiprow tvchips" role="radiogroup" aria-label={t('int.tvPick')}>
+                    {b.sources.map((s) => (
                       <button
-                        key={c}
+                        key={s.id}
                         type="button"
                         role="radio"
-                        aria-checked={c === symbol}
-                        className={c === symbol ? 'on' : undefined}
-                        onClick={() => choose(p, c)}
+                        aria-checked={s.id === src.id}
+                        className={s.id === src.id ? 'on' : undefined}
+                        onClick={() => choose(b, s.id)}
                       >
-                        {c}
+                        {srcLabel(s)}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              </Fragment>
             );
           })}
         </div>
       )}
+      <p className="cap">{t('int.refNote')}</p>
     </>
   );
 }

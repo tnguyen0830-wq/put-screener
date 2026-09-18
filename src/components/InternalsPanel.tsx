@@ -3,21 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
+import { Card, type Series } from './InternalsCard';
 import TradingViewInternals from './TradingViewInternals';
 
-export type SeriesPoint = { t: number; v: number };
-export type Series = {
-  key: string;
-  label: string;
-  points: SeriesPoint[];
-  current: number | null;
-  source: 'schwab' | 'uw' | 'sampled';
-  asOf: number | null;
-  /** Vì sao rỗng, khi rỗng - xem Series.note trong internals-pure.ts. */
-  note?: string;
-};
 type Unavailable = { key: string; label: string };
-type Data = { series: Series[]; unavailable: Unavailable[] };
+export type SectorChange = { name: string; change: number; count: number };
+export type Internals = {
+  series: Series[];
+  unavailable: Unavailable[];
+  marketOpen: boolean;
+  nyseUpDown: number | null;
+  tables: { sectors: SectorChange[]; topCaps: { symbol: string; change: number }[]; note?: string };
+};
+export type Load =
+  | { state: 'loading' }
+  | { state: 'error'; expired: boolean; msg: string }
+  | { state: 'ok'; data: Internals };
 
 /**
  * Đo được ở #165 (`/api/internalsprobe`): market internals chia ba nhóm,
@@ -27,151 +28,32 @@ type Data = { series: Series[]; unavailable: Unavailable[] };
  *     (nến phút Schwab, làm mới mỗi lần mở panel) hay đường TỰ LẤY MẪU
  *     (~15 phút/lần, thô hơn hẳn) - hai thứ trông giống nhau trên biểu đồ
  *     nhưng đáng tin khác nhau, không được để người đọc tự đoán.
- *   - 2 chỉ báo Schwab không quote được (NASDAQ Advance-Decline, Put/Call
- *     Total) hiện thành thẻ NÓI THẲNG "không có dữ liệu", không bị bỏ qua
- *     âm thầm - một ô trống trông giống app quên vẽ, một ô ghi rõ lý do thì
- *     không.
+ *   - Chỉ báo Schwab không quote được (NASDAQ Advance-Decline) hiện thành
+ *     thẻ NÓI THẲNG "không có dữ liệu", không bị bỏ qua âm thầm - một ô
+ *     trống trông giống app quên vẽ, một ô ghi rõ lý do thì không.
+ *
+ * /api/internals được gọi MỘT lần ở đây và đưa xuống CẢ HAI chế độ: từ #177
+ * chế độ TradingView cũng có ba ô app (VIX, NYSE TICK, UVOL−DVOL) cộng hai
+ * bảng ngành/top vốn hoá, nên "chỉ gọi khi xem Số liệu app" không còn tiết
+ * kiệm được gì mà chỉ thành hai lượt gọi cho cùng một dữ liệu.
  */
 const ORDER = [
   'uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick',
   'vix', 'pccEquity', 'pccTotal', 'marketTide', 'avgIvRank',
 ];
 
-/** Chỉ những chỉ báo là HIỆU SỐ (nhiều mua trừ nhiều bán) mới đáng tô theo
- *  dấu - đúng luật ColorLegend: xanh/đỏ chỉ dùng khi DẤU của số có nghĩa.
- *  VIX và Put/Call là một ĐỘ LỚN, không phải một hiệu số, tô theo dấu ở đó
- *  sẽ đọc thành "số dương là tốt" - sai. */
-const SIGNED = new Set(['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'marketTide']);
-
-/** Hậu tố đơn vị - chỉ IV rank cần, mọi chỉ báo khác là chênh lệch/tỉ lệ
- *  không đơn vị nên không có mục ở đây thì `UNIT[key]` là `undefined`. */
-const UNIT: Record<string, string> = { avgIvRank: '%' };
-
-/** Nhãn nguồn, tra theo `Series.source`. Bảng tra thay vì một biểu thức
- *  ba ngôi: thêm nguồn thứ ba mà quên sửa biểu thức là cách market tide
- *  từng bị dán nhãn "nến thật (Schwab)" trong khi nó là dữ liệu UW. */
-const SOURCE_KEY: Record<Series['source'], string> = {
-  schwab: 'int.sourceSchwab',
-  uw: 'int.sourceUw',
-  sampled: 'int.sourceSampled',
-};
-
-const fmt = (v: number | null, key?: string) =>
-  v === null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}${key ? (UNIT[key] ?? '') : ''}`;
-
-function timeFmt(t: number | null): string {
-  if (t === null) return '—';
-  return new Date(t).toLocaleTimeString('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-}
-
-/** `tall`: bản cao cho ô VIX trong khung TradingView, đứng cạnh các iframe
- *  300px - viewBox kéo giãn theo khung (`preserveAspectRatio="none"`) và
- *  nét vẽ giữ độ dày thật (`vector-effect`), nếu không một viewBox 260×56
- *  phóng lên 220px cao sẽ thành một nét dày 6px méo mó. */
-export function Sparkline({ points, signed, tall }: { points: SeriesPoint[]; signed: boolean; tall?: boolean }) {
-  const W = 260;
-  const H = tall ? 120 : 56;
-  const RENDER_H = tall ? 220 : H;
-  const PAD = 4;
-  if (points.length < 2) return <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={RENDER_H} />;
-
-  const values = points.map((p) => p.v);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = Math.max(1e-9, max - min);
-  const x = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
-  const y = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2);
-  const path = points.map((p, i) => `${x(i)},${y(p.v)}`).join(' ');
-  const last = points[points.length - 1].v;
-  const color = signed ? (last >= 0 ? 'var(--credit)' : 'var(--risk)') : 'var(--stamp)';
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={RENDER_H} preserveAspectRatio={tall ? 'none' : undefined}>
-      {min <= 0 && max >= 0 && (
-        <line
-          x1={PAD}
-          x2={W - PAD}
-          y1={y(0)}
-          y2={y(0)}
-          stroke="var(--rule-soft)"
-          strokeWidth="1"
-          strokeDasharray="2 2"
-        />
-      )}
-      <polyline
-        points={path}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect={tall ? 'non-scaling-stroke' : undefined}
-      />
-    </svg>
-  );
-}
-
-function Card({ s, t }: { s: Series; t: (k: string, ...a: any[]) => string }) {
-  const signed = SIGNED.has(s.key);
-  const noPoints = s.points.length < 2;
-  return (
-    <div className="intcard">
-      <p className="cap intlabel">{s.label}</p>
-      <p
-        className="intvalue"
-        style={signed && s.current !== null ? { color: s.current >= 0 ? 'var(--credit)' : 'var(--risk)' } : undefined}
-      >
-        {fmt(s.current, s.key)}
-      </p>
-      {noPoints ? (
-        /* `note` là LÝ DO thật do nguồn nói ra (key chưa đặt, UW trả lỗi...),
-           nên nó thắng câu mặc định - một nguồn chết phải nói mình chết chứ
-           không được đội lốt "chưa có dữ liệu hôm nay". */
-        <p className="cap warnline">
-          {s.note ?? (s.source === 'sampled' ? t('int.noSamplesYet') : t('int.noHistory'))}
-        </p>
-      ) : (
-        <Sparkline points={s.points} signed={signed} />
-      )}
-      <p className="cap intmeta">
-        {t(SOURCE_KEY[s.source])} · {t('int.asOf', timeFmt(s.asOf))}
-      </p>
-    </div>
-  );
-}
-
 const VIEWS = ['tv', 'app'] as const;
 type View = (typeof VIEWS)[number];
 
-/** Phần "Số liệu app": các thẻ dựng từ dữ liệu Schwab/tastytrade CHÍNH APP
- *  đọc được - khác hẳn khung hình TradingView bên cạnh. */
-function AppCards({ t }: { t: (k: string, ...a: any[]) => string }) {
-  const [data, setData] = useState<Data | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const pct = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+const signColor = (v: number) => ({ color: v >= 0 ? 'var(--credit)' : 'var(--risk)' });
 
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/internals')
-      .then(async (r) => {
-        const j = await r.json();
-        if (!alive) return;
-        if (!r.ok) setError(j.error ?? t('int.loadFailed'));
-        else setData(j);
-      })
-      .catch(() => alive && setError(t('int.loadFailed')));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (error) return <p className="cap">{error}</p>;
-  if (!data) return <p className="cap">{t('int.loading')}</p>;
+/** Phần "Số liệu app": các thẻ dựng từ dữ liệu Schwab/tastytrade/UW CHÍNH
+ *  APP đọc được - khác hẳn khung hình TradingView bên cạnh. */
+function AppCards({ load, t }: { load: Load; t: (k: string, ...a: any[]) => string }) {
+  if (load.state === 'error') return <p className="cap warnline">{load.expired ? t('int.expired') : `${t('int.loadFailed')} ${load.msg}`}</p>;
+  if (load.state === 'loading') return <p className="cap">{t('int.loading')}</p>;
+  const data = load.data;
 
   const byKey = new Map(data.series.map((s) => [s.key, s]));
   const ordered = ORDER.map((k) => byKey.get(k)).filter((s): s is Series => !!s);
@@ -195,12 +77,56 @@ function AppCards({ t }: { t: (k: string, ...a: any[]) => string }) {
   );
 }
 
+/**
+ * Hai bảng của trang mẫu, dựng từ rổ S&P 500 của chính app (cùng cache với
+ * bản đồ nhiệt). Trang mẫu đặt chúng làm tooltip ĐÈ lên biểu đồ; ở đây
+ * chúng đứng dưới lưới - một bảng che mất một phần biểu đồ là một bảng
+ * người đọc phải đóng đi mới xem được cái bên dưới.
+ */
+function Tables({ data, t }: { data: Internals; t: (k: string, ...a: any[]) => string }) {
+  const { sectors, topCaps, note } = data.tables;
+  if (note) return <p className="cap warnline">{t('int.tablesFailed', note)}</p>;
+  return (
+    <div className="inttables">
+      <div className="intcard">
+        <p className="cap intlabel">{t('int.sectorsTitle')}</p>
+        <table className="inttable">
+          <tbody>
+            {sectors.map((s) => (
+              <tr key={s.name}>
+                <td>{s.name}</td>
+                <td style={signColor(s.change)}>{pct(s.change)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="intcard">
+        <p className="cap intlabel">{t('int.topCapsTitle')}</p>
+        <table className="inttable">
+          <tbody>
+            {topCaps.map((r) => (
+              <tr key={r.symbol}>
+                <td>{r.symbol}</td>
+                <td style={signColor(r.change)}>{pct(r.change)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="cap" style={{ gridColumn: '1 / -1' }}>{t('int.tablesNote')}</p>
+    </div>
+  );
+}
+
 export default function InternalsPanel() {
   const { t } = useLang();
   // Mặc định 'tv' vì đó là thứ chủ app xin ("hiện giống ảnh"), nhưng nhớ
   // lựa chọn để ai thích số liệu app thì không phải gạt lại mỗi lần mở.
   const [view, setView] = useState<View>('tv');
   const [restored, setRestored] = useState(false);
+  const [full, setFull] = useState(false);
+  const [load, setLoad] = useState<Load>({ state: 'loading' });
 
   useEffect(() => {
     const saved = readRememberedOneOf<View>('internalsView', VIEWS);
@@ -212,9 +138,32 @@ export default function InternalsPanel() {
     if (restored) remember('internalsView', view);
   }, [restored, view]);
 
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/internals')
+      .then(async (r) => {
+        const j = await r.json();
+        if (!alive) return;
+        if (!r.ok) setLoad({ state: 'error', expired: r.status === 401, msg: String(j?.error ?? r.status) });
+        else setLoad({ state: 'ok', data: j });
+      })
+      .catch((e) => alive && setLoad({ state: 'error', expired: false, msg: String(e?.message ?? e) }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
-    <section className="panel">
-      <div className="panel-head">{t('int.title')}</div>
+    <section className={full ? 'panel panelfull' : 'panel'}>
+      <div
+        className="panel-head"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+      >
+        <span>{t('int.title')}</span>
+        <button className="rrgfullbtn" onClick={() => setFull((v) => !v)}>
+          {full ? t('rrg.exitFullscreen') : t('rrg.fullscreen')}
+        </button>
+      </div>
       <div className="panel-body">
         <div className="segmented hmranges">
           <button className={view === 'tv' ? 'on' : undefined} onClick={() => setView('tv')}>
@@ -225,10 +174,16 @@ export default function InternalsPanel() {
           </button>
         </div>
 
-        {/* Chỉ gọi /api/internals khi đang XEM chế độ đó - không tiêu 4
-            request Schwab cho một bảng không ai mở. Đổi chế độ thì component
-            được dựng lại và tự gọi. */}
-        {view === 'tv' ? <TradingViewInternals /> : <AppCards t={t} />}
+        {/* Chỉ nói "đã đóng cửa" khi ĐÃ đo được giờ từ server; lúc chưa tải
+            xong hoặc lỗi thì không nói gì - "chưa biết" không được đội lốt
+            "đang mở". */}
+        {load.state === 'ok' && !load.data.marketOpen && (
+          <p className="cap warnline intclosed">{t('int.closed')}</p>
+        )}
+
+        {view === 'tv' ? <TradingViewInternals load={load} t={t} /> : <AppCards load={load} t={t} />}
+
+        {load.state === 'ok' && <Tables data={load.data} t={t} />}
       </div>
     </section>
   );

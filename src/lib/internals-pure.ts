@@ -23,6 +23,11 @@ export type Series = {
    *  của con số. */
   source: 'schwab' | 'uw' | 'sampled';
   asOf: number | null;
+  /** Với nguồn Schwab: con số đầu thẻ là `lastPrice` của `/quotes` (cùng
+   *  trường thanh ticker in) hay giá đóng của nến 5 phút cuối (quote không
+   *  trả về). Hai số lệch nhau vài xu, và một thẻ không nói thì người đọc
+   *  thấy "chưa khớp" (#176). */
+  currentSource?: 'quote' | 'candle';
   /** Vì sao chuỗi này rỗng, khi nó rỗng. Thiếu trường này thì một nguồn
    *  chết chỉ đơn giản là biến mất khỏi màn hình - không phân biệt được
    *  với "tính năng không tồn tại". */
@@ -66,4 +71,91 @@ export function meanOf(values: (number | null)[]): number | null {
   const known = values.filter((v): v is number => v !== null && Number.isFinite(v));
   if (!known.length) return null;
   return known.reduce((a, b) => a + b, 0) / known.length;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Bảng phụ của tab Bề rộng TT (#177): tỉ lệ up/down volume, biến động
+ *  theo ngành, top vốn hoá. Thuần, test độc lập.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Tỉ lệ khối lượng tăng/giảm theo đúng quy ước tapchiphowall in trên ô
+ * UVOL−DVOL: "1.38:1" khi khối lượng tăng lớn hơn, "-2.94:1" khi khối
+ * lượng GIẢM lớn hơn (dấu âm = phe bán thắng, con số = gấp bao nhiêu lần).
+ * Thiếu một vế, hoặc vế bị chia bằng 0, ra `null` chứ không ra 0 hay
+ * Infinity - một tỉ lệ 0:1 đọc thành "không ai mua", mà thật ra là "chưa
+ * biết".
+ */
+export function upDownRatio(up: number | null, down: number | null): number | null {
+  if (up === null || down === null) return null;
+  if (!Number.isFinite(up) || !Number.isFinite(down) || up <= 0 || down <= 0) return null;
+  return up >= down ? up / down : -(down / up);
+}
+
+export function fmtRatio(r: number | null): string {
+  if (r === null) return '—';
+  return `${r < 0 ? '-' : ''}${Math.abs(r).toFixed(2)}:1`;
+}
+
+export type CapRow = { symbol: string; sector: string; marketCap: number; change1d: number };
+export type SectorChange = { name: string; change: number; count: number };
+
+/**
+ * Biến động 1 ngày theo ngành, trung bình CÓ TRỌNG SỐ vốn hoá - đúng cách
+ * `/api/heatmap` gộp (một chỉ số theo vốn hoá vận động thế), không phải
+ * trung bình cộng. Xếp giảm dần theo biến động, như bảng "S&P 500 SECTORS"
+ * của trang mẫu. Ngành có vốn hoá tổng 0 (không thể, nhưng số 0 không được
+ * chia) bị bỏ chứ không ra NaN.
+ */
+export function sectorChanges(rows: CapRow[]): SectorChange[] {
+  const acc = new Map<string, { cap: number; weighted: number; count: number }>();
+  for (const r of rows) {
+    if (!Number.isFinite(r.marketCap) || r.marketCap <= 0 || !Number.isFinite(r.change1d)) continue;
+    const a = acc.get(r.sector) ?? { cap: 0, weighted: 0, count: 0 };
+    a.cap += r.marketCap;
+    a.weighted += r.marketCap * r.change1d;
+    a.count += 1;
+    acc.set(r.sector, a);
+  }
+  return [...acc.entries()]
+    .filter(([, a]) => a.cap > 0)
+    .map(([name, a]) => ({ name, change: a.weighted / a.cap, count: a.count }))
+    .sort((x, y) => y.change - x.change);
+}
+
+/** N mã vốn hoá lớn nhất, xếp theo biến động 1 ngày giảm dần - cùng hình
+ *  dạng bảng "NASDAQ 100 TOP 14" của trang mẫu, nhưng trên RỔ ĐANG CÓ
+ *  (S&P 500): app không có danh sách thành phần NASDAQ 100, và một danh
+ *  sách gõ tay từ trí nhớ là một danh sách sai trông y như danh sách đúng.
+ *  Nhãn trên màn hình nói đúng rổ nào. */
+export function topCaps(rows: CapRow[], n: number): { symbol: string; change: number }[] {
+  return [...rows]
+    .filter((r) => Number.isFinite(r.marketCap) && r.marketCap > 0 && Number.isFinite(r.change1d))
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, n)
+    .map((r) => ({ symbol: r.symbol, change: r.change1d }))
+    .sort((a, b) => b.change - a.change);
+}
+
+/**
+ * Phiên chính thức của sàn (09:30–16:00 New York, thứ Hai–Sáu) - cho dòng
+ * "Thị trường đã đóng cửa — đang hiển thị phiên gần nhất". KHÁC
+ * `inMarketHours()` của alerts.ts (8h–18h, cố ý rộng để cảnh báo không bỏ
+ * lỡ trước/sau giờ): ở đây câu hỏi là "sàn đang mở không", nên phải đúng
+ * giờ sàn. Ngày lễ KHÔNG được xét - một ngày lễ rơi vào thứ Tư sẽ đọc là
+ * "đang mở" dù không có nến nào; chú thích trên màn hình nói ra giới hạn đó.
+ */
+export function sessionOpenAt(now: Date): boolean {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const weekday = get('weekday');
+  if (weekday === 'Sat' || weekday === 'Sun') return false;
+  const mins = (Number(get('hour')) % 24) * 60 + Number(get('minute'));
+  return mins >= 9 * 60 + 30 && mins < 16 * 60;
 }
