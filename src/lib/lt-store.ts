@@ -46,12 +46,27 @@ export type SavedLtScan = {
   at: string;
   scanned: number;
   kept: number;
+  /** Ô tích "giá còn trên SMA200" lúc quét. Xem `keyOf`. */
+  aboveSma200?: boolean;
+  /** Số mã bị loại CHỈ vì cổng SMA200 - để bảng trống nói được vì sao. */
+  belowSma200?: number;
   rows: LtCandidate[];
 };
 
 type Store = Record<string, SavedLtScan>;
 
-const keyOf = (user: string, universe: LtUniverse) => `${user}:${universe}`;
+/**
+ * Khoá gồm cả ô tích SMA200, cùng lý do đã gồm phạm vi quét: bật và tắt cho
+ * ra hai bảng khác hẳn nhau, nên chúng phải là hai ô nhớ khác nhau. Dùng
+ * chung một ô thì gạt ô tích xong bảng cũ vẫn nằm đó dưới cái ô vừa đổi -
+ * đúng kiểu nói dối im lặng mà khoá theo phạm vi sinh ra để chặn.
+ *
+ * Trạng thái TẮT cố ý giữ nguyên khoá cũ (không có hậu tố). Mọi bản ghi lưu
+ * trước #145 đều được quét khi chưa hề có cổng này, tức đúng bằng trạng thái
+ * tắt - nên chúng đọc lại được y nguyên và không cần bước di trú nào.
+ */
+const keyOf = (user: string, universe: LtUniverse, aboveSma200: boolean) =>
+  `${user}:${universe}${aboveSma200 ? ':sma200' : ''}`;
 
 async function readStore(): Promise<Store> {
   try {
@@ -63,7 +78,7 @@ async function readStore(): Promise<Store> {
 
 export async function saveLtScan(scan: SavedLtScan, user: string): Promise<void> {
   const store = await readStore();
-  store[keyOf(user, scan.universe)] = scan;
+  store[keyOf(user, scan.universe, scan.aboveSma200 === true)] = scan;
   await fs.mkdir(path.dirname(FILE()), { recursive: true });
   /* Ghi tạm rồi đổi tên: sập giữa chừng thì file cũ còn nguyên, chứ không
      để lại một file JSON cụt mà `readStore()` sẽ đọc thành "chưa quét lần
@@ -75,10 +90,11 @@ export async function saveLtScan(scan: SavedLtScan, user: string): Promise<void>
 
 export async function readLtScan(
   universe: LtUniverse,
-  user: string
+  user: string,
+  aboveSma200: boolean
 ): Promise<SavedLtScan | null> {
   const store = await readStore();
-  return store[keyOf(user, universe)] ?? null;
+  return store[keyOf(user, universe, aboveSma200)] ?? null;
 }
 
 /* Không có nhánh "định dạng khoá cũ" như scan-store.ts: kho này sinh ra sau

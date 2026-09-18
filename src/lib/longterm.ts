@@ -110,6 +110,12 @@ export type LtGate = {
   unknown?: boolean;
 };
 
+/** Cổng do người dùng bật/tắt. Xem chú thích trong `gatesFor`. */
+export type LtGateOptions = {
+  /** Đòi giá nằm TRÊN SMA200. Tắt (mặc định của hàm) = chỉ xét độ dốc. */
+  requireAboveSma200?: boolean;
+};
+
 export type LtInput = {
   price: number;
   trend: TrendRead;
@@ -139,7 +145,7 @@ export type LtInput = {
  * cùng thang. Nó chỉ để chặn mấy trường hợp đắt lố; phần tinh tế do phân vị
  * P/E so với CHÍNH mã đó gánh (cột riêng, và một phần điểm số).
  */
-export function gatesFor(input: LtInput): LtGate[] {
+export function gatesFor(input: LtInput, opts?: LtGateOptions): LtGate[] {
   const { price, trend, support, fa, sec } = input;
 
   const slope = trend.sma200SlopePct;
@@ -154,6 +160,31 @@ export function gatesFor(input: LtInput): LtGate[] {
       passed: slope === null ? true : slope > 0,
       unknown: slope === null,
     },
+    /* Cổng DO NGƯỜI DÙNG BẬT, nên nó chỉ có mặt khi được bật - khác hẳn tám
+       cổng còn lại vốn luôn được xét.
+
+       Vì sao không đóng cứng: tab này đi tìm mã ĐANG RỚT, mà mã rớt đủ sâu
+       để đáng nhìn thì phần lớn đã thủng SMA200 rồi - đó chính là lý do
+       #137 chỉ xét ĐỘ DỐC của SMA200 chứ không xét giá so với SMA200. Đóng
+       cứng là bảng trống gần như quanh năm, và một bảng trống không nói
+       được vì sao nó trống.
+
+       Vì sao không để nó thành một dòng ✗ khi tắt: một cổng in dấu ✗ mà
+       không loại ai là dạy người đọc bỏ qua dấu ✗. Lúc tắt, việc giá nằm
+       dưới SMA200 VẪN hiện - ở cột Xu hướng, chữ "Dưới SMA200" - nên thông
+       tin không mất đi đâu cả, chỉ là nó không còn quyền loại mã. */
+    ...(opts?.requireAboveSma200
+      ? [
+          {
+            key: 'aboveSma200',
+            label: 'Giá còn nằm trên SMA200',
+            /* Thiếu SMA200 (chưa đủ 200 phiên) thì ĐI QUA kèm cờ, đúng luật
+               chung của repo: thiếu dữ liệu không phải bằng chứng có vấn đề. */
+            passed: trend.aboveSma200 === null ? true : trend.aboveSma200,
+            unknown: trend.aboveSma200 === null,
+          } as LtGate,
+        ]
+      : []),
     {
       key: 'nearSupport',
       label: `Đang ở trong ${NEAR_SUPPORT_PCT}% phía trên một vùng hỗ trợ`,

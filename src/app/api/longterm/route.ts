@@ -64,7 +64,7 @@ type Event =
   | { type: 'candidate'; row: LtCandidate }
   | { type: 'skip'; symbol: string; reason: string }
   | { type: 'error'; message: string }
-  | { type: 'done'; scanned: number; kept: number; at: string };
+  | { type: 'done'; scanned: number; kept: number; at: string; belowSma200: number };
 
 type Constituent = { symbol: string; name: string; sector: string };
 
@@ -90,6 +90,10 @@ export async function GET(req: NextRequest) {
   const universe = req.nextUrl.searchParams.get('universe') === 'watchlist'
     ? 'watchlist'
     : 'sp500';
+  /* Ô tích của người dùng, không phải cổng cứng - xem chú thích trong
+     `gatesFor`. Mặc định TẮT ở phía server: một request thiếu tham số phải
+     cho ra bảng rộng hơn chứ không phải bảng bị lọc thêm mà không ai yêu cầu. */
+  const requireAboveSma200 = req.nextUrl.searchParams.get('aboveSma200') === '1';
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -137,6 +141,7 @@ export async function GET(req: NextRequest) {
           trend: ReturnType<typeof readTrend>;
         }[] = [];
         let done = 0;
+        let belowSma200 = 0;
         await pooled(tier1, 6, async (c) => {
           try {
             const candles = await historyCandles(c.symbol, 3);
@@ -146,11 +151,18 @@ export async function GET(req: NextRequest) {
             }
             const trend = readTrend(candles, c.price);
             const support = readSupport(c.price, supportZones(pivotLows(candles)));
-            const pre = gatesFor({ price: c.price, trend, support, fa: EMPTY_FA });
-            const hardFail = pre.some(
-              (g) => (g.key === 'trend' || g.key === 'nearSupport') && !g.passed
+            const pre = gatesFor(
+              { price: c.price, trend, support, fa: EMPTY_FA },
+              { requireAboveSma200 }
             );
-            if (!hardFail) tier2.push({ c, support, trend });
+            const failed = pre.filter((g) => TIER1_KEYS.has(g.key) && !g.passed);
+            /* Đếm mã rụng CHỈ vì cổng SMA200, để bảng trống nói được vì sao
+               nó trống. Không có con số này thì "bật ô tích nên không còn mã
+               nào" trông y hệt "thị trường không có mã nào đạt" - hai thứ cần
+               hai hành động khác hẳn nhau. Đúng một cổng hỏng mới tính, vì
+               con số phải trả lời được câu "bỏ tích thì mã này xét tiếp chứ?". */
+            if (failed.length === 1 && failed[0].key === 'aboveSma200') belowSma200++;
+            if (failed.length === 0) tier2.push({ c, support, trend });
           } catch (e: any) {
             /* Một mã hỏng không được làm chết cả lượt quét: nó là một dòng
                skip có LÝ DO THẬT, không phải một khoảng trống. */
@@ -210,7 +222,7 @@ export async function GET(req: NextRequest) {
             const pe = await peContext(c.symbol, fa.pe);
 
             const input = { price: c.price, trend, support, fa, sec: secRes.sec };
-            const gates = gatesFor(input);
+            const gates = gatesFor(input, { requireAboveSma200 });
             if (gates.some((g) => !g.passed)) return;
 
             const breakdown = scoreComponents(input, pe);
@@ -257,7 +269,15 @@ export async function GET(req: NextRequest) {
            chứ không ném - mất chỗ lưu không đáng làm hỏng bảng đang có. */
         try {
           await saveLtScan(
-            { universe, at, scanned: list.length, kept: rows.length, rows },
+            {
+              universe,
+              at,
+              scanned: list.length,
+              kept: rows.length,
+              aboveSma200: requireAboveSma200,
+              belowSma200,
+              rows,
+            },
             user
           );
         } catch (e: any) {
@@ -265,7 +285,7 @@ export async function GET(req: NextRequest) {
         }
 
         for (const row of rows) send({ type: 'candidate', row });
-        send({ type: 'done', scanned: list.length, kept: rows.length, at });
+        send({ type: 'done', scanned: list.length, kept: rows.length, at, belowSma200 });
       } catch (e: any) {
         const msg = String(e?.message ?? e);
         send({ type: 'error', message: msg.slice(0, 400) });
@@ -283,7 +303,13 @@ export async function GET(req: NextRequest) {
   });
 }
 
-/* Tầng 1 chưa có dữ liệu Finviz, nên nó chỉ được phép xét hai cổng thuần kỹ
+/* Những cổng tầng 1 được phép xét - thuần kỹ thuật, tính từ nến ngày, nên
+   chúng lọc được TRƯỚC khi tốn một lần cào Finviz hay một file SEC. Cổng
+   SMA200 có tên ở đây vì đó chính là chỗ nó đáng giá nhất: nó cắt mạnh, và
+   cắt ở tầng rẻ. */
+const TIER1_KEYS = new Set(['trend', 'nearSupport', 'aboveSma200']);
+
+/* Tầng 1 chưa có dữ liệu Finviz, nên nó chỉ được phép xét các cổng thuần kỹ
    thuật. Giá trị rỗng này làm bốn cổng còn lại ra `unknown` và ĐI QUA - đúng
    ý: chúng sẽ được xét thật ở tầng 2, chứ không bị loại oan ở đây. */
 const EMPTY_FA = {
