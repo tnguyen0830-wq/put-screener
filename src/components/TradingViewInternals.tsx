@@ -5,6 +5,8 @@ import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import { Sparkline, type Series } from './InternalsPanel';
 
+type VixSeries = Series & { currentSource?: 'quote' | 'candle' };
+
 /**
  * Tám biểu đồ market internals nhúng từ TradingView - đúng bố cục trang
  * tapchiphowall.com mà chủ app đưa ảnh mẫu.
@@ -229,7 +231,7 @@ function timeNy(t: number | null): string {
  * lại, khác hẳn) / lỗi khác kèm chữ thật / có dữ liệu.
  */
 function SchwabVixCard({ t }: { t: (k: string, ...a: any[]) => string }) {
-  const [s, setS] = useState<Series | null>(null);
+  const [s, setS] = useState<VixSeries | null>(null);
   const [error, setError] = useState<{ expired: boolean; msg: string } | null>(null);
 
   useEffect(() => {
@@ -265,8 +267,12 @@ function SchwabVixCard({ t }: { t: (k: string, ...a: any[]) => string }) {
           ) : (
             <Sparkline points={s.points} signed={false} tall />
           )}
+          {/* Nói con số đầu thẻ là giá cuối (cùng trường với thanh ticker)
+              hay giá đóng nến cuối (quote hỏng) - hai thứ lệch nhau vài xu
+              và một thẻ không nói thì người đọc thấy "chưa khớp". */}
           <p className="cap intmeta">
-            {t('int.sourceSchwab')} · $VIX · {t('int.asOf', timeNy(s.asOf))}
+            {t(s.currentSource === 'candle' ? 'int.vixFromCandle' : 'int.vixFromQuote')} · $VIX ·{' '}
+            {t('int.asOf', timeNy(s.asOf))}
           </p>
         </>
       )}

@@ -1443,6 +1443,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Ô này là dữ liệu của APP (Schwab $VIX, nến 5 phút), không phải khung TradingView. Widget nhúng không vẽ được chỉ số VIX thật (dữ liệu CBOE bị giữ cho trang TradingView), còn nguồn duy nhất nó vẽ được (CAPITALCOM:VIX) là một CFD định giá theo HỢP ĐỒNG TƯƠNG LAI VIX — đo được 18 khi chỉ số tiền mặt là 14,82. Cùng chữ "VIX", hai công cụ khác nhau.',
     en: 'This box is the APP’s data (Schwab $VIX, 5-minute candles), not a TradingView frame. The embed cannot draw the real VIX index (CBOE data is reserved for tradingview.com), and the one source it can draw (CAPITALCOM:VIX) is a CFD priced off VIX FUTURES — measured at 18 while the cash index read 14.82. Same word "VIX", two different instruments.',
   },
+  'int.vixFromQuote': { vi: 'giá cuối Schwab (cùng nguồn thanh ticker), đường = nến 5 phút', en: 'Schwab last price (same source as the ticker tape), line = 5-min candles' },
+  'int.vixFromCandle': { vi: 'giá đóng nến 5 phút cuối (Schwab; quote không trả về)', en: 'close of the last 5-min candle (Schwab; quote unavailable)' },
   'int.vixExpired': {
     vi: 'Phiên Schwab đã hết hạn. Bấm ⚙ → Kết nối lại rồi mở lại tab này.',
     en: 'The Schwab session has expired. Open ⚙ → Reconnect, then reopen this tab.',

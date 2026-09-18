@@ -100,9 +100,29 @@ function toSeries(r: ChartableRaw): Series {
  * mặt `$VIX` kèm nến 5 phút (#165), nên ô VIX bên khung TradingView lấy từ
  * đây - MỘT request, không kéo theo ba mã còn lại.
  */
-export async function vixSeries(): Promise<Series> {
+export async function vixSeries(): Promise<Series & { currentSource: 'quote' | 'candle' }> {
   const c = CHARTABLE.find((x) => x.key === 'vix')!;
-  return toSeries(await fetchChartable(c));
+  /* Con số đầu thẻ đọc từ `/quotes` `lastPrice` - ĐÚNG trường thanh ticker
+     (`/api/tape`) đang in trên cùng màn hình - chứ không phải giá đóng của
+     nến 5 phút cuối. Chủ app đo được hai con số "chưa khớp" khi thẻ lấy
+     nến: nến cuối có thể cũ tới 5 phút trong phiên, và sau giờ thì giá
+     đóng nến cuối lệch vài xu so với lần in cuối của chỉ số. Một màn hình,
+     một con số cho một thứ - nên cùng nguồn, cùng trường. Nến chỉ vẽ ĐƯỜNG.
+     Quote hỏng (không phải hết phiên) thì rơi về giá đóng nến và NÓI RA qua
+     `currentSource`, không im lặng. */
+  const [raw, q] = await Promise.all([
+    fetchChartable(c),
+    quotes([c.symbol]).catch((e) => {
+      if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
+      return {} as Record<string, any>;
+    }),
+  ]);
+  const s = toSeries(raw);
+  const quote = q?.[c.symbol]?.quote;
+  const last = quote?.lastPrice;
+  if (typeof last !== 'number') return { ...s, currentSource: 'candle' };
+  const qt = [quote?.quoteTime, quote?.tradeTime].find((v) => typeof v === 'number') as number | undefined;
+  return { ...s, current: last, asOf: qt ?? s.asOf, currentSource: 'quote' };
 }
 
 async function chartableSeries(): Promise<Series[]> {
