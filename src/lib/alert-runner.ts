@@ -8,6 +8,7 @@ import { trackedSymbols } from './insiders';
 import { syncCongress } from './congress';
 import { syncOptionFlow } from './optionflow';
 import { syncDarkpool } from './darkpool';
+import { collectEventAlerts, type EventReport } from './liveevents';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -57,6 +58,16 @@ export type RunReport = {
   sent: number;
   channels: string[];
   errors: string[];
+  /**
+   * Sàn có đang mở không. TRƯỚC ĐÂY thông tin này nằm trong `skipped:
+   * 'market-closed'` vì đóng cửa nghĩa là bỏ hẳn cả lượt chạy; giờ không
+   * còn thế nữa - cảnh báo 8-K vẫn chạy ngoài giờ - nên nó phải là một
+   * trường riêng, nếu không màn hình sẽ nói "đã bỏ qua" về một lượt chạy
+   * thật sự có làm việc.
+   */
+  marketOpen: boolean;
+  /** Tình trạng phần cảnh báo sự kiện; null = lượt này không chạy được. */
+  events: EventReport | null;
 };
 
 let lastRun: RunReport | null = null;
@@ -76,13 +87,16 @@ export function prune(state: State, day: string): State {
 
 export async function runOnce(force = false): Promise<RunReport> {
   const at = Date.now();
+  const marketOpen = force || inMarketHours();
 
-  if (!force && !inMarketHours()) {
-    lastRun = { at, skipped: 'market-closed', found: 0, sent: 0, channels: [], errors: [] };
-    return lastRun;
-  }
+  /* Cổng "chưa cấu hình kênh nào" lên TRƯỚC: tính toán xong mà không có chỗ
+     gửi thì chỉ tốn request. Cổng giờ giao dịch KHÔNG còn chặn cả lượt chạy
+     nữa - nó chỉ quyết định nguồn nào chạy (xem dưới). */
   if (!telegramConfigured() && !webPushConfigured()) {
-    lastRun = { at, skipped: 'no-channel', found: 0, sent: 0, channels: [], errors: [] };
+    lastRun = {
+      at, skipped: 'no-channel', found: 0, sent: 0, channels: [], errors: [],
+      marketOpen, events: null,
+    };
     return lastRun;
   }
 
@@ -90,10 +104,38 @@ export async function runOnce(force = false): Promise<RunReport> {
   let found = 0;
   let sent = 0;
   let channels: string[] = [];
+  let events: EventReport | null = null;
 
   try {
     const day = tradingDay();
-    const all = await collectAlerts();
+
+    /* HAI nguồn, hỏng ĐỘC LẬP nhau.
+     *
+     * - Cảnh báo danh mục (ITM, earnings, skew, quy mô) giữ NGUYÊN hành vi
+     *   cũ: chỉ chạy trong giờ giao dịch. Chúng đọc giá và greek, ngoài giờ
+     *   thì chỉ lặp lại con số đóng cửa.
+     * - Cảnh báo sự kiện chạy BẤT KỂ GIỜ, vì 8-K phần lớn nộp sau khi sàn
+     *   đóng - gắn nó vào cổng giờ là bỏ lỡ đúng thứ nó sinh ra để bắt.
+     *
+     * Tách bằng allSettled chứ không await nối tiếp: phiên Schwab hết hạn
+     * làm `collectAlerts()` ném, và trước đây cú ném đó giết cả lượt chạy.
+     * Giờ nó không được phép làm mất cảnh báo 8-K, vốn không cần Schwab. */
+    const [pfSettled, evSettled] = await Promise.allSettled([
+      marketOpen ? collectAlerts() : Promise.resolve([] as Alert[]),
+      collectEventAlerts(marketOpen, day),
+    ]);
+
+    const all: Alert[] = [];
+    if (pfSettled.status === 'fulfilled') all.push(...pfSettled.value);
+    else errors.push(`portfolio: ${String(pfSettled.reason?.message ?? pfSettled.reason)}`);
+
+    if (evSettled.status === 'fulfilled') {
+      all.push(...evSettled.value.alerts);
+      events = evSettled.value.report;
+    } else {
+      errors.push(`events: ${String(evSettled.reason?.message ?? evSettled.reason)}`);
+    }
+
     found = all.length;
 
     let state = prune(await readState(), day);
@@ -115,7 +157,7 @@ export async function runOnce(force = false): Promise<RunReport> {
     errors.push(String(e?.message ?? e));
   }
 
-  lastRun = { at, skipped: null, found, sent, channels, errors };
+  lastRun = { at, skipped: null, found, sent, channels, errors, marketOpen, events };
   return lastRun;
 }
 
