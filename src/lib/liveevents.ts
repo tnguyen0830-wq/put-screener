@@ -5,9 +5,19 @@
  * ĐANG xảy ra với mã của tôi ngay lúc này". Cảnh báo cũ đều tính từ giá,
  * greek và ngày tháng - không cái nào đọc sự kiện doanh nghiệp.
  *
- * Nguồn là hồ sơ 8-K của SEC, không phải mạng xã hội. Lý do: 8-K là chính
- * công ty BẮT BUỘC khai một sự kiện trọng yếu - nó là NGUỒN GỐC, không phải
- * bài viết về nguồn gốc. Miễn phí, không cần key.
+ * Nguồn CHÍNH là hồ sơ 8-K của SEC, không phải mạng xã hội. Lý do: 8-K là
+ * chính công ty BẮT BUỘC khai một sự kiện trọng yếu - nó là NGUỒN GỐC,
+ * không phải bài viết về nguồn gốc. Miễn phí, không cần key.
+ *
+ * BA TẦNG, xếp theo độ mạnh của bằng chứng:
+ *   1. hồ sơ 8-K (file này) - công ty tự khai, bắt buộc theo luật
+ *   2. giá chạy ≥7% (`moveAlertsFrom`) - con số của chính thị trường
+ *   3. tiêu đề báo chí (`pressalerts.ts`) - bên thứ ba viết, chưa kiểm
+ *      chứng; nhanh hơn 8-K nhưng yếu hơn hẳn, nên mang nhãn riêng và đi
+ *      qua ba cổng lọc (xem đầu file đó)
+ *
+ * Ba tầng HỎNG ĐỘC LẬP nhau: SEC chết không được làm mất cảnh báo giá, và
+ * báo chí chết không được làm mất cả hai cái kia.
  *
  * ============================================================
  * ĐO 2026-09-18 (`www.sec.gov`, bốn lượt gọi thật) - không đoán
@@ -368,6 +378,25 @@ export type EventReport = {
   skippedRoutine: number;
   unknownItems: string[];
   windowShort: boolean;
+  /**
+   * Tầng tiêu đề báo chí. `pressRan: false` nghĩa là LƯỢT NÀY không hỏi
+   * tin (nó chạy ~60 phút một lần, xem alert-runner.ts) - phải tách khỏi
+   * "đã hỏi và không có gì", vì nếu không thì mấy con số 0 bên dưới đọc
+   * thành "báo chí im lặng" trong khi thật ra chưa ai hỏi. Đúng luật
+   * "chưa biết không được trông giống không có gì".
+   */
+  pressRan: boolean;
+  /** Số mã đã hỏi tin. */
+  pressChecked: number;
+  /** Số mã bị bỏ vì vượt trần mã mỗi lượt. */
+  pressSkipped: number;
+  /** Bài mới, riêng một mã, nhưng không khớp từ khoá - đếm, không gửi. */
+  pressRoutine: number;
+  /** Bài mới nhưng gắn nhiều mã (bản tin thị trường) - đếm, không gửi. */
+  pressBroad: number;
+  /** Cảnh báo báo chí bị cắt vì chạm trần mỗi lượt. */
+  pressOverflow: number;
+  pressErrors: string[];
 };
 
 /**
@@ -414,7 +443,14 @@ export async function alertSymbols(): Promise<{ symbols: string[]; heldError: st
 export async function collectEventAlerts(
   marketOpen: boolean,
   day: string,
-  now = Date.now()
+  now = Date.now(),
+  /**
+   * Lượt này có hỏi tin báo chí không. Yahoo tốn 1 request MỖI MÃ nên nó
+   * chạy giãn ra (~60 phút), quyết định ở alert-runner.ts nơi bộ đếm tick
+   * đã sẵn có - đúng khuôn syncDarkpool(). Cửa sổ 90 phút khiến nhịp giãn
+   * này không làm mất bài nào.
+   */
+  pressDue = false
 ): Promise<{ alerts: Alert[]; report: EventReport }> {
   const { symbols, heldError } = await alertSymbols();
 
@@ -427,10 +463,17 @@ export async function collectEventAlerts(
     skippedRoutine: 0,
     unknownItems: [],
     windowShort: false,
+    pressRan: false,
+    pressChecked: 0,
+    pressSkipped: 0,
+    pressRoutine: 0,
+    pressBroad: 0,
+    pressOverflow: 0,
+    pressErrors: [],
   };
   if (!symbols.length) return { alerts: [], report };
 
-  const [secSettled, quoteSettled] = await Promise.allSettled([
+  const [secSettled, quoteSettled, pressSettled] = await Promise.allSettled([
     (async () => {
       const { ciksFor } = await import('./sec');
       const { found, missing } = await ciksFor(symbols);
@@ -442,6 +485,17 @@ export async function collectEventAlerts(
       ? (async () => {
           const { quotes } = await import('./schwab');
           return quotes(symbols);
+        })()
+      : Promise.resolve(null),
+    /* Tầng BA: tiêu đề báo chí. Chạy BẤT KỂ GIỜ, cùng lý do với 8-K - tin
+       quan trọng nhất trong ngày (kết quả kinh doanh, lãnh đạo từ chức)
+       phần lớn ra SAU khi sàn đóng. Nạp động để không tạo vòng import:
+       pressalerts.ts đọc FRESH_MS từ chính file này. */
+    pressDue
+      ? (async () => {
+          const { fetchPressHeadlines, pressAlertsFrom } = await import('./pressalerts');
+          const got = await fetchPressHeadlines(symbols);
+          return { got, scan: pressAlertsFrom(got.items, now) };
         })()
       : Promise.resolve(null),
   ]);
@@ -464,6 +518,25 @@ export async function collectEventAlerts(
     if (quoteSettled.value) alerts.push(...moveAlertsFrom(quoteSettled.value, symbols, day));
   } else {
     report.quoteError = String(quoteSettled.reason?.message ?? quoteSettled.reason).slice(0, 200);
+  }
+
+  if (pressSettled.status === 'fulfilled') {
+    if (pressSettled.value) {
+      const { got, scan } = pressSettled.value;
+      report.pressRan = true;
+      report.pressChecked = got.asked;
+      report.pressSkipped = Math.max(0, symbols.length - got.asked);
+      report.pressErrors = got.errors;
+      report.pressRoutine = scan.routine;
+      report.pressBroad = scan.broad;
+      report.pressOverflow = scan.overflow;
+      alerts.push(...scan.alerts);
+    }
+  } else {
+    /* Cả tầng báo chí ném (chứ không phải vài mã lẻ hỏng) vẫn phải NÓI RA,
+       không được lẫn vào `pressRan: false` - hai chuyện khác nhau. */
+    report.pressRan = true;
+    report.pressErrors = [String(pressSettled.reason?.message ?? pressSettled.reason).slice(0, 200)];
   }
 
   return { alerts, report };

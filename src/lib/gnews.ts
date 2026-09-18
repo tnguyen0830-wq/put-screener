@@ -160,11 +160,77 @@ export function parseGnewsRss(xml: string, now = Date.now()): GnewsItem[] {
   return out.sort((a, b) => b.published.localeCompare(a.published));
 }
 
+/* ------------------------------------------------------------------ *
+ *  503 của Google: PHÂN LOẠI, không đoán.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Một cái 503 của Google có HAI nghĩa dẫn tới hai cách sửa NGƯỢC nhau:
+ * Google sập tạm (thử lại là xong) hay Google chặn dải IP trung tâm dữ
+ * liệu (thử lại vô ích vĩnh viễn, phải đổi nguồn). #153 đã cho lỗi mang
+ * theo BODY để trả lời câu đó - nhưng vẫn bắt người đọc tự nhìn body rồi
+ * tự kết luận. Hàm này đọc hộ, vì trang chặn của Google tự xưng tên bằng
+ * những chữ rất đặc trưng.
+ *
+ * Đây là PHÉP ĐO trên thứ nhận được, không phải phỏng đoán: không khớp chữ
+ * nào thì trả `unavailable`, tức vẫn coi là hỏng tạm và vẫn thử lại.
+ */
+export type GnewsFailure = 'blocked' | 'unavailable';
+
+const BLOCK_SIGNS = [
+  'unusual traffic',
+  'automated queries',
+  'our systems have detected',
+  '/sorry/index',
+  'recaptcha',
+  'captcha',
+];
+
+export function classifyGnewsBody(body: string): GnewsFailure {
+  const b = (body ?? '').toLowerCase();
+  return BLOCK_SIGNS.some((w) => b.includes(w)) ? 'blocked' : 'unavailable';
+}
+
+/**
+ * Đo được là BỊ CHẶN thì nghỉ hẳn một lúc.
+ *
+ * Không phải để tiết kiệm request - mà vì một nguồn đã bị chặn sẽ hỏng y
+ * hệt ở MỌI lượt gọi tiếp theo, nên để nguyên là in ra cùng một dòng lỗi
+ * trong `failed` mãi mãi, và một dòng lỗi lặp vô hạn là một dòng lỗi bị bỏ
+ * qua. 6 tiếng chứ không vĩnh viễn, cố ý: nếu hoá ra Google chỉ chặn tạm
+ * theo nhịp thì app tự hồi phục mà không cần ai deploy lại.
+ *
+ * Trạng thái này nằm trong RAM: deploy lại là quên - đúng ý, vì deploy có
+ * thể đổi cả IP thoát.
+ */
+export const BLOCK_COOLDOWN_MS = 6 * 60 * 60_000;
+
+let blockedUntil = 0;
+
+/** Chỉ để test đặt lại; không nơi nào trong app gọi. */
+export function _resetGnewsBlock() {
+  blockedUntil = 0;
+}
+
+export const gnewsBlockedUntil = () => blockedUntil;
+
 export async function gnewsSearch(
   symbol: string,
   name?: string | null,
   limit = 8
 ): Promise<GnewsItem[]> {
+  /* Đang trong thời gian nghỉ vì ĐÃ ĐO được là bị chặn: ném ngay, và nói
+     rõ đây là quyết định của app chứ không phải câu trả lời của Google -
+     hai chuyện đó cần hai cách sửa khác nhau. */
+  if (Date.now() < blockedUntil) {
+    const mins = Math.ceil((blockedUntil - Date.now()) / 60_000);
+    throw new Error(
+      `Google News blocked - app tạm ngừng hỏi thêm ${mins} phút nữa. ` +
+        'Lần gọi gần nhất nhận đúng trang chặn của Google (chặn dải IP trung ' +
+        'tâm dữ liệu), nên thử lại ngay cũng chỉ nhận lại đúng trang đó.'
+    );
+  }
+
   const r = await fetch(gnewsUrl(symbol, name), {
     headers: { 'User-Agent': UA },
     cache: 'no-store',
@@ -181,8 +247,15 @@ export async function gnewsSearch(
      ký tự khi lên prompt và màn hình - bài học #102 về thứ tự trường. */
   if (!r.ok) {
     const body = await r.text().catch(() => '');
+    const kind = classifyGnewsBody(body);
+    if (kind === 'blocked') blockedUntil = Date.now() + BLOCK_COOLDOWN_MS;
+    /* Thứ tự trường: trạng thái, rồi KẾT LUẬN, rồi mới tới trích body -
+       chuỗi này bị cắt ở 200 ký tự khi lên prompt và màn hình, nên thứ
+       đáng giá nhất phải đứng trước (#102). */
     throw new Error(
-      `Google News ${r.status}${body ? ` - ${shapeOf(body)}` : ' (thân rỗng)'}`
+      `Google News ${r.status} ${kind}` +
+        (kind === 'blocked' ? ' (trang chặn của Google, không phải sập tạm)' : '') +
+        (body ? ` - ${shapeOf(body)}` : ' (thân rỗng)')
     );
   }
   return parseGnewsRss(await r.text()).slice(0, limit);
