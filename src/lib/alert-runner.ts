@@ -9,6 +9,7 @@ import { syncCongress } from './congress';
 import { syncOptionFlow } from './optionflow';
 import { syncDarkpool } from './darkpool';
 import { collectEventAlerts, type EventReport } from './liveevents';
+import { sampleInternals } from './internals';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -208,6 +209,11 @@ export function startAlertLoop() {
     void syncCongress().catch(() => {});
     void syncEarningsCalendar().catch(() => {});
     void syncOptionFlow().catch(() => {});
+    // Lấy mẫu market internals ($TICKQ/$ADV/$DECL/$PCCE) - MỘT lượt /quotes
+    // gộp cả bốn mã (rẻ), tự gác giờ giao dịch bên trong nên gọi mỗi tick
+    // vẫn an toàn, không cần giãn nhịp như Dark Pool (nơi tốn 1 request MỖI
+    // MÃ). Xem lib/internals.ts.
+    void sampleInternals().catch(() => {});
     // Dark Pool tốn hẳn 1 request MỖI MÃ (không gộp lô được như Options
     // Flow) - với rổ ~500+ mã, gọi ở đúng nhịp 15 phút như các mục còn
     // lại từng đốt cả hạn mức 30.000 request/ngày của UW chỉ riêng

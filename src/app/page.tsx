@@ -11,6 +11,7 @@ import HeatmapPanel from '@/components/HeatmapPanel';
 import FearGreed from '@/components/FearGreed';
 import RrgChart from '@/components/RrgChart';
 import GexExposurePanel from '@/components/GexExposurePanel';
+import InternalsPanel from '@/components/InternalsPanel';
 import PortfolioPanel from '@/components/PortfolioPanel';
 import InsiderPanel from '@/components/InsiderPanel';
 import CongressPanel from '@/components/CongressPanel';
@@ -63,7 +64,7 @@ type InsiderSub = (typeof INSIDER_SUBS)[number];
 /** Bốn nội dung khác nhau trong tab Heatmap, cùng lý do tách tab con như
  *  Insider Trade ở trên - trước đó cả bốn (bản đồ nhiệt, Fear & Greed, RRG,
  *  GEX) xếp chồng trong một cột phải cuộn rất dài mới thấy hết. */
-const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex'] as const;
+const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex', 'internals'] as const;
 type HeatmapSub = (typeof HEATMAP_SUBS)[number];
 
 export default function Page() {
@@ -496,6 +497,12 @@ export default function Page() {
             >
               {t('hm.subGex')}
             </button>
+            <button
+              className={heatmapSub === 'internals' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('internals')}
+            >
+              {t('hm.subInternals')}
+            </button>
           </div>
 
           {heatmapSub === 'map' ? (
@@ -509,8 +516,10 @@ export default function Page() {
             <FearGreed />
           ) : heatmapSub === 'rrg' ? (
             <RrgChart />
-          ) : (
+          ) : heatmapSub === 'gex' ? (
             <GexExposurePanel />
+          ) : (
+            <InternalsPanel />
           )}
         </div>
       )}
