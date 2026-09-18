@@ -82,11 +82,16 @@ export async function GET() {
 
   const out: Record<string, unknown> = {};
 
-  /* 1. HẠN MỨC THÁNG. Đặt TRƯỚC mọi lượt tìm kiếm, cố ý: nếu hạn mức đã cạn
-        thì mọi bước dưới sẽ hỏng vì lý do đó chứ không phải vì câu truy vấn
-        sai, và không có con số này thì hai chuyện đó trông y hệt nhau. Gói
-        của X tính theo SỐ BÀI đọc mỗi tháng, nên đây cũng chính là con số
-        quyết định tính năng rẻ hay đắt. */
+  /* 1. MỨC ĐÃ DÙNG. Đặt TRƯỚC mọi lượt tìm kiếm, cố ý: nếu tài khoản đã hết
+        tiền/hết hạn mức thì mọi bước dưới sẽ hỏng vì lý do ĐÓ chứ không phải
+        vì câu truy vấn sai, và không có bước này thì hai chuyện đó trông y
+        hệt nhau.
+
+        `/2/usage/tweets` là endpoint của mô hình CŨ tính theo tháng. Ảnh chụp
+        `developer.x.com` (2026-09-18) cho thấy X giờ bán tín dụng TRẢ THEO
+        LƯỢNG DÙNG, nên bước này có thể trả 404/403 — và đó KHÔNG phải lỗi,
+        chính lời từ chối là phát hiện: nó nói rằng số dư phải đọc ở chỗ khác.
+        Vì vậy `step()` giữ nguyên trạng thái thật thay vì nuốt đi. */
   out.usage = await step(async () => {
     const { json, rate, status } = await xGet('/usage/tweets');
     return {
@@ -148,8 +153,9 @@ export async function GET() {
   /* 3. `since_id` — CƠ CHẾ giữ chi phí xuống, không phải chi tiết.
         Hỏi lại ngay với `since_id` là id mới nhất vừa nhận: phải ra ÍT hơn
         hẳn (gần như chắc chắn 0). Nếu nó trả lại nguyên chừng ấy bài thì
-        `since_id` bị bỏ qua, và hạn mức tháng sẽ bốc hơi trong vài ngày vì
-        mỗi lượt hỏi lại đọc lại cùng một đống bài cũ. */
+        `since_id` bị bỏ qua, và với cách tính TRẢ THEO LƯỢNG DÙNG thì mỗi
+        lượt hỏi lại đọc lại cùng một đống bài cũ là tiền thật chảy ra liên
+        tục — không có trần tháng nào tự chặn lại. */
   const sinceId = (cashtag.ok && (cashtag.newestId as string | null)) || null;
   out.sinceId = sinceId
     ? await step(async () => {

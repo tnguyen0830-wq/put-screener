@@ -567,14 +567,22 @@ làm (#127), và lý do không phải sự cẩn thận suông: repo này đã b
 theo tài liệu nhớ được rồi sai. Nên hiện tại chỉ có `/api/xprobe`, **không có
 cảnh báo nào đọc X**.
 
+**Và trang giá của X đã đổi hẳn mô hình so với thứ tôi nhớ** (ảnh chụp
+`developer.x.com`, 2026-09-18): giờ là **trả theo lượng dùng, mua tín dụng,
+không cam kết**, cộng một bậc Enterprise. Tức không còn phải quyết "có đáng
+tiền hằng tháng không" trước khi đo được gì — nạp một ít tín dụng, chạy probe,
+đọc chi phí thật, rồi mới mở rộng. **Cảnh báo một con số dễ đọc nhầm**:
+$0.001/tài nguyên trên trang đó là giá **Owned Reads**, tức đọc dữ liệu của
+CHÍNH MÌNH — đọc bài người khác, thứ tính năng này cần, là một mức giá khác.
+
 Probe trả lời bốn câu, và câu đầu quyết định kiến trúc chứ không phải chi tiết:
 
 | Câu hỏi | Vì sao nó quyết định |
 |---|---|
 | Toán tử `$AAPL` có dùng được ở gói này không | Có → tìm thẳng theo mã. Không → phải bám **danh sách tài khoản** rồi lọc mã trong app, tức một tính năng khác |
-| Hạn mức **tháng** còn bao nhiêu | X tính theo **số bài đọc**, không phải số request — đây là con số quyết định rẻ hay đắt |
-| `since_id` có được tôn trọng không | Đây là **cơ chế** giữ chi phí xuống: hỏi lại mà không có bài mới phải ra 0 bài |
+| `since_id` có được tôn trọng không | **Cơ chế** giữ chi phí xuống: hỏi lại mà không có bài mới phải ra 0 bài. Với cách tính theo lượng dùng thì càng quan trọng — đọc lại bài cũ là tiền chảy ra liên tục, không có trần tháng nào tự chặn |
 | Trần độ dài câu truy vấn | Bao nhiêu mã nhét vừa một lượt hỏi |
+| Mức đã dùng | Probe hỏi endpoint của mô hình cũ tính theo tháng; với gói trả-theo-lượng-dùng nó có thể từ chối, và probe in nguyên trạng thái thật thay vì đoán |
 
 Cách chạy nằm ở `DEPLOY.md`. Token **phải** là app-only (chỉ đọc, không đăng
 được bài) — lộ token người dùng là người lạ đăng bài dưới tên bạn.
