@@ -22,6 +22,14 @@ import { ttConfigured, ttGet, TtError } from './tastytrade';
  * không phải bằng cách im lặng. Đó chính là ranh giới mà cả #131 xoay
  * quanh: "đã hỏi, mã này không có earnings" là một câu trả lời THẬT, khác
  * hẳn "chưa ai hỏi mã này bao giờ".
+ *
+ * File này giờ CŨNG lưu IV rank (`parseIvRank`, kho `ivRanks`) - cùng bản
+ * ghi `/market-metrics`, cùng lượt gọi, không tốn thêm request nào. Dùng
+ * cho chỉ báo "IV rank trung bình" ở tab Bề rộng thị trường (`lib/
+ * internals.ts`) - CLAUDE.md từng ghi đây là việc "cố ý CHƯA làm" vì hai
+ * bẫy thật (ba trường IV rank khác nhau đọc lệch nhau tới ~6 điểm, và
+ * thang 0-1 của tastytrade khác thang 0-100 của app) - cả hai bẫy đó nằm
+ * hết trong `parseIvRank()`, không lặp lại ở nơi gọi.
  */
 
 const STORE = path.resolve(process.env.TT_EARNINGS_PATH || './.cache/ttearnings.json');
@@ -52,8 +60,18 @@ export type TtEarningsRecord = {
   fetchedAt: number;
 };
 
+export type TtIvRankRecord = {
+  /** 0-100. tastytrade trả 0-1; nhân 100 đúng MỘT LẦN ở biên này. null khi
+   *  tastytrade không trả trường này cho mã đó. */
+  value: number | null;
+  fetchedAt: number;
+};
+
 type Stored = {
   records: Record<string, TtEarningsRecord>;
+  /** Cùng lượt gọi /market-metrics với `records` - không tốn thêm request
+   *  nào để có IV rank, chỉ đọc thêm một trường từ đúng bản ghi đã có. */
+  ivRanks: Record<string, TtIvRankRecord>;
   lastSyncAt: number | null;
 };
 
@@ -89,14 +107,37 @@ export function parseEarnings(rec: any, now = Date.now()): TtEarningsRecord | nu
   return { date, estimated: e.estimated === true, visible: true, fetchedAt: now };
 }
 
+/**
+ * IV rank 0-100, đọc RÕ MỘT nguồn - `tos-implied-volatility-index-rank`,
+ * không phải trường chung `implied-volatility-index-rank`.
+ *
+ * CLAUDE.md đã cảnh báo trường chung chỉ ÂM THẦM trỏ theo
+ * `implied-volatility-index-rank-source` (hiện đang trỏ "tos", nhưng đó là
+ * một con trỏ có thể đổi hướng bất kỳ lúc nào) - đọc trường chung là đọc
+ * theo con trỏ đó chứ không phải một nguồn cố định. Chọn "tos" một cách
+ * TƯỜNG MINH vì đó là nền thinkorswim chủ app đối chiếu ở nơi khác trong
+ * app này.
+ *
+ * tastytrade trả 0-1 (phân số); app này dùng thang 0-100 khắp nơi khác
+ * (ivRank() trong gex.ts) - nhân 100 đúng MỘT LẦN ở biên này, không để lọt
+ * ra ngoài dưới dạng phân số rồi bị hiểu nhầm là phần trăm.
+ */
+export function parseIvRank(rec: any): number | null {
+  const raw = rec?.['tos-implied-volatility-index-rank'];
+  const n = typeof raw === 'string' ? Number(raw) : typeof raw === 'number' ? raw : NaN;
+  return Number.isFinite(n) ? n * 100 : null;
+}
+
 async function read(): Promise<Stored> {
   try {
     const j = JSON.parse(await fs.readFile(STORE, 'utf8'));
-    if (j && typeof j === 'object' && j.records) return j;
+    // `ivRanks` không có trong file cũ (trước khi trường này tồn tại) - đọc
+    // dung thứ, mặc định rỗng, chứ không coi file cũ là hỏng.
+    if (j && typeof j === 'object' && j.records) return { ivRanks: {}, ...j };
   } catch {
     /* chưa đồng bộ lần nào */
   }
-  return { records: {}, lastSyncAt: null };
+  return { records: {}, ivRanks: {}, lastSyncAt: null };
 }
 
 async function write(s: Stored): Promise<void> {
@@ -125,6 +166,18 @@ export async function loadTtEarnings(): Promise<Record<string, string[]>> {
 /** Chi tiết cho màn hình: ngày này là ước tính hay đã xác nhận. */
 export async function ttEarningsDetail(): Promise<Record<string, TtEarningsRecord>> {
   return (await read()).records;
+}
+
+/**
+ * IV rank đã đồng bộ, theo mã. `null` cho một mã nghĩa là ĐÃ HỎI nhưng
+ * tastytrade không trả trường này cho mã đó (khác hẳn mã chưa từng được
+ * hỏi - mã đó đơn giản không có mặt trong object trả về ở đây).
+ */
+export async function loadTtIvRanks(): Promise<Record<string, number | null>> {
+  const store = await read();
+  const out: Record<string, number | null> = {};
+  for (const [sym, r] of Object.entries(store.ivRanks)) out[sym] = r.value;
+  return out;
 }
 
 export type TtEarningsRun = {
@@ -200,6 +253,9 @@ export async function syncTtEarnings(symbols: string[]): Promise<TtEarningsRun> 
                kho: để trống thì cổng vẫn gắn cờ "chưa biết", đúng sự thật. */
             undecided.push(sym);
           }
+          // IV rank ghi ĐỘC LẬP với việc earnings có kết luận được hay
+          // không - cùng bản ghi, cùng lượt gọi, không tốn thêm request nào.
+          store.ivRanks[sym] = { value: parseIvRank(rec), fetchedAt: at };
         }
         for (const s of lot) if (!seen.has(s)) missing.push(s);
       } catch (e: any) {
