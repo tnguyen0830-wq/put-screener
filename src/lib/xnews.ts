@@ -31,14 +31,18 @@
  *     nhớ không phải đo) thì phải đổi hẳn sang bám theo DANH SÁCH TÀI KHOẢN
  *     (`from:`) rồi lọc trong app — tức một kiến trúc khác. Vì vậy cả HAI
  *     kiểu câu truy vấn đều được viết sẵn ở đây và probe thử cả hai.
- *  2. **Hạn mức THÁNG còn bao nhiêu** (`/2/usage/tweets`). Gói trả phí của X
- *     tính theo SỐ BÀI đọc được mỗi tháng, không phải số request — nên thiết
- *     kế rẻ hay đắt phụ thuộc hẳn vào con số này. Không có nó thì mọi tính
- *     toán chi phí đều là phỏng đoán.
+ *  2. **Mức đã dùng** (`/2/usage/tweets`). LƯU Ý: đó là endpoint của mô hình
+ *     CŨ tính theo tháng. Ảnh chụp `developer.x.com` chủ app gửi ngày
+ *     2026-09-18 cho thấy X giờ bán **tín dụng trả theo lượng dùng, không
+ *     cam kết** (cộng một bậc Enterprise), nên endpoint này có thể từ chối —
+ *     và chính lời từ chối đó là phát hiện, nên probe in nguyên trạng thái
+ *     thật chứ không giả vờ.
  *  3. **`since_id` có hoạt động đúng nghĩa không.** Đây là CƠ CHẾ giữ chi phí
  *     xuống: hỏi lại sau 15 phút mà không có bài mới thì phải về 0 bài, tức
- *     tốn 0 hạn mức. Nếu `since_id` bị bỏ qua thì mỗi lượt hỏi lại trả về
- *     nguyên 100 bài cũ và hạn mức tháng bốc hơi trong vài ngày.
+ *     tốn 0 đồng. **Trả theo lượng dùng làm câu này QUAN TRỌNG HƠN chứ không
+ *     nhẹ đi**: một hạn mức tháng ít ra còn tự dừng khi cạn, còn trả theo
+ *     lượng dùng mà đọc lại cùng đống bài cũ thì tiền chảy ra liên tục, không
+ *     có trần nào tự chặn.
  *  4. **Tên và KIỂU trường thật** của một bài, và trần độ dài câu truy vấn.
  *
  * ============================================================

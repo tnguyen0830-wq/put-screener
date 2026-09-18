@@ -382,19 +382,43 @@ theo tài liệu.
 **Hiện mới chỉ có probe. Chưa có tính năng nào đọc X**, và đó là chủ ý: X là
 host CÓ KEY, nên luật của repo là đo ở production trước rồi mới viết code.
 
-**Bước 0 — biết mình mua gì trước khi trả tiền.** X **không** có bậc miễn phí
-cho việc tìm kiếm bài. Trước khi mua, hãy đọc kỹ bảng giá hiện hành trên
-`developer.x.com` và tìm đúng hai dòng:
+**Bước 0 — biết mình mua gì trước khi trả tiền.**
 
-1. **Endpoint `recent search`** (`/2/tweets/search/recent`) có nằm trong gói
+Chủ app gửi ảnh chụp `developer.x.com` (2026-09-18) và **nó khác hẳn thứ tôi
+nhớ** — chỗ này là phép đo, không phải trí nhớ. Trang đó hiện bán đúng hai
+thứ:
+
+| Sản phẩm | Cách tính tiền |
+|---|---|
+| **X API — Pay-per-use** | **tín dụng, không cam kết**, trả theo đúng phần đã dùng |
+| **X API — Enterprise** | lưu lượng lớn, hạn mức riêng, có người quản lý tài khoản |
+
+**Đây là tin tốt và nó đổi hẳn cách quyết định.** Bản cũ bán theo THÁNG, nên
+câu hỏi là "có đáng bỏ tiền hằng tháng không" và phải trả lời TRƯỚC khi đo
+được gì. Trả theo lượng dùng thì không còn câu đó: nạp một ít tín dụng, chạy
+probe, đọc chi phí thật, rồi mới quyết mở rộng. Rủi ro lớn nhất của cả việc
+này biến mất.
+
+> **Một con số trên trang đó RẤT dễ đọc nhầm, và đọc nhầm là tốn tiền.** Ô
+> "Pay Per Use Pricing Changes" ghi **$0.001 mỗi tài nguyên** — nhưng đó là
+> giá của **Owned Reads**, tức đọc **dữ liệu của CHÍNH BẠN** (bài mình đăng,
+> bookmark, follower, like), và chính trang đó gọi nó là giá **giảm**. Thứ
+> tính năng này cần là đọc bài của **NGƯỜI KHÁC** nói về mã mình nắm — một
+> mức giá KHÁC, và cao hơn. Đừng lấy $0.001 làm cơ sở tính toán.
+
+Vẫn phải tìm đúng hai dòng này trước khi nạp tiền:
+
+1. **Endpoint `recent search`** (`/2/tweets/search/recent`) có dùng được
    không. Không có nó thì không đọc được gì.
-2. **Toán tử `$AAPL` (cashtag)** có nằm trong gói không. Đây là câu QUYẾT ĐỊNH
+2. **Toán tử `$AAPL` (cashtag)** có dùng được không. Đây là câu QUYẾT ĐỊNH
    kiến trúc chứ không phải chi tiết: có thì tìm thẳng theo mã; không có thì
    phải bám theo DANH SÁCH TÀI KHOẢN (`from:`) rồi lọc mã trong app — vẫn làm
    được, nhưng là một tính năng khác và cần bạn chọn danh sách tài khoản.
 
-Tôi **không** ghi con số giá ở đây, cố ý: giá và giới hạn của X đổi luôn, mà
-một con số nhớ nhầm trong tài liệu triển khai trông y hệt một con số đã kiểm.
+Ngoài hai dòng đó tôi **không** ghi con số giá nào ở đây, cố ý — và lần này
+có bằng chứng cho chính luật đó: bảng giá X đã đổi hẳn mô hình so với thứ tôi
+nhớ, nên một con số chép vào runbook sẽ trông y hệt một con số đã kiểm trong
+khi nó đã chết từ lâu.
 
 **Bước 1 — token.** Tạo App ở cổng developer rồi lấy **App-only Bearer
 Token**.
@@ -419,21 +443,24 @@ bằng tài khoản chủ app và mở:
 https://<app>/api/xprobe
 ```
 
-Nó chỉ trả **hình dạng** và **con số hạn mức**; không có token trong câu trả
+Nó chỉ trả **hình dạng** và **con số mức dùng**; không có token trong câu trả
 lời. Bốn dòng đáng đọc, theo thứ tự:
 
-- `usage.data` — **hạn mức tháng còn lại**. Gói của X tính theo SỐ BÀI đọc
-  mỗi tháng chứ không phải số request, nên đây là con số quyết định tính năng
-  rẻ hay đắt.
 - `cashtag.ok` — toán tử `$AAPL` có dùng được không. `false` kèm 403 **không
   phải lỗi của probe, nó chính là câu trả lời**, và quyết định làm tiếp kiểu
-  nào.
+  nào. Đây là dòng quan trọng nhất.
 - `sinceId.honoured` — `since_id` có được tôn trọng không. Đây là **cơ chế**
-  giữ chi phí xuống: hỏi lại mà không có bài mới thì phải ra 0 bài. Nếu
-  `false` thì mỗi lượt hỏi lại đọc lại cùng một đống bài cũ và hạn mức tháng
-  bốc hơi trong vài ngày.
+  giữ chi phí xuống: hỏi lại mà không có bài mới thì phải ra 0 bài. **Với
+  cách tính theo lượng dùng thì dòng này còn quan trọng hơn trước**: hạn mức
+  tháng cạn thì tính năng chỉ ngừng chạy, còn trả-theo-lượng-dùng thì mỗi
+  lượt đọc lại cùng đống bài cũ là tiền thật chảy ra liên tục, không có trần
+  nào tự chặn lại.
 - `queryLimit` — trần độ dài câu truy vấn, tức bao nhiêu mã nhét vừa một
   lượt hỏi.
+- `usage` — probe hỏi `/2/usage/tweets`, endpoint của **mô hình cũ tính theo
+  tháng**. Với gói trả-theo-lượng-dùng nó **có thể trả 404 hoặc 403, và đó
+  không phải lỗi** — probe in nguyên trạng thái thật để ta biết cần đọc số dư
+  tín dụng ở đâu khác. Số dư thật thì xem trên chính cổng developer.
 
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
