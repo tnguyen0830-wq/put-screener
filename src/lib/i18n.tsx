@@ -1397,6 +1397,23 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'rrg.tableToggle': { vi: 'Xem bảng số', en: 'Show the numbers' },
   'rrg.colSector': { vi: 'Ngành', en: 'Sector' },
   'rrg.colQuadrant': { vi: 'Góc phần tư', en: 'Quadrant' },
+  'rrg.colDirection': { vi: 'Hướng', en: 'Direction' },
+
+  'rrg.weeks5': { vi: '5 tuần', en: '5 weeks' },
+  'rrg.weeks10': { vi: '10 tuần', en: '10 weeks' },
+  'rrg.weeks20': { vi: '20 tuần', en: '20 weeks' },
+  'rrg.weeksAll': { vi: 'Tất cả', en: 'All' },
+
+  'rrg.fullscreen': { vi: 'Toàn màn hình', en: 'Fullscreen' },
+  'rrg.exitFullscreen': { vi: 'Thoát toàn màn hình', en: 'Exit fullscreen' },
+
+  'rrg.aiTitle': { vi: 'Phân tích AI về RRG', en: 'AI analysis of the RRG' },
+  'rrg.aiRun': { vi: 'Phân tích AI', en: 'Run AI analysis' },
+  'rrg.aiRerun': { vi: 'Phân tích lại', en: 'Run again' },
+  'rrg.aiNote': {
+    vi: 'Claude chỉ đọc đúng RS-Ratio/RS-Momentum/góc phần tư/hướng đang hiện trong bảng trên - không gọi thêm dữ liệu nào khác. Đây là ngành, không phải cổ phiếu: nhãn góc phần tư mô tả trạng thái dòng tiền của cả ngành, không phải khuyến nghị mua bán một mã nào.',
+    en: 'Claude reads only the RS-Ratio/RS-Momentum/quadrant/direction already in the table above - no extra data fetched. This describes a SECTOR, not a stock: a quadrant label is a state of sector money flow, not a buy/sell call on any ticker.',
+  },
   'rrg.note': {
     vi: 'Toạ độ tính từ giá tuần của 11 quỹ ngành SPDR so với SPY, lấy từ Schwab: chênh lệch hai đường EMA của sức mạnh tương đối, rồi so với mặt bằng của cả 11 ngành trong cùng tuần — nên 100 nghĩa là ngang bằng mặt bằng chung, không phải ngang bằng SPY. Công thức RS-Ratio/RS-Momentum gốc của JdK không được công bố, đây là bản dựng lại: vòng xoay và thứ tự ngành đọc như bản gốc, con số tuyệt đối thì không nhất thiết trùng. Vị trí góc phần tư mô tả trạng thái, không phải khuyến nghị mua bán.',
     en: 'Coordinates are computed from weekly Schwab prices for the 11 SPDR sector funds against SPY: the gap between two EMAs of relative strength, then scored against where all 11 sectors sit that same week — so 100 means level with the pack, not level with SPY. JdK\u2019s original RS-Ratio/RS-Momentum formula is unpublished; this is a reconstruction, so the rotation and the ordering read like the original while the absolute numbers need not match. A quadrant describes a state, not a recommendation.',
