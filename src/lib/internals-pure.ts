@@ -47,3 +47,13 @@ export function numField(q: Record<string, any>, symbol: string): number | null 
   const v = q[symbol]?.quote?.lastPrice;
   return typeof v === 'number' ? v : null;
 }
+
+/** Trung bình các giá trị ĐÃ BIẾT, bỏ qua `null` - không coi mã thiếu là 0
+ *  (một rổ 500 mã mà 400 mã thiếu IV rank sẽ kéo trung bình về gần 0 nếu
+ *  null bị tính như 0, một con số sai trông y như con số đúng). Rỗng hoặc
+ *  toàn null trả về `null`, không trả `0` (0 là một giá trị thật). */
+export function meanOf(values: (number | null)[]): number | null {
+  const known = values.filter((v): v is number => v !== null && Number.isFinite(v));
+  if (!known.length) return null;
+  return known.reduce((a, b) => a + b, 0) / known.length;
+}

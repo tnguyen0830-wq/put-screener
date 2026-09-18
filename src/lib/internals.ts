@@ -2,9 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { quotes, intradayHistory } from './schwab';
 import { inMarketHours, tradingDay } from './alerts';
+import { ttConfigured } from './tastytrade';
+import { loadTtIvRanks } from './ttearnings';
+import { trackedSymbols } from './insiders';
 import {
   diffOrNull,
   diffSeries,
+  meanOf,
   numField,
   type Series,
   type SeriesPoint,
@@ -29,6 +33,15 @@ export type { Series, SeriesPoint } from './internals-pure';
  *     Advance-Decline, CBOE Total Put/Call) - không có đường vòng nào từ
  *     Schwab, nói thẳng "không có dữ liệu" trên màn hình thay vì âm thầm bỏ
  *     qua hay lấy một con số gần đúng giả làm con số thật.
+ *
+ * Sau khi chủ app xác nhận tài khoản tastytrade đã hoạt động (#130/#135),
+ * thêm MỘT chỉ báo thứ tám: IV rank trung bình toàn rổ đang theo dõi, đọc
+ * từ đúng kho `ttearnings.ts` đã đồng bộ sẵn mỗi 15 phút cho cổng earnings -
+ * không tốn thêm request nào tới tastytrade, chỉ đọc thêm một trường từ dữ
+ * liệu đã có. Đây là một chỉ báo TÂM LÝ THỊ TRƯỜNG qua biến động ngụ ý,
+ * khác nhóm với bảy chỉ báo TICK/ADV-DECL/Put-Call ở trên (đo dòng lệnh),
+ * nên đứng riêng trong bảng nhưng cùng một tab vì cùng trả lời câu hỏi
+ * "thị trường đang ở trạng thái nào".
  */
 
 const CHARTABLE: { key: string; label: string; symbol: string }[] = [
@@ -104,6 +117,7 @@ type StoredPoint = {
   tickNasdaq: number | null;
   advDeclNyse: number | null;
   pccEquity: number | null;
+  avgIvRank: number | null;
 };
 type Store = { date: string; points: StoredPoint[] };
 
@@ -149,22 +163,43 @@ export async function sampleInternals(now = new Date()): Promise<void> {
   const decl = numField(q, '$DECL');
   const pccEquity = numField(q, '$PCCE');
   const advDeclNyse = diffOrNull(adv, decl);
+  const avgIvRank = await averageIvRank();
 
   const day = tradingDay(now);
   let store = await readStore();
   if (store.date !== day) store = { date: day, points: [] };
-  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity });
+  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity, avgIvRank });
   await writeStore(store);
+}
+
+/**
+ * IV rank trung bình toàn rổ đang theo dõi - đọc kho `ttearnings.ts` ĐÃ
+ * đồng bộ sẵn (đi nhờ chính bộ đếm giờ này qua `syncEarningsCalendar()`),
+ * KHÔNG gọi thêm tastytrade lần nào ở đây. `null` khi tastytrade chưa cấu
+ * hình (tự tắt, đúng khuôn UW/Telegram/web push - #130/#135 xác nhận có
+ * cấu hình rồi, nhưng vẫn tự kiểm để không vỡ khi ai đó gỡ biến môi
+ * trường) hoặc rổ theo dõi rỗng.
+ */
+async function averageIvRank(): Promise<number | null> {
+  if (!ttConfigured()) return null;
+  const { symbols } = await trackedSymbols();
+  if (!symbols.length) return null;
+  const ranks = await loadTtIvRanks();
+  const values = symbols.map((s) => ranks[s.toUpperCase()] ?? null);
+  return meanOf(values);
 }
 
 function sampledSeries(store: Store): Series[] {
   const build = (
     key: string,
     label: string,
-    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity'
+    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity' | 'avgIvRank'
   ): Series => {
+    // typeof, không phải !== null: điểm cũ lưu trước khi trường này tồn tại
+    // (ví dụ avgIvRank) đọc ra `undefined`, và `undefined !== null` là true -
+    // lọt qua bộ lọc rồi vẽ một điểm NaN nếu chỉ kiểm null.
     const points = store.points
-      .filter((p) => p[field] !== null)
+      .filter((p) => typeof p[field] === 'number')
       .map((p) => ({ t: p.t, v: p[field] as number }));
     return {
       key,
@@ -180,6 +215,7 @@ function sampledSeries(store: Store): Series[] {
     build('nasdaqTick', 'NASDAQ TICK', 'tickNasdaq'),
     build('advDeclNyse', 'NYSE ADV − DECL', 'advDeclNyse'),
     build('pccEquity', 'Put/Call Ratio (Equity)', 'pccEquity'),
+    build('avgIvRank', 'IV Rank trung bình (tastytrade)', 'avgIvRank'),
   ];
 }
 

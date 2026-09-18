@@ -28,7 +28,7 @@ type Data = { series: Series[]; unavailable: Unavailable[] };
  *     âm thầm - một ô trống trông giống app quên vẽ, một ô ghi rõ lý do thì
  *     không.
  */
-const ORDER = ['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'vix', 'pccEquity'];
+const ORDER = ['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'vix', 'pccEquity', 'avgIvRank'];
 
 /** Chỉ những chỉ báo là HIỆU SỐ (nhiều mua trừ nhiều bán) mới đáng tô theo
  *  dấu - đúng luật ColorLegend: xanh/đỏ chỉ dùng khi DẤU của số có nghĩa.
@@ -36,8 +36,12 @@ const ORDER = ['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'vix', '
  *  sẽ đọc thành "số dương là tốt" - sai. */
 const SIGNED = new Set(['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick']);
 
-const fmt = (v: number | null) =>
-  v === null ? '—' : v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+/** Hậu tố đơn vị - chỉ IV rank cần, mọi chỉ báo khác là chênh lệch/tỉ lệ
+ *  không đơn vị nên không có mục ở đây thì `UNIT[key]` là `undefined`. */
+const UNIT: Record<string, string> = { avgIvRank: '%' };
+
+const fmt = (v: number | null, key?: string) =>
+  v === null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}${key ? (UNIT[key] ?? '') : ''}`;
 
 function timeFmt(t: number | null): string {
   if (t === null) return '—';
@@ -100,7 +104,7 @@ function Card({ s, t }: { s: Series; t: (k: string, ...a: any[]) => string }) {
         className="intvalue"
         style={signed && s.current !== null ? { color: s.current >= 0 ? 'var(--credit)' : 'var(--risk)' } : undefined}
       >
-        {fmt(s.current)}
+        {fmt(s.current, s.key)}
       </p>
       {noPoints ? (
         <p className="cap">{s.source === 'sampled' ? t('int.noSamplesYet') : t('int.noHistory')}</p>
