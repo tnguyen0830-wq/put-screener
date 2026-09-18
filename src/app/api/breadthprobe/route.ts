@@ -172,14 +172,33 @@ async function probeTastytrade() {
   const dx = await dxHandshake(dxUrl, token, symbols, 12_000);
 
   const controlsSeen = CONTROL_SYMBOLS.filter((s) => dx.symbolsWithData.includes(s));
-  const breadthSeen = dx.symbolsWithData.filter((s) => !CONTROL_SYMBOLS.includes(s));
+
+  /* Phân loại bằng DỮ LIỆU, không bằng tên mã.
+   *
+   * Lần đo 2026-09-18 trả về ADV và DVOL có dữ liệu, và bản probe khi ấy
+   * gọi đó là "mã bề rộng dùng được" - SAI. Bid/ask của chúng là số thật
+   * (32,47/41,79 và 17,75/53,23), tức chúng GIAO DỊCH được, tức là cổ
+   * phiếu trùng tên. Một chỉ số không giao dịch được nên bid/ask là NaN -
+   * đúng như VIX trong cùng phép đo đó. Và "số mã tăng giá của NYSE" là
+   * một số đếm hàng nghìn, không phải một cái giá 32 đô. */
+  const nonControl = dx.observations.filter((o) => !CONTROL_SYMBOLS.includes(o.symbol));
+  const looksLikeIndex = nonControl.filter((o) => !o.tradeableQuote);
+  const looksLikeStock = nonControl.filter((o) => o.tradeableQuote);
 
   return {
     skipped: null,
     quoteToken: tokenInfo,
     dxlink: dx,
     controlsSeen,
-    breadthSeen,
+    /** Ứng viên THẬT: có dữ liệu và không giao dịch được (giống chỉ số). */
+    breadthLikelyIndex: looksLikeIndex.map((o) => o.symbol),
+    /** Có dữ liệu nhưng giao dịch được → cổ phiếu trùng tên, KHÔNG phải
+     *  chỉ báo cần tìm. Liệt kê kèm giá để nhìn là thấy. */
+    sameNamedStocks: looksLikeStock.map((o) => ({
+      symbol: o.symbol,
+      tradePrice: o.tradePrice,
+      note: 'có bid/ask thật → giao dịch được → cổ phiếu, không phải chỉ số bề rộng',
+    })),
     /* Cách đọc kết quả, viết sẵn để khỏi phải suy lại: mã đối chứng chính
        là thứ tách "streaming hỏng" khỏi "streaming chạy nhưng không có mã
        bề rộng". VIX là đối chứng thứ hai vì nó là một CHỈ SỐ - có nó nghĩa
@@ -188,9 +207,13 @@ async function probeTastytrade() {
        dxFeed không làm chỉ số. */
     howToRead: !controlsSeen.length
       ? 'KHÔNG mã đối chứng nào có dữ liệu → chưa kết luận được gì về mã bề rộng, vì chính đường streaming chưa chạy (hoặc đang ngoài giờ). Đọc `messages` để xem DXLink dừng ở bước nào.'
-      : breadthSeen.length
-        ? `Streaming CHẠY (${controlsSeen.join(', ')}) và mã bề rộng DÙNG ĐƯỢC: ${breadthSeen.join(', ')}.`
-        : `Streaming CHẠY (${controlsSeen.join(', ')}) nhưng KHÔNG mã bề rộng nào trong ${BREADTH_CANDIDATES.length} cách viết có dữ liệu, sau khi nghe hết ${12}s. Có VIX nghĩa là dxFeed vẫn phục vụ chỉ số, nên đây là chuyện tài khoản không mang mấy mã đó (hoặc tên mã khác hẳn), không phải chuyện streaming hỏng.`,
+      : looksLikeIndex.length
+        ? `Streaming CHẠY (${controlsSeen.join(', ')}). ỨNG VIÊN THẬT: ${looksLikeIndex.map((o) => o.symbol).join(', ')} - có dữ liệu và KHÔNG có bid/ask, giống một chỉ số. Phải nhìn giá trị xem có đúng đại lượng cần không (ADV/DECL là số ĐẾM hàng nghìn, TICK dao động quanh 0, UVOL/DVOL là khối lượng hàng trăm triệu cổ phiếu).`
+        : `Streaming CHẠY (${controlsSeen.join(', ')}) nhưng KHÔNG mã nào trong ${BREADTH_CANDIDATES.length} cách viết là chỉ báo bề rộng.` +
+          (looksLikeStock.length
+            ? ` ${looksLikeStock.map((o) => o.symbol).join(', ')} CÓ dữ liệu nhưng có bid/ask thật → đó là cổ phiếu trùng tên, không phải chỉ số (xem sameNamedStocks).`
+            : '') +
+          ' Có VIX nghĩa là dxFeed vẫn phục vụ chỉ số, nên đây là chuyện tài khoản không mang mấy mã đó hoặc tên mã khác hẳn, không phải chuyện streaming hỏng.',
   };
 }
 
