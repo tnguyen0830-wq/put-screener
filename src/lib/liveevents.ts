@@ -397,6 +397,21 @@ export type EventReport = {
   /** Cảnh báo báo chí bị cắt vì chạm trần mỗi lượt. */
   pressOverflow: number;
   pressErrors: string[];
+  /**
+   * Tầng X (thứ tư). KHÔNG giống `pressRan`: X không giãn nhịp theo tick -
+   * xnews.ts gộp cả watchlist vào vài LÔ (`cashtagBatches`, $A OR $B OR $C
+   * trong một request), khác hẳn Yahoo bắt hỏi từng mã, nên chi phí mỗi
+   * lượt đã rẻ sẵn và `since_id` (xalerts.ts) mới là thứ giữ chi phí xuống
+   * theo thời gian, không phải giãn nhịp. `xConfigured: false` (chưa đặt
+   * X_BEARER_TOKEN) phải tách khỏi "đã hỏi và không có gì" - hai chuyện
+   * khác nhau, đúng luật "chưa biết không được trông giống không có gì".
+   */
+  xConfigured: boolean;
+  xChecked: number;
+  xBatches: number;
+  xRoutine: number;
+  xOverflow: number;
+  xErrors: string[];
 };
 
 /**
@@ -470,10 +485,16 @@ export async function collectEventAlerts(
     pressBroad: 0,
     pressOverflow: 0,
     pressErrors: [],
+    xConfigured: false,
+    xChecked: 0,
+    xBatches: 0,
+    xRoutine: 0,
+    xOverflow: 0,
+    xErrors: [],
   };
   if (!symbols.length) return { alerts: [], report };
 
-  const [secSettled, quoteSettled, pressSettled] = await Promise.allSettled([
+  const [secSettled, quoteSettled, pressSettled, xSettled] = await Promise.allSettled([
     (async () => {
       const { ciksFor } = await import('./sec');
       const { found, missing } = await ciksFor(symbols);
@@ -498,6 +519,13 @@ export async function collectEventAlerts(
           return { got, scan: pressAlertsFrom(got.items, now) };
         })()
       : Promise.resolve(null),
+    /* Tầng BỐN: X. Chạy BẤT KỂ GIỜ và BẤT KỂ TICK - đúng lý do X đáng tiền
+       hơn báo chí (#155/#159): nhanh hơn, và chỉ nhanh khi hỏi mỗi lượt.
+       Nạp động cùng lý do với pressalerts.ts: tránh vòng import. */
+    (async () => {
+      const { collectXAlerts } = await import('./xalerts');
+      return collectXAlerts(symbols, {}, now);
+    })(),
   ]);
 
   const alerts: Alert[] = [];
@@ -537,6 +565,22 @@ export async function collectEventAlerts(
        không được lẫn vào `pressRan: false` - hai chuyện khác nhau. */
     report.pressRan = true;
     report.pressErrors = [String(pressSettled.reason?.message ?? pressSettled.reason).slice(0, 200)];
+  }
+
+  if (xSettled.status === 'fulfilled') {
+    const { xConfigured } = await import('./xnews');
+    const { alerts: xAlerts, report: xr } = xSettled.value;
+    report.xConfigured = xConfigured();
+    report.xChecked = xr.checked;
+    report.xBatches = xr.batches;
+    report.xRoutine = xr.routine;
+    report.xOverflow = xr.overflow;
+    report.xErrors = xr.errors;
+    alerts.push(...xAlerts);
+  } else {
+    const { xConfigured } = await import('./xnews');
+    report.xConfigured = xConfigured();
+    report.xErrors = [String(xSettled.reason?.message ?? xSettled.reason).slice(0, 200)];
   }
 
   return { alerts, report };

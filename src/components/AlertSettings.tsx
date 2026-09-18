@@ -33,6 +33,12 @@ type Status = {
       pressBroad: number;
       pressOverflow: number;
       pressErrors: string[];
+      xConfigured: boolean;
+      xChecked: number;
+      xBatches: number;
+      xRoutine: number;
+      xOverflow: number;
+      xErrors: string[];
     } | null;
   } | null;
 };
@@ -261,6 +267,25 @@ export default function AlertSettings() {
             </>
           ) : (
             <p className="cap">{t('al.pressIdle')}</p>
+          )}
+          {/* Tầng X. `xConfigured: false` (chưa đặt X_BEARER_TOKEN) tách
+              khỏi "đã hỏi và không có gì" - X tự tắt như UW/Telegram nên
+              phần lớn người đọc file này sẽ thấy đúng dòng "chưa cấu hình". */}
+          {lr.events.xConfigured ? (
+            <>
+              <p className="cap">
+                {t('al.x', { checked: lr.events.xChecked, batches: lr.events.xBatches })}{' '}
+                {t('al.xQuiet', lr.events.xRoutine)}
+              </p>
+              {lr.events.xOverflow > 0 && (
+                <p className="cap warnline">{t('al.xOverflow', lr.events.xOverflow)}</p>
+              )}
+              {lr.events.xErrors.length > 0 && (
+                <p className="cap warnline">{t('al.xErr', lr.events.xErrors.join(' · '))}</p>
+              )}
+            </>
+          ) : (
+            <p className="cap">{t('al.xIdle')}</p>
           )}
         </>
       )}

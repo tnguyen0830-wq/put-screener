@@ -221,6 +221,29 @@ export function cashtagQuery(symbols: string[], maxLen = 512): BuiltQuery {
   return joinOr(symbols.map(toCashtag), SUFFIX, maxLen);
 }
 
+/**
+ * CHIA thành nhiều câu truy vấn để phủ HẾT danh sách mã, không bỏ mã nào.
+ *
+ * `cashtagQuery()`/`joinOr()` chỉ dựng MỘT câu và báo phần bị BỎ khi tràn
+ * 512 ký tự — đúng cho probe (đo một mẫu), sai cho cảnh báo (phải hỏi hết
+ * watchlist). Hàm này gọi `joinOr` lặp lại trên phần dư cho tới khi hết mã,
+ * nên một watchlist vài chục mã chỉ cần vài LÔ chứ không phải một request
+ * cho từng mã — khác hẳn kiến trúc "1 request/mã" của tầng báo chí
+ * (`pressalerts.ts`, giới hạn bởi chính Yahoo), vì X cho gộp `$A OR $B`
+ * trong một câu.
+ */
+export function cashtagBatches(symbols: string[], maxLen = 512): BuiltQuery[] {
+  const out: BuiltQuery[] = [];
+  let rest = symbols;
+  while (rest.length) {
+    const b = cashtagQuery(rest, maxLen);
+    if (!b.used.length) break; // một mã đơn lẻ vẫn không vừa - đừng lặp vô hạn
+    out.push(b);
+    rest = b.dropped;
+  }
+  return out;
+}
+
 /** Tìm theo TÀI KHOẢN. Đây là đường lùi nếu cashtag không dùng được, và nó
  *  cũng là đường RẺ hơn: một câu truy vấn cho cả danh sách, lọc mã trong app
  *  — đúng khuôn "một feed chung" của tab Quốc hội và của cảnh báo 8-K. */
