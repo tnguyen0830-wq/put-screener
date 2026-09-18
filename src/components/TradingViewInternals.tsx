@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
+import { Sparkline, type Series } from './InternalsPanel';
 
 /**
  * Tám biểu đồ market internals nhúng từ TradingView - đúng bố cục trang
@@ -68,12 +69,29 @@ import { readRememberedOneOf, remember } from '@/lib/remember';
  *     (`USI:VOLD` = UVOL−DVOL, `USI:ADD` = ADV−DECL, `USI:ADDQ` bên
  *     NASDAQ) - một mã đơn có nến trong ngày như `USI:PCCE` đã đo được
  *     chạy tốt ở 5m; biểu thức trừ giữ lại làm đường lùi.
- *   - VIX: `TVC:VIX` bị loại (vẽ Apple), `CBOE:VIX` bị loại (chỉ trên
- *     TradingView); còn lại là các nguồn CFD/tổng hợp mà widget vẫn vẽ
- *     được ở nơi khác - chưa đo, nên đưa hết lên nút.
+ *   - VIX: KHÔNG còn là iframe TradingView nữa - xem ngay dưới.
  *
  * Dòng mã in dưới mỗi ô là DẤU HIỆU DUY NHẤT khi biểu đồ không khớp với
  * nhãn: iframe khác origin không cho app tự so, nên app không thể tự đổi.
+ *
+ * ============================================================
+ * Ô VIX LÀ CỦA SCHWAB, KHÔNG PHẢI CỦA TRADINGVIEW (#175)
+ * ============================================================
+ *
+ * Bốn lần đo VIX trong widget nhúng: `TVC:VIX` vẽ Apple; `CBOE:VIX` bị
+ * giữ cho trang chính; `CAPITALCOM:VIX` VẼ ĐƯỢC - và chủ app đọc được
+ * **18** trong ô đó khi thanh ticker (Schwab `$VIX`) ghi **14,82**. Không
+ * phải lỗi vẽ: CAPITALCOM là một CFD của nhà môi giới, định giá theo HỢP
+ * ĐỒNG TƯƠNG LAI VIX (thường cao hơn chỉ số tiền mặt khi đường cong
+ * contango), không phải chỉ số CBOE tính từ giá quyền chọn SPX. Cùng chữ
+ * "VIX", hai công cụ khác nhau, lệch 3 điểm trên cùng một màn hình - một
+ * con số sai trông y như con số đúng, và ở đây nó còn mang nhãn đúng.
+ *
+ * Widget nhúng không có cách nào vẽ chỉ số tiền mặt (dữ liệu CBOE bị giữ
+ * lại), còn Schwab thì có đúng nó kèm nến 5 phút (#165). Nên ô VIX trong
+ * khung này là thẻ của app, dựng từ `/api/internals/vix` - MỘT request
+ * Schwab - và nói rõ vì sao. Không đặt CFD cạnh chỉ số thật với cùng một
+ * nhãn: người đọc sẽ phải đoán cái nào là VIX.
  */
 
 type Panel = {
@@ -97,7 +115,6 @@ const PANELS: Panel[] = [
   { key: 'pcc', label: 'Put/Call Ratio', candidates: ['USI:PCC'], interval: '5', style: '2' },
   { key: 'tick', label: 'NYSE TICK', candidates: ['USI:TICK'], interval: '5', style: '1' },
   { key: 'tickq', label: 'NASDAQ TICK', candidates: ['USI:TICKQ'], interval: '5', style: '1' },
-  { key: 'vix', label: 'VIX', candidates: ['CAPITALCOM:VIX', 'FOREXCOM:VIX', 'SP:VIX', 'VIX'], interval: '5', style: '2' },
   { key: 'pcce', label: 'Put/Call Ratio (Equity)', candidates: ['USI:PCCE'], interval: '5', style: '2' },
 ];
 
@@ -192,6 +209,72 @@ function useChosenSymbols() {
   return { chosen, choose };
 }
 
+/** Vị trí ô VIX trong lưới: đúng chỗ của nó trong ảnh mẫu (ô thứ 7), giữa
+ *  NASDAQ TICK và Put/Call Equity. */
+const VIX_SLOT = 6;
+
+function timeNy(t: number | null): string {
+  if (t === null) return '—';
+  return new Date(t).toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/**
+ * Ô VIX của app, đứng trong lưới TradingView. Bốn trạng thái, không trạng
+ * thái nào để trống: đang tải / phiên Schwab hết hạn (cách sửa là kết nối
+ * lại, khác hẳn) / lỗi khác kèm chữ thật / có dữ liệu.
+ */
+function SchwabVixCard({ t }: { t: (k: string, ...a: any[]) => string }) {
+  const [s, setS] = useState<Series | null>(null);
+  const [error, setError] = useState<{ expired: boolean; msg: string } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/internals/vix')
+      .then(async (r) => {
+        const j = await r.json();
+        if (!alive) return;
+        if (!r.ok) setError({ expired: r.status === 401, msg: String(j?.error ?? r.status) });
+        else setS(j);
+      })
+      .catch((e) => alive && setError({ expired: false, msg: String(e?.message ?? e) }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const current = s?.current ?? null;
+  return (
+    <div className="tvcard">
+      <p className="cap intlabel">{t('int.vixTitle')}</p>
+      {error ? (
+        <p className="cap warnline">{error.expired ? t('int.vixExpired') : `${t('int.loadFailed')} ${error.msg}`}</p>
+      ) : !s ? (
+        <p className="cap">{t('int.loading')}</p>
+      ) : (
+        <>
+          <p className="intvalue">
+            {current === null ? '—' : current.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          </p>
+          {s.points.length < 2 ? (
+            <p className="cap warnline">{s.note ?? t('int.noHistory')}</p>
+          ) : (
+            <Sparkline points={s.points} signed={false} tall />
+          )}
+          <p className="cap intmeta">
+            {t('int.sourceSchwab')} · $VIX · {t('int.asOf', timeNy(s.asOf))}
+          </p>
+        </>
+      )}
+      <p className="hint hint-warn">{t('int.vixWhy')}</p>
+    </div>
+  );
+}
+
 export default function TradingViewInternals() {
   const { t, lang } = useLang();
   const theme = useResolvedTheme();
@@ -214,7 +297,9 @@ export default function TradingViewInternals() {
           {PANELS.map((p, i) => {
             const symbol = chosen[p.key];
             return (
-              <div key={p.key} className="tvcard">
+              <Fragment key={p.key}>
+              {i === VIX_SLOT && <SchwabVixCard t={t} />}
+              <div className="tvcard">
                 <p className="cap intlabel">{p.label}</p>
                 <iframe
                   /* `key` theo mã: đổi mã là dựng iframe MỚI chứ không đổi
@@ -261,6 +346,7 @@ export default function TradingViewInternals() {
                   </div>
                 )}
               </div>
+              </Fragment>
             );
           })}
         </div>
