@@ -527,6 +527,12 @@ Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớ
 thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng
 dài hạn, cộng với chốt chặn "còn cách đáy 52 tuần" để không bắt dao rơi.
 
+**Muốn chặt hơn thì có ô tích "Chỉ lấy mã còn trên SMA200".** Bật là bỏ hẳn mọi mã
+đã thủng SMA200. Cái giá phải trả được nói ngay cạnh ô tích chứ không giấu: bảng sẽ
+ngắn hơn nhiều, có lúc trống. Và khi nó thật sự làm trống bảng thì màn hình in **số
+mã bị loại vì đúng lý do đó** — không có con số ấy thì "ô tích làm trống bảng" trông
+y hệt "không mã nào đạt", mà hai thứ đó cần hai hành động ngược nhau.
+
 Như mọi nơi khác trong app, **thiếu dữ liệu thì đi qua cổng nhưng hiện dấu `?`
 chứ không phải ✓** — loại một mã chỉ vì một lần cào Finviz hụt thì sai, mà vẽ
 dấu ✓ lên thứ chưa ai xét thì còn sai hơn.

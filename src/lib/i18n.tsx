@@ -984,6 +984,23 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
   'lt.watchlist': { vi: 'Watchlist', en: 'Watchlist' },
   'lt.sp500': { vi: 'Cả rổ S&P 500', en: 'Full S&P 500' },
+  'lt.aboveSma200': {
+    vi: 'Chỉ lấy mã còn trên SMA200',
+    en: 'Only stocks still above their SMA200',
+  },
+  /* Nói ngay cạnh ô tích cái giá phải trả khi bật, vì cái giá đó ĐÃ ĐO:
+     mã rớt đủ sâu để tab này quan tâm thì phần lớn đã thủng SMA200. Không
+     có câu này thì người bật ô tích gặp bảng trống và không biết vì sao. */
+  'lt.aboveSma200Note': {
+    vi: 'Bật = chặt hơn: bỏ hẳn những mã đã thủng SMA200, chỉ giữ mã còn nằm trên đường này. Tab này đi tìm mã ĐANG RỚT, mà rớt đủ sâu thì thường đã thủng SMA200 — nên bật ô này bảng sẽ ngắn hơn nhiều, có lúc trống. Tắt = quay lại mức cũ: cho thủng SMA200 miễn là SMA200 vẫn dốc lên.',
+    en: 'On = stricter: drops every stock that has broken below its SMA200, keeping only those still above it. This tab looks for stocks that are FALLING, and anything down far enough has usually lost its SMA200 already — so expect a much shorter table, sometimes an empty one. Off = the previous behaviour: below SMA200 is allowed as long as the SMA200 itself is still sloping up.',
+  },
+  'lt.belowSmaCount': {
+    vi: (n: number) =>
+      `${n} mã bị loại vì đang nằm dưới SMA200. Bỏ tích ô "Chỉ lấy mã còn trên SMA200" thì chúng được xét tiếp (vẫn phải qua các cổng còn lại).`,
+    en: (n: number) =>
+      `${n} symbols were dropped for sitting below their SMA200. Untick "Only stocks still above their SMA200" to let them through to the remaining gates.`,
+  },
   'lt.scan': { vi: 'Quét', en: 'Scan' },
   'lt.scanning': { vi: 'Đang quét…', en: 'Scanning…' },
   'lt.phase.quotes': { vi: 'Đang lấy giá và đỉnh/đáy 52 tuần (gộp lô)…', en: 'Fetching quotes and 52-week range (batched)…' },

@@ -11,8 +11,12 @@ export async function GET(req: NextRequest) {
 
   const u = req.nextUrl.searchParams.get('universe');
   const universe: LtUniverse = u === 'watchlist' ? 'watchlist' : 'sp500';
+  /* Bật và tắt ô tích SMA200 là hai bảng khác nhau, lưu ở hai khoá khác
+     nhau - nên phải hỏi đúng cái đang bật, không thì màn hình hiện bảng của
+     lần quét kia dưới cái ô vừa gạt. */
+  const aboveSma200 = req.nextUrl.searchParams.get('aboveSma200') === '1';
   try {
-    return NextResponse.json({ scan: await readLtScan(universe, user) });
+    return NextResponse.json({ scan: await readLtScan(universe, user, aboveSma200) });
   } catch (e: any) {
     /* Đọc hỏng thì NÓI RA. Trả `{scan:null}` kèm 200 sẽ hiện y hệt "chưa
        quét lần nào", mà hai thứ đó cần hai cách sửa khác nhau. */

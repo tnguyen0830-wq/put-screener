@@ -61,13 +61,19 @@ const pc = (v: number | null | undefined, d = 1) =>
 export default function LongTermPanel() {
   const { t } = useLang();
   const [universe, setUniverse] = useState<'watchlist' | 'sp500'>('watchlist');
+  /* Mặc định BẬT vì chủ app đặt hàng đúng cái cổng này. Vẫn là ô tích chứ
+     không đóng cứng: mã rớt đủ sâu để tab này quan tâm thì phần lớn đã thủng
+     SMA200, nên phải bỏ tích được khi bảng trống. */
+  const [aboveSma200, setAboveSma200] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
   const [prog, setProg] = useState<{ done: number; total: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [scannedAt, setScannedAt] = useState<string | null>(null);
-  const [summary, setSummary] = useState<{ scanned: number; kept: number } | null>(null);
+  const [summary, setSummary] = useState<
+    { scanned: number; kept: number; belowSma200: number } | null
+  >(null);
   const [open, setOpen] = useState<string | null>(null);
   /* Bảng đang hiện đến từ kho chứ không phải từ lượt quét vừa rồi. Phải nói
      ra: một bảng số nhìn y hệt nhau dù nó là số sống hay ảnh chụp bốn tiếng
@@ -82,21 +88,32 @@ export default function LongTermPanel() {
   const runningRef = useRef(false);
 
   /* Mở tab lên là có ngay kết quả lần quét trước, và chạy lại mỗi khi đổi
-     phạm vi vì hai phạm vi lưu riêng: gạt từ watchlist sang cả rổ mà vẫn
-     thấy bảng của watchlist là đọc nhầm kết quả. Không có bản lưu thì XOÁ
-     bảng - giữ lại bảng của phạm vi kia dưới cái nút đang sáng của phạm vi
-     này là nói dối một cách im lặng. */
+     phạm vi HOẶC gạt ô tích SMA200, vì mỗi tổ hợp lưu riêng: gạt từ
+     watchlist sang cả rổ mà vẫn thấy bảng của watchlist là đọc nhầm kết
+     quả, và gạt ô tích mà bảng cũ nằm nguyên đó cũng vậy. Không có bản lưu
+     thì XOÁ bảng - giữ lại bảng của tổ hợp kia dưới mấy cái nút vừa đổi là
+     nói dối một cách im lặng. */
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(`/api/longterm/last?universe=${universe}`, { cache: 'no-store' });
+        const res = await fetch(
+          `/api/longterm/last?universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}`,
+          { cache: 'no-store' }
+        );
         const j = await res.json();
         if (!alive || runningRef.current) return;
         if (j.scan) {
           setRows(j.scan.rows ?? []);
           setScannedAt(j.scan.at ?? null);
-          setSummary({ scanned: j.scan.scanned, kept: j.scan.kept });
+          setSummary({
+            scanned: j.scan.scanned,
+            kept: j.scan.kept,
+            /* Bản ghi lưu trước #145 không có trường này - `?? 0` chứ không
+               phải bịa một con số, và 0 đọc đúng: hồi đó chưa có cổng nào
+               loại mã vì SMA200. */
+            belowSma200: j.scan.belowSma200 ?? 0,
+          });
           setRestored(true);
         } else {
           setRows([]); setScannedAt(null); setSummary(null); setRestored(false);
@@ -109,7 +126,7 @@ export default function LongTermPanel() {
       }
     })();
     return () => { alive = false; };
-  }, [universe]);
+  }, [universe, aboveSma200]);
 
   const scan = useCallback(async () => {
     runningRef.current = true;
@@ -117,7 +134,10 @@ export default function LongTermPanel() {
     setRestored(false); setScannedAt(null); setOpen(null);
     setPhase('quotes'); setProg(null);
     try {
-      const res = await fetch(`/api/longterm?universe=${universe}`, { cache: 'no-store' });
+      const res = await fetch(
+        `/api/longterm?universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}`,
+        { cache: 'no-store' }
+      );
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -136,7 +156,10 @@ export default function LongTermPanel() {
           else if (e.type === 'progress') setProg({ done: e.done, total: e.total });
           else if (e.type === 'candidate') { found.push(e.row); setRows([...found]); }
           else if (e.type === 'error') setErr(e.message);
-          else if (e.type === 'done') { setScannedAt(e.at); setSummary({ scanned: e.scanned, kept: e.kept }); }
+          else if (e.type === 'done') {
+            setScannedAt(e.at);
+            setSummary({ scanned: e.scanned, kept: e.kept, belowSma200: e.belowSma200 ?? 0 });
+          }
         }
       }
     } catch (e: any) {
@@ -145,7 +168,7 @@ export default function LongTermPanel() {
       runningRef.current = false;
       setRunning(false); setPhase(null); setProg(null);
     }
-  }, [universe]);
+  }, [universe, aboveSma200]);
 
   return (
     <section>
@@ -161,6 +184,17 @@ export default function LongTermPanel() {
           {t('lt.sp500')}
         </button>
       </div>
+
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={aboveSma200}
+          onChange={(e) => setAboveSma200(e.target.checked)}
+          disabled={running}
+        />
+        {t('lt.aboveSma200')}
+      </label>
+      <p className="hint">{t('lt.aboveSma200Note')}</p>
 
       <button className="run" onClick={scan} disabled={running}>
         {running ? t('lt.scanning') : t('lt.scan')}
@@ -188,6 +222,13 @@ export default function LongTermPanel() {
           {t('lt.summary', { scanned: summary.scanned, kept: summary.kept })}
           {scannedAt ? ` · ${new Date(scannedAt).toLocaleString()}` : ''}
         </p>
+      )}
+
+      {/* Con số này là thứ ngăn một bảng trống đọc thành "app hỏng" hoặc
+          thành "thị trường không có mã nào đạt". Nó nói đúng một điều: ô tích
+          đã loại bao nhiêu mã, và bỏ tích thì chúng được xét tiếp. */}
+      {summary && summary.belowSma200 > 0 && (
+        <p className="hint hint-warn">{t('lt.belowSmaCount', summary.belowSma200)}</p>
       )}
 
       {/* Ảnh chụp, không phải giá sống - và câu này phải là CẢNH BÁO chứ
