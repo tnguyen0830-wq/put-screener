@@ -1,12 +1,15 @@
 import { dailyHistory } from './schwab';
 import {
   MIN_WEEKS,
+  directionOf,
   quadrantOf,
   rrgFromTrends,
   rsTrend,
   weeklyCloses,
   type Bar,
+  type Direction,
   type Quadrant,
+  type RrgPoint,
 } from './rrg';
 
 /**
@@ -74,6 +77,8 @@ export type RrgSectorPoint = {
   quadrant: Quadrant;
   ratio: number;
   momentum: number;
+  /** Hướng di chuyển gần nhất (8 phương la bàn), từ hai điểm cuối của đuôi. */
+  direction: Direction;
   /** [RS-Ratio, RS-Momentum] theo thứ tự thời gian, cũ trước. */
   tail: [number, number][];
 };
@@ -87,20 +92,42 @@ export type RrgSectors = {
   missing: string[];
 };
 
-/** Độ dài cái đuôi: 10 tuần, đủ thấy hướng xoay mà chưa thành mớ rối. */
-const TAIL_WEEKS = 10;
+/** Độ dài cái đuôi mặc định: 10 tuần, đủ thấy hướng xoay mà chưa thành mớ rối. */
+const DEFAULT_TAIL_WEEKS = 10;
+
+/** Ba lựa chọn cố định cộng "tất cả" - đúng bốn nút của tapchiphowall.com. */
+export type WeeksParam = 5 | 10 | 20 | 'all';
+export const WEEKS_OPTIONS: WeeksParam[] = [5, 10, 20, 'all'];
 
 /**
  * Ba năm nến ngày ~ 156 tuần: đủ cho EMA 30 tuần khởi động, cửa sổ chuẩn hoá
- * 52 tuần, rồi vẫn còn dư cho cái đuôi.
+ * 52 tuần, rồi vẫn còn dư cho cái đuôi - kể cả đuôi dài nhất (20 tuần) hay
+ * "tất cả".
  */
 const YEARS = 3;
+
+/**
+ * Toạ độ THÔ của cả rổ - trước khi cắt theo độ dài đuôi người dùng chọn.
+ *
+ * Tách khỏi phần cắt đuôi vì việc tốn Schwab request (12 lịch sử giá) và việc
+ * chọn xem bao nhiêu tuần là hai việc khác nhau: đổi nút 5/10/20/Tất cả tuần
+ * không được kéo theo một lượt gọi Schwab mới, nếu không bấm qua lại bốn nút
+ * đó tốn y hệt bốn lần quét. Một cache DUY NHẤT cho phần thô, cắt đuôi tính
+ * lại mỗi lần (rẻ, thuần bộ nhớ) - nên bốn độ dài đuôi luôn nhất quán với
+ * nhau, không có đường tính song song nào có thể trôi lệch (bài học #96/#99).
+ */
+type RrgRaw = {
+  benchTimes: number[];
+  coords: Map<string, ({ ratio: number; momentum: number } | null)[]>;
+  /** Ngành có lịch sử nhưng tuần cuối bị đứng lại (niêm yết ETF khác biệt). */
+  stale: string[];
+};
 
 /* 12 request lịch sử giá cho một lần tính. Dữ liệu là theo TUẦN nên cache một
    giờ là thừa chặt chẽ - và cache nằm ở đây, dùng chung, nên tab Heatmap mở
    biểu đồ rồi tab Đầu tư dài hạn quét ngay sau đó KHÔNG tốn thêm request nào. */
 const TTL_MS = 60 * 60 * 1000;
-let cache: { at: number; body: RrgSectors } | null = null;
+let rawCache: { at: number; body: RrgRaw } | null = null;
 
 export class RrgError extends Error {
   constructor(message: string, readonly detail?: Record<string, unknown>) {
@@ -108,8 +135,8 @@ export class RrgError extends Error {
   }
 }
 
-export async function rrgSectors(): Promise<RrgSectors> {
-  if (cache && Date.now() - cache.at < TTL_MS) return cache.body;
+async function computeRaw(): Promise<RrgRaw> {
+  if (rawCache && Date.now() - rawCache.at < TTL_MS) return rawCache.body;
 
   const symbols = [BENCHMARK, ...SECTORS.map((s) => s.symbol)];
   const histories = await Promise.all(
@@ -159,25 +186,46 @@ export async function rrgSectors(): Promise<RrgSectors> {
 
   const coords = rrgFromTrends(trends);
 
+  const body: RrgRaw = { benchTimes, coords, stale };
+  rawCache = { at: Date.now(), body };
+  return body;
+}
+
+/**
+ * Toạ độ RRG đã cắt theo độ dài đuôi người dùng chọn.
+ *
+ * `weeksParam` mặc định 10 - giữ nguyên hành vi cũ cho nơi gọi không truyền gì
+ * (tab Đầu tư dài hạn lọc theo góc phần tư HIỆN TẠI, độ dài đuôi không ảnh
+ * hưởng tới điểm đó nên nó không cần quan tâm tham số này).
+ */
+export async function rrgSectors(weeksParam: WeeksParam = DEFAULT_TAIL_WEEKS): Promise<RrgSectors> {
+  const raw = await computeRaw();
+  const { benchTimes, coords, stale } = raw;
+
   // Một ngành thiếu lịch sử thì rơi khỏi biểu đồ và được gọi tên, chứ không
   // được vẽ bằng dữ liệu chắp vá.
   const missing: string[] = [...stale];
+  const tailN = weeksParam === 'all' ? Infinity : weeksParam;
+  let longestTail = 0;
   const points = SECTORS.map((s) => {
     if (stale.includes(s.symbol)) return null;
     const series = coords.get(s.key);
     const tail = (series ?? [])
-      .filter((p): p is { ratio: number; momentum: number } => p !== null)
-      .slice(-TAIL_WEEKS);
+      .filter((p): p is RrgPoint => p !== null)
+      .slice(-tailN);
 
     if (tail.length < 2) {
       missing.push(s.symbol);
       return null;
     }
+    longestTail = Math.max(longestTail, tail.length);
     const head = tail[tail.length - 1];
+    const prev = tail[tail.length - 2];
     return {
       key: s.key,
       symbol: s.symbol,
       quadrant: quadrantOf(head),
+      direction: directionOf(prev, head),
       ratio: head.ratio,
       momentum: head.momentum,
       tail: tail.map((p) => [p.ratio, p.momentum] as [number, number]),
@@ -186,18 +234,16 @@ export async function rrgSectors(): Promise<RrgSectors> {
 
   if (!points.length) throw new RrgError('RRG_NO_DATA', { missing });
 
-  const body: RrgSectors = {
+  return {
     benchmark: BENCHMARK,
-    weeks: TAIL_WEEKS,
-    from: new Date(benchTimes[benchTimes.length - TAIL_WEEKS] ?? benchTimes[0])
+    weeks: longestTail,
+    from: new Date(benchTimes[Math.max(0, benchTimes.length - longestTail)] ?? benchTimes[0])
       .toISOString()
       .slice(0, 10),
     to: new Date(benchTimes[benchTimes.length - 1]).toISOString().slice(0, 10),
     points,
     missing,
   };
-  cache = { at: Date.now(), body };
-  return body;
 }
 
 /**

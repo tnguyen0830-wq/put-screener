@@ -1839,18 +1839,71 @@ table.results tbody tr.clickable {
 .rrgtable {
   margin-top: 12px;
 }
-.rrgtable summary {
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--stamp);
+
+/* Bốn ô tóm tắt góc phần tư ở đầu biểu đồ - đếm + gọi tên ngay, không cần rê
+   chuột vào từng chấm. Viền trái tô màu góc chỉ để NHẮC LẠI (cùng lý do màu
+   đuôi trên biểu đồ không phải thông tin duy nhất, xem chú thích QUAD trong
+   RrgChart.tsx) - vị trí trong lưới bốn ô và tên góc đã đủ tự đọc được. */
+.rrgsummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 14px;
 }
-.rrgtable table {
-  margin-top: 8px;
+.rrgsumbox {
+  border: 1px solid var(--rule-soft);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  background: var(--card);
+}
+.rrgsumcount {
+  font-family: var(--data);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 2px 0;
+}
+.rrgsumnames {
+  margin: 0;
+}
+
+.rrgfullbtn {
+  flex: none;
+  padding: 5px 10px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--muted);
+}
+.rrgfullbtn:hover {
+  color: var(--ink);
+}
+
+/* Toàn màn hình là một "phóng to trong trang" bằng CSS (position: fixed phủ
+   kín viewport), không dùng Fullscreen API của trình duyệt: API đó không
+   nhất quán trên Safari iOS (không cho requestFullscreen một element tuỳ ý),
+   và cách này chạy giống nhau trên mọi trình duyệt. z-index 40 đứng trên
+   .scrim/.drawer (30/31), z-index cao nhất từng dùng trong app trước đó. */
+.rrgfullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: auto;
+  border-radius: 0;
 }
 
 @media (max-width: 640px) {
   .rrglegend {
     grid-template-columns: 1fr;
+  }
+  .rrgsummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 
+type Direction = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 type Point = {
   key: string;
   symbol: string;
   quadrant: 'leading' | 'weakening' | 'lagging' | 'improving';
+  direction: Direction;
   ratio: number;
   momentum: number;
   tail: [number, number][];
@@ -55,8 +57,24 @@ const QUAD_TINT: Record<Point['quadrant'], string> = {
 };
 const QUADRANTS = ['improving', 'leading', 'lagging', 'weakening'] as const;
 
+/** Mũi tên hiển thị cho cột "Hướng" - cùng bảng với lib/rrg.ts DIRECTION_ARROW,
+ *  chép lại ở đây vì component client không import được lib server-only. */
+const ARROW: Record<Direction, string> = {
+  n: '↑',
+  ne: '↗',
+  e: '→',
+  se: '↘',
+  s: '↓',
+  sw: '↙',
+  w: '←',
+  nw: '↖',
+};
+
+const WEEKS_OPTIONS = [5, 10, 20, 'all'] as const;
+type WeeksChoice = (typeof WEEKS_OPTIONS)[number];
+
 export default function RrgChart() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [on, setOn] = useState<string | null>(null);
@@ -64,6 +82,13 @@ export default function RrgChart() {
   // và đổi sau khi dựng xong thì không lệch giữa HTML của server và của trình
   // duyệt.
   const [compact, setCompact] = useState(false);
+  const [weeks, setWeeks] = useState<WeeksChoice>(10);
+  const [full, setFull] = useState(false);
+
+  const [aiText, setAiText] = useState('');
+  const [aiState, setAiState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [aiErrKey, setAiErrKey] = useState('ai.failed');
+  const aiAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
@@ -75,7 +100,14 @@ export default function RrgChart() {
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/rrg')
+    setData(null);
+    setError(null);
+    setOn(null);
+    // Đổi độ dài đuôi là đổi cách NHÌN dữ liệu, không phải dữ liệu mới - bảng
+    // AI đang nói về đuôi cũ thì không còn đúng, nên reset theo.
+    setAiText('');
+    setAiState('idle');
+    fetch(`/api/rrg?weeks=${weeks}`)
       .then(async (r) => {
         const j = await r.json();
         if (!alive) return;
@@ -87,7 +119,76 @@ export default function RrgChart() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [weeks]);
+
+  const summary = useMemo(() => {
+    if (!data) return null;
+    const groups: Record<Point['quadrant'], Point[]> = {
+      leading: [],
+      weakening: [],
+      lagging: [],
+      improving: [],
+    };
+    for (const p of data.points) groups[p.quadrant].push(p);
+    return groups;
+  }, [data]);
+
+  const runAi = async () => {
+    if (!data) return;
+    aiAbort.current?.abort();
+    const ctrl = new AbortController();
+    aiAbort.current = ctrl;
+
+    setAiText('');
+    setAiState('running');
+
+    try {
+      const res = await fetch('/api/ai/rrg-briefing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rrg: data, lang }),
+        signal: ctrl.signal,
+      });
+
+      if (!res.ok) {
+        setAiErrKey(res.status === 503 ? 'ai.notConfigured' : 'ai.failed');
+        setAiState('error');
+        return;
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let acc = '';
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+
+        const marker = acc.match(/\[(AI_[A-Z_]+|REFUSED)\]\s*$/);
+        if (marker) {
+          setAiText(acc.slice(0, marker.index).trimEnd());
+          setAiErrKey(
+            marker[1] === 'AI_BAD_KEY'
+              ? 'ai.badKey'
+              : marker[1] === 'AI_RATE_LIMITED'
+                ? 'ai.rateLimited'
+                : marker[1] === 'REFUSED'
+                  ? 'ai.refused'
+                  : 'ai.failed'
+          );
+          setAiState('error');
+          return;
+        }
+        setAiText(acc);
+      }
+      setAiState('done');
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return;
+      setAiErrKey('ai.failed');
+      setAiState('error');
+    }
+  };
 
   if (error)
     return (
@@ -147,9 +248,49 @@ export default function RrgChart() {
   const hovered = data.points.find((p) => p.key === on) ?? null;
 
   return (
-    <section className="panel">
-      <div className="panel-head">{t('rrg.title')}</div>
+    <section className={full ? 'panel rrgfullscreen' : 'panel'}>
+      <div
+        className="panel-head"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+      >
+        <span>{t('rrg.title')}</span>
+        <button className="rrgfullbtn" onClick={() => setFull((v) => !v)}>
+          {full ? t('rrg.exitFullscreen') : t('rrg.fullscreen')}
+        </button>
+      </div>
       <div className="panel-body">
+
+      <div className="segmented hmranges">
+        {WEEKS_OPTIONS.map((w) => (
+          <button
+            key={w}
+            className={weeks === w ? 'on' : undefined}
+            onClick={() => setWeeks(w)}
+          >
+            {w === 'all' ? t('rrg.weeksAll') : t(`rrg.weeks${w}`)}
+          </button>
+        ))}
+      </div>
+
+      {/* Tóm tắt bốn góc phần tư: đếm + gọi tên, đúng bố cục bốn ô của
+          tapchiphowall.com - đọc được ngay không cần rê chuột vào từng chấm. */}
+      {summary && (
+        <div className="rrgsummary">
+          {QUADRANTS.map((q) => (
+            <div key={q} className="rrgsumbox" style={{ borderLeftColor: QUAD[q] }}>
+              <p className="cap" style={{ color: QUAD[q], fontWeight: 700 }}>
+                {t(`rrg.q.${q}`)}
+              </p>
+              <p className="rrgsumcount">{summary[q].length}</p>
+              <p className="cap rrgsumnames">
+                {summary[q].length
+                  ? summary[q].map((p) => t(`rrg.s.${p.key}`)).join(', ')
+                  : '—'}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="rrgwrap">
         <svg
@@ -282,37 +423,56 @@ export default function RrgChart() {
         ))}
       </div>
 
-      {/* Bảng số: đọc được bằng trình đọc màn hình, và khi hai ngành chồng lên
-          nhau trên biểu đồ thì đây là chỗ tra ra con số thật. */}
-      <details className="rrgtable">
-        <summary>{t('rrg.tableToggle')}</summary>
-        <table className="ratings">
-          <thead>
-            <tr>
-              <th>{t('rrg.colSector')}</th>
-              <th>ETF</th>
-              <th>RS-Ratio</th>
-              <th>RS-Momentum</th>
-              <th>{t('rrg.colQuadrant')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...data.points]
-              .sort((a, b) => b.ratio - a.ratio)
-              .map((p) => (
-                <tr key={p.key}>
-                  <td>{t(`rrg.s.${p.key}`)}</td>
-                  <td>{p.symbol}</td>
-                  <td>{p.ratio.toFixed(2)}</td>
-                  <td>{p.momentum.toFixed(2)}</td>
-                  <td>{t(`rrg.q.${p.quadrant}`)}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </details>
+      {/* Bảng số luôn hiện, không còn nằm sau <details> - đúng bố cục bảng
+          RS-R/RS-M của tapchiphowall.com, và khi hai ngành chồng lên nhau
+          trên biểu đồ thì đây là chỗ tra ra con số thật. */}
+      <table className="ratings rrgtable">
+        <thead>
+          <tr>
+            <th>{t('rrg.colSector')}</th>
+            <th>ETF</th>
+            <th>RS-Ratio</th>
+            <th>RS-Momentum</th>
+            <th>{t('rrg.colQuadrant')}</th>
+            <th>{t('rrg.colDirection')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...data.points]
+            .sort((a, b) => b.ratio - a.ratio)
+            .map((p) => (
+              <tr key={p.key}>
+                <td>{t(`rrg.s.${p.key}`)}</td>
+                <td>{p.symbol}</td>
+                <td>{p.ratio.toFixed(2)}</td>
+                <td>{p.momentum.toFixed(2)}</td>
+                <td>{t(`rrg.q.${p.quadrant}`)}</td>
+                <td style={{ color: QUAD[p.quadrant] }}>{ARROW[p.direction]}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
 
       <p className="cap">{t('rrg.note')}</p>
+
+      <section className="airead">
+        <div className="aihead">
+          <h3 className="dsec">{t('rrg.aiTitle')}</h3>
+          <button className="aibtn" onClick={runAi} disabled={aiState === 'running'}>
+            {aiState === 'running'
+              ? t('ai.running')
+              : aiState === 'idle'
+                ? t('rrg.aiRun')
+                : t('rrg.aiRerun')}
+          </button>
+        </div>
+        <p className="cap">{t('rrg.aiNote')}</p>
+        {aiText && <div className="aitext">{aiText}</div>}
+        {aiState === 'error' && <p className="hint hint-warn">{t(aiErrKey)}</p>}
+        {(aiState === 'done' || aiState === 'running') && aiText && (
+          <p className="cap">{t('ai.caveat')}</p>
+        )}
+      </section>
       </div>
     </section>
   );

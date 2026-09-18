@@ -185,3 +185,45 @@ export function quadrantOf(p: RrgPoint): Quadrant {
   if (p.ratio >= 100) return p.momentum >= 100 ? 'leading' : 'weakening';
   return p.momentum >= 100 ? 'improving' : 'lagging';
 }
+
+/**
+ * Hướng di chuyển gần nhất trên biểu đồ, theo 8 phương la bàn - dùng cho cột
+ * "Hướng" của bảng số và cho phần Claude diễn giải.
+ *
+ * Lấy từ VECTOR giữa hai điểm cuối cùng của cái đuôi (không phải từ quadrant
+ * hiện tại), vì quadrant chỉ nói ngành đang Ở ĐÂU còn hướng nói nó đang ĐI
+ * ĐÂU - một ngành có thể đứng trong góc "Dẫn đầu" mà vẫn đang trôi dần về
+ * phía "Đuối dần", và đó chính là tín hiệu sớm người đọc biểu đồ RRG cần.
+ */
+export type Direction = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+
+const COMPASS: Record<number, Direction> = {
+  0: 'e',
+  45: 'ne',
+  90: 'n',
+  135: 'nw',
+  180: 'w',
+  225: 'sw',
+  270: 's',
+  315: 'se',
+};
+
+export function directionOf(prev: RrgPoint, cur: RrgPoint): Direction {
+  const dx = cur.ratio - prev.ratio;
+  const dy = cur.momentum - prev.momentum;
+  const deg = (Math.atan2(dy, dx) * 180) / Math.PI; // -180..180, 0 = đông, dương = ngược kim đồng hồ
+  const snapped = (((Math.round(deg / 45) * 45) % 360) + 360) % 360;
+  return COMPASS[snapped] ?? 'e';
+}
+
+/** Mũi tên hiển thị cho mỗi hướng - dùng chung giữa bảng số và chú giải. */
+export const DIRECTION_ARROW: Record<Direction, string> = {
+  n: '↑',
+  ne: '↗',
+  e: '→',
+  se: '↘',
+  s: '↓',
+  sw: '↙',
+  w: '←',
+  nw: '↖',
+};
