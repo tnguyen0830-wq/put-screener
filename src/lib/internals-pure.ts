@@ -12,11 +12,21 @@ export type Series = {
   label: string;
   points: SeriesPoint[];
   current: number | null;
-  /** 'schwab' = nến phút thật, làm mới mỗi lần gọi endpoint.
+  /** 'schwab' = nến phút thật của Schwab, làm mới mỗi lần gọi endpoint.
+   *  'uw'     = chuỗi trong ngày lấy trọn một lượt từ Unusual Whales.
    *  'sampled' = app tự lấy mẫu ~15 phút/lần - đường THÔ hơn bản gốc, và
-   *  màn hình phải nói ra điều đó chứ không được trông giống dữ liệu tick. */
-  source: 'schwab' | 'sampled';
+   *  màn hình phải nói ra điều đó chứ không được trông giống dữ liệu tick.
+   *
+   *  Đây là NHÃN NGUỒN hiện thẳng lên thẻ, không phải một cách phân loại
+   *  nội bộ: market tide từng mang 'schwab' với ý "chuỗi đầy đủ", và màn
+   *  hình dịch ra "nến thật (Schwab)" - một lời khẳng định sai về xuất xứ
+   *  của con số. */
+  source: 'schwab' | 'uw' | 'sampled';
   asOf: number | null;
+  /** Vì sao chuỗi này rỗng, khi nó rỗng. Thiếu trường này thì một nguồn
+   *  chết chỉ đơn giản là biến mất khỏi màn hình - không phân biệt được
+   *  với "tính năng không tồn tại". */
+  note?: string;
 };
 
 /**

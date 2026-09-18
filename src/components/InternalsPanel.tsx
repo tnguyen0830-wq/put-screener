@@ -11,8 +11,10 @@ type Series = {
   label: string;
   points: SeriesPoint[];
   current: number | null;
-  source: 'schwab' | 'sampled';
+  source: 'schwab' | 'uw' | 'sampled';
   asOf: number | null;
+  /** Vì sao rỗng, khi rỗng - xem Series.note trong internals-pure.ts. */
+  note?: string;
 };
 type Unavailable = { key: string; label: string };
 type Data = { series: Series[]; unavailable: Unavailable[] };
@@ -44,6 +46,15 @@ const SIGNED = new Set(['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick',
 /** Hậu tố đơn vị - chỉ IV rank cần, mọi chỉ báo khác là chênh lệch/tỉ lệ
  *  không đơn vị nên không có mục ở đây thì `UNIT[key]` là `undefined`. */
 const UNIT: Record<string, string> = { avgIvRank: '%' };
+
+/** Nhãn nguồn, tra theo `Series.source`. Bảng tra thay vì một biểu thức
+ *  ba ngôi: thêm nguồn thứ ba mà quên sửa biểu thức là cách market tide
+ *  từng bị dán nhãn "nến thật (Schwab)" trong khi nó là dữ liệu UW. */
+const SOURCE_KEY: Record<Series['source'], string> = {
+  schwab: 'int.sourceSchwab',
+  uw: 'int.sourceUw',
+  sampled: 'int.sourceSampled',
+};
 
 const fmt = (v: number | null, key?: string) =>
   v === null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}${key ? (UNIT[key] ?? '') : ''}`;
@@ -112,12 +123,17 @@ function Card({ s, t }: { s: Series; t: (k: string, ...a: any[]) => string }) {
         {fmt(s.current, s.key)}
       </p>
       {noPoints ? (
-        <p className="cap">{s.source === 'sampled' ? t('int.noSamplesYet') : t('int.noHistory')}</p>
+        /* `note` là LÝ DO thật do nguồn nói ra (key chưa đặt, UW trả lỗi...),
+           nên nó thắng câu mặc định - một nguồn chết phải nói mình chết chứ
+           không được đội lốt "chưa có dữ liệu hôm nay". */
+        <p className="cap warnline">
+          {s.note ?? (s.source === 'sampled' ? t('int.noSamplesYet') : t('int.noHistory'))}
+        </p>
       ) : (
         <Sparkline points={s.points} signed={signed} />
       )}
       <p className="cap intmeta">
-        {t(s.source === 'sampled' ? 'int.sourceSampled' : 'int.sourceSchwab')} · {t('int.asOf', timeFmt(s.asOf))}
+        {t(SOURCE_KEY[s.source])} · {t('int.asOf', timeFmt(s.asOf))}
       </p>
     </div>
   );

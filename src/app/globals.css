@@ -1800,7 +1800,18 @@ table.results tbody tr.clickable {
   color: var(--ink);
 }
 
-.warnline {
+/* BUG THẬT, ĐO ĐƯỢC trong trình duyệt: `.warnline` một mình có specificity
+   (0,1,0) - bằng đúng `.cap`, mà `.cap { color: var(--muted) }` nằm SAU
+   trong file (dòng ~2495) nên nó thắng. Mọi `class="cap warnline"` trong
+   app vì thế render ra XÁM MỜ chứ không phải màu cảnh báo - đo được
+   rgb(143,153,163) = --muted thay vì #ed7e12 = --warn.
+
+   Đây là lần thứ TƯ repo này dính đúng bẫy đó (#58 dấu của số, #101, #117
+   `.hint.hint-warn`, và giờ là đây). Sửa bằng CẤU TRÚC chứ không bằng đổi
+   thứ tự: selector ghép (0,2,0) thắng bất kể ai đứng trước đứng sau, nên
+   không thể vỡ lại lần nữa khi có người sắp xếp lại file. */
+.warnline,
+.cap.warnline {
   color: var(--warn);
 }
 

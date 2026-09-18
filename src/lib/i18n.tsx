@@ -1439,6 +1439,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'If the boxes below are empty or grey: your browser, an ad blocker, or the network is blocking tradingview.com — the app cannot detect that itself (a third-party frame is opaque to it), which is why this line says so up front.',
   },
   'int.sourceSchwab': { vi: 'nến thật (Schwab)', en: 'real candles (Schwab)' },
+  'int.sourceUw': { vi: 'chuỗi trong ngày (UW)', en: 'intraday series (UW)' },
   'int.sourceSampled': { vi: 'tự lấy mẫu ~15 phút', en: 'self-sampled ~15min' },
   'int.asOf': { vi: (t: any) => `lúc ${t}`, en: (t: any) => `as of ${t}` },
   'int.noHistory': { vi: 'Không có nến trong ngày.', en: 'No intraday candles.' },

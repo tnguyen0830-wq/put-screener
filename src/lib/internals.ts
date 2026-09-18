@@ -255,24 +255,41 @@ const UNAVAILABLE: Unavailable[] = [
 
 /**
  * Market tide lấy RIÊNG chứ không đi cùng nhóm tự lấy mẫu: một lượt gọi đã
- * trả cả chuỗi trong ngày, nên nó thuộc nhóm "làm mới mỗi lần mở trang"
- * như nến Schwab. Hỏng thì trả chuỗi rỗng - thẻ tự nói "chưa có dữ liệu"
- * chứ không kéo sập cả bảng.
+ * trả cả chuỗi trong ngày (đo được 81 điểm từ 09:30 New York), nên nó
+ * thuộc nhóm "làm mới mỗi lần mở trang" như nến Schwab.
+ *
+ * LUÔN trả về một chuỗi, kể cả khi rỗng - bản đầu `return []` khi UW hỏng,
+ * nên thẻ BIẾN MẤT khỏi lưới và "UW chết" trông y hệt "tính năng này không
+ * tồn tại". Rỗng kèm `note` thì thẻ vẫn đứng đó và nói ra lý do.
  */
 async function marketTideSeries(): Promise<Series[]> {
-  if (!uwConfigured()) return [];
-  const points = await uwMarketTide();
-  if (!points.length) return [];
-  return [
-    {
-      key: 'marketTide',
-      label: 'Net call − put premium (UW)',
-      points,
-      current: points[points.length - 1].v,
-      source: 'schwab', // nhãn "chuỗi đầy đủ, làm mới mỗi lần gọi" - xem Series.source
-      asOf: points[points.length - 1].t,
-    },
+  const base = {
+    key: 'marketTide',
+    label: 'Net call − put premium (UW)',
+    source: 'uw' as const,
+  };
+  const empty = (note: string): Series[] => [
+    { ...base, points: [], current: null, asOf: null, note },
   ];
+
+  if (!uwConfigured()) return empty('UW_API_KEY chưa được cấu hình');
+
+  try {
+    const points = await uwMarketTide();
+    if (!points.length) return empty('UW trả lời nhưng không có điểm nào cho phiên này');
+    return [
+      {
+        ...base,
+        points,
+        current: points[points.length - 1].v,
+        asOf: points[points.length - 1].t,
+      },
+    ];
+  } catch (e: any) {
+    // Lời thật của UW, cắt ngắn: 401 (key hết hạn) và 404 (đổi endpoint)
+    // cần hai cách sửa khác nhau, gộp thành "lỗi" là mất chỗ đó.
+    return empty(String(e?.message ?? e).slice(0, 160));
+  }
 }
 
 export async function marketInternals(): Promise<{ series: Series[]; unavailable: Unavailable[] }> {
@@ -286,6 +303,8 @@ export async function marketInternals(): Promise<{ series: Series[]; unavailable
       return [] as Series[];
     }),
     readStore(),
+    // marketTideSeries tự bắt lỗi thành một chuỗi rỗng KÈM lý do, nên
+    // .catch ở đây chỉ là lưới an toàn cuối cùng.
     marketTideSeries().catch(() => [] as Series[]),
   ]);
 
