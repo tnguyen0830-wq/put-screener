@@ -5,6 +5,8 @@ import { inMarketHours, tradingDay } from './alerts';
 import { ttConfigured } from './tastytrade';
 import { loadTtIvRanks } from './ttearnings';
 import { trackedSymbols } from './insiders';
+import { uwConfigured } from './unusualwhales';
+import { uwMarketTide, uwTotalOptionsVolume } from './uwmarket';
 import {
   diffOrNull,
   diffSeries,
@@ -118,6 +120,9 @@ type StoredPoint = {
   advDeclNyse: number | null;
   pccEquity: number | null;
   avgIvRank: number | null;
+  /** Put/Call toàn thị trường từ UW - endpoint chỉ trả ảnh chụp luỹ kế của
+   *  hôm nay (1 dòng), nên muốn có đường thì phải tự lấy mẫu như ba cái trên. */
+  pccTotal: number | null;
 };
 type Store = { date: string; points: StoredPoint[] };
 
@@ -163,12 +168,22 @@ export async function sampleInternals(now = new Date()): Promise<void> {
   const decl = numField(q, '$DECL');
   const pccEquity = numField(q, '$PCCE');
   const advDeclNyse = diffOrNull(adv, decl);
-  const avgIvRank = await averageIvRank();
+
+  /* Hai nguồn phụ, hỏng ĐỘC LẬP với nhau và với Schwab: UW chết không được
+     làm mất mẫu TICK/ADV-DECL vừa lấy được, và ngược lại. Một lượt lấy mẫu
+     thiếu một trường là một khoảng trống trên đúng đường đó - chấp nhận
+     được; mất cả lượt thì không. */
+  const [ivSettled, pccSettled] = await Promise.allSettled([
+    averageIvRank(),
+    uwConfigured() ? uwTotalOptionsVolume() : Promise.resolve(null),
+  ]);
+  const avgIvRank = ivSettled.status === 'fulfilled' ? ivSettled.value : null;
+  const pccTotal = pccSettled.status === 'fulfilled' ? pccSettled.value?.putCallRatio ?? null : null;
 
   const day = tradingDay(now);
   let store = await readStore();
   if (store.date !== day) store = { date: day, points: [] };
-  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity, avgIvRank });
+  store.points.push({ t: now.getTime(), tickNasdaq, advDeclNyse, pccEquity, avgIvRank, pccTotal });
   await writeStore(store);
 }
 
@@ -193,7 +208,7 @@ function sampledSeries(store: Store): Series[] {
   const build = (
     key: string,
     label: string,
-    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity' | 'avgIvRank'
+    field: 'tickNasdaq' | 'advDeclNyse' | 'pccEquity' | 'avgIvRank' | 'pccTotal'
   ): Series => {
     // typeof, không phải !== null: điểm cũ lưu trước khi trường này tồn tại
     // (ví dụ avgIvRank) đọc ra `undefined`, và `undefined !== null` là true -
@@ -215,6 +230,7 @@ function sampledSeries(store: Store): Series[] {
     build('nasdaqTick', 'NASDAQ TICK', 'tickNasdaq'),
     build('advDeclNyse', 'NYSE ADV − DECL', 'advDeclNyse'),
     build('pccEquity', 'Put/Call Ratio (Equity)', 'pccEquity'),
+    build('pccTotal', 'Put/Call Ratio (Total, UW)', 'pccTotal'),
     build('avgIvRank', 'IV Rank trung bình (tastytrade)', 'avgIvRank'),
   ];
 }
@@ -225,12 +241,56 @@ function sampledSeries(store: Store): Series[] {
  * tưởng app quên vẽ.
  */
 export type Unavailable = { key: string; label: string };
+/**
+ * Chỉ còn MỘT. Put/Call Total từng nằm đây, cho tới khi
+ * `/api/breadthprobe` đo được UW có nó (và con số khớp 0,73 với ảnh mẫu
+ * TradingView cùng phiên). NASDAQ Advance-Decline thì cả ba nguồn có key
+ * đều không có: Schwab không quote mã nào, UW không bán bề rộng cổ phiếu
+ * (`breadthFields` rỗng ở cả 5 endpoint thị trường), tastytrade/dxFeed
+ * không trả dữ liệu cho cách viết nào đã thử.
+ */
 const UNAVAILABLE: Unavailable[] = [
   { key: 'nasdaqAdvDecl', label: 'NASDAQ Advance − Decline' },
-  { key: 'putCallTotal', label: 'Put/Call Ratio (Total)' },
 ];
 
+/**
+ * Market tide lấy RIÊNG chứ không đi cùng nhóm tự lấy mẫu: một lượt gọi đã
+ * trả cả chuỗi trong ngày, nên nó thuộc nhóm "làm mới mỗi lần mở trang"
+ * như nến Schwab. Hỏng thì trả chuỗi rỗng - thẻ tự nói "chưa có dữ liệu"
+ * chứ không kéo sập cả bảng.
+ */
+async function marketTideSeries(): Promise<Series[]> {
+  if (!uwConfigured()) return [];
+  const points = await uwMarketTide();
+  if (!points.length) return [];
+  return [
+    {
+      key: 'marketTide',
+      label: 'Net call − put premium (UW)',
+      points,
+      current: points[points.length - 1].v,
+      source: 'schwab', // nhãn "chuỗi đầy đủ, làm mới mỗi lần gọi" - xem Series.source
+      asOf: points[points.length - 1].t,
+    },
+  ];
+}
+
 export async function marketInternals(): Promise<{ series: Series[]; unavailable: Unavailable[] }> {
-  const [chartable, store] = await Promise.all([chartableSeries(), readStore()]);
-  return { series: [...chartable, ...sampledSeries(store)], unavailable: UNAVAILABLE };
+  /* Ba nguồn, hỏng độc lập: Schwab hết phiên không được che mất market tide
+     của UW, và UW chết không được làm mất nến Schwab. Riêng
+     REAUTH_REQUIRED của Schwab vẫn phải nổi lên thành 401 thật (xem
+     chartableSeries), nên nhánh đó KHÔNG bị nuốt ở đây. */
+  const [chartSettled, store, tideSettled] = await Promise.all([
+    chartableSeries().catch((e) => {
+      if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
+      return [] as Series[];
+    }),
+    readStore(),
+    marketTideSeries().catch(() => [] as Series[]),
+  ]);
+
+  return {
+    series: [...chartSettled, ...sampledSeries(store), ...tideSettled],
+    unavailable: UNAVAILABLE,
+  };
 }

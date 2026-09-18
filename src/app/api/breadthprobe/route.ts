@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uwGet, uwConfigured, UwError } from '@/lib/unusualwhales';
 import { ttConfigured, ttGet, TtError } from '@/lib/tastytrade';
-import { dxHandshake, BREADTH_CANDIDATES, CONTROL_SYMBOL } from '@/lib/dxprobe';
+import { dxHandshake, BREADTH_CANDIDATES, CONTROL_SYMBOL, CONTROL_SYMBOLS } from '@/lib/dxprobe';
 
 /**
  * Hai nhà cung cấp CÓ KEY mà app đã trả tiền, có mang chỉ báo bề rộng thị
@@ -164,21 +164,33 @@ async function probeTastytrade() {
     };
   }
 
-  // --- Bước 2: bắt tay thật, kèm mã đối chứng ---
-  const symbols = [CONTROL_SYMBOL, ...BREADTH_CANDIDATES];
-  const dx = await dxHandshake(dxUrl, token, symbols);
+  // --- Bước 2: bắt tay thật, kèm hai mã đối chứng ---
+  const symbols = [...CONTROL_SYMBOLS, ...BREADTH_CANDIDATES];
+  /* 12 giây, và lần này KHÔNG dừng sớm vì mã đối chứng về (lỗi của phép đo
+     đầu tiên, xem dxprobe.ts) - không có mã bề rộng nào thì phải nghe hết
+     giờ mới được nói là không có. */
+  const dx = await dxHandshake(dxUrl, token, symbols, 12_000);
+
+  const controlsSeen = CONTROL_SYMBOLS.filter((s) => dx.symbolsWithData.includes(s));
+  const breadthSeen = dx.symbolsWithData.filter((s) => !CONTROL_SYMBOLS.includes(s));
 
   return {
     skipped: null,
     quoteToken: tokenInfo,
     dxlink: dx,
+    controlsSeen,
+    breadthSeen,
     /* Cách đọc kết quả, viết sẵn để khỏi phải suy lại: mã đối chứng chính
        là thứ tách "streaming hỏng" khỏi "streaming chạy nhưng không có mã
-       bề rộng". */
-    howToRead: dx.symbolsWithData.includes(CONTROL_SYMBOL)
-      ? `Có dữ liệu ${CONTROL_SYMBOL} → streaming CHẠY. Mã bề rộng nào có mặt trong symbolsWithData là mã dùng được; không có cái nào nghĩa là tài khoản không mang chúng.`
-      : `KHÔNG có dữ liệu ${CONTROL_SYMBOL} → chưa kết luận được gì về mã bề rộng, vì chính đường streaming chưa chạy. Đọc `
-        + '`messages` để xem DXLink từ chối ở bước nào.',
+       bề rộng". VIX là đối chứng thứ hai vì nó là một CHỈ SỐ - có nó nghĩa
+       là dxFeed phục vụ cả loại chỉ số chứ không riêng cổ phiếu, nên việc
+       thiếu mã bề rộng là chuyện quyền truy cập/tên mã, không phải chuyện
+       dxFeed không làm chỉ số. */
+    howToRead: !controlsSeen.length
+      ? 'KHÔNG mã đối chứng nào có dữ liệu → chưa kết luận được gì về mã bề rộng, vì chính đường streaming chưa chạy (hoặc đang ngoài giờ). Đọc `messages` để xem DXLink dừng ở bước nào.'
+      : breadthSeen.length
+        ? `Streaming CHẠY (${controlsSeen.join(', ')}) và mã bề rộng DÙNG ĐƯỢC: ${breadthSeen.join(', ')}.`
+        : `Streaming CHẠY (${controlsSeen.join(', ')}) nhưng KHÔNG mã bề rộng nào trong ${BREADTH_CANDIDATES.length} cách viết có dữ liệu, sau khi nghe hết ${12}s. Có VIX nghĩa là dxFeed vẫn phục vụ chỉ số, nên đây là chuyện tài khoản không mang mấy mã đó (hoặc tên mã khác hẳn), không phải chuyện streaming hỏng.`,
   };
 }
 

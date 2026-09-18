@@ -49,21 +49,37 @@ export type DxProbeResult = {
 const MAX_MSG = 40;
 const CLIP = 400;
 
-/** Mã đối chứng luôn đi kèm - xem chú thích đầu file. */
-export const CONTROL_SYMBOL = 'AAPL';
+/**
+ * Mã đối chứng - xem chú thích đầu file.
+ *
+ * HAI mã, không phải một, và đó là bài học từ chính lần đo đầu tiên
+ * (2026-09-18): lần đó VIX nằm trong danh sách mã bề rộng, nên điều kiện
+ * dừng sớm "có mã đối chứng + ít nhất một mã khác" được thoả ngay khi VIX
+ * về - probe đóng kết nối sau 237ms thay vì nghe hết 9 giây, và kết luận
+ * "không có mã bề rộng nào" khi ấy chưa đủ căn cứ.
+ *
+ * VIX đo được là CÓ trên dxFeed, nên giờ nó làm mã đối chứng thứ hai (một
+ * chỉ số thật, chứng minh dxFeed có phục vụ loại chỉ số chứ không chỉ cổ
+ * phiếu) và KHÔNG còn nằm trong danh sách ứng viên.
+ */
+export const CONTROL_SYMBOLS = ['AAPL', 'VIX'];
+/** Giữ lại tên cũ cho nơi gọi chỉ cần một mã để in ra câu hướng dẫn đọc. */
+export const CONTROL_SYMBOL = CONTROL_SYMBOLS[0];
 
 /**
- * Các cách viết có thể có của chỉ báo bề rộng trên dxFeed. CHƯA đo được -
- * hỏi hết một lượt trong cùng một lần đăng ký, vì hỏi thêm một mã trong
- * cùng một request không tốn gì thêm, còn thiếu một cách viết thì phải bấm
- * lại lần nữa.
+ * Các cách viết có thể có của chỉ báo bề rộng trên dxFeed. Lần đo đầu
+ * KHÔNG mã nào trong số này trả dữ liệu - nhưng phép đo đó bị cắt ngắn
+ * (xem trên), nên lần sau phải nghe hết giờ mới kết luận được.
+ *
+ * Hỏi hết một lượt trong cùng một lần đăng ký: thêm một mã trong cùng
+ * request không tốn gì, còn thiếu một cách viết thì phải bấm lại lần nữa.
  */
 export const BREADTH_CANDIDATES = [
-  'TICK', '$TICK', 'TICK.NY', 'TICK-NY',
-  'ADVN', '$ADV', 'DECLN', '$DECL',
+  'TICK', '$TICK', 'TICK.NY', 'TICK-NY', 'TICK.IV', 'TICKQ', '$TICKQ',
+  'ADVN', '$ADV', 'ADV', 'DECLN', '$DECL', 'DECL',
   'ADVQ', '$ADVQ', 'DECLQ', '$DECLQ',
   'PCC', '$PCC', 'PCCE', '$PCCE',
-  'VIX', '$VIX',
+  'UVOL', '$UVOL', 'DVOL', '$DVOL',
 ];
 
 export type Sender = (text: string) => void;
@@ -231,9 +247,13 @@ export async function dxHandshake(
       try {
         step(text, state, send, symbols);
         for (const s of symbolsInFeed(text, symbols)) found.add(s);
-        // Đã có dữ liệu của mã đối chứng VÀ ít nhất một mã bề rộng thì
-        // không cần chờ hết giờ nữa.
-        if (found.size > 1 && found.has(CONTROL_SYMBOL)) {
+        /* Chỉ dừng sớm khi đã có một mã KHÔNG PHẢI đối chứng - tức câu hỏi
+           thật đã có câu trả lời "có". Lần đo đầu dừng ngay khi hai mã đối
+           chứng về (237ms), nên kết luận "không có mã bề rộng" lúc đó là
+           một phép đo bị cắt ngắn chứ không phải một sự thật. Không có mã
+           bề rộng nào thì PHẢI nghe hết giờ mới được kết luận. */
+        const breadthFound = [...found].some((s) => !CONTROL_SYMBOLS.includes(s));
+        if (breadthFound) {
           clearTimeout(timer);
           finish();
         }

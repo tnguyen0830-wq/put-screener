@@ -30,13 +30,16 @@ type Data = { series: Series[]; unavailable: Unavailable[] };
  *     âm thầm - một ô trống trông giống app quên vẽ, một ô ghi rõ lý do thì
  *     không.
  */
-const ORDER = ['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'vix', 'pccEquity', 'avgIvRank'];
+const ORDER = [
+  'uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick',
+  'vix', 'pccEquity', 'pccTotal', 'marketTide', 'avgIvRank',
+];
 
 /** Chỉ những chỉ báo là HIỆU SỐ (nhiều mua trừ nhiều bán) mới đáng tô theo
  *  dấu - đúng luật ColorLegend: xanh/đỏ chỉ dùng khi DẤU của số có nghĩa.
  *  VIX và Put/Call là một ĐỘ LỚN, không phải một hiệu số, tô theo dấu ở đó
  *  sẽ đọc thành "số dương là tốt" - sai. */
-const SIGNED = new Set(['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick']);
+const SIGNED = new Set(['uvolDvolDiff', 'advDeclNyse', 'nyseTick', 'nasdaqTick', 'marketTide']);
 
 /** Hậu tố đơn vị - chỉ IV rank cần, mọi chỉ báo khác là chênh lệch/tỉ lệ
  *  không đơn vị nên không có mục ở đây thì `UNIT[key]` là `undefined`. */
