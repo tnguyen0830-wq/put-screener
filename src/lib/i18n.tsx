@@ -1988,9 +1988,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'cg.noPhotoHead': { vi: 'Chưa có ảnh chân dung', en: 'No portraits yet' },
   'cg.noPhotoBioguide': {
     vi: (id: string) =>
-      `Unusual Whales trả mã định danh dạng "${id}", không phải Bioguide ID (một chữ cái + 6 chữ số, ví dụ P000197). Kho ảnh công khai chỉ tra được bằng Bioguide ID, nên app KHÔNG dựng đường dẫn ảnh - vẽ đường dẫn đoán bừa chỉ tạo ra một loạt ảnh vỡ. Gửi dòng này cho Claude để nối thêm bảng tra tên → Bioguide ID.`,
+      `Không nghị sĩ nào trên màn hình khớp bộ ảnh của app (33 ảnh, tra theo Bioguide ID hoặc theo TÊN đầy đủ / tên đầu + họ). Unusual Whales trả mã định danh dạng "${id}"${/^[A-Z]\d{6}$/.test(id) ? ' (đúng dạng Bioguide)' : ' (không phải Bioguide ID, nên kho ảnh unitedstates/images cũng không tra được)'}. Gửi dòng này cùng vài tên đang hiện cho Claude để đối chiếu cách UW viết tên.`,
     en: (id: string) =>
-      `Unusual Whales returns an id shaped like "${id}", not a Bioguide ID (one letter + 6 digits, e.g. P000197). The public portrait repository can only be looked up by Bioguide ID, so the app does not build an image URL — a guessed one would just produce broken images. Send this line to Claude to add a name → Bioguide ID lookup.`,
+      `No member on screen matched the app's portrait set (33 photos, looked up by Bioguide ID or by full name / first + last name). Unusual Whales returns an id shaped like "${id}"${/^[A-Z]\d{6}$/.test(id) ? ' (Bioguide-shaped)' : ' (not a Bioguide ID, so the unitedstates/images repository cannot be looked up either)'}. Send this line plus a few names shown to Claude to compare how UW spells names.`,
+  },
+  'cg.photoMissing': {
+    vi: (names: string) => `Chưa có ảnh trong bộ ảnh của app cho: ${names}. Tra theo Bioguide ID hoặc tên đầy đủ / tên đầu + họ — không đoán theo họ đơn lẻ hay biệt danh, vì ảnh gắn nhầm người trông y hệt ảnh đúng. Gửi ảnh Bioguide của họ để bổ sung.`,
+    en: (names: string) => `No portrait in the app's set for: ${names}. Matched by Bioguide ID or full name / first + last name — never by surname alone or a nickname, since a wrongly attached face looks exactly like a right one. Send their Bioguide photos to add them.`,
   },
   'cg.noPhotoUnknown': {
     vi: 'Chưa đồng bộ lần nào từ khi app biết đọc mã định danh, nên chưa đo được UW trả gì. Bấm "Đồng bộ ngay" ở trên rồi mở lại tab này.',
@@ -2005,8 +2009,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (keys: string) => `Real field names Unusual Whales sends: ${keys}`,
   },
   'cg.photoSource': {
-    vi: 'Ảnh chân dung thuộc phạm vi công cộng, lấy từ kho unitedstates/images - chỉ hiện khi mã định danh đúng dạng Bioguide, nếu không màn hình vẽ chữ cái đầu tên.',
-    en: 'Portraits are public-domain images from the unitedstates/images repository - shown only when the member id matches the Bioguide format; otherwise initials are drawn instead.',
+    vi: 'Ảnh chân dung: bộ ảnh Bioguide (public domain) do chủ app cung cấp, lưu ngay trong app và tra theo Bioguide ID hoặc tên; nghị sĩ ngoài bộ đó chỉ có ảnh khi mã định danh đúng dạng Bioguide (kho unitedstates/images), còn lại vẽ chữ cái đầu tên.',
+    en: 'Portraits: a public-domain Bioguide set supplied by the owner, stored in the app and matched by Bioguide ID or name; members outside that set get a portrait only when their id is Bioguide-shaped (unitedstates/images), otherwise initials are drawn.',
   },
 
 

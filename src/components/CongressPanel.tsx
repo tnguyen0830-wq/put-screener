@@ -448,9 +448,17 @@ export default function CongressPanel() {
                   data?.lastRun?.samplePoliticianId ||
                   null;
                 const keys = data?.lastRun?.sampleKeys ?? null;
-                if (anyPhoto && anyParty) return null;
+                /* Có ảnh cho MỘT SỐ người: in tên những người chưa có, để chủ
+                   app bổ sung vào bộ ảnh (#179) - một vòng tròn chữ cái giữa
+                   một hàng ảnh thật không tự nói mình là "chưa có trong bộ
+                   ảnh" hay "tên không khớp". */
+                const missing = anyPhoto ? members.filter((m) => !m.head.photo).map((m) => m.head.name) : [];
+                if (anyPhoto && anyParty && !missing.length) return null;
                 return (
                   <div className="cgdiag">
+                    {missing.length > 0 && (
+                      <p className="cap hint hint-warn">{t('cg.photoMissing', missing.join(', '))}</p>
+                    )}
                     {!anyPhoto && (
                       <p className="cap hint hint-warn">
                         <b>{t('cg.noPhotoHead')}</b>{' '}
