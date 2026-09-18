@@ -40,6 +40,13 @@ const INDICATORS: Candidate[] = [
   { key: 'nasdaqDecl', label: 'NASDAQ Declining issues', candidates: ['$DECLQ', 'DECLQ'] },
   { key: 'nyseUvol', label: 'NYSE Up Volume', candidates: ['$UVOL', '$UVOL.NY', 'UVOL'] },
   { key: 'nyseDvol', label: 'NYSE Down Volume', candidates: ['$DVOL', '$DVOL.NY', 'DVOL'] },
+  /* Thêm ở #178 cho tỉ lệ NASDAQ up/down (badge "1.38:1 NASD" của trang mẫu):
+     #177 chỉ có badge NYSE vì hai mã này CHƯA ĐO. Cách viết đoán theo đúng
+     khuôn NASDAQ của bốn mã đã đo được ($TICKQ/$ADVQ/$DECLQ đều là mã NYSE +
+     hậu tố Q; $ADVQ/$DECLQ hoá ra KHÔNG quote được nên khuôn này không chắc)
+     - hai cách có dấu `$`, một cách trần, đúng thang $TICK/$TICK.NY/TICK. */
+  { key: 'nasdaqUvol', label: 'NASDAQ Up Volume', candidates: ['$UVOLQ', '$UVOL.NQ', 'UVOLQ'] },
+  { key: 'nasdaqDvol', label: 'NASDAQ Down Volume', candidates: ['$DVOLQ', '$DVOL.NQ', 'DVOLQ'] },
   { key: 'vix', label: 'VIX (đã dùng ở nơi khác trong app, để đối chiếu)', candidates: ['$VIX'] },
   { key: 'putCallTotal', label: 'CBOE Total Put/Call Ratio', candidates: ['$PCC', '$CPC', 'PCC'] },
   { key: 'putCallEquity', label: 'CBOE Equity Put/Call Ratio', candidates: ['$PCCE', '$CPCE', 'PCCE'] },
