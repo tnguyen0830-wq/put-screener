@@ -66,7 +66,7 @@ type Analysis = {
     publisher: string;
     link: string;
     published: string;
-    tickerCount: number;
+    tickerCount: number | null;
     relatedTickers: string[];
   }[];
   profile: {
@@ -604,9 +604,11 @@ export default function AnalysisPanel({
                     </a>
                     <span className="nmeta">
                       {n.published.slice(0, 10)} · {n.publisher} ·{' '}
-                      {n.tickerCount > 1
-                        ? tr('an.mentionsN', n.tickerCount)
-                        : tr('an.thisTickerOnly')}
+                      {n.tickerCount === null
+                        ? tr('an.tickerUnknown')
+                        : n.tickerCount > 1
+                          ? tr('an.mentionsN', n.tickerCount)
+                          : tr('an.thisTickerOnly')}
                     </span>
                   </li>
                 ))}

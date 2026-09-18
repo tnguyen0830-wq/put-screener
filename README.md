@@ -570,11 +570,29 @@ và nó không kéo điểm lên hay xuống.
 như luôn nằm trên giá hiện tại, nên lấy nó làm cổng là giao quyền lọc cho sự lạc
 quan nghề nghiệp của người khác.
 
-**Nút "Tại sao rớt?"** lấy tin gần nhất của mã (Yahoo, không cần key) rồi để
-Claude đọc cùng TA và FA đang hiện. Mọi con số vẫn do code tính, Claude chỉ diễn
-giải — và được dặn phải **nói thẳng khi tin tức không giải thích được cú rớt**,
-vì bịa một lý do nghe lọt tai thì dễ hơn nhiều so với thừa nhận không biết. Nút
-này chỉ chạy khi bấm, không tự chạy cho cả bảng.
+**Nút "Tại sao rớt?"** lấy tin gần nhất của mã rồi để Claude đọc cùng TA và FA
+đang hiện. Mọi con số vẫn do code tính, Claude chỉ diễn giải — và được dặn phải
+**nói thẳng khi tin tức không giải thích được cú rớt**, vì bịa một lý do nghe
+lọt tai thì dễ hơn nhiều so với thừa nhận không biết. Nút này chỉ chạy khi bấm,
+không tự chạy cho cả bảng.
+
+Tin đến từ **ba nguồn miễn phí, không cần key, và hỏng độc lập nhau**:
+
+| Nguồn | Là gì | Gắn mã cổ phiếu? |
+|---|---|---|
+| Yahoo Finance | tìm kiếm tin tài chính | có, nên biết chắc bài nào riêng về mã |
+| Hồ sơ SEC (EDGAR) | 8-K, 10-Q/10-K, phát hành thêm cổ phiếu, SC 13D | theo định nghĩa là của đúng công ty đó |
+| Google News | bộ gom tin của hàng trăm toà báo | **không** — nên app ghi "chưa rõ" chứ không ghi "riêng mã này" |
+
+Một nguồn chết **không** xoá hai nguồn kia, và prompt nói rõ nguồn nào trả lời
+nguồn nào hỏng — "không có tin" và "một nửa số nguồn chết" dẫn tới hai kết luận
+ngược nhau về việc cú rớt đã được giải thích hay chưa. Bài về trùng từ hai nguồn
+được gộp làm một, giữ lại bản đã xác nhận gắn mã.
+
+**X/Twitter và Reddit cố ý không có mặt.** X cần gói API trả phí. Reddit còn bậc
+miễn phí nhưng phải đăng ký app lấy client id + secret, và quan trọng hơn: nó là
+**bàn tán sau khi giá đã rớt**, không phải tin — trộn vào đây là mời đúng cái
+bịa đặt mà nút này sinh ra để chặn.
 
 > **Chi phí quét, và vì sao nó chạy nổi.** Finviz là một lần cào HTML *mỗi mã*,
 > nên quét 503 mã kiểu thẳng là không dùng được. Lọc đi ba tầng theo giá: sáu

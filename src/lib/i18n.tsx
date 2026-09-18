@@ -1472,6 +1472,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `mentions ${n} tickers`,
   },
   'an.thisTickerOnly': { vi: 'riêng mã này', en: 'this ticker only' },
+  /* Google News không gắn mã cho bài, nên đây là CHƯA BIẾT - không được in
+     "riêng mã này" cho một bài chưa ai kiểm là viết về công ty nào. */
+  'an.tickerUnknown': {
+    vi: 'chưa rõ có riêng mã này không',
+    en: 'not tagged to a ticker',
+  },
   'an.noNews': {
     vi: 'Không có tin nào gắn với mã này.',
     en: 'No stories are tagged to this ticker.',
