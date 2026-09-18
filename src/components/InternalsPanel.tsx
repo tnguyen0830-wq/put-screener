@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { readRememberedOneOf, remember } from '@/lib/remember';
+import TradingViewInternals from './TradingViewInternals';
 
 type SeriesPoint = { t: number; v: number };
 type Series = {
@@ -118,15 +120,17 @@ function Card({ s, t }: { s: Series; t: (k: string, ...a: any[]) => string }) {
   );
 }
 
-export default function InternalsPanel() {
-  const { t } = useLang();
+const VIEWS = ['tv', 'app'] as const;
+type View = (typeof VIEWS)[number];
+
+/** Phần "Số liệu app": các thẻ dựng từ dữ liệu Schwab/tastytrade CHÍNH APP
+ *  đọc được - khác hẳn khung hình TradingView bên cạnh. */
+function AppCards({ t }: { t: (k: string, ...a: any[]) => string }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    setData(null);
-    setError(null);
     fetch('/api/internals')
       .then(async (r) => {
         const j = await r.json();
@@ -141,46 +145,65 @@ export default function InternalsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (error)
-    return (
-      <section className="panel">
-        <div className="panel-head">{t('int.title')}</div>
-        <div className="panel-body">
-          <p className="cap">{error}</p>
-        </div>
-      </section>
-    );
-  if (!data)
-    return (
-      <section className="panel">
-        <div className="panel-head">{t('int.title')}</div>
-        <div className="panel-body">
-          <p className="cap">{t('int.loading')}</p>
-        </div>
-      </section>
-    );
+  if (error) return <p className="cap">{error}</p>;
+  if (!data) return <p className="cap">{t('int.loading')}</p>;
 
   const byKey = new Map(data.series.map((s) => [s.key, s]));
   const ordered = ORDER.map((k) => byKey.get(k)).filter((s): s is Series => !!s);
 
   return (
+    <>
+      <p className="cap">{t('int.note')}</p>
+      <div className="intgrid">
+        {ordered.map((s) => (
+          <Card key={s.key} s={s} t={t} />
+        ))}
+        {data.unavailable.map((u) => (
+          <div key={u.key} className="intcard intcard-unavail">
+            <p className="cap intlabel">{u.label}</p>
+            <p className="intvalue intvalue-dash">{'—'}</p>
+            <p className="cap">{t('int.unavailable')}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+export default function InternalsPanel() {
+  const { t } = useLang();
+  // Mặc định 'tv' vì đó là thứ chủ app xin ("hiện giống ảnh"), nhưng nhớ
+  // lựa chọn để ai thích số liệu app thì không phải gạt lại mỗi lần mở.
+  const [view, setView] = useState<View>('tv');
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    const saved = readRememberedOneOf<View>('internalsView', VIEWS);
+    if (saved) setView(saved);
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (restored) remember('internalsView', view);
+  }, [restored, view]);
+
+  return (
     <section className="panel">
       <div className="panel-head">{t('int.title')}</div>
       <div className="panel-body">
-        <p className="cap">{t('int.note')}</p>
-
-        <div className="intgrid">
-          {ordered.map((s) => (
-            <Card key={s.key} s={s} t={t} />
-          ))}
-          {data.unavailable.map((u) => (
-            <div key={u.key} className="intcard intcard-unavail">
-              <p className="cap intlabel">{u.label}</p>
-              <p className="intvalue intvalue-dash">{'—'}</p>
-              <p className="cap">{t('int.unavailable')}</p>
-            </div>
-          ))}
+        <div className="segmented hmranges">
+          <button className={view === 'tv' ? 'on' : undefined} onClick={() => setView('tv')}>
+            {t('int.viewTv')}
+          </button>
+          <button className={view === 'app' ? 'on' : undefined} onClick={() => setView('app')}>
+            {t('int.viewApp')}
+          </button>
         </div>
+
+        {/* Chỉ gọi /api/internals khi đang XEM chế độ đó - không tiêu 4
+            request Schwab cho một bảng không ai mở. Đổi chế độ thì component
+            được dựng lại và tự gọi. */}
+        {view === 'tv' ? <TradingViewInternals /> : <AppCards t={t} />}
       </div>
     </section>
   );
