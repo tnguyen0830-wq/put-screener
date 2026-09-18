@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: lưu kết quả quét (#144), ô tích trên SMA200 (#145), nút vốn hoá (#146), nút dòng tiền RRG (#147), nút "Tại sao rớt?" trả lời đúng tiếng Việt + nguồn hồ sơ SEC (#148), Google News thành nguồn tin thứ ba (#149), thêm chỉ số kỹ thuật/IV của tab Analyze (#151), sửa nhãn 424B + đọc body 503 (#153).
+2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: lưu kết quả quét (#144), ô tích trên SMA200 (#145), nút vốn hoá (#146), nút dòng tiền RRG (#147), nút "Tại sao rớt?" trả lời đúng tiếng Việt + nguồn hồ sơ SEC (#148), Google News thành nguồn tin thứ ba (#149), thêm chỉ số kỹ thuật/IV của tab Analyze (#151), sửa nhãn 424B + đọc body 503 (#153). **MỚI: cảnh báo sự kiện thời gian thực cho vị thế nắm + watchlist (#155).**
 
 **ĐÃ XÁC NHẬN Ở PRODUCTION (#153):** câu trả lời RA TIẾNG VIỆT; mã mục 8-K giải mã đúng và được dùng thật; hỏng-độc-lập chạy đúng (Claude tự nói "Google News 503 nên phần tin báo chí bị thiếu, ở đây tôi bị mù một phần"). **CÒN TREO:** Google News trả **503** từ Render — chưa biết là sập tạm hay chặn dải IP trung tâm dữ liệu; #153 đã cho lỗi mang theo BODY nên lần bấm tới sẽ nói ra (trang chặn của Google viết thẳng "unusual traffic from your computer network"). Chủ app bấm lại một lần nữa là đủ để quyết: thử-lại-được hay phải bỏ hẳn Google News.
 
@@ -137,6 +137,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-18 — #155 **Cảnh báo thời gian thực: có chuyện gì đang xảy ra với mã đang nắm.** Chủ app hỏi trước "lấy tin từ X thì làm sao" — tôi đo được cả bốn host của X đều bị chặn từ sandbox, nói thẳng là **với tab Đầu tư dài hạn thì X không đáng tiền** (ưu thế của nó là nhanh hơn báo chí vài chục phút, mà tiền mua-và-giữ không đổi quyết định vì 30 phút), và chỉ ra chỗ X *thật sự* đáng tiền là một tính năng KHÁC mà app chưa có: cảnh báo thời gian thực cho vị thế. Chủ app chọn đúng cái đó. **Và hoá ra không cần X**: mọi cảnh báo cũ đều tính từ giá/greek/ngày tháng, không cái nào đọc được sự kiện doanh nghiệp — còn **8-K là chính công ty bị luật bắt buộc khai sự kiện trọng yếu, tức NGUỒN GỐC chứ không phải bài viết về nguồn gốc**, miễn phí và không cần key. **ĐO chứ không nhớ**: `browse-edgar?action=getcurrent&type=8-K&output=atom` trả 8-K mới nhất của TOÀN THỊ TRƯỜNG trong MỘT request (đúng khuôn "một feed chung, lọc trong app" của tab Quốc hội, rẻ hơn hẳn hỏi từng mã vì `recentFilings` KHÔNG cache) — `count=100` ra 100 dòng/72 KB ổn định, `count=400` vẫn 100 nên 100 là TRẦN, 100 dòng phủ **17h30m** còn 20 dòng mới nhất phủ 1h09m, CIK bóc được 100/100, mã mục có mặt 100/100. Feed này cho **hai thứ `filings.recent` KHÔNG có và cả hai load-bearing**: dấu thời gian tới PHÚT (kia chỉ có ngày — không có phút thì không làm được cảnh báo thời gian thực) và TÊN MỤC do chính SEC viết (nên bảng `EIGHT_K_ITEMS` của ta không thể cũ đi). **Chạy parser trên feed THẬT lòi ra ba lỗi, một cái nghiêm trọng**: SEC escape `<summary>` thành HTML và ngăn các mục bằng `&lt;br&gt;`, giải mã xong thì chúng thành THẺ THẬT nằm giữa văn bản nên regex chỉ bóc được mục CUỐI CÙNG — đo được 100 dòng ra đúng 100 mã mục, tức MỌI hồ sơ nhiều mục đều bị cắt; hệ quả là một 8-K `2.02,9.01` (công bố kết quả kinh doanh) bóc thành mỗi `9.01` → không trọng yếu → **KHÔNG BÁO**, tức cảnh báo giá trị nhất bị giết lặng lẽ. Gỡ thẻ SAU khi giải mã: 225 mã mục trên cùng 100 dòng, 75 hồ sơ nhiều mục, hồ sơ trọng yếu 9→48. Cùng lỗi đó giấu số hồ sơ sau `</b>` (0/100 → 100/100) và để CIK dính trong tên công ty. **Cửa sổ 90 phút KHÔNG phải để tiết kiệm — nó chặn một lỗi báo-lại có thật**: chống lặp khoá theo NGÀY GIAO DỊCH và `prune()` xoá khoá ngày cũ, nên một 8-K nộp tối thứ Sáu sẽ thành "chưa gửi" khi sang ngày mới và báo lại; chỉ hồ sơ trong 90 phút mới được báo thì điều đó bất khả. **Cổng giờ giao dịch đổi từ "chặn cả lượt chạy" thành "quyết định nguồn nào chạy"**: cảnh báo danh mục giữ NGUYÊN hành vi cũ, cảnh báo 8-K chạy bất kể giờ vì **8-K phần lớn nộp SAU khi sàn đóng** — ba chỗ khác trong repo (Form 4, lịch earnings, Quốc hội) đã đứng ngoài `runOnce()` vì đúng lý do này. Hai nửa **hỏng độc lập** qua `allSettled`: phiên Schwab hết hạn không còn nuốt mất cảnh báo SEC, và ngược lại (trước đây một cú ném từ `collectAlerts()` giết cả lượt). **Yên tĩnh có chủ đích**, theo đúng luật sẵn có của `alerts.ts` ("một hộp thư kêu suốt là một hộp thư bị bỏ qua"): danh sách CHO PHÉP chứ không loại trừ, bốn mục khẩn (1.03 phá sản, **4.02 báo cáo tài chính cũ không còn đáng tin**, 1.05 an ninh mạng, 3.01 huỷ niêm yết); mục thủ tục (5.07, 9.01, 7.01, 8.01) bị ĐẾM chứ không gửi, mã lạ không bao giờ báo theo phỏng đoán nhưng hiện thành một CON SỐ trên màn hình. Giá chạy ≥7% (≥12% khẩn), hai bậc khoá RIÊNG nên rớt 7% rồi rớt tiếp thành 14% thì cả hai đều tới được điện thoại. Hai câu chữ đã thành SAI được sửa (`al.closed` và README đều nói "ngoài giờ không kiểm tra") — bẫy #136. 66 khẳng định trong hai script + chạy parser trên feed EDGAR thật. Không biến môi trường mới, không bước deploy. Touches alert-runner.ts, AlertSettings.tsx, i18n (chỉ thêm), README; mới lib/liveevents.ts.
 - 2026-09-18 — #153 **Phép đo production đầu tiên của #148/#149: xác nhận ba thứ, và CHÍNH CLAUDE bắt được một lỗi thật trong code của tôi.** Chủ app bấm nút ở production rồi dán câu trả lời về. **Xác nhận chạy đúng**: (1) câu trả lời RA TIẾNG VIỆT — neo ngôn ngữ #148 hiệu quả; (2) mã mục 8-K được giải mã và dùng thật ("Item 8.01 sự kiện khác", "Item 5.02 departure or appointment of directors"); (3) hỏng-độc-lập chạy đúng như thiết kế — Claude nói thẳng "Google News trả về lỗi 503 nên phần tin báo chí bị thiếu, ở đây tôi bị mù một phần" thay vì đọc một nguồn chết thành "không có tin gì xấu". **Lỗi Claude bắt được, và nó ĐÚNG**: nó viết "nhãn pha loãng này do công cụ tự suy ra, không được kiểm chứng; các bản 424B thường cũng được dùng cho phát hành nợ." Code cũ khẳng định `a share offering has been priced (dilution)` cho MỌI 424B. **ĐO trên `data.sec.gov`**: Bank of America 10.626/11.416 dòng là 424B (**93%**), Morgan Stanley 16.716/19.909 (**84%**), NVIDIA đúng 4/1.001 (0,4%). Phiếu của Morgan Stanley đánh số tới **"PRICING SUPPLEMENT NO. 18,867"** — chương trình phát hành TRÁI PHIẾU trung hạn; nhãn cũ gọi từng cái trong số đó là pha loãng cổ đông, tức một lời khẳng định SAI về cấu trúc vốn của công ty thật, ở quy mô hàng chục nghìn hồ sơ. Giờ nói đúng thứ biết được và nói thẳng thứ không biết: bảng kê hồ sơ KHÔNG cho biết cổ phiếu hay trái phiếu. **Lỗi thứ hai, cùng lúc đo ra, và đúng cái bẫy repo đã tránh được một lần**: 424B chiếm 84-93% bảng kê của một ngân hàng, trong khi Form 4 bị loại khỏi nguồn tin này vì nhấn chìm mọi thứ ở 591/1001 (59%) — 424B TỆ HƠN mà vẫn được thả vào, nên với mọi mã ngân hàng cả 4 chỗ đều là phiếu chào giá và MỌI 8-K thật bị đẩy ra. Chặn ở **1 bản cáo bạch**; test dựng lại đúng tỷ lệ BAC (200 phiếu + 3 cái 8-K) và cả 3 cái 8-K giờ đều lọt, trước là 0. **`primaryDocDescription` load-bearing ở đây**: #148 đo được nó VÔ DỤNG với 8-K (chỉ chép lại "8-K") nhưng với 424B nó mang "PRICING SUPPLEMENT"/"PRODUCT SUPPLEMENT" — chữ ký chương trình trái phiếu; cùng một trường, vô dụng ở loại này và quyết định ở loại kia. **Google 503 — bộ đo của tôi thiếu đúng thứ cần biết**: `if (!r.ok) throw` NÉM TRƯỚC KHI ĐỌC BODY, nên phần "in ra thứ thật sự nhận được" của #149 không bao giờ chạy ở nhánh này. Một cái 503 của Google có HAI nghĩa dẫn tới hai cách sửa NGƯỢC nhau (sập tạm → thử lại được; chặn dải IP trung tâm dữ liệu → thử lại vô ích vĩnh viễn) và CHỈ BODY nói ra được, vì trang chặn viết thẳng "unusual traffic from your computer network". Giờ body được đọc và cắt gọn vào lỗi, trạng thái đứng TRƯỚC để cú cắt 200 ký tự không ăn mất nó (#102). **Cố ý CHƯA thêm retry** — chồng một cách chữa đoán mò lên một nguyên nhân chưa đo chính là thứ repo này liên tục bị bỏng. Vết nhỏ được test lôi ra: mục 9.01 có nghĩa rõ ràng và `BOILERPLATE` đã gọi đúng tên nó, nhưng đứng một mình thì in "app chưa biết nghĩa" — app nói dối về chính bảng tra của nó; đã thêm vào bảng, vẫn bị bỏ khi có mục khác. 42 khẳng định trong ba script. Touches sec.ts (chỉ thêm `primaryDocDescription`), secnews.ts, gnews.ts.
 - 2026-09-18 — #151 **Nút "Tại sao rớt?" giờ có thêm chỉ số kỹ thuật/IV của tab Analyze.** Chủ app hỏi trước "longterm hỏi claude có tự search giống analysis không" (đáp: KHÔNG, cả hai đều không có `tools`, chỉ đọc dữ kiện code đã lấy sẵn), rồi đặt hàng thẳng: "lấy thêm thông tin bên tab analysis nữa". Tab Đầu tư dài hạn tự nó chỉ tính SMA200 + vùng hỗ trợ, không có RSI/MACD/Bollinger/ATR/biến động thực tế/ẩn ý - toàn bộ mảng đó nằm ở route Analyze. **Bóc phần tính đó ra `lib/technical.ts` (`technicalSnapshot()`), dùng CHUNG cho cả `/api/analyze` lẫn `/api/longterm/why`**, đúng bài học #96/#99/#147 lặp lại lần thứ tư: hai đường tính song song sẽ trôi lệch, và ở đây trôi lệch đặc biệt lộ liễu - người dùng mở CẢ HAI tab cho cùng một mã sẽ thấy hai con số RSI khác nhau trả lời cùng một câu hỏi trong cùng một phiên. `/api/analyze/route.ts` giờ chỉ là vỏ mỏng cộng thêm earnings/tin tức/Finviz/hồ sơ FMP - hành vi giữ NGUYÊN VẸN (cùng 3 request Schwab song song, cùng hình dạng JSON, cùng cách chia 401/404/500: hai điểm `return 404` cũ giờ là `throw` trong `technicalSnapshot`, route ngoài dò tên lỗi để trả lại đúng mã cũ). `/api/longterm/why` gọi `technicalSnapshot()` SONG SONG với lấy tin qua `Promise.allSettled`, và **hỏng độc lập** - phiên Schwab hết hạn không được làm mất phần tin tức đã lấy, và ngược lại; thiếu thì nói rõ lý do thật (REAUTH_REQUIRED, không đủ lịch sử giá...), không bao giờ để trống - trống bị Claude đọc thành "không có gì đáng nói", đúng bẫy `gexError` trong airead.ts. **Cố ý KHÔNG gọi lại Finviz hay tin tức**: Long-term đã có Finviz riêng từ chính lượt quét (`row.fa`) và tin tức riêng từ `news.ts` - gọi lại chỉ tốn thêm và có thể ra một con số LỆCH với con số đã hiện ngay trên bảng bên cạnh. **Prompt dặn dùng phần kỹ thuật làm MÀU SẮC BỔ SUNG, không phải NGUYÊN NHÂN**: RSI/MACD/IV là thứ thị trường đang định giá NGAY BÂY GIỜ, không phải lý do cổ phiếu rớt - tin tức và nền tảng doanh nghiệp vẫn là bằng chứng chính cho câu "vì sao"; không có câu này thì Claude rất dễ đọc "RSI 28 quá bán" thành một LÝ DO rớt giá thay vì một TRIỆU CHỨNG của nó. 20 khẳng định độc lập + typecheck + build. Không biến môi trường mới, không bước deploy. Touches ltwhy.ts, api/analyze/route.ts, api/longterm/why/route.ts, README; mới lib/technical.ts.
 - 2026-09-18 — #149 **Google News thành nguồn tin thứ ba, và Reddit cố ý chưa làm.** Chủ app: "tôi muốn tin tức tại sao rớt, còn reddit thì sao". **Google News RSS** miễn phí, không cần key, không cần đăng ký — và nó không phải MỘT toà báo mà là bộ gom tin của hàng trăm toà báo. Có mặt vì hai lý do đo được: Yahoo một mình là MỘT điểm chết duy nhất, và Yahoo chỉ trả bài mà CHÍNH NÓ gắn `relatedTickers`, nên bài nào Yahoo không gắn mã là bài app không bao giờ thấy. **"Không đo được từ sandbox" ở đây KHÔNG phải rủi ro mới**: đo hôm nay `news.google.com` bị proxy từ chối 403 ở bước CONNECT — nhưng `query1.finance.yahoo.com`, nguồn ĐANG CHẠY THẬT trong production từ lâu, cũng bị từ chối y hệt. Nên theo đúng khuôn CBOE #109: đọc dung thứ, và khi bóc hụt thì IN RA thứ thật sự nhận được. **Khác biệt thật và nó định hình cả bản vá: Google KHÔNG gắn mã cho bài.** Nên `tickerCount` thành `number | null`, `null` = CHƯA BIẾT — ghi `1` là khẳng định bài viết riêng về công ty này trong khi không ai kiểm chứng, đúng bẫy "chưa biết thành lời khẳng định". Xếp hạng đặt chưa-biết ở **1.5**: dưới bài đã xác nhận riêng về mã (1), trên bản tin thị trường đã xác nhận (≥2) — đúng chỗ của một phép chưa đo. Prompt có NHÃN THỨ BA và dặn Claude bỏ tiêu đề rõ ràng nói về công ty khác; tab Analyze in "chưa rõ có riêng mã này không" thay vì "riêng mã này". **Tìm theo TÊN công ty chứ không theo mã**: ALL, ON, IT, KEY, CAR, NOW vừa là mã vừa là từ tiếng Anh thông dụng, tìm theo mã trần ra một trang tin rác TRÔNG Y NHƯ tin thật; route `why` truyền sẵn tên đang có trên dòng, hậu tố pháp nhân bị cắt vì `"Nike, Inc."` trong nháy kép gần như không khớp tiêu đề báo nào (test ghim rằng `Incyte Corporation` → `Incyte`, không ăn mất chữ trong lòng tên). **Cắt đuôi tên báo trong tiêu đề phải khớp `<source>`**, không được cắt ở dấu gạch ngang CUỐI CÙNG bất kỳ — rất nhiều tiêu đề có sẵn dấu gạch giữa câu. **Gộp trùng SAU khi xếp** nên bản sống sót là bản xếp cao hơn: không gộp thì hạn mức 8 bài bị bản sao ăn hết, và Claude đọc MỘT tin lặp lại thành HAI nguồn độc lập cùng xác nhận — một bằng chứng mạnh hơn sự thật. **Thân không phải RSS thì NÉM kèm 160 ký tự đầu** chứ không trả rỗng: một trang chặn phải đọc thành "hỏng", không phải "không có tin gì xấu"; feed thật mà rỗng thì ra `[]`, hai nhánh khác nhau vì hai cách sửa khác nhau. Bài không có ngày đọc được bị BỎ (một tiêu đề không gắn được vào thời gian thì không trả lời được câu "vì sao rớt tuần này"), bài cũ hơn 45 ngày cũng vậy. **Reddit cố ý chưa làm, hai lý do khác nhau**: (1) cần đăng ký app lấy client id + secret, tức host CÓ KEY → luật repo là probe trước; (2) quan trọng hơn, Reddit là BÀN TÁN chứ không phải tin — người ta đoán lý do SAU khi giá đã rớt và thường đoán sai, đổ thẳng vào prompt "tại sao rớt" là mời đúng cái bịa đặt mà prompt đó sinh ra để chặn; nếu làm thì phải là một TẦNG RIÊNG dán nhãn bàn tán chưa kiểm chứng, cả trong prompt lẫn trên màn hình. X/Twitter vẫn không có đường miễn phí nào còn sống. 63 khẳng định độc lập trong ba script. Touches news.ts, ltwhy.ts, route longterm/why, AnalysisPanel, i18n (chỉ thêm), README; mới lib/gnews.ts.
@@ -205,7 +206,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #153. If you're reading this and a
+No PR is currently open and unmerged as of #155. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -1646,6 +1647,75 @@ large filer's file is tens of MB.
 Everything else in this app is passive — computed only when a browser asks. Alerts needed something that runs on its own, so this is the only timer in the codebase. It lives **in-process**, not in a Render Cron Job, because `/var/data` (holding the Schwab token) attaches to one service only; a cron service could not read the token and would have to call back over HTTP anyway. Its weakness is invisibility, so My Portfolio prints the last-run clock — a dead timer reads as a frozen number rather than as "nothing is wrong".
 
 Alerts cover what you must act on: Schwab session at 2/1/0 days left (the 7-day cap is non-renewable and its expiry stops the whole app), puts gone ITM, earnings before expiry, backwardation or elevated skew, sizing limits breached. **Daily P/L is deliberately excluded** — a thing that pings constantly is a thing you learn to ignore, including on the day it is right.
+
+#### Live position events (`src/lib/liveevents.ts`)
+
+Every alert above is computed from **price, greeks and dates**. None of them
+reads a corporate event, so the app could not say that a CEO had resigned or
+that a company had declared its own past financials unreliable. The owner asked
+for that after considering X/Twitter; it turned out not to need X at all, since
+an **8-K is the company itself being legally required to disclose a material
+event** — the cause, not a report of the cause — and it is free and keyless.
+
+**Measured 2026-09-18 against `www.sec.gov`, not remembered.**
+`browse-edgar?action=getcurrent&type=8-K&output=atom` returns the newest 8-Ks
+for the **whole market** in one request — the Congress-trading "one global feed,
+filter in-app" shape, and far cheaper than asking per symbol, since
+`recentFilings` is **uncached** (a few dozen symbols × 96 ticks/day is thousands
+of requests). `count=100` → 100 entries / 72 KB, stable; `count=400` → still
+100, so **100 is the ceiling**; 100 entries span **17h30m** while the newest 20
+span 1h09m; CIK parsed 100/100 and item codes present 100/100.
+
+That feed carries **two things `filings.recent` does not, both load-bearing**:
+**minute-level timestamps** (the other has only a date, and without minutes
+there is no real-time alert *and* no way to stop the re-alert bug below), and
+**SEC's own wording for each item code**, so no lookup table of ours can go
+stale.
+
+**Running the parser against the real feed found three bugs, one serious.** SEC
+escapes `<summary>` as HTML and separates items with `&lt;br&gt;`; once entities
+are decoded those become **real tags sitting between the values**, so the item
+regex matched only the **last** item of each filing — measured, 100 entries
+yielded exactly 100 item codes, i.e. every multi-item filing was truncated. A
+`2.02, 9.01` earnings 8-K therefore parsed as `9.01` alone → not material → **no
+alert**. The single most valuable alert was being dropped silently. Stripping
+tags *after* decoding gives 225 items across the same 100 entries, 75 of them
+multi-item, and material filings go **9 → 48**. The same bug hid the accession
+number behind a `</b>` (0/100 → 100/100) and left the CIK glued inside the
+company name.
+
+**The 90-minute freshness window is not an optimisation — it prevents a real
+re-alert bug.** Dedup keys on the *trading day* and `prune()` drops yesterday's
+keys, so an 8-K filed on Friday evening would read as unsent again on Saturday
+and fire twice. Only filings from the last 90 minutes can alert, which makes
+that impossible. 90 rather than 15 so one missed tick does not lose an event,
+and the measured 17.5-hour span leaves ample margin. `windowShort` reports the
+case where the feed no longer covers the window, rather than missing silently.
+
+**The market-hours gate changed from "skip the whole run" to "decide which
+sources run".** Portfolio alerts keep their exact previous behaviour; 8-K checks
+run at any hour, because **most 8-Ks are filed after the close** — gating them
+on market hours would miss precisely what they exist to catch. Three other syncs
+here already sit outside `runOnce()` for that reason. The two halves now fail
+**independently** via `allSettled`: an expired Schwab session no longer swallows
+the SEC alerts, where before one throw from `collectAlerts()` killed the run.
+
+**Quiet by design**, per this file's own rule that a thing which pings
+constantly is a thing you learn to ignore. `MATERIAL_ITEMS` is an **allow-list**,
+not an exclude-list, with four urgent codes: 1.03 bankruptcy, **4.02
+non-reliance on past financials**, 1.05 cyber incident, 3.01 delisting notice.
+Routine items (5.07, 9.01, 7.01, 8.01 — the last two being the form's widest
+catch-alls) are **counted, not sent**, and an unknown code never alerts on a
+guess but is surfaced as a number on screen, so "quiet" can never look like
+"broken". Price moves alert at ≥7% (≥12% urgent) with **separate keys per tier**,
+so 7% followed by 14% both reach the phone.
+
+Scope is **held positions ∪ watchlist**, deliberately *not* `trackedSymbols()`,
+which also folds in the whole S&P 500 — right for the shared Form 4 cache, wrong
+for a phone notification, where 500 symbols is a feature muted in week one.
+
+Two pieces of text that became false were fixed rather than left: `al.closed`
+and the README both said no check runs outside market hours (#136's trap).
 
 Anti-spam matters more than the rules: checking every 15 minutes with one put ITM would otherwise mean 96 notifications a day. Each alert key sends at most once per New York trading day, state on disk so a redeploy does not re-fire everything, and keys are marked sent only once a channel actually accepted them so an outage retries instead of being swallowed. Checks skip outside market hours.
 
