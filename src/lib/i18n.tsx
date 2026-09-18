@@ -1425,8 +1425,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'int.loading': { vi: 'Đang tải…', en: 'Loading…' },
   'int.loadFailed': { vi: 'Không tải được market internals.', en: 'Could not load market internals.' },
   'int.note': {
-    vi: 'Đo được ở production trước khi làm (#165): 4 chỉ báo dưới đây có nến phút thật từ Schwab, làm mới mỗi lần mở trang; 3 chỉ báo Schwab chỉ trả SỐ HIỆN TẠI chứ không có lịch sử trong ngày nên app tự lấy mẫu mỗi ~15 phút — đường THÔ hơn hẳn bản gốc, mỗi thẻ tự nói rõ đang dùng loại nào. IV Rank trung bình đọc từ tastytrade (cùng kho đã đồng bộ cho cổng earnings, không tốn thêm request). 2 chỉ báo còn lại (NASDAQ Advance-Decline, Put/Call Total) không mã nào Schwab quote được qua API, dù có trên thinkorswim.',
-    en: 'Measured in production before building this (#165): the four indicators below have real minute-by-minute candles from Schwab, refreshed on every page load; three more only give a CURRENT NUMBER, no intraday history, so the app self-samples every ~15 minutes — a coarser line than the original, and each card names which kind it is. Average IV Rank comes from tastytrade (the same store already synced for the earnings gate, no extra request). Two indicators (NASDAQ Advance-Decline, Put/Call Total) have no symbol Schwab quotes through the API at all, even though they exist on thinkorswim.',
+    vi: 'Mọi con số ở đây app ĐỌC ĐƯỢC (khác khung TradingView), và mỗi thẻ tự nói nó lấy từ đâu. Nến phút thật từ Schwab (4 chỉ báo) và chuỗi trong ngày từ UW (market tide) làm mới mỗi lần mở trang. Bốn chỉ báo còn lại chỉ có SỐ HIỆN TẠI nên app tự lấy mẫu mỗi ~15 phút — đường THÔ hơn hẳn: NASDAQ TICK, NYSE ADV−DECL, Put/Call Equity (Schwab), Put/Call Total (UW). IV Rank trung bình đọc từ kho tastytrade đã đồng bộ sẵn cho cổng earnings. Put/Call Total tính từ khối lượng quyền chọn toàn thị trường của UW — đo ngày 18/09 ra 0,73, khớp với CBOE trên TradingView cùng phiên, nhưng hai bên tính trên hai feed khác nhau nên không phải lúc nào cũng trùng.',
+    en: 'Every number here is one the app can READ (unlike the TradingView frame), and each card names its source. Real minute candles from Schwab (four indicators) and an intraday series from UW (market tide) refresh on every page load. Four more only give a CURRENT NUMBER, so the app self-samples every ~15 minutes — a much coarser line: NASDAQ TICK, NYSE ADV−DECL, Put/Call Equity (Schwab), Put/Call Total (UW). Average IV Rank comes from the tastytrade store already synced for the earnings gate. Put/Call Total is computed from UW’s market-wide option volume — measured 0.73 on Sep 18, matching CBOE on TradingView the same session, but the two are computed on different feeds and need not always agree.',
   },
   'int.viewTv': { vi: 'TradingView', en: 'TradingView' },
   'int.viewApp': { vi: 'Số liệu app', en: "App's own data" },
@@ -1444,8 +1444,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'int.noHistory': { vi: 'Không có nến trong ngày.', en: 'No intraday candles.' },
   'int.noSamplesYet': { vi: 'Chưa có mẫu nào hôm nay.', en: 'No samples yet today.' },
   'int.unavailable': {
-    vi: 'Schwab không quote được chỉ báo này qua API — không có cách nào lấy.',
-    en: 'Schwab does not quote this indicator through the API — no way to get it.',
+    vi: 'Đã hỏi cả ba nguồn app có key và không nguồn nào có: Schwab không quote mã nào, UW không bán bề rộng cổ phiếu, tastytrade/dxFeed không trả dữ liệu cho cách viết nào đã thử. Muốn nhìn thì xem chế độ TradingView.',
+    en: 'All three keyed sources were asked and none carries it: Schwab quotes no symbol for it, UW does not sell equity breadth, and tastytrade/dxFeed returned nothing for any spelling tried. Use the TradingView view to look at it.',
   },
 
   // ---- analyze tab ----
