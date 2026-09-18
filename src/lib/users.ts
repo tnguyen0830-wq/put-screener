@@ -104,6 +104,10 @@ const OWNER_ONLY = [
   // app. Chỉ trả hình dạng, không trả số - nhưng người nhà vẫn không được
   // là người bấm nút trên tài khoản đó.
   '/api/ttprobe',
+  // Probe X: chỉ trả hình dạng, nhưng mỗi lượt bấm ĂN VÀO HẠN MỨC THÁNG mà
+  // chủ app trả tiền cho X. Cùng lý do với ttprobe - người nhà không được là
+  // người bấm nút tiêu tiền trên tài khoản của chủ app.
+  '/api/xprobe',
 ];
 
 /** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang

@@ -555,6 +555,31 @@ gì"** — hai chuyện khác nhau, mà nếu gộp thì mấy con số 0 sẽ n
 > này từng đốt sạch hạn mức của một nhà cung cấp khác đúng vì gọi từng mã ở nhịp
 > 15 phút. Cửa sổ cảnh báo là 90 phút nên nhịp giãn này **không bỏ sót bài nào**.
 
+##### X (Twitter) — CHƯA CHẠY, mới chỉ có phép đo
+
+Chủ app đặt hàng tin từ X cho mã đang nắm, và **đây đúng là chỗ X đáng tiền**:
+ưu thế duy nhất của X là nhanh hơn báo chí vài chục phút, thứ không đổi được
+quyết định mua-và-giữ nhưng đổi được quyết định trên một vị thế đang mở.
+
+Nhưng X **không có bậc miễn phí cho việc tìm kiếm**, và luật của repo với host
+cần key là đo ở production trước rồi mới viết code — đúng cách tastytrade đã
+làm (#127), và lý do không phải sự cẩn thận suông: repo này đã ba lần viết code
+theo tài liệu nhớ được rồi sai. Nên hiện tại chỉ có `/api/xprobe`, **không có
+cảnh báo nào đọc X**.
+
+Probe trả lời bốn câu, và câu đầu quyết định kiến trúc chứ không phải chi tiết:
+
+| Câu hỏi | Vì sao nó quyết định |
+|---|---|
+| Toán tử `$AAPL` có dùng được ở gói này không | Có → tìm thẳng theo mã. Không → phải bám **danh sách tài khoản** rồi lọc mã trong app, tức một tính năng khác |
+| Hạn mức **tháng** còn bao nhiêu | X tính theo **số bài đọc**, không phải số request — đây là con số quyết định rẻ hay đắt |
+| `since_id` có được tôn trọng không | Đây là **cơ chế** giữ chi phí xuống: hỏi lại mà không có bài mới phải ra 0 bài |
+| Trần độ dài câu truy vấn | Bao nhiêu mã nhét vừa một lượt hỏi |
+
+Cách chạy nằm ở `DEPLOY.md`. Token **phải** là app-only (chỉ đọc, không đăng
+được bài) — lộ token người dùng là người lạ đăng bài dưới tên bạn.
+
+
 ---
 
 ## Đầu tư dài hạn — mua lúc rớt, nhưng chỉ mua công ty còn tốt
