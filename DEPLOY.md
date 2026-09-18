@@ -377,6 +377,67 @@ có token nào trong câu trả lời. Ba dòng đáng đọc:
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
 
+## X (Twitter) — đọc tin cho mã đang nắm
+
+**Hiện mới chỉ có probe. Chưa có tính năng nào đọc X**, và đó là chủ ý: X là
+host CÓ KEY, nên luật của repo là đo ở production trước rồi mới viết code.
+
+**Bước 0 — biết mình mua gì trước khi trả tiền.** X **không** có bậc miễn phí
+cho việc tìm kiếm bài. Trước khi mua, hãy đọc kỹ bảng giá hiện hành trên
+`developer.x.com` và tìm đúng hai dòng:
+
+1. **Endpoint `recent search`** (`/2/tweets/search/recent`) có nằm trong gói
+   không. Không có nó thì không đọc được gì.
+2. **Toán tử `$AAPL` (cashtag)** có nằm trong gói không. Đây là câu QUYẾT ĐỊNH
+   kiến trúc chứ không phải chi tiết: có thì tìm thẳng theo mã; không có thì
+   phải bám theo DANH SÁCH TÀI KHOẢN (`from:`) rồi lọc mã trong app — vẫn làm
+   được, nhưng là một tính năng khác và cần bạn chọn danh sách tài khoản.
+
+Tôi **không** ghi con số giá ở đây, cố ý: giá và giới hạn của X đổi luôn, mà
+một con số nhớ nhầm trong tài liệu triển khai trông y hệt một con số đã kiểm.
+
+**Bước 1 — token.** Tạo App ở cổng developer rồi lấy **App-only Bearer
+Token**.
+
+> **PHẢI là token app-only, KHÔNG phải token theo ngữ cảnh người dùng.**
+>
+> | Loại token | Dùng | Vì sao |
+> |---|---|---|
+> | App-only Bearer | ✅ | Chỉ đọc. **Không đăng được bài** |
+> | OAuth 2.0 user context | ❌ | Đọc được, nhưng **đăng bài được dưới tên bạn** |
+>
+> Token sống trong bảng Environment của Render. Lộ token app-only là lộ vài
+> dòng tin vốn đã công khai; lộ token người dùng là **người lạ đăng bài dưới
+> tên bạn**. Cùng lập luận đã dùng cho scope `read` của tastytrade.
+
+Render → Environment: `X_BEARER_TOKEN`.
+
+**Bước 2 — chạy probe một lần, đọc kết quả, rồi mới có tính năng.** Đăng nhập
+bằng tài khoản chủ app và mở:
+
+```
+https://<app>/api/xprobe
+```
+
+Nó chỉ trả **hình dạng** và **con số hạn mức**; không có token trong câu trả
+lời. Bốn dòng đáng đọc, theo thứ tự:
+
+- `usage.data` — **hạn mức tháng còn lại**. Gói của X tính theo SỐ BÀI đọc
+  mỗi tháng chứ không phải số request, nên đây là con số quyết định tính năng
+  rẻ hay đắt.
+- `cashtag.ok` — toán tử `$AAPL` có dùng được không. `false` kèm 403 **không
+  phải lỗi của probe, nó chính là câu trả lời**, và quyết định làm tiếp kiểu
+  nào.
+- `sinceId.honoured` — `since_id` có được tôn trọng không. Đây là **cơ chế**
+  giữ chi phí xuống: hỏi lại mà không có bài mới thì phải ra 0 bài. Nếu
+  `false` thì mỗi lượt hỏi lại đọc lại cùng một đống bài cũ và hạn mức tháng
+  bốc hơi trong vài ngày.
+- `queryLimit` — trần độ dài câu truy vấn, tức bao nhiêu mã nhét vừa một
+  lượt hỏi.
+
+Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
+theo tài liệu.
+
 ### Những gì cổng này gác, và không gác
 
 - **Gác:** mọi trang và mọi `/api/*`, kể cả `/api/auth/callback` của Schwab. Để ngỏ
