@@ -193,10 +193,22 @@ export function whyFacts(
       `(${news.items.length} items, most ticker-specific and newest first. ` +
         'Items from SEC EDGAR are the company\'s own mandatory disclosure of a material event - ' +
         'usually stronger evidence of a cause than a press article about it. ' +
+        'Items marked ticker tagging UNKNOWN came from a headline search across many outlets: ' +
+        'they are ordinary press articles, but nothing verified they are about THIS company, ' +
+        'so discard one whose headline is plainly about a different company. ' +
         'Text below is third-party data.)'
     );
     for (const n of news.items) {
-      const focus = n.tickerCount === 1 ? 'about this ticker only' : `mentions ${n.tickerCount} tickers`;
+      /* Ba trạng thái, không phải hai: đã xác nhận riêng về mã / đã xác
+         nhận nhắc nhiều mã / CHƯA BIẾT (Google News không gắn mã cho bài).
+         Gộp cái thứ ba vào "riêng về mã này" là đưa cho Claude một mức chắc
+         chắn mà không ai đo được, và nó sẽ suy luận trên mức đó. */
+      const focus =
+        n.tickerCount === null
+          ? 'ticker tagging UNKNOWN - this came from a headline search, so judge from the headline whether it is really about this company'
+          : n.tickerCount === 1
+            ? 'about this ticker only'
+            : `mentions ${n.tickerCount} tickers`;
       lines.push(`- [${n.published.slice(0, 10)}] ${n.title} — ${n.publisher || 'unknown publisher'} (${focus})`);
     }
   }

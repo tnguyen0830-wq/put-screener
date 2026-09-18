@@ -46,7 +46,10 @@ export async function POST(req: Request) {
   let news: NewsResult | null = null;
   let newsError: string | null = null;
   try {
-    news = await symbolNewsAll(String(row.symbol), 10);
+    /* Tên công ty đi kèm vì Google News tìm theo CHỮ: "Nike" ra tin Nike,
+       còn mã trần thì ALL/ON/IT/KEY/CAR/NOW ra một trang tin rác trông y
+       như tin thật. Dòng client gửi lên đã có sẵn tên, không tốn gì thêm. */
+    news = await symbolNewsAll(String(row.symbol), 10, row.name ? String(row.name) : null);
     /* Mọi nguồn cùng chết mới là "không kiểm được tin". Một nguồn chết thì
        `news.failed` đã nói rõ trong prompt, và phần còn lại vẫn đọc được -
        gộp hai chuyện đó lại là tự bịt mắt mình một nửa. */
@@ -109,10 +112,11 @@ export async function POST(req: Request) {
 /* Tin tức cũng cần đường riêng: bảng muốn hiện vài tiêu đề mà KHÔNG gọi
    Claude (miễn phí, không tốn hạn mức API). */
 export async function GET(req: Request) {
-  const symbol = new URL(req.url).searchParams.get('symbol');
+  const sp = new URL(req.url).searchParams;
+  const symbol = sp.get('symbol');
   if (!symbol) return Response.json({ error: 'Missing symbol' }, { status: 400 });
   try {
-    const r = await symbolNewsAll(symbol, 8);
+    const r = await symbolNewsAll(symbol, 8, sp.get('name'));
     return Response.json({ news: r.items, sources: r.ok, failed: r.failed });
   } catch (e: any) {
     /* 200 kèm lý do THẬT, không phải 500 trống: màn hình cần phân biệt
