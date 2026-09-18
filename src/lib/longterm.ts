@@ -1,4 +1,5 @@
 import { capPasses, type CapTier } from './marketcap';
+import type { Quadrant } from './rrg';
 import type { PeContext } from './pehistory';
 import type { SecFundamentals } from './secfacts';
 import type { SupportRead, SupportZone, TrendRead } from './support';
@@ -117,6 +118,8 @@ export type LtGateOptions = {
   requireAboveSma200?: boolean;
   /** Bậc vốn hoá được chọn. Rỗng (mặc định) = không lọc theo vốn hoá. */
   caps?: readonly CapTier[];
+  /** Góc phần tư RRG được chọn. Rỗng (mặc định) = không lọc theo dòng tiền. */
+  quadrants?: readonly Quadrant[];
 };
 
 export type LtInput = {
@@ -129,6 +132,8 @@ export type LtInput = {
   sec?: SecFundamentals | null;
   /** Vốn hoá từ Schwab (giá × số cổ phiếu), tính ở tầng 0. null = chưa biết. */
   marketCap?: number | null;
+  /** Góc phần tư RRG của NGÀNH mã này. null = chưa tra được. */
+  sectorQuadrant?: Quadrant | null;
 };
 
 /**
@@ -195,6 +200,28 @@ export function gatesFor(input: LtInput, opts?: LtGateOptions): LtGate[] {
        ô `fa.marketCap` của Finviz ngay bên dưới - Finviz là số cào theo
        ngày còn cái này là số sống, và quan trọng hơn: nó có mặt ở tầng 0
        nên lọc được trước khi tốn bất cứ request nào theo từng mã. */
+    /* Cổng thứ ba do người dùng bật. Đây là góc phần tư của NGÀNH, không
+       phải của chính mã - toạ độ RRG là vị trí so với 10 ngành còn lại
+       trong cùng tuần, nên không tồn tại một toạ độ RRG cho riêng một cổ
+       phiếu. Nhãn nói thẳng "ngành" để không ai đọc nó thành nhận định về
+       công ty.
+
+       Ngành tra không ra (mã ngoài rổ S&P 500, hoặc ngành rơi khỏi biểu đồ
+       vì thiếu lịch sử) thì ĐI QUA kèm cờ, luật #131 - loại nó là để một
+       khoảng trống trong bảng tra quyết định thay người dùng. */
+    ...(opts?.quadrants?.length
+      ? [
+          {
+            key: 'rrg',
+            label: `Dòng tiền vào ngành: ${opts.quadrants.join(', ')}`,
+            passed:
+              input.sectorQuadrant == null
+                ? true
+                : opts.quadrants.includes(input.sectorQuadrant),
+            unknown: input.sectorQuadrant == null,
+          } as LtGate,
+        ]
+      : []),
     ...(opts?.caps?.length
       ? [
           {
@@ -358,6 +385,8 @@ export type LtCandidate = {
   targetUpsidePct: number | null;
   /** Vốn hoá Schwab (giá × số cổ phiếu). null = Schwab không trả số cổ phiếu. */
   marketCap: number | null;
+  /** Góc phần tư RRG của NGÀNH mã này (không phải của chính mã). */
+  sectorQuadrant: Quadrant | null;
   /** Số liệu 10-K từ SEC. null kèm `secReason` nói vì sao. */
   sec: SecFundamentals | null;
   /** 'no-cik' (ETF / không có trong danh bạ SEC) · 'no-data' (có CIK nhưng

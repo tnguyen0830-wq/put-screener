@@ -527,6 +527,19 @@ Cổng xu hướng cố ý **không** đòi giá nằm trên SMA200 — mã rớ
 thì thường đã thủng SMA200 rồi. Cái được giữ là *độ dốc* của SMA200, tức xu hướng
 dài hạn, cộng với chốt chặn "còn cách đáy 52 tuần" để không bắt dao rơi.
 
+**Bốn nút dòng tiền ngành (RRG): Tụt lại · Đang hồi · Dẫn đầu · Đuối dần.**
+Muốn *"ngành đang uptrend mạnh"* thì bấm **Dẫn đầu** — ngành mạnh hơn thị trường
+và còn đang mạnh lên. **Đang hồi** là ngành còn yếu hơn thị trường nhưng đã quay
+đầu lên, thường là chỗ những mã vừa rớt về hỗ trợ nằm. Số dùng đúng bằng số biểu
+đồ RRG bên tab Heatmap đang vẽ (11 quỹ ngành so với SPY) — một phép tính, hai
+chỗ đọc, nên bảng và biểu đồ không bao giờ cãi nhau.
+
+Một điều phải nhớ khi đọc cột này: **đây là góc phần tư của NGÀNH, không phải của
+mã**. Toạ độ RRG là vị trí so với 10 ngành còn lại trong cùng tuần, nên không
+tồn tại toạ độ RRG cho riêng một cổ phiếu — một mã yếu vẫn có thể nằm trong ngành
+đang hồi, và ngược lại. Mã không tra được ngành (ngoài rổ S&P 500) vẫn đi qua và
+được đánh dấu `?`.
+
 **Ba nút vốn hoá: Mega ≥200 tỷ · Big 10–200 tỷ · Mid 2–10 tỷ.** Bấm được nhiều
 nút cùng lúc; **không bấm nút nào là không lọc** (mã nhỏ hơn 2 tỷ vẫn vào) chứ
 không phải loại sạch — màn hình nói thẳng câu đó, vì ba nút tối thui trông y hệt

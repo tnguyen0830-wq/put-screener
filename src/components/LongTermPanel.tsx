@@ -3,6 +3,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import CapChips from './CapChips';
+import RrgChips from './RrgChips';
+import type { Quadrant } from '@/lib/rrg';
 import { capsKey, type CapTier } from '@/lib/marketcap';
 
 /* Hình dạng khớp với LtCandidate của src/lib/longterm.ts. Khai báo lại ở đây
@@ -22,6 +24,7 @@ type Row = {
     offHighPct: number | null; aboveLowPct: number | null;
   };
   marketCap: number | null;
+  sectorQuadrant: Quadrant | null;
   nearestSupport: Zone | null;
   distancePct: number | null;
   brokenSupport: Zone | null;
@@ -70,6 +73,8 @@ export default function LongTermPanel() {
   const [aboveSma200, setAboveSma200] = useState(true);
   /* Rỗng = không lọc. Mặc định rộng nhất, cùng lý do như bên tab Screener. */
   const [caps, setCaps] = useState<CapTier[]>([]);
+  /* Rỗng = không lọc theo dòng tiền, cùng quy ước với nút vốn hoá. */
+  const [quadrants, setQuadrants] = useState<Quadrant[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
@@ -77,7 +82,10 @@ export default function LongTermPanel() {
   const [err, setErr] = useState<string | null>(null);
   const [scannedAt, setScannedAt] = useState<string | null>(null);
   const [summary, setSummary] = useState<
-    { scanned: number; kept: number; belowSma200: number; capDropped: number } | null
+    {
+      scanned: number; kept: number; belowSma200: number;
+      capDropped: number; rrgDropped: number; rrgError: string | null;
+    } | null
   >(null);
   const [open, setOpen] = useState<string | null>(null);
   /* Bảng đang hiện đến từ kho chứ không phải từ lượt quét vừa rồi. Phải nói
@@ -95,7 +103,9 @@ export default function LongTermPanel() {
   /* Một chỗ dựng tham số cho CẢ hai đường gọi (nạp lại và quét). Hai chuỗi
      query dựng riêng là hai chỗ có thể quên cùng một tham số, rồi bảng nạp
      về không khớp với mấy cái nút đang sáng. */
-  const query = `universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}&caps=${caps.join(',')}`;
+  const query =
+    `universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}` +
+    `&caps=${caps.join(',')}&rrg=${quadrants.join(',')}`;
 
   /* Mở tab lên là có ngay kết quả lần quét trước, và chạy lại mỗi khi đổi
      phạm vi HOẶC gạt ô tích SMA200, vì mỗi tổ hợp lưu riêng: gạt từ
@@ -121,6 +131,8 @@ export default function LongTermPanel() {
                loại mã vì SMA200. */
             belowSma200: j.scan.belowSma200 ?? 0,
             capDropped: j.scan.capDropped ?? 0,
+            rrgDropped: j.scan.rrgDropped ?? 0,
+            rrgError: j.scan.rrgError ?? null,
           });
           setRestored(true);
         } else {
@@ -139,7 +151,7 @@ export default function LongTermPanel() {
        chuẩn hoá thứ tự - bấm mega-rồi-big và big-rồi-mega là cùng một bộ
        lọc, không việc gì phải nạp lại. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [universe, aboveSma200, capsKey(caps)]);
+  }, [universe, aboveSma200, capsKey(caps), quadrants.join(',')]);
 
   const scan = useCallback(async () => {
     runningRef.current = true;
@@ -173,6 +185,8 @@ export default function LongTermPanel() {
               kept: e.kept,
               belowSma200: e.belowSma200 ?? 0,
               capDropped: e.capDropped ?? 0,
+              rrgDropped: e.rrgDropped ?? 0,
+              rrgError: e.rrgError ?? null,
             });
           }
         }
@@ -201,6 +215,8 @@ export default function LongTermPanel() {
       </div>
 
       <CapChips value={caps} onChange={setCaps} disabled={running} />
+
+      <RrgChips value={quadrants} onChange={setQuadrants} disabled={running} />
 
       <label className="check">
         <input
@@ -252,6 +268,16 @@ export default function LongTermPanel() {
           trống vì không mã nào đạt cần hai hành động khác hẳn nhau. */}
       {summary && summary.capDropped > 0 && (
         <p className="hint hint-warn">{t('lt.capDropped', summary.capDropped)}</p>
+      )}
+
+      {summary && summary.rrgDropped > 0 && (
+        <p className="hint hint-warn">{t('lt.rrgDropped', summary.rrgDropped)}</p>
+      )}
+
+      {/* Vòng xoay hỏng phải nói ra lý do thật: cột trống vì mạng hỏng và cột
+          trống vì mã ngoài rổ cần hai cách sửa khác nhau. */}
+      {summary?.rrgError && (
+        <p className="hint hint-warn">{t('lt.rrgError', summary.rrgError)}</p>
       )}
 
       {/* Ảnh chụp, không phải giá sống - và câu này phải là CẢNH BÁO chứ
@@ -318,6 +344,13 @@ export default function LongTermPanel() {
                         ? '—'
                         : r.trend.aboveSma200 ? t('lt.aboveSma') : t('lt.belowSma')}
                       <div className="pfsub">{t('lt.slope', pc(r.trend.sma200SlopePct, 2))}</div>
+                      {/* Góc phần tư của NGÀNH. Để ngay dưới xu hướng vì cả
+                          hai trả lời cùng một câu - "bối cảnh của mã này đang
+                          thuận hay nghịch" - chỉ khác cỡ: một cái là chính
+                          mã, một cái là cả ngành. */}
+                      <div className="pfsub">
+                        {r.sectorQuadrant ? t(`rrg.q.${r.sectorQuadrant}`) : '—'}
+                      </div>
                     </td>
                     <td>
                       {t('lt.roe')} {pc(r.fa.roe)}
@@ -462,6 +495,13 @@ function Detail({ row }: { row: Row }) {
               Finviz - đây là số cùng nguồn với cái bộ lọc đang dùng, nên
               nhìn vào là hiểu vì sao mã này qua hay không qua. */}
           <tr><td>{t('lt.col.cap')}</td><td>{big(row.marketCap)}</td></tr>
+          <tr>
+            <td>{t('lt.col.rrg')}</td>
+            <td>
+              {row.sectorQuadrant ? t(`rrg.q.${row.sectorQuadrant}`) : '—'}
+              {row.sector ? ` · ${row.sector}` : ''}
+            </td>
+          </tr>
           <tr><td>EPS (ttm)</td><td>{n2(row.fa.eps)}</td></tr>
           <tr><td>P/E · Forward P/E · PEG</td><td>{n2(row.fa.pe, 1)} · {n2(row.fa.forwardPe, 1)} · {n2(row.fa.peg, 2)}</td></tr>
           <tr><td>ROE · ROIC</td><td>{pc(row.fa.roe)} · {pc(row.fa.roic)}</td></tr>

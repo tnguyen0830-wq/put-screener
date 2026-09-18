@@ -11,6 +11,8 @@ import { secDiagnosis, secFundamentals, type SecFundamentals } from '@/lib/secfa
 import { peContext, recordPe, flushPe } from '@/lib/pehistory';
 import { saveLtScan } from '@/lib/lt-store';
 import { capPasses, marketCapOf, parseCaps } from '@/lib/marketcap';
+import { quadrantBySector, rrgSectors } from '@/lib/rrgsectors';
+import type { Quadrant } from '@/lib/rrg';
 import { pivotLows, readSupport, readTrend, supportZones } from '@/lib/support';
 import {
   gatesFor,
@@ -65,7 +67,7 @@ type Event =
   | { type: 'candidate'; row: LtCandidate }
   | { type: 'skip'; symbol: string; reason: string }
   | { type: 'error'; message: string }
-  | { type: 'done'; scanned: number; kept: number; at: string; belowSma200: number; capDropped: number };
+  | { type: 'done'; scanned: number; kept: number; at: string; belowSma200: number; capDropped: number; rrgDropped: number; rrgError: string | null };
 
 type Constituent = { symbol: string; name: string; sector: string };
 
@@ -98,6 +100,22 @@ export async function GET(req: NextRequest) {
   /* Bậc vốn hoá đã chọn. Rỗng = không lọc, và mặc định phải là rỗng vì một
      request thiếu tham số không được âm thầm loại mã. */
   const caps = parseCaps(req.nextUrl.searchParams.get('caps'));
+  /* Góc phần tư RRG được chọn. Giá trị lạ bị bỏ chứ không làm hỏng lượt quét,
+     và rỗng = không lọc, cùng quy ước với mọi bộ lọc khác của tab này. */
+  const ALL_Q: Quadrant[] = ['leading', 'weakening', 'lagging', 'improving'];
+  const picked = (req.nextUrl.searchParams.get('rrg') ?? '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter((x): x is Quadrant => (ALL_Q as string[]).includes(x));
+  /* Chọn đủ CẢ BỐN góc là không lọc gì cả - thu về mảng rỗng, y như
+     `parseCaps`, để cổng biến mất thay vì thành một dấu ✓ không loại ai, và
+     để khoá kho lưu không mọc hậu tố cho một phép lọc vô tác dụng. Thứ tự
+     cũng chuẩn hoá theo `ALL_Q` nên bấm khác thứ tự vẫn ra cùng một khoá. */
+  const quadrants: Quadrant[] =
+    picked.length === 0 || picked.length === ALL_Q.length
+      ? []
+      : ALL_Q.filter((q) => picked.includes(q));
+  const wantRrg = quadrants.length > 0;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -114,12 +132,45 @@ export async function GET(req: NextRequest) {
         } else {
           list = await constituents();
         }
+        /* Ngành của mã watchlist: tra từ chính danh sách rổ, không gọi mạng.
+           Trước đây watchlist đi với `sector: ''` tới tận tầng 2 (Finviz),
+           nên không có gì để tra vòng xoay ngành ở tầng 0. Cùng lối
+           `scan-job.ts` đã làm từ lâu cho tab Screener. */
+        if (universe === 'watchlist') {
+          try {
+            const bySymbol = new Map((await constituents()).map((c) => [c.symbol, c]));
+            list = list.map((c) => bySymbol.get(c.symbol) ?? c);
+          } catch {
+            /* Không có file rổ thì ngành để trống - cổng RRG sẽ ra `?`, chứ
+               không phải loại oan cả watchlist. */
+          }
+        }
+
+        /* Vòng xoay dòng tiền 11 ngành. Tính LUÔN chứ không chỉ khi đang lọc:
+           12 request có cache một giờ dùng chung với biểu đồ bên tab Heatmap,
+           nhỏ so với 6 lượt báo giá + hàng trăm lượt nến của chính lượt quét
+           này - và đổi lại, cột "dòng tiền ngành" có số ngay cả khi người
+           dùng chưa bật bộ lọc. Hỏng thì cả tab vẫn chạy: mọi cổng RRG ra
+           `?` và màn hình in lý do thật. */
+        let qBySector = new Map<string, Quadrant>();
+        let rrgError: string | null = null;
+        try {
+          qBySector = quadrantBySector(await rrgSectors());
+        } catch (e: any) {
+          rrgError = String(e?.message ?? e).slice(0, 160);
+        }
+
         send({ type: 'phase', phase: 'quotes', total: list.length });
 
         /* ---- tầng 0: giá + đỉnh/đáy 52 tuần, gộp lô ---- */
         const q = await quotes(list.map((c) => c.symbol));
-        const tier1: (Constituent & { price: number; marketCap: number | null })[] = [];
+        const tier1: (Constituent & {
+          price: number;
+          marketCap: number | null;
+          sectorQuadrant: Quadrant | null;
+        })[] = [];
         let capDropped = 0;
+        let rrgDropped = 0;
         for (const c of list) {
           const row = q[c.symbol];
           const price = Number(row?.quote?.lastPrice ?? 0);
@@ -141,13 +192,25 @@ export async function GET(req: NextRequest) {
              phiếu thì ĐI QUA kèm cờ, `capPasses` lo phần đó. */
           const marketCap = marketCapOf(row);
           if (!capPasses(marketCap, caps).passed) { capDropped++; continue; }
-          tier1.push({ ...c, price, marketCap });
+          /* Vòng xoay ngành cũng cắt ở tầng 0 - nó chỉ cần TÊN NGÀNH, thứ đã
+             có sẵn trong rổ, nên không tốn gì theo từng mã. Ngành chưa tra
+             được thì đi qua (null), `gatesFor` gắn cờ `?`. */
+          const sectorQuadrant = qBySector.get(c.sector) ?? null;
+          if (wantRrg && sectorQuadrant !== null && !quadrants.includes(sectorQuadrant)) {
+            rrgDropped++;
+            continue;
+          }
+          tier1.push({ ...c, price, marketCap, sectorQuadrant });
         }
 
         /* ---- tầng 1: nến, vùng hỗ trợ, xu hướng ---- */
         send({ type: 'phase', phase: 'support', total: tier1.length });
         const tier2: {
-          c: Constituent & { price: number; marketCap: number | null };
+          c: Constituent & {
+            price: number;
+            marketCap: number | null;
+            sectorQuadrant: Quadrant | null;
+          };
           support: ReturnType<typeof readSupport>;
           trend: ReturnType<typeof readTrend>;
         }[] = [];
@@ -163,8 +226,11 @@ export async function GET(req: NextRequest) {
             const trend = readTrend(candles, c.price);
             const support = readSupport(c.price, supportZones(pivotLows(candles)));
             const pre = gatesFor(
-              { price: c.price, trend, support, fa: EMPTY_FA, marketCap: c.marketCap },
-              { requireAboveSma200, caps }
+              {
+                price: c.price, trend, support, fa: EMPTY_FA,
+                marketCap: c.marketCap, sectorQuadrant: c.sectorQuadrant,
+              },
+              { requireAboveSma200, caps, quadrants }
             );
             const failed = pre.filter((g) => TIER1_KEYS.has(g.key) && !g.passed);
             /* Đếm mã rụng CHỈ vì cổng SMA200, để bảng trống nói được vì sao
@@ -233,9 +299,10 @@ export async function GET(req: NextRequest) {
             const pe = await peContext(c.symbol, fa.pe);
 
             const input = {
-              price: c.price, trend, support, fa, sec: secRes.sec, marketCap: c.marketCap,
+              price: c.price, trend, support, fa, sec: secRes.sec,
+              marketCap: c.marketCap, sectorQuadrant: c.sectorQuadrant,
             };
-            const gates = gatesFor(input, { requireAboveSma200, caps });
+            const gates = gatesFor(input, { requireAboveSma200, caps, quadrants });
             if (gates.some((g) => !g.passed)) return;
 
             const breakdown = scoreComponents(input, pe);
@@ -245,6 +312,7 @@ export async function GET(req: NextRequest) {
               sector: c.sector || fv.profile?.sector || '',
               price: c.price,
               marketCap: c.marketCap,
+              sectorQuadrant: c.sectorQuadrant,
               trend,
               nearestSupport: support.nearest,
               distancePct: support.distancePct,
@@ -292,6 +360,8 @@ export async function GET(req: NextRequest) {
               belowSma200,
               caps,
               capDropped,
+              quadrants,
+              rrgDropped,
               rows,
             },
             user
@@ -301,7 +371,10 @@ export async function GET(req: NextRequest) {
         }
 
         for (const row of rows) send({ type: 'candidate', row });
-        send({ type: 'done', scanned: list.length, kept: rows.length, at, belowSma200, capDropped });
+        send({
+          type: 'done', scanned: list.length, kept: rows.length, at,
+          belowSma200, capDropped, rrgDropped, rrgError,
+        });
       } catch (e: any) {
         const msg = String(e?.message ?? e);
         send({ type: 'error', message: msg.slice(0, 400) });

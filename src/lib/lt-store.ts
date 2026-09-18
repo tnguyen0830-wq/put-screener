@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { LtCandidate } from './longterm';
 import { capsKey, type CapTier } from './marketcap';
+import type { Quadrant } from './rrg';
 
 /**
  * Giữ lại kết quả quét Long-term gần nhất.
@@ -55,6 +56,12 @@ export type SavedLtScan = {
   caps?: CapTier[];
   /** Số mã bị bộ lọc vốn hoá loại ở tầng 0 - cùng lý do như `belowSma200`. */
   capDropped?: number;
+  /** Góc phần tư RRG đã chọn lúc quét. Xem `keyOf`. */
+  quadrants?: Quadrant[];
+  /** Số mã bị bộ lọc dòng tiền loại ở tầng 0. */
+  rrgDropped?: number;
+  /** Vì sao không tính được vòng xoay ngành, nếu có. */
+  rrgError?: string | null;
   rows: LtCandidate[];
 };
 
@@ -74,16 +81,30 @@ type Store = Record<string, SavedLtScan>;
  * và không lọc thì không thêm hậu tố - nên bản ghi cũ vẫn là bản ghi của
  * trạng thái "không lọc", vẫn đọc lại được, vẫn không phải di trú gì.
  * `capsKey` chuẩn hoá thứ tự nên bấm mega-rồi-big và big-rồi-mega ra cùng
- * một ô nhớ chứ không thành hai.
+ * một ô nhớ chứ không thành hai. Bộ lọc dòng tiền RRG vào khoá theo đúng
+ * cùng một luật (`rrgKey`), nên mọi bản ghi cũ vẫn là bản ghi "không lọc".
  */
+const Q_ORDER: Quadrant[] = ['leading', 'weakening', 'lagging', 'improving'];
+const rrgKey = (q: readonly Quadrant[] = []) =>
+  !q.length || q.length === Q_ORDER.length
+    ? ''
+    : Q_ORDER.filter((x) => q.includes(x)).join('+');
+
 const keyOf = (
   user: string,
   universe: LtUniverse,
   aboveSma200: boolean,
-  caps: readonly CapTier[] = []
+  caps: readonly CapTier[] = [],
+  quadrants: readonly Quadrant[] = []
 ) => {
   const c = capsKey(caps);
-  return `${user}:${universe}${aboveSma200 ? ':sma200' : ''}${c ? `:cap=${c}` : ''}`;
+  const r = rrgKey(quadrants);
+  return (
+    `${user}:${universe}` +
+    (aboveSma200 ? ':sma200' : '') +
+    (c ? `:cap=${c}` : '') +
+    (r ? `:rrg=${r}` : '')
+  );
 };
 
 async function readStore(): Promise<Store> {
@@ -96,7 +117,9 @@ async function readStore(): Promise<Store> {
 
 export async function saveLtScan(scan: SavedLtScan, user: string): Promise<void> {
   const store = await readStore();
-  store[keyOf(user, scan.universe, scan.aboveSma200 === true, scan.caps ?? [])] = scan;
+  store[
+    keyOf(user, scan.universe, scan.aboveSma200 === true, scan.caps ?? [], scan.quadrants ?? [])
+  ] = scan;
   await fs.mkdir(path.dirname(FILE()), { recursive: true });
   /* Ghi tạm rồi đổi tên: sập giữa chừng thì file cũ còn nguyên, chứ không
      để lại một file JSON cụt mà `readStore()` sẽ đọc thành "chưa quét lần
@@ -110,10 +133,11 @@ export async function readLtScan(
   universe: LtUniverse,
   user: string,
   aboveSma200: boolean,
-  caps: readonly CapTier[] = []
+  caps: readonly CapTier[] = [],
+  quadrants: readonly Quadrant[] = []
 ): Promise<SavedLtScan | null> {
   const store = await readStore();
-  return store[keyOf(user, universe, aboveSma200, caps)] ?? null;
+  return store[keyOf(user, universe, aboveSma200, caps, quadrants)] ?? null;
 }
 
 /* Không có nhánh "định dạng khoá cũ" như scan-store.ts: kho này sinh ra sau
