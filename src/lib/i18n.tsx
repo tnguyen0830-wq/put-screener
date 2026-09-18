@@ -733,6 +733,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.subFearGreed': { vi: 'Fear & Greed', en: 'Fear & Greed' },
   'hm.subRrg': { vi: 'RRG', en: 'RRG' },
   'hm.subGex': { vi: 'GEX', en: 'GEX' },
+  'hm.subInternals': { vi: 'Bề rộng TT', en: 'Internals' },
   'hm.head': {
     vi: (v: any) => `Bản đồ S&P 500 · ${v.count} mã · ${v.source}`,
     en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
@@ -1417,6 +1418,24 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'rrg.note': {
     vi: 'Toạ độ tính từ giá tuần của 11 quỹ ngành SPDR so với SPY, lấy từ Schwab: chênh lệch hai đường EMA của sức mạnh tương đối, rồi so với mặt bằng của cả 11 ngành trong cùng tuần — nên 100 nghĩa là ngang bằng mặt bằng chung, không phải ngang bằng SPY. Công thức RS-Ratio/RS-Momentum gốc của JdK không được công bố, đây là bản dựng lại: vòng xoay và thứ tự ngành đọc như bản gốc, con số tuyệt đối thì không nhất thiết trùng. Vị trí góc phần tư mô tả trạng thái, không phải khuyến nghị mua bán.',
     en: 'Coordinates are computed from weekly Schwab prices for the 11 SPDR sector funds against SPY: the gap between two EMAs of relative strength, then scored against where all 11 sectors sit that same week — so 100 means level with the pack, not level with SPY. JdK\u2019s original RS-Ratio/RS-Momentum formula is unpublished; this is a reconstruction, so the rotation and the ordering read like the original while the absolute numbers need not match. A quadrant describes a state, not a recommendation.',
+  },
+
+  // ---- market internals (tab Heatmap → Bề rộng TT) ----
+  'int.title': { vi: 'Bề rộng thị trường', en: 'Market internals' },
+  'int.loading': { vi: 'Đang tải…', en: 'Loading…' },
+  'int.loadFailed': { vi: 'Không tải được market internals.', en: 'Could not load market internals.' },
+  'int.note': {
+    vi: 'Đo được ở production trước khi làm (#165): 4 chỉ báo dưới đây có nến phút thật từ Schwab, làm mới mỗi lần mở trang; 2 chỉ báo Schwab chỉ trả SỐ HIỆN TẠI chứ không có lịch sử trong ngày nên app tự lấy mẫu mỗi ~15 phút — đường THÔ hơn hẳn bản gốc, mỗi thẻ tự nói rõ đang dùng loại nào. 2 chỉ báo còn lại (NASDAQ Advance-Decline, Put/Call Total) không mã nào Schwab quote được qua API, dù có trên thinkorswim.',
+    en: 'Measured in production before building this (#165): the four indicators below have real minute-by-minute candles from Schwab, refreshed on every page load; two more only give a CURRENT NUMBER, no intraday history, so the app self-samples every ~15 minutes — a coarser line than the original, and each card names which kind it is. Two indicators (NASDAQ Advance-Decline, Put/Call Total) have no symbol Schwab quotes through the API at all, even though they exist on thinkorswim.',
+  },
+  'int.sourceSchwab': { vi: 'nến thật (Schwab)', en: 'real candles (Schwab)' },
+  'int.sourceSampled': { vi: 'tự lấy mẫu ~15 phút', en: 'self-sampled ~15min' },
+  'int.asOf': { vi: (t: any) => `lúc ${t}`, en: (t: any) => `as of ${t}` },
+  'int.noHistory': { vi: 'Không có nến trong ngày.', en: 'No intraday candles.' },
+  'int.noSamplesYet': { vi: 'Chưa có mẫu nào hôm nay.', en: 'No samples yet today.' },
+  'int.unavailable': {
+    vi: 'Schwab không quote được chỉ báo này qua API — không có cách nào lấy.',
+    en: 'Schwab does not quote this indicator through the API — no way to get it.',
   },
 
   // ---- analyze tab ----

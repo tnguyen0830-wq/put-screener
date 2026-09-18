@@ -1907,6 +1907,44 @@ table.results tbody tr.clickable {
   }
 }
 
+/* Lưới thẻ market internals (TICK, UVOL-DVOL, ADV-DECL, Put/Call) - cùng
+   hình dạng lưới với .cgcards (Quốc hội), mỗi thẻ tự đứng được một mình. */
+.intgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.intcard {
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  background: var(--card);
+}
+.intlabel {
+  margin: 0 0 2px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.intvalue {
+  font-family: var(--data);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 2px 0 6px;
+  color: var(--ink);
+}
+.intvalue-dash {
+  color: var(--muted);
+}
+.intmeta {
+  margin: 6px 0 0;
+}
+/* Hai chỉ báo Schwab không quote được - mờ đi để mắt lướt qua nhanh hơn,
+   nhưng vẫn ĐỨNG TRONG LƯỚI và vẫn nói rõ lý do, không bị bỏ qua âm thầm. */
+.intcard-unavail {
+  opacity: 0.7;
+}
+
 /* ---------- hồ sơ công ty (tab phân tích) ---------- */
 
 .cptags {
