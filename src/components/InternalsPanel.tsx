@@ -5,8 +5,8 @@ import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import TradingViewInternals from './TradingViewInternals';
 
-type SeriesPoint = { t: number; v: number };
-type Series = {
+export type SeriesPoint = { t: number; v: number };
+export type Series = {
   key: string;
   label: string;
   points: SeriesPoint[];
@@ -69,11 +69,16 @@ function timeFmt(t: number | null): string {
   });
 }
 
-function Sparkline({ points, signed }: { points: SeriesPoint[]; signed: boolean }) {
+/** `tall`: bản cao cho ô VIX trong khung TradingView, đứng cạnh các iframe
+ *  300px - viewBox kéo giãn theo khung (`preserveAspectRatio="none"`) và
+ *  nét vẽ giữ độ dày thật (`vector-effect`), nếu không một viewBox 260×56
+ *  phóng lên 220px cao sẽ thành một nét dày 6px méo mó. */
+export function Sparkline({ points, signed, tall }: { points: SeriesPoint[]; signed: boolean; tall?: boolean }) {
   const W = 260;
-  const H = 56;
+  const H = tall ? 120 : 56;
+  const RENDER_H = tall ? 220 : H;
   const PAD = 4;
-  if (points.length < 2) return <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} />;
+  if (points.length < 2) return <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={RENDER_H} />;
 
   const values = points.map((p) => p.v);
   const min = Math.min(...values);
@@ -86,7 +91,7 @@ function Sparkline({ points, signed }: { points: SeriesPoint[]; signed: boolean 
   const color = signed ? (last >= 0 ? 'var(--credit)' : 'var(--risk)') : 'var(--stamp)';
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={RENDER_H} preserveAspectRatio={tall ? 'none' : undefined}>
       {min <= 0 && max >= 0 && (
         <line
           x1={PAD}
@@ -105,6 +110,7 @@ function Sparkline({ points, signed }: { points: SeriesPoint[]; signed: boolean 
         strokeWidth="1.6"
         strokeLinejoin="round"
         strokeLinecap="round"
+        vectorEffect={tall ? 'non-scaling-stroke' : undefined}
       />
     </svg>
   );

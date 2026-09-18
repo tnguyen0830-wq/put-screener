@@ -63,31 +63,50 @@ const CHARTABLE: { key: string; label: string; symbol: string }[] = [
  * được đọc thành "bốn chỉ báo đều rỗng" - đúng luật `/api/gex`/`/api/rrg`
  * đã ghi ("session expiry never papered over").
  */
-async function chartableSeries(): Promise<Series[]> {
-  const raw = await Promise.all(
-    CHARTABLE.map(async (c) => {
-      try {
-        const hist = await intradayHistory(c.symbol, 5);
-        const candles: any[] = Array.isArray(hist?.candles) ? hist.candles : [];
-        const points: SeriesPoint[] = candles
-          .filter((cd) => typeof cd?.close === 'number' && typeof cd?.datetime === 'number')
-          .map((cd) => ({ t: cd.datetime, v: cd.close }));
-        return { ...c, points };
-      } catch (e: any) {
-        if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
-        return { ...c, points: [] as SeriesPoint[] };
-      }
-    })
-  );
+type ChartableRaw = (typeof CHARTABLE)[number] & { points: SeriesPoint[] };
 
-  const toSeries = (r: (typeof raw)[number]): Series => ({
+async function fetchChartable(c: (typeof CHARTABLE)[number]): Promise<ChartableRaw> {
+  try {
+    const hist = await intradayHistory(c.symbol, 5);
+    const candles: any[] = Array.isArray(hist?.candles) ? hist.candles : [];
+    const points: SeriesPoint[] = candles
+      .filter((cd) => typeof cd?.close === 'number' && typeof cd?.datetime === 'number')
+      .map((cd) => ({ t: cd.datetime, v: cd.close }));
+    return { ...c, points };
+  } catch (e: any) {
+    if (String(e?.message ?? e).includes('REAUTH_REQUIRED')) throw e;
+    return { ...c, points: [] as SeriesPoint[] };
+  }
+}
+
+function toSeries(r: ChartableRaw): Series {
+  return {
     key: r.key,
     label: r.label,
     points: r.points,
     current: r.points.length ? r.points[r.points.length - 1].v : null,
     source: 'schwab',
     asOf: r.points.length ? r.points[r.points.length - 1].t : null,
-  });
+  };
+}
+
+/**
+ * Riêng VIX, cho khung TradingView (#175). Widget nhúng KHÔNG vẽ được chỉ
+ * số VIX tiền mặt: `CBOE:VIX` bị giữ cho trang chính ("chỉ có trên
+ * TradingView"), còn nguồn duy nhất vẽ được (`CAPITALCOM:VIX`) là một CFD
+ * của nhà môi giới định giá theo HỢP ĐỒNG TƯƠNG LAI VIX - chủ app đo được
+ * 18 trong ô đó khi chỉ số tiền mặt đang 14,82. Cùng nhãn "VIX", hai con số
+ * khác nhau 3 điểm trên cùng một màn hình. Schwab lại có đúng chỉ số tiền
+ * mặt `$VIX` kèm nến 5 phút (#165), nên ô VIX bên khung TradingView lấy từ
+ * đây - MỘT request, không kéo theo ba mã còn lại.
+ */
+export async function vixSeries(): Promise<Series> {
+  const c = CHARTABLE.find((x) => x.key === 'vix')!;
+  return toSeries(await fetchChartable(c));
+}
+
+async function chartableSeries(): Promise<Series[]> {
+  const raw = await Promise.all(CHARTABLE.map(fetchChartable));
 
   const out = raw.map(toSeries);
 

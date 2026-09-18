@@ -1438,6 +1438,15 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'TradingView KHÔNG báo lỗi khi mã sai — nó lặng lẽ vẽ một cổ phiếu khác (Apple), hoặc bật hộp "chỉ có trên TradingView", hoặc vẽ được nhưng không cho xem khung 1m/5m. Ô nào như vậy thì bấm một mã khác trong hàng nút dưới ô đó; lựa chọn được nhớ riêng cho từng ô trên trình duyệt này. Không mã nào chạy thì báo lại chuỗi mã đã thử.',
     en: 'TradingView does NOT report a wrong symbol — it silently draws a different stock (Apple), or pops a "only on TradingView" notice, or draws but refuses the 1m/5m timeframes. For such a box, press another symbol in the row under it; the choice is remembered per box in this browser. If none works, report the strings you tried.',
   },
+  'int.vixTitle': { vi: 'VIX (chỉ số tiền mặt — Schwab)', en: 'VIX (cash index — Schwab)' },
+  'int.vixWhy': {
+    vi: 'Ô này là dữ liệu của APP (Schwab $VIX, nến 5 phút), không phải khung TradingView. Widget nhúng không vẽ được chỉ số VIX thật (dữ liệu CBOE bị giữ cho trang TradingView), còn nguồn duy nhất nó vẽ được (CAPITALCOM:VIX) là một CFD định giá theo HỢP ĐỒNG TƯƠNG LAI VIX — đo được 18 khi chỉ số tiền mặt là 14,82. Cùng chữ "VIX", hai công cụ khác nhau.',
+    en: 'This box is the APP’s data (Schwab $VIX, 5-minute candles), not a TradingView frame. The embed cannot draw the real VIX index (CBOE data is reserved for tradingview.com), and the one source it can draw (CAPITALCOM:VIX) is a CFD priced off VIX FUTURES — measured at 18 while the cash index read 14.82. Same word "VIX", two different instruments.',
+  },
+  'int.vixExpired': {
+    vi: 'Phiên Schwab đã hết hạn. Bấm ⚙ → Kết nối lại rồi mở lại tab này.',
+    en: 'The Schwab session has expired. Open ⚙ → Reconnect, then reopen this tab.',
+  },
   'int.tvPick': { vi: 'Mã TradingView cho ô này', en: 'TradingView symbol for this box' },
   'int.tvBlocked': {
     vi: 'Nếu các ô dưới đây trống hoặc xám: trình duyệt, tiện ích chặn quảng cáo hoặc mạng đang chặn tradingview.com — app không tự biết được điều đó (khung của bên thứ ba, app không đọc được vào trong), nên dòng này nói trước.',
