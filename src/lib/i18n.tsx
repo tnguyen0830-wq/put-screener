@@ -1435,9 +1435,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'These eight charts are embedded straight from TradingView (USI source) — all eight indicators with full history, including the two Schwab has no symbol for. THE TRADE-OFF: this is a TradingView FRAME, the app cannot read the numbers inside it — no alerts, nothing for "Ask Claude". Switch to "App\'s own data" for numbers the app can actually read.',
   },
   'int.tvFallback': {
-    vi: 'Nếu một ô hiện biểu đồ CỔ PHIẾU (ví dụ Apple) thay vì chỉ báo ghi trên nhãn: TradingView không nhận ra chuỗi mã in dưới ô đó và lặng lẽ vẽ mã mặc định của nó thay vì báo lỗi. Chuỗi mã in dưới ô là thứ cần sửa — báo đúng chuỗi đó.',
-    en: 'If a box shows a STOCK chart (e.g. Apple) instead of the indicator on its label: TradingView did not recognise the symbol printed under that box and silently drew its own default instead of an error. The printed symbol is what needs fixing — report that exact string.',
+    vi: 'TradingView KHÔNG báo lỗi khi mã sai — nó lặng lẽ vẽ một cổ phiếu khác (Apple), hoặc bật hộp "chỉ có trên TradingView", hoặc vẽ được nhưng không cho xem khung 1m/5m. Ô nào như vậy thì bấm một mã khác trong hàng nút dưới ô đó; lựa chọn được nhớ riêng cho từng ô trên trình duyệt này. Không mã nào chạy thì báo lại chuỗi mã đã thử.',
+    en: 'TradingView does NOT report a wrong symbol — it silently draws a different stock (Apple), or pops a "only on TradingView" notice, or draws but refuses the 1m/5m timeframes. For such a box, press another symbol in the row under it; the choice is remembered per box in this browser. If none works, report the strings you tried.',
   },
+  'int.tvPick': { vi: 'Mã TradingView cho ô này', en: 'TradingView symbol for this box' },
   'int.tvBlocked': {
     vi: 'Nếu các ô dưới đây trống hoặc xám: trình duyệt, tiện ích chặn quảng cáo hoặc mạng đang chặn tradingview.com — app không tự biết được điều đó (khung của bên thứ ba, app không đọc được vào trong), nên dòng này nói trước.',
     en: 'If the boxes below are empty or grey: your browser, an ad blocker, or the network is blocking tradingview.com — the app cannot detect that itself (a third-party frame is opaque to it), which is why this line says so up front.',
