@@ -1016,6 +1016,33 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chỉ giữ các nhóm đang sáng. Vốn hoá tính từ dữ liệu Schwab (giá × số cổ phiếu lưu hành), nên là số sống; mã Schwab không trả số cổ phiếu thì vẫn đi qua và được đánh dấu.',
     en: 'Only the highlighted groups are kept. Market cap is computed from Schwab data (price × shares outstanding), so it is live; a symbol whose share count Schwab does not return still passes, and is flagged.',
   },
+  // ---- nút dòng tiền RRG (tab Đầu tư dài hạn) ----
+  'rrgf.label': { vi: 'Dòng tiền vào ngành (RRG)', en: 'Sector money flow (RRG)' },
+  /* Câu này phải nói HAI điều, và điều thứ hai quan trọng hơn: đây là góc
+     phần tư của NGÀNH, không phải của mã. Thiếu vế đó thì cái nhãn "đang
+     hồi" bị đọc thành một nhận định về chính công ty. */
+  'rrgf.none': {
+    vi: 'Chưa chọn góc nào = không lọc theo dòng tiền. Muốn “ngành đang uptrend mạnh” thì bấm Dẫn đầu (mạnh hơn thị trường VÀ còn đang mạnh lên); Đang hồi là ngành còn yếu hơn thị trường nhưng đã quay đầu lên — thường là chỗ mã rớt về hỗ trợ hay nằm. Đây là góc phần tư của NGÀNH (11 quỹ ngành so với SPY, cùng số với biểu đồ RRG bên tab Heatmap), KHÔNG phải của riêng mã — một mã yếu vẫn có thể nằm trong ngành đang hồi, và ngược lại.',
+    en: 'Nothing selected = no money-flow filter. For "sectors in a strong uptrend" pick Leading (stronger than the market AND still strengthening); Improving means still weaker than the market but turning up — often where stocks falling toward support sit. This is the quadrant of the SECTOR (11 sector ETFs against SPY, the same numbers as the RRG chart in the Heatmap tab), NOT of the individual stock — a weak stock can sit in an improving sector, and the other way round.',
+  },
+  'rrgf.some': {
+    vi: 'Chỉ giữ mã thuộc ngành đang ở các góc đang sáng. Nhắc lại: đây là góc của NGÀNH, không phải của mã. Mã không tra được ngành (ngoài rổ S&P 500) vẫn đi qua và được đánh dấu.',
+    en: 'Only stocks whose sector sits in a highlighted quadrant are kept. Again: this is the SECTOR’s quadrant, not the stock’s. A symbol whose sector cannot be looked up (outside the S&P 500 list) still passes, and is flagged.',
+  },
+  'lt.rrgDropped': {
+    vi: (n: number) =>
+      `${n} mã bị loại vì ngành của chúng không nằm trong các góc đã chọn. Bỏ chọn hết các nút dòng tiền thì chúng được xét tiếp (vẫn phải qua các cổng còn lại).`,
+    en: (n: number) =>
+      `${n} symbols were dropped because their sector is not in the selected quadrants. Clear the money-flow buttons to let them through to the remaining gates.`,
+  },
+  /* Vòng xoay ngành hỏng KHÁC HẲN "ngành này không nằm trong góc đã chọn":
+     một bên là cả bảng mất cột, một bên là lọc đúng luật. Nói ra lý do thật
+     chứ không để cột trống tự giải thích. */
+  'lt.rrgError': {
+    vi: (m: string) => `Không tính được vòng xoay dòng tiền ngành (${m}) — cổng dòng tiền hiện dấu "?" cho mọi mã, và cột ngành để trống.`,
+    en: (m: string) => `Could not compute the sector rotation (${m}) — the money-flow gate shows "?" for every symbol and the sector column is blank.`,
+  },
+  'lt.col.rrg': { vi: 'Dòng tiền ngành', en: 'Sector flow' },
   'lt.capDropped': {
     vi: (n: number) =>
       `${n} mã bị loại vì vốn hoá ngoài nhóm đã chọn. Bỏ chọn hết các nút vốn hoá thì chúng được xét tiếp (vẫn phải qua các cổng còn lại).`,

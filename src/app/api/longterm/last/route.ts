@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readLtScan, type LtUniverse } from '@/lib/lt-store';
 import { parseCaps } from '@/lib/marketcap';
+import type { Quadrant } from '@/lib/rrg';
 import { requireUser } from '@/lib/userstore';
 
 /** Kết quả quét Long-term gần nhất của một phạm vi, để mở lại tab là có ngay. */
@@ -17,8 +18,19 @@ export async function GET(req: NextRequest) {
      lần quét kia dưới cái ô vừa gạt. */
   const aboveSma200 = req.nextUrl.searchParams.get('aboveSma200') === '1';
   const caps = parseCaps(req.nextUrl.searchParams.get('caps'));
+  /* Cùng luật chuẩn hoá với route quét: đủ bốn góc = không lọc, và thứ tự
+     không được quyết định ô nhớ nào bị đọc. */
+  const ALL_Q: Quadrant[] = ['leading', 'weakening', 'lagging', 'improving'];
+  const picked = (req.nextUrl.searchParams.get('rrg') ?? '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter((x): x is Quadrant => (ALL_Q as string[]).includes(x));
+  const quadrants =
+    picked.length === ALL_Q.length ? [] : ALL_Q.filter((q) => picked.includes(q));
   try {
-    return NextResponse.json({ scan: await readLtScan(universe, user, aboveSma200, caps) });
+    return NextResponse.json({
+      scan: await readLtScan(universe, user, aboveSma200, caps, quadrants),
+    });
   } catch (e: any) {
     /* Đọc hỏng thì NÓI RA. Trả `{scan:null}` kèm 200 sẽ hiện y hệt "chưa
        quét lần nào", mà hai thứ đó cần hai cách sửa khác nhau. */

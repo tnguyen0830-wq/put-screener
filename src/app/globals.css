@@ -1352,18 +1352,18 @@ table.results tbody tr.clickable {
   color: var(--card);
 }
 
-/* Ba nút vốn hoá (CapChips). Chọn NHIỀU được, nên cố ý khác `.segmented`
-   (lưới hai cột, chọn một, tô `--ink`): đây là flex bọc dòng và tô bằng
-   `--stamp` - đúng màu ô tích của app - để nhìn là biết kiểu điều khiển
-   khác nhau. Chỉ dùng biến màu đã có sẵn, nên không phải sửa cả ba khối
-   theme. */
-.capchips {
+/* Hàng nút bật/tắt chọn NHIỀU (ChipRow: vốn hoá, góc phần tư RRG). Cố ý khác
+   `.segmented` (lưới hai cột, chọn một, tô `--ink`): đây là flex bọc dòng và
+   tô bằng `--stamp` - đúng màu ô tích của app - để nhìn là biết kiểu điều
+   khiển khác nhau. Chỉ dùng biến màu đã có sẵn, nên không phải sửa cả ba
+   khối theme. */
+.chiprow {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.capchips button {
+.chiprow button {
   padding: 6px 10px;
   background: var(--paper);
   border: 1px solid var(--rule);
@@ -1375,14 +1375,14 @@ table.results tbody tr.clickable {
   color: var(--muted);
 }
 
-.capchips button.on {
+.chiprow button.on {
   background: var(--stamp);
   border-color: var(--stamp);
   color: var(--card);
   font-weight: 700;
 }
 
-.capchips button:disabled {
+.chiprow button:disabled {
   opacity: 0.5;
   cursor: default;
 }
