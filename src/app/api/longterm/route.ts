@@ -10,6 +10,7 @@ import { ciksFor, companyFacts } from '@/lib/sec';
 import { secDiagnosis, secFundamentals, type SecFundamentals } from '@/lib/secfacts';
 import { peContext, recordPe, flushPe } from '@/lib/pehistory';
 import { saveLtScan } from '@/lib/lt-store';
+import { capPasses, marketCapOf, parseCaps } from '@/lib/marketcap';
 import { pivotLows, readSupport, readTrend, supportZones } from '@/lib/support';
 import {
   gatesFor,
@@ -64,7 +65,7 @@ type Event =
   | { type: 'candidate'; row: LtCandidate }
   | { type: 'skip'; symbol: string; reason: string }
   | { type: 'error'; message: string }
-  | { type: 'done'; scanned: number; kept: number; at: string; belowSma200: number };
+  | { type: 'done'; scanned: number; kept: number; at: string; belowSma200: number; capDropped: number };
 
 type Constituent = { symbol: string; name: string; sector: string };
 
@@ -94,6 +95,9 @@ export async function GET(req: NextRequest) {
      `gatesFor`. Mặc định TẮT ở phía server: một request thiếu tham số phải
      cho ra bảng rộng hơn chứ không phải bảng bị lọc thêm mà không ai yêu cầu. */
   const requireAboveSma200 = req.nextUrl.searchParams.get('aboveSma200') === '1';
+  /* Bậc vốn hoá đã chọn. Rỗng = không lọc, và mặc định phải là rỗng vì một
+     request thiếu tham số không được âm thầm loại mã. */
+  const caps = parseCaps(req.nextUrl.searchParams.get('caps'));
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -114,7 +118,8 @@ export async function GET(req: NextRequest) {
 
         /* ---- tầng 0: giá + đỉnh/đáy 52 tuần, gộp lô ---- */
         const q = await quotes(list.map((c) => c.symbol));
-        const tier1: (Constituent & { price: number })[] = [];
+        const tier1: (Constituent & { price: number; marketCap: number | null })[] = [];
+        let capDropped = 0;
         for (const c of list) {
           const row = q[c.symbol];
           const price = Number(row?.quote?.lastPrice ?? 0);
@@ -130,13 +135,19 @@ export async function GET(req: NextRequest) {
           const aboveLow = ((price - lo) / lo) * 100;
           if (offHigh < MIN_OFF_HIGH_PCT) continue;       // chưa rớt thì không phải việc của tab này
           if (aboveLow < MIN_ABOVE_52W_LOW_PCT) continue; // sát đáy = dao đang rơi
-          tier1.push({ ...c, price });
+          /* Vốn hoá đi kèm CHÍNH lượt `quotes()` này (`sharesOutstanding`),
+             nên lọc ở đây không tốn thêm request nào - và cắt ở tầng 0 là
+             cắt trước cả nến lẫn Finviz lẫn SEC. Mã Schwab không trả số cổ
+             phiếu thì ĐI QUA kèm cờ, `capPasses` lo phần đó. */
+          const marketCap = marketCapOf(row);
+          if (!capPasses(marketCap, caps).passed) { capDropped++; continue; }
+          tier1.push({ ...c, price, marketCap });
         }
 
         /* ---- tầng 1: nến, vùng hỗ trợ, xu hướng ---- */
         send({ type: 'phase', phase: 'support', total: tier1.length });
         const tier2: {
-          c: Constituent & { price: number };
+          c: Constituent & { price: number; marketCap: number | null };
           support: ReturnType<typeof readSupport>;
           trend: ReturnType<typeof readTrend>;
         }[] = [];
@@ -152,8 +163,8 @@ export async function GET(req: NextRequest) {
             const trend = readTrend(candles, c.price);
             const support = readSupport(c.price, supportZones(pivotLows(candles)));
             const pre = gatesFor(
-              { price: c.price, trend, support, fa: EMPTY_FA },
-              { requireAboveSma200 }
+              { price: c.price, trend, support, fa: EMPTY_FA, marketCap: c.marketCap },
+              { requireAboveSma200, caps }
             );
             const failed = pre.filter((g) => TIER1_KEYS.has(g.key) && !g.passed);
             /* Đếm mã rụng CHỈ vì cổng SMA200, để bảng trống nói được vì sao
@@ -221,8 +232,10 @@ export async function GET(req: NextRequest) {
             if (fa.pe !== null) await recordPe(c.symbol, fa.pe);
             const pe = await peContext(c.symbol, fa.pe);
 
-            const input = { price: c.price, trend, support, fa, sec: secRes.sec };
-            const gates = gatesFor(input, { requireAboveSma200 });
+            const input = {
+              price: c.price, trend, support, fa, sec: secRes.sec, marketCap: c.marketCap,
+            };
+            const gates = gatesFor(input, { requireAboveSma200, caps });
             if (gates.some((g) => !g.passed)) return;
 
             const breakdown = scoreComponents(input, pe);
@@ -231,6 +244,7 @@ export async function GET(req: NextRequest) {
               name: c.name,
               sector: c.sector || fv.profile?.sector || '',
               price: c.price,
+              marketCap: c.marketCap,
               trend,
               nearestSupport: support.nearest,
               distancePct: support.distancePct,
@@ -276,6 +290,8 @@ export async function GET(req: NextRequest) {
               kept: rows.length,
               aboveSma200: requireAboveSma200,
               belowSma200,
+              caps,
+              capDropped,
               rows,
             },
             user
@@ -285,7 +301,7 @@ export async function GET(req: NextRequest) {
         }
 
         for (const row of rows) send({ type: 'candidate', row });
-        send({ type: 'done', scanned: list.length, kept: rows.length, at, belowSma200 });
+        send({ type: 'done', scanned: list.length, kept: rows.length, at, belowSma200, capDropped });
       } catch (e: any) {
         const msg = String(e?.message ?? e);
         send({ type: 'error', message: msg.slice(0, 400) });

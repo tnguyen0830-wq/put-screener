@@ -1001,6 +1001,28 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) =>
       `${n} symbols were dropped for sitting below their SMA200. Untick "Only stocks still above their SMA200" to let them through to the remaining gates.`,
   },
+  // ---- nút vốn hoá, dùng chung hai tab ----
+  'cap.label': { vi: 'Vốn hoá', en: 'Market cap' },
+  'cap.mega': { vi: 'Mega ≥200 tỷ', en: 'Mega ≥$200B' },
+  'cap.big': { vi: 'Big 10–200 tỷ', en: 'Big $10–200B' },
+  'cap.mid': { vi: 'Mid 2–10 tỷ', en: 'Mid $2–10B' },
+  /* Không bấm nút nào là KHÔNG lọc, không phải "loại sạch" - ba nút tối
+     thui trông y hệt một bộ lọc đang chặn hết, nên phải nói ra. */
+  'cap.none': {
+    vi: 'Chưa chọn nhóm nào = không lọc theo vốn hoá (mã nhỏ hơn 2 tỷ cũng vào). Bấm được nhiều nút cùng lúc.',
+    en: 'Nothing selected = no market-cap filter (stocks under $2B come through too). You can select several at once.',
+  },
+  'cap.some': {
+    vi: 'Chỉ giữ các nhóm đang sáng. Vốn hoá tính từ dữ liệu Schwab (giá × số cổ phiếu lưu hành), nên là số sống; mã Schwab không trả số cổ phiếu thì vẫn đi qua và được đánh dấu.',
+    en: 'Only the highlighted groups are kept. Market cap is computed from Schwab data (price × shares outstanding), so it is live; a symbol whose share count Schwab does not return still passes, and is flagged.',
+  },
+  'lt.capDropped': {
+    vi: (n: number) =>
+      `${n} mã bị loại vì vốn hoá ngoài nhóm đã chọn. Bỏ chọn hết các nút vốn hoá thì chúng được xét tiếp (vẫn phải qua các cổng còn lại).`,
+    en: (n: number) =>
+      `${n} symbols were dropped for sitting outside the selected market-cap groups. Clear the market-cap buttons to let them through to the remaining gates.`,
+  },
+  'lt.col.cap': { vi: 'Vốn hoá', en: 'Mkt cap' },
   'lt.scan': { vi: 'Quét', en: 'Scan' },
   'lt.scanning': { vi: 'Đang quét…', en: 'Scanning…' },
   'lt.phase.quotes': { vi: 'Đang lấy giá và đỉnh/đáy 52 tuần (gộp lô)…', en: 'Fetching quotes and 52-week range (batched)…' },

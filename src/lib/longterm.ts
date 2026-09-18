@@ -1,3 +1,4 @@
+import { capPasses, type CapTier } from './marketcap';
 import type { PeContext } from './pehistory';
 import type { SecFundamentals } from './secfacts';
 import type { SupportRead, SupportZone, TrendRead } from './support';
@@ -114,6 +115,8 @@ export type LtGate = {
 export type LtGateOptions = {
   /** Đòi giá nằm TRÊN SMA200. Tắt (mặc định của hàm) = chỉ xét độ dốc. */
   requireAboveSma200?: boolean;
+  /** Bậc vốn hoá được chọn. Rỗng (mặc định) = không lọc theo vốn hoá. */
+  caps?: readonly CapTier[];
 };
 
 export type LtInput = {
@@ -124,6 +127,8 @@ export type LtInput = {
   /** null = chưa hỏi SEC hoặc SEC không có gì cho mã này (ETF, công ty
    *  nước ngoài dùng IFRS). Ba cổng SEC ra `unknown` khi null. */
   sec?: SecFundamentals | null;
+  /** Vốn hoá từ Schwab (giá × số cổ phiếu), tính ở tầng 0. null = chưa biết. */
+  marketCap?: number | null;
 };
 
 /**
@@ -182,6 +187,20 @@ export function gatesFor(input: LtInput, opts?: LtGateOptions): LtGate[] {
                chung của repo: thiếu dữ liệu không phải bằng chứng có vấn đề. */
             passed: trend.aboveSma200 === null ? true : trend.aboveSma200,
             unknown: trend.aboveSma200 === null,
+          } as LtGate,
+        ]
+      : []),
+    /* Cổng thứ hai do người dùng bật, cùng khuôn: chỉ có mặt khi có chọn.
+       Vốn hoá đọc từ SCHWAB (giá × số cổ phiếu, tính ở tầng 0), KHÔNG phải
+       ô `fa.marketCap` của Finviz ngay bên dưới - Finviz là số cào theo
+       ngày còn cái này là số sống, và quan trọng hơn: nó có mặt ở tầng 0
+       nên lọc được trước khi tốn bất cứ request nào theo từng mã. */
+    ...(opts?.caps?.length
+      ? [
+          {
+            key: 'marketCap',
+            label: `Vốn hoá thuộc nhóm đã chọn (${opts.caps.join(', ')})`,
+            ...capPasses(input.marketCap, opts.caps),
           } as LtGate,
         ]
       : []),
@@ -337,6 +356,8 @@ export type LtCandidate = {
   faMissing: string[];
   pe: PeContext | null;
   targetUpsidePct: number | null;
+  /** Vốn hoá Schwab (giá × số cổ phiếu). null = Schwab không trả số cổ phiếu. */
+  marketCap: number | null;
   /** Số liệu 10-K từ SEC. null kèm `secReason` nói vì sao. */
   sec: SecFundamentals | null;
   /** 'no-cik' (ETF / không có trong danh bạ SEC) · 'no-data' (có CIK nhưng

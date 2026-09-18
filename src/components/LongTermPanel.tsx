@@ -2,6 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import CapChips from './CapChips';
+import { capsKey, type CapTier } from '@/lib/marketcap';
 
 /* Hình dạng khớp với LtCandidate của src/lib/longterm.ts. Khai báo lại ở đây
    thay vì import kiểu từ server: component này là 'use client', còn chuỗi
@@ -19,6 +21,7 @@ type Row = {
     aboveSma200: boolean | null; high52w: number | null; low52w: number | null;
     offHighPct: number | null; aboveLowPct: number | null;
   };
+  marketCap: number | null;
   nearestSupport: Zone | null;
   distancePct: number | null;
   brokenSupport: Zone | null;
@@ -65,6 +68,8 @@ export default function LongTermPanel() {
      không đóng cứng: mã rớt đủ sâu để tab này quan tâm thì phần lớn đã thủng
      SMA200, nên phải bỏ tích được khi bảng trống. */
   const [aboveSma200, setAboveSma200] = useState(true);
+  /* Rỗng = không lọc. Mặc định rộng nhất, cùng lý do như bên tab Screener. */
+  const [caps, setCaps] = useState<CapTier[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
@@ -72,7 +77,7 @@ export default function LongTermPanel() {
   const [err, setErr] = useState<string | null>(null);
   const [scannedAt, setScannedAt] = useState<string | null>(null);
   const [summary, setSummary] = useState<
-    { scanned: number; kept: number; belowSma200: number } | null
+    { scanned: number; kept: number; belowSma200: number; capDropped: number } | null
   >(null);
   const [open, setOpen] = useState<string | null>(null);
   /* Bảng đang hiện đến từ kho chứ không phải từ lượt quét vừa rồi. Phải nói
@@ -87,6 +92,11 @@ export default function LongTermPanel() {
      đang quét bằng ảnh chụp cũ. */
   const runningRef = useRef(false);
 
+  /* Một chỗ dựng tham số cho CẢ hai đường gọi (nạp lại và quét). Hai chuỗi
+     query dựng riêng là hai chỗ có thể quên cùng một tham số, rồi bảng nạp
+     về không khớp với mấy cái nút đang sáng. */
+  const query = `universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}&caps=${caps.join(',')}`;
+
   /* Mở tab lên là có ngay kết quả lần quét trước, và chạy lại mỗi khi đổi
      phạm vi HOẶC gạt ô tích SMA200, vì mỗi tổ hợp lưu riêng: gạt từ
      watchlist sang cả rổ mà vẫn thấy bảng của watchlist là đọc nhầm kết
@@ -97,10 +107,7 @@ export default function LongTermPanel() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(
-          `/api/longterm/last?universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}`,
-          { cache: 'no-store' }
-        );
+        const res = await fetch(`/api/longterm/last?${query}`, { cache: 'no-store' });
         const j = await res.json();
         if (!alive || runningRef.current) return;
         if (j.scan) {
@@ -113,6 +120,7 @@ export default function LongTermPanel() {
                phải bịa một con số, và 0 đọc đúng: hồi đó chưa có cổng nào
                loại mã vì SMA200. */
             belowSma200: j.scan.belowSma200 ?? 0,
+            capDropped: j.scan.capDropped ?? 0,
           });
           setRestored(true);
         } else {
@@ -126,7 +134,12 @@ export default function LongTermPanel() {
       }
     })();
     return () => { alive = false; };
-  }, [universe, aboveSma200]);
+    /* `capsKey` chứ không phải mảng `caps`: mảng là tham chiếu mới mỗi lần
+       render nên effect sẽ chạy lại vô ích, còn khoá là chuỗi ổn định và
+       chuẩn hoá thứ tự - bấm mega-rồi-big và big-rồi-mega là cùng một bộ
+       lọc, không việc gì phải nạp lại. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [universe, aboveSma200, capsKey(caps)]);
 
   const scan = useCallback(async () => {
     runningRef.current = true;
@@ -134,10 +147,7 @@ export default function LongTermPanel() {
     setRestored(false); setScannedAt(null); setOpen(null);
     setPhase('quotes'); setProg(null);
     try {
-      const res = await fetch(
-        `/api/longterm?universe=${universe}&aboveSma200=${aboveSma200 ? 1 : 0}`,
-        { cache: 'no-store' }
-      );
+      const res = await fetch(`/api/longterm?${query}`, { cache: 'no-store' });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -158,7 +168,12 @@ export default function LongTermPanel() {
           else if (e.type === 'error') setErr(e.message);
           else if (e.type === 'done') {
             setScannedAt(e.at);
-            setSummary({ scanned: e.scanned, kept: e.kept, belowSma200: e.belowSma200 ?? 0 });
+            setSummary({
+              scanned: e.scanned,
+              kept: e.kept,
+              belowSma200: e.belowSma200 ?? 0,
+              capDropped: e.capDropped ?? 0,
+            });
           }
         }
       }
@@ -168,7 +183,7 @@ export default function LongTermPanel() {
       runningRef.current = false;
       setRunning(false); setPhase(null); setProg(null);
     }
-  }, [universe, aboveSma200]);
+  }, [query]);
 
   return (
     <section>
@@ -184,6 +199,8 @@ export default function LongTermPanel() {
           {t('lt.sp500')}
         </button>
       </div>
+
+      <CapChips value={caps} onChange={setCaps} disabled={running} />
 
       <label className="check">
         <input
@@ -229,6 +246,12 @@ export default function LongTermPanel() {
           đã loại bao nhiêu mã, và bỏ tích thì chúng được xét tiếp. */}
       {summary && summary.belowSma200 > 0 && (
         <p className="hint hint-warn">{t('lt.belowSmaCount', summary.belowSma200)}</p>
+      )}
+
+      {/* Cùng lý do với dòng trên: một bảng trống vì bộ lọc và một bảng
+          trống vì không mã nào đạt cần hai hành động khác hẳn nhau. */}
+      {summary && summary.capDropped > 0 && (
+        <p className="hint hint-warn">{t('lt.capDropped', summary.capDropped)}</p>
       )}
 
       {/* Ảnh chụp, không phải giá sống - và câu này phải là CẢNH BÁO chứ
@@ -435,6 +458,10 @@ function Detail({ row }: { row: Row }) {
       <h4>{t('lt.faHead')}</h4>
       <table className="ltmini">
         <tbody>
+          {/* Vốn hoá của SCHWAB (giá × số cổ phiếu), không phải ô của
+              Finviz - đây là số cùng nguồn với cái bộ lọc đang dùng, nên
+              nhìn vào là hiểu vì sao mã này qua hay không qua. */}
+          <tr><td>{t('lt.col.cap')}</td><td>{big(row.marketCap)}</td></tr>
           <tr><td>EPS (ttm)</td><td>{n2(row.fa.eps)}</td></tr>
           <tr><td>P/E · Forward P/E · PEG</td><td>{n2(row.fa.pe, 1)} · {n2(row.fa.forwardPe, 1)} · {n2(row.fa.peg, 2)}</td></tr>
           <tr><td>ROE · ROIC</td><td>{pc(row.fa.roe)} · {pc(row.fa.roic)}</td></tr>

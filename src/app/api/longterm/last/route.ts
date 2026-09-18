@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readLtScan, type LtUniverse } from '@/lib/lt-store';
+import { parseCaps } from '@/lib/marketcap';
 import { requireUser } from '@/lib/userstore';
 
 /** Kết quả quét Long-term gần nhất của một phạm vi, để mở lại tab là có ngay. */
@@ -15,8 +16,9 @@ export async function GET(req: NextRequest) {
      nhau - nên phải hỏi đúng cái đang bật, không thì màn hình hiện bảng của
      lần quét kia dưới cái ô vừa gạt. */
   const aboveSma200 = req.nextUrl.searchParams.get('aboveSma200') === '1';
+  const caps = parseCaps(req.nextUrl.searchParams.get('caps'));
   try {
-    return NextResponse.json({ scan: await readLtScan(universe, user, aboveSma200) });
+    return NextResponse.json({ scan: await readLtScan(universe, user, aboveSma200, caps) });
   } catch (e: any) {
     /* Đọc hỏng thì NÓI RA. Trả `{scan:null}` kèm 200 sẽ hiện y hệt "chưa
        quét lần nào", mà hai thứ đó cần hai cách sửa khác nhau. */
