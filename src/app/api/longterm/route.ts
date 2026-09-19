@@ -3,6 +3,7 @@ import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
 import { quotes } from '@/lib/schwab';
 import { requireUser } from '@/lib/userstore';
+import { logActivity } from '@/lib/activity';
 import { readWatchlist } from '@/lib/watchlist';
 import { historyCandles } from '@/lib/history';
 import { finvizQuote } from '@/lib/finviz';
@@ -116,6 +117,11 @@ export async function GET(req: NextRequest) {
       ? []
       : ALL_Q.filter((q) => picked.includes(q));
   const wantRrg = quadrants.length > 0;
+
+  /* Ghi nhật ký hoạt động (lib/activity.ts): lượt quét này tốn hạn mức
+     Schwab, Finviz và SEC của chủ app, nên nó là một trong những việc màn
+     hình Hoạt động sinh ra để hiện. */
+  await logActivity(user, 'ltscan', universe);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

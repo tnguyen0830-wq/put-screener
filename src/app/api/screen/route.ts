@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentScan, startScan } from '@/lib/scan-job';
 import { requireUser } from '@/lib/userstore';
+import { logActivity } from '@/lib/activity';
 import type { Filters, StreamEvent } from '@/lib/types';
 
 /**
@@ -49,6 +50,10 @@ export async function POST(req: NextRequest) {
     // nhau hạn mức Schwab và làm chậm cả hai.
     return NextResponse.json({ error: 'SCAN_BUSY' }, { status: 409 });
   }
+  /* Ghi nhật ký hoạt động (lib/activity.ts). Không bao giờ ném, không chặn
+     đường đi chính - xem chú thích ở `logActivity`. */
+  await logActivity(user, 'scan', job.universe);
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

@@ -5,6 +5,8 @@ import { symbolNews } from '@/lib/news';
 import { finvizQuote } from '@/lib/finviz';
 import { fmpCompanyProfile, mergeProfile } from '@/lib/profile';
 import { technicalSnapshot } from '@/lib/technical';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,9 @@ export async function GET(req: NextRequest) {
   if (!raw)
     return NextResponse.json({ error: 'Thiếu tham số symbol' }, { status: 400 });
   const symbol = normalizeSymbol(raw);
+  /* Ghi nhật ký hoạt động (lib/activity.ts). Không bao giờ ném, không chặn
+     đường đi chính - xem chú thích ở `logActivity`. */
+  await logActivity(currentUser(req), 'analyze', symbol);
 
   try {
     const [snap, earnings, news, finviz, fmpProfile] = await Promise.all([

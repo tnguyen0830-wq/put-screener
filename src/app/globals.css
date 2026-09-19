@@ -2728,6 +2728,62 @@ body {
 .acctlist td {
   color: var(--muted);
 }
+/* --- Hoạt động của người nhà (#193) ---------------------------------
+   Chỉ dùng biến màu ĐÃ CÓ, nên không phải sửa ba khối theme của file này
+   (bare :root / prefers-color-scheme / [data-theme]) - đúng cái bẫy đã ghi
+   trong CLAUDE.md. Chấm xanh dùng --credit vì "đang mở app" là trạng thái
+   tốt/đang sống, cùng quy ước xanh-đỏ của cả app. */
+.actsub {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.actonline {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.actonline li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.actdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--credit);
+  flex: none;
+}
+.actme,
+.actwhere,
+.actago {
+  font-size: 12px;
+  color: var(--muted);
+}
+.actwhere {
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink);
+}
+.actn {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.actlog td:first-child {
+  white-space: nowrap;
+}
+
 .acctactions {
   display: flex;
   gap: 8px;

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ElevenError, MAX_CHARS, elevenConfigured, listVoices, pickElevenVoice, synthesize } from '@/lib/eleventts';
 import { cleanForSpeech } from '@/lib/tts';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 /**
  * Đọc bản tóm tắt bằng giọng AI (ElevenLabs). Chỉ chạy khi BẤM; cache trên
@@ -32,6 +34,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'TOO_LONG', chars: text.length, max: MAX_CHARS }, { status: 413 });
   }
   const chosen = typeof body?.voiceId === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(body.voiceId) ? body.voiceId : null;
+
+  /* Ghi SỐ KÝ TỰ, vì đó chính là đơn vị ElevenLabs tính tiền - "đã bấm
+     Nghe" không trả lời được câu hỏi tốn bao nhiêu. Ghi TRƯỚC khi tổng hợp:
+     lượt gọi hỏng vẫn là một lần người dùng bấm nút tiêu tiền, và một lần
+     bấm không hiện ra vì nó lỗi là đúng cái kiểu im lặng repo này chống. */
+  await logActivity(currentUser(req), 'tts', `${text.length} ký tự`);
 
   try {
     const voices = await listVoices();

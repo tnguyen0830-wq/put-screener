@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, deleteUser, listUsers, setPassword } from '@/lib/userstore';
+import { clearPresence } from '@/lib/activity';
 
 /**
  * Quản lý tài khoản người nhà. **Chỉ chủ app** - `/api/users` nằm trong
@@ -41,5 +42,10 @@ export async function DELETE(req: NextRequest) {
   const name = req.nextUrl.searchParams.get('name') ?? '';
   const r = await deleteUser(name);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+  /* Bỏ khỏi ô "đang mở app" ngay. Không làm thì người vừa bị xoá còn hiện
+     là đang online thêm năm phút nữa, trong khi nhịp báo kế tiếp của họ đã
+     bị 401 - tức màn hình nói một điều đã không còn đúng. Lịch sử thì GIỮ
+     NGUYÊN: những việc họ đã làm vẫn là việc đã xảy ra. */
+  await clearPresence(name);
   return NextResponse.json({ ok: true, users: await listUsers() });
 }

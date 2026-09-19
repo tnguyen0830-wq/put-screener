@@ -191,6 +191,42 @@ mã đặt lại được mật khẩu chủ app thì một mã lọt ra ngoài 
 tài khoản phụ — nó trao cả tab My Portfolio, tức vị thế Schwab thật. Anh
 quên mật khẩu thì đổi `APP_PASSWORD` trên Render, xem `DEPLOY.md`.
 
+### Hoạt động — ai đang mở app, và đã dùng những gì
+
+Cùng chỗ: ⚙️ → **Quản lý tài khoản**, phần **Hoạt động** nằm ngay trên danh
+sách tài khoản. Chỉ chủ app đọc được (người nhà gõ thẳng địa chỉ sẽ bị đưa về
+trang chủ).
+
+- **Đang mở app** — ai đang ngồi đó ngay lúc này và đang mở tab nào. Trình
+  duyệt báo nhịp hai phút một lần, và **chỉ khi tab đang hiện**: một cửa sổ bỏ
+  quên trong nền tính là đã rời đi. Không thấy nhịp trong 5 phút là biến mất
+  khỏi danh sách.
+- **Đã dùng gần đây** — nhật ký, mới nhất trước, giữ 14 ngày.
+
+Chỉ ghi những việc **tốn hạn mức hoặc tốn tiền** (quét Sell Put, quét
+Long-term, Analyze một mã, hỏi Claude, "Tại sao rớt?", tóm tắt tin, dịch tiêu
+đề, giọng đọc AI, sửa watchlist) cộng với đăng nhập, đăng xuất và đổi tab. Xem
+bảng, cuộn trang hay bấm tab con thì không — chúng không tốn gì và sẽ nhấn chìm
+phần đáng đọc. Những việc giống hệt nhau xảy ra sát nhau được gộp thành một
+dòng kèm số lần.
+
+Nhật ký ghi **ở máy chủ, ngay trong đoạn mã làm việc đó** — không phải do trình
+duyệt tự khai — nên người nhà không tắt được, và cũng không báo thay người khác
+được. Thứ duy nhất trình duyệt được phép nói là "tôi đang mở tab nào", và tên
+tab phải nằm trong danh sách cho phép.
+
+**Telegram:** mỗi lần người nhà đăng nhập, bạn nhận một dòng kèm giờ New York
+và địa chỉ IP — nhiều nhất một tin mỗi người mỗi 30 phút, để một cái điện thoại
+xoay vòng đăng nhập không biến kênh cảnh báo danh mục thành chỗ ồn. Chưa đặt
+`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` thì phần này tự tắt, nhật ký trong app
+vẫn chạy. Đăng nhập của **chính bạn** cố ý không nhắn: báo cho bạn biết bạn vừa
+đăng nhập là tiếng ồn.
+
+Nhật ký nằm cạnh `SCAN_PATH` trên đĩa (`/var/data/activity.log`, cộng
+`activity-presence.json`), **không có biến môi trường mới** và không có bước
+deploy nào. File tự dọn khi vượt 512 KB. Nó bắt đầu từ lần deploy đưa
+tính năng này lên — việc làm trước đó không có ở đây.
+
 ### Ba điều cần biết
 
 Mọi người **dùng chung phiên Schwab và chung hạn mức** của bạn (người nhà quét

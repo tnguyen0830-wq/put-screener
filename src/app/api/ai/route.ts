@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { facts, system } from '@/lib/airead';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 /**
  * Claude's read of the indicators already on screen in the analyze tab.
@@ -47,6 +49,8 @@ export async function POST(req: Request) {
   if (!analysis?.symbol) {
     return Response.json({ error: 'Missing analysis' }, { status: 400 });
   }
+
+  await logActivity(currentUser(req), 'ai', String(analysis.symbol));
 
   const client = new Anthropic();
   const params = {

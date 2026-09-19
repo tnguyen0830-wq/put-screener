@@ -22,6 +22,7 @@ import LongTermPanel from '@/components/LongTermPanel';
 import NewsPanel from '@/components/NewsPanel';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
+import { TABS, type Tab } from '@/lib/tabs';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
 import { DEFAULT_OFF, type Candidate, type Filters, type StreamEvent } from '@/lib/types';
@@ -56,8 +57,9 @@ type Status = {
   daysLeft?: number;
 };
 
-const TABS = ['news', 'longterm', 'screener', 'analyze', 'heatmap', 'insider', 'portfolio'] as const;
-type Tab = (typeof TABS)[number];
+/* TABS/Tab nằm ở `lib/tabs.ts` chứ không ở đây từ khi server phải kiểm tên
+   tab của nhịp báo hoạt động - một danh sách, hai nơi dùng, không có bản
+   chép nào để trôi lệch. */
 /** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
 const INSIDER_SUBS = ['form4', 'congress', 'flow', 'darkpool'] as const;
@@ -67,6 +69,11 @@ type InsiderSub = (typeof INSIDER_SUBS)[number];
  *  GEX) xếp chồng trong một cột phải cuộn rất dài mới thấy hết. */
 const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex', 'internals'] as const;
 type HeatmapSub = (typeof HEATMAP_SUBS)[number];
+
+/** Nhịp báo "đang mở tab nào". Hai phút, dưới hẳn ngưỡng 5 phút mà server
+ *  coi là đã rời đi (`ONLINE_MS`), nên một nhịp rớt không làm người đang
+ *  ngồi đó biến mất khỏi màn hình Hoạt động. */
+const HEARTBEAT_MS = 2 * 60_000;
 
 export default function Page() {
   const { t } = useLang();
@@ -94,6 +101,37 @@ export default function Page() {
     remember('heatmapSub', heatmapSub);
     remember('insiderSub', insiderSub);
   }, [restored, tab, heatmapSub, insiderSub]);
+
+  /* Nhịp báo "tôi đang mở tab nào" cho màn hình Hoạt động (⚙ → Quản lý tài
+     khoản, chỉ chủ app đọc được). Gửi khi đổi tab và hai phút một lần.
+
+     CHỈ gửi khi tab trình duyệt đang HIỆN: một cửa sổ bỏ quên trong nền
+     không phải là "đang dùng app", và nếu vẫn báo thì màn hình kia sẽ nói
+     có người online suốt đêm. `visibilitychange` cũng gọi lại ngay, để quay
+     lại tab là hiện online liền chứ không phải chờ hết hai phút.
+
+     Hỏng thì im: đây là thứ phụ, không được phép làm vỡ trang chính. */
+  useEffect(() => {
+    if (!restored) return;
+    let alive = true;
+    const ping = () => {
+      if (!alive || document.visibilityState !== 'visible') return;
+      fetch('/api/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    ping();
+    const id = setInterval(ping, HEARTBEAT_MS);
+    document.addEventListener('visibilitychange', ping);
+    return () => {
+      alive = false;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', ping);
+    };
+  }, [restored, tab]);
 
   /* Vai trò của người đang đăng nhập. 'owner' thấy tab My Portfolio, người
      nhà thì không - xem lib/users.ts. Mặc định 'member' trong lúc chưa biết:

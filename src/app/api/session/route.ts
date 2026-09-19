@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE, sessionMsFor, signSession } from '@/lib/session';
 import { authenticate } from '@/lib/userstore';
+import { clearPresence, logActivity, loginNotice, loginPingDue } from '@/lib/activity';
+import { sendNotice } from '@/lib/notify';
+import { currentUser } from '@/lib/users';
 import {
   clientIp,
   newBucket,
@@ -70,6 +73,21 @@ export async function POST(req: NextRequest) {
   }
 
   clear(bucket, ip);
+
+  /* Ghi kèm IP: một dòng "vo đăng nhập" không trả lời được câu hỏi thật sự
+     đáng hỏi khi thấy nó lúc 3 giờ sáng - có phải họ không. */
+  await logActivity(who.name, 'login', ip);
+
+  /* Telegram CHỈ cho người nhà. Chủ app chính là người nhận tin nhắn - báo
+     cho họ biết chính họ vừa đăng nhập là tiếng ồn, và một hộp thư kêu suốt
+     là một hộp thư bị bỏ qua (luật sẵn có của alerts.ts). Không chặn câu trả
+     lời: Telegram chậm hay hỏng không được làm người nhà chờ để vào app.
+     Nội dung tin nhắn dựng ở `loginNotice()` (thuần, có test) - xem chú
+     thích ở đó về cái bẫy Markdown với dấu gạch dưới trong tên. */
+  if (who.role !== 'owner' && loginPingDue(who.name)) {
+    void sendNotice(loginNotice(who.name, ip, now));
+  }
+
   const expiresAt = now + sessionMsFor(who.role);
   const res = NextResponse.json({
     ok: true,
@@ -89,6 +107,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  /* `currentUser` chứ không `requireUser`: đăng xuất phải chạy được kể cả
+     khi tài khoản đã bị xoá, và một lần đọc đĩa cho việc đó là thừa. */
+  const who = currentUser(req);
+  await logActivity(who, 'logout');
+  await clearPresence(who);
+
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE, '', {
     httpOnly: true,

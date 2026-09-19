@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 import { system, facts } from '@/lib/rrgbrief';
 
 /**
@@ -29,6 +31,8 @@ export async function POST(req: Request) {
   if (!Array.isArray(rrg?.points) || !rrg.points.length) {
     return Response.json({ error: 'Missing rrg' }, { status: 400 });
   }
+
+  await logActivity(currentUser(req), 'ai', 'RRG');
 
   const client = new Anthropic();
   const params = {

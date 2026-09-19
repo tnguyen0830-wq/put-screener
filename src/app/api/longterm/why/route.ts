@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { symbolNewsAll, type NewsResult } from '@/lib/news';
 import { technicalSnapshot, type TechnicalSnapshot } from '@/lib/technical';
 import { whyFacts, whySystem } from '@/lib/ltwhy';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +52,8 @@ export async function POST(req: Request) {
 
   const row = body?.row;
   if (!row?.symbol) return Response.json({ error: 'Missing row' }, { status: 400 });
+
+  await logActivity(currentUser(req), 'why', String(row.symbol));
 
   /* Tin hỏng KHÔNG làm hỏng cả câu trả lời: prompt có nhánh riêng nói rằng
      không kiểm được tin, và Claude được dặn phải nói ra điều đó. Nuốt lỗi
