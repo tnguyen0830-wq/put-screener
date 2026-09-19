@@ -3553,9 +3553,34 @@ body {
   padding: 0;
 }
 
+/* Ảnh, khi có, đứng bên trái; văn bản co giãn lấy phần còn lại. `align-items:
+   flex-start` để ảnh không kéo giãn theo chiều cao mấy dòng meta bên dưới
+   tiêu đề dài. Không có ảnh thì item vẫn là một hàng flex một cột - không
+   cần quy tắc riêng cho trường hợp đó, `.newsbody` tự chiếm hết bề rộng. */
 .newsitem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--rule-soft);
+}
+
+.newsbody {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Cỡ cố định - một hàng tin không được đổi chiều cao vì có ảnh hay không,
+   nếu không cuộn danh sách sẽ giật. `object-fit: cover` cắt vừa khung thay
+   vì méo ảnh; nền `--card` là chỗ giữ trong lúc ảnh còn đang tải. */
+.newsthumb {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule-soft);
+  background: var(--card);
+  object-fit: cover;
 }
 
 .newstitle {

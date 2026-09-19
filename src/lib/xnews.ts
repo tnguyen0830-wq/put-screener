@@ -268,6 +268,11 @@ export type XPost = {
   authorName: string | null;
   /** Mã X tự gắn cho bài, nếu có (`entities.cashtags`). */
   cashtags: string[];
+  /** Ảnh đầu tiên đính kèm bài, nếu có — cần `expansions=attachments.media_keys`
+   *  và `media.fields=url,preview_image_url,type` trên chính request tìm
+   *  kiếm; thiếu hai tham số đó thì `includes.media` không tồn tại và
+   *  trường này luôn `null`, không phải lỗi. */
+  imageUrl: string | null;
 };
 
 export type XSearch = {
@@ -290,6 +295,12 @@ export function parseSearch(payload: any): XSearch {
   const users = Array.isArray(payload?.includes?.users) ? payload.includes.users : [];
   const byId = new Map<string, any>();
   for (const u of users) if (u?.id) byId.set(String(u.id), u);
+  // `includes.media` chỉ có mặt khi request TỰ hỏi qua `expansions`/
+  // `media.fields` — thiếu hai tham số đó thì mảng này rỗng và mọi bài đều
+  // ra `imageUrl: null`, đúng chứ không phải lỗi bóc tách.
+  const media = Array.isArray(payload?.includes?.media) ? payload.includes.media : [];
+  const mediaByKey = new Map<string, any>();
+  for (const m of media) if (m?.media_key) mediaByKey.set(String(m.media_key), m);
 
   const posts: XPost[] = [];
   for (const d of data) {
@@ -298,6 +309,17 @@ export function parseSearch(payload: any): XSearch {
     if (!id || !text) continue;
     const author = d?.author_id ? byId.get(String(d.author_id)) : null;
     const tags = Array.isArray(d?.entities?.cashtags) ? d.entities.cashtags : [];
+    const mediaKeys: string[] = Array.isArray(d?.attachments?.media_keys) ? d.attachments.media_keys : [];
+    let imageUrl: string | null = null;
+    for (const k of mediaKeys) {
+      const m = mediaByKey.get(String(k));
+      if (!m || (m.type && m.type !== 'photo')) continue;
+      const u = str(m.url) ?? str(m.preview_image_url);
+      if (u) {
+        imageUrl = u;
+        break;
+      }
+    }
     posts.push({
       id,
       text,
@@ -306,6 +328,7 @@ export function parseSearch(payload: any): XSearch {
       authorHandle: str(author?.username),
       authorName: str(author?.name),
       cashtags: tags.map((t: any) => String(t?.tag ?? '').toUpperCase()).filter(Boolean),
+      imageUrl,
     });
   }
 

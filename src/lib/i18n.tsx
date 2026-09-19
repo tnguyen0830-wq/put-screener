@@ -1743,8 +1743,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // ---- Tab Tin tức ----
   'nw.title': { vi: 'Tin tức: thị trường & chính trị-kinh tế', en: 'News: markets & political economy' },
   'nw.intro': {
-    vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước, để nguyên tiếng Anh của báo. Bấm "Tóm tắt tiếng Việt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc.',
-    en: 'Headlines from the last 48 hours, newest first, in the outlet\'s own English. Press "Summarise" to have Claude read both columns in ONE call and write a brief — from headlines only, no article bodies. Each line opens the original article.',
+    vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước — tự dịch sang tiếng Việt khi app ở chế độ này (chuyển sang tiếng Anh để xem nguyên văn của báo). Bấm "Tóm tắt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt cùng ngôn ngữ — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc.',
+    en: 'Headlines from the last 48 hours, newest first — auto-translated to Vietnamese when the app is in that language (switch to English to see the outlet\'s own wording). Press "Summarise" to have Claude read both columns in ONE call and write a brief in the same language — from headlines only, no article bodies. Each line opens the original article.',
   },
   'nw.colMarket': { vi: 'Thị trường', en: 'Markets' },
   'nw.colPolitics': { vi: 'Chính trị - kinh tế', en: 'Politics & economy' },
@@ -1808,6 +1808,35 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'nw.sourcesOptional': {
     vi: 'X và Unusual Whales là nguồn tuỳ chọn có key: chưa đặt thì tự tắt, cột vẫn chạy bằng RSS và Google News.',
     en: 'X and Unusual Whales are optional keyed sources: unset means off, and the columns still run on RSS and Google News.',
+  },
+  /* Vì sao một số tiêu đề vẫn hiện tiếng Anh dù đang ở chế độ tiếng Việt —
+     cùng lý do tách năm câu ở `an.companyTranslate*`: mỗi nguyên nhân cần
+     một cách sửa khác nhau, gộp chung thành im lặng là biến "chưa dịch"
+     thành trông y hệt "app hỏng". Tiêu đề CHƯA dịch (đang chờ hoặc dịch lỗi)
+     vẫn hiện nguyên văn tiếng Anh — không có gạch ngang hay ô trống nào. */
+  'nw.headlinesTrNoKey': {
+    vi: 'Một số tiêu đề chưa dịch được: server chưa có ANTHROPIC_API_KEY. Chúng vẫn hiện nguyên văn tiếng Anh.',
+    en: 'Some headlines could not be translated: the server has no ANTHROPIC_API_KEY. They still show in their original English.',
+  },
+  'nw.headlinesTrBadKey': {
+    vi: 'Một số tiêu đề chưa dịch được: khoá API bị từ chối. Kiểm tra lại ANTHROPIC_API_KEY trên Render.',
+    en: 'Some headlines could not be translated: the API key was rejected. Check ANTHROPIC_API_KEY on Render.',
+  },
+  'nw.headlinesTrRateLimited': {
+    vi: 'Một số tiêu đề chưa dịch được: Anthropic đang giới hạn tần suất. Làm mới trang sau ít phút.',
+    en: 'Some headlines could not be translated: Anthropic is rate limiting. Refresh in a few minutes.',
+  },
+  'nw.headlinesTrTruncated': {
+    vi: 'Bản dịch tiêu đề bị cắt giữa chừng vì lô quá dài — phần đã dịch vẫn hiển thị, phần còn lại tạm thời tiếng Anh.',
+    en: 'Headline translation was cut off (the batch ran long) — what finished still shows in Vietnamese, the rest stays English for now.',
+  },
+  'nw.headlinesTrBadRequest': {
+    vi: 'Một số tiêu đề chưa dịch được: Anthropic từ chối yêu cầu (lỗi tham số phía app) — cần sửa code, làm mới trang không giúp được.',
+    en: 'Some headlines could not be translated: Anthropic rejected the request (a parameter bug in the app) — this needs a code fix, refreshing will not help.',
+  },
+  'nw.headlinesTrFailed': {
+    vi: 'Một số tiêu đề chưa dịch được lần này. Làm mới trang để thử lại.',
+    en: 'Some headlines failed to translate this time. Refresh to try again.',
   },
 
   // ---- Giọng đọc (Web Speech API) ----
