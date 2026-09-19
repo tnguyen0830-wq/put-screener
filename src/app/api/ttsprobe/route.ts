@@ -33,7 +33,10 @@ export async function GET() {
   const [sub, voices] = await Promise.all([
     step(async () => ({ ...(await subscription()) })),
     step(async () => {
-      const vs = await listVoices();
+      // force: true - bỏ qua cache 1 giờ. Chủ app bấm probe đúng lúc để
+      // KIỂM một giọng vừa thêm; phục vụ bản cache cũ là tự làm sai lý do
+      // route này tồn tại.
+      const vs = await listVoices(true);
       return {
         count: vs.length,
         voices: vs.slice(0, 40).map((v) => ({ id: v.id, name: v.name, category: v.category ?? null, labels: v.labels })),

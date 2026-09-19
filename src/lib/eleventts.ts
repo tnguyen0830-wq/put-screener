@@ -178,12 +178,23 @@ async function failFrom(r: Response, what: string): Promise<never> {
 }
 
 /** Danh sách giọng của TÀI KHOẢN, cache 1 giờ trong RAM — người dùng đổi
- *  giọng qua ô chọn không được tốn một request mỗi lần mở tab. */
+ *  giọng qua ô chọn không được tốn một request mỗi lần mở tab.
+ *
+ * `force: true` BỎ QUA cache — chỉ `/api/ttsprobe` dùng. Một công cụ ĐO
+ * mà phục vụ dữ liệu cũ là tự phản bội lý do nó tồn tại: chủ app vừa thêm
+ * một giọng mới bên trang ElevenLabs, bấm probe để KIỂM, mà probe lại trả
+ * đúng bản chụp từ trước khi thêm — vì cùng tiến trình Node trên Render
+ * chạy liên tục nên cache 1 giờ hoàn toàn có thể còn hiệu lực. Chủ app khi
+ * đó thấy "giọng chưa thêm được" trong khi nó đã nằm trong tài khoản, và đi
+ * tìm sai chỗ (nghi lại thao tác Add to my voices thay vì nghi cái cache).
+ * Route phục vụ ô chọn giọng của tab (`/api/tts/voices`) và route tổng hợp
+ * (`/api/tts`) vẫn dùng cache mặc định — đó là đường nóng, không phải công
+ * cụ chẩn đoán. */
 let voicesCache: { at: number; voices: ElevenVoice[] } | null = null;
 const VOICES_MS = 60 * 60_000;
 
-export async function listVoices(): Promise<ElevenVoice[]> {
-  if (voicesCache && Date.now() - voicesCache.at < VOICES_MS) return voicesCache.voices;
+export async function listVoices(force = false): Promise<ElevenVoice[]> {
+  if (!force && voicesCache && Date.now() - voicesCache.at < VOICES_MS) return voicesCache.voices;
   const r = await elevenFetch('/voices');
   if (!r.ok) await failFrom(r, '/voices');
   const voices = parseVoices(await r.json());
