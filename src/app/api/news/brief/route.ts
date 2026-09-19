@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { briefFacts, briefKey, briefSystem, sanitizeHeadlines } from '@/lib/newsbrief';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +39,8 @@ export async function POST(req: Request) {
   const headlines = sanitizeHeadlines(body?.headlines);
   if (!headlines.length) return Response.json({ error: 'NO_HEADLINES' }, { status: 400 });
   const lang: 'vi' | 'en' = body?.lang === 'en' ? 'en' : 'vi';
+
+  await logActivity(currentUser(req), 'brief', `${headlines.length} tin`);
 
   const key = briefKey(headlines, lang);
   const hit = briefs.get(key);

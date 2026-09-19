@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { logActivity } from '@/lib/activity';
+import { currentUser } from '@/lib/users';
 
 /**
  * Claude viết phần diễn giải cho AI Trade Briefing trong khung GEX - CHỈ
@@ -102,6 +104,8 @@ export async function POST(req: Request) {
   if (!brief?.symbol) {
     return Response.json({ error: 'Missing brief' }, { status: 400 });
   }
+
+  await logActivity(currentUser(req), 'ai', String(brief.symbol));
 
   const client = new Anthropic();
   const params = {

@@ -114,10 +114,16 @@ function vapid() {
 
 const icon = (s: Alert['severity']) => (s === 'urgent' ? '🔴' : '🟠');
 
-async function sendTelegram(alerts: Alert[]): Promise<string | null> {
-  const text = alerts
-    .map((a) => `${icon(a.severity)} *${a.title}*\n${a.body}`)
-    .join('\n\n');
+/**
+ * Một chỗ duy nhất biết cách nói chuyện với Telegram.
+ *
+ * Tách ra khi có người gọi thứ hai (`sendNotice`, báo người nhà đăng nhập):
+ * hai bản chép của cùng phép gọi là hai bản sẽ trôi lệch, và bản trôi lệch
+ * là bản không ai nhìn tới - ở đây trôi lệch nghĩa là một kênh nuốt lỗi còn
+ * kênh kia nói ra. Cùng lý do `ratelimit.ts` và `cleanForSpeech()` được
+ * tách ra.
+ */
+async function postTelegram(text: string): Promise<string | null> {
   try {
     const res = await fetch(
       `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -141,6 +147,31 @@ async function sendTelegram(alerts: Alert[]): Promise<string | null> {
   } catch (e: any) {
     return `Telegram: ${String(e?.message ?? e)}`;
   }
+}
+
+async function sendTelegram(alerts: Alert[]): Promise<string | null> {
+  return postTelegram(
+    alerts.map((a) => `${icon(a.severity)} *${a.title}*\n${a.body}`).join('\n\n')
+  );
+}
+
+/**
+ * Một dòng thông báo KHÔNG phải cảnh báo danh mục - hiện chỉ dùng cho "người
+ * nhà vừa đăng nhập".
+ *
+ * Cố ý KHÔNG đi qua `sendAlerts()`: bộ máy cảnh báo có chống lặp theo ngày
+ * giao dịch, có mức độ khẩn, có web push, và nó tồn tại cho những thứ phải
+ * hành động ngay. Một lần đăng nhập không phải thứ để hành động, nên nó chỉ
+ * là một dòng chữ trên kênh Telegram - và KHÔNG gửi web push, vì đăng ký web
+ * push nằm sau `/api/alerts` (chỉ chủ app) và trộn hai loại vào một luồng sẽ
+ * làm cái quan trọng trông như cái không quan trọng.
+ *
+ * Tự tắt khi chưa cấu hình Telegram, đúng nếp mọi kênh khác: máy ở nhà không
+ * đặt gì thì chạy y như cũ.
+ */
+export async function sendNotice(text: string): Promise<string | null> {
+  if (!telegramConfigured()) return null;
+  return postTelegram(text);
 }
 
 async function sendWebPush(alerts: Alert[]): Promise<string | null> {

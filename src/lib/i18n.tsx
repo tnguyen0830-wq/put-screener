@@ -211,6 +211,69 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (name: string) => `Đã huỷ mã đặt lại của “${name}”.`,
     en: (name: string) => `Cancelled the reset code for "${name}".`,
   },
+  /* ---- Hoạt động của người nhà (#193) ---- */
+  'acct.actTitle': { vi: 'Hoạt động', en: 'Activity' },
+  'acct.actIntro': {
+    vi: 'Ai đang mở app, và đã dùng những gì. Chỉ bạn đọc được trang này. Nhật ký ghi ở máy chủ khi việc thật sự xảy ra — không phải do trình duyệt tự khai — và giữ 14 ngày.',
+    en: 'Who is in the app right now, and what they have used. Only you can read this page. The log is written on the server when the work actually happens — not self-reported by the browser — and kept for 14 days.',
+  },
+  'acct.actOnline': { vi: 'Đang mở app', en: 'In the app now' },
+  'acct.actNobody': {
+    vi: 'Không ai gửi nhịp báo trong 5 phút qua. Cửa sổ để ở nền cũng tính là đã rời đi — app chỉ báo khi tab đang hiện.',
+    en: 'Nobody has checked in for 5 minutes. A window left in the background counts as away — the app only reports while its tab is visible.',
+  },
+  'acct.actRecent': { vi: 'Đã dùng gần đây', en: 'Recently used' },
+  'acct.actEmpty': {
+    vi: 'Chưa ghi được hoạt động nào. Nhật ký bắt đầu từ lần deploy này — việc làm trước đó không có ở đây.',
+    en: 'No activity recorded yet. The log starts at this deploy — anything done before it is not here.',
+  },
+  'acct.actFailed': {
+    vi: (e: string) => `Không đọc được nhật ký hoạt động: ${e}`,
+    en: (e: string) => `Could not load the activity log: ${e}`,
+  },
+  'acct.actColTime': { vi: 'Lúc', en: 'When' },
+  'acct.actColUser': { vi: 'Ai', en: 'Who' },
+  'acct.actColWhat': { vi: 'Việc', en: 'What' },
+  'acct.actNow': { vi: 'vừa xong', en: 'just now' },
+  'acct.actAgo': {
+    vi: (m: number) => `${m} phút trước`,
+    en: (m: number) => `${m} min ago`,
+  },
+  'acct.actTimes': {
+    vi: (n: number) => `${n} lần`,
+    en: (n: number) => `${n}×`,
+  },
+  'acct.actOwnerTag': { vi: 'bạn', en: 'you' },
+  'acct.actNote': {
+    vi: 'Chỉ những việc tốn hạn mức hoặc tốn tiền mới được ghi (quét, Analyze, hỏi Claude, tóm tắt tin, dịch tiêu đề, giọng đọc AI, sửa watchlist) cộng với ra vào và đổi tab. Xem bảng, cuộn trang, bấm tab con thì không — chúng không tốn gì và sẽ nhấn chìm phần đáng đọc.',
+    en: 'Only quota- or money-spending actions are logged (scans, Analyze, Ask Claude, news brief, headline translation, AI voice, watchlist edits) plus logins, logouts and tab changes. Reading a table, scrolling or switching a sub-tab is not — those cost nothing and would drown out what matters.',
+  },
+  'acct.actMore': {
+    vi: (n: number) => `Còn ${n} dòng cũ hơn trong nhật ký, không hiện ở đây.`,
+    en: (n: number) => `${n} older entries are in the log but not shown here.`,
+  },
+  'acct.actTelegram': {
+    vi: 'Mỗi lần người nhà đăng nhập, Telegram của bạn nhận một dòng kèm giờ New York và địa chỉ IP (nhiều nhất một tin mỗi người mỗi 30 phút). Chưa đặt TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID thì phần này tự tắt, nhật ký dưới đây vẫn chạy.',
+    en: 'Every family-member login sends one line to your Telegram with the New York time and the IP address (at most one message per person per 30 minutes). Without TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID this part switches itself off; the log below still works.',
+  },
+
+  /* Nhãn từng loại việc. Loại LẠ in nguyên mã của nó chứ không in
+     `act.kind.xxx` — cùng lý do `ruleLabel()` bên Options Flow: `t()` trả về
+     khoá khi thiếu, mà một loại mới thêm ở server sẽ ra màn hình trước khi
+     ai kịp thêm khoá ở đây. */
+  'act.kind.login': { vi: 'Đăng nhập', en: 'Logged in' },
+  'act.kind.logout': { vi: 'Đăng xuất', en: 'Logged out' },
+  'act.kind.tab': { vi: 'Mở tab', en: 'Opened tab' },
+  'act.kind.scan': { vi: 'Quét Sell Put', en: 'Sell Put scan' },
+  'act.kind.ltscan': { vi: 'Quét Long-term', en: 'Long-term scan' },
+  'act.kind.analyze': { vi: 'Phân tích mã', en: 'Analyzed symbol' },
+  'act.kind.why': { vi: 'Hỏi Claude "Tại sao rớt?"', en: 'Asked Claude "why did it fall?"' },
+  'act.kind.ai': { vi: 'Hỏi Claude', en: 'Asked Claude' },
+  'act.kind.brief': { vi: 'Tóm tắt tin bằng AI', en: 'AI news brief' },
+  'act.kind.translate': { vi: 'Dịch tiêu đề tin', en: 'Translated headlines' },
+  'act.kind.tts': { vi: 'Giọng đọc AI', en: 'AI voice' },
+  'act.kind.watchlist': { vi: 'Sửa watchlist', en: 'Edited watchlist' },
+
   'acct.ownerNoCode': {
     vi: 'Mã đặt lại chỉ dành cho người nhà. Mật khẩu của chính bạn là APP_PASSWORD trên Render — cố tình để ngoài kho tài khoản, để một cái mã lọt ra ngoài không bao giờ chạm được tới danh mục.',
     en: 'Reset codes are for family accounts only. Your own password is APP_PASSWORD on Render — deliberately kept outside the account store, so a leaked code can never reach the portfolio.',

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readWatchlist, writeWatchlist } from '@/lib/watchlist';
 import { requireUser } from '@/lib/userstore';
+import { logActivity } from '@/lib/activity';
 
 /**
  * Watchlist của CHÍNH người đang đăng nhập - xem lý do tách theo người ở
@@ -28,5 +29,7 @@ export async function PUT(req: NextRequest) {
       { status: 400 }
     );
   }
-  return NextResponse.json({ symbols: await writeWatchlist(body.symbols, user) });
+  const saved = await writeWatchlist(body.symbols, user);
+  await logActivity(user, 'watchlist', `${saved.length}`);
+  return NextResponse.json({ symbols: saved });
 }
