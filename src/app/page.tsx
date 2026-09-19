@@ -56,7 +56,7 @@ type Status = {
   daysLeft?: number;
 };
 
-const TABS = ['screener', 'analyze', 'heatmap', 'portfolio', 'insider', 'longterm', 'news'] as const;
+const TABS = ['news', 'longterm', 'screener', 'analyze', 'heatmap', 'insider', 'portfolio'] as const;
 type Tab = (typeof TABS)[number];
 /** Bốn nguồn "ai/cái gì đang mua" trong tab Insider Trade, xem RIÊNG
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
@@ -320,6 +320,18 @@ export default function Page() {
         </a>
         <nav className="segmented tabs">
           <button
+            className={tab === 'news' ? 'on' : undefined}
+            onClick={() => setTab('news')}
+          >
+            {t('tab.news')}
+          </button>
+          <button
+            className={tab === 'longterm' ? 'on' : undefined}
+            onClick={() => setTab('longterm')}
+          >
+            {t('tab.longterm')}
+          </button>
+          <button
             className={tab === 'screener' ? 'on' : undefined}
             onClick={() => setTab('screener')}
           >
@@ -337,6 +349,12 @@ export default function Page() {
           >
             {t('tab.heatmap')}
           </button>
+          <button
+            className={tab === 'insider' ? 'on' : undefined}
+            onClick={() => setTab('insider')}
+          >
+            {t('tab.insider')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -345,24 +363,6 @@ export default function Page() {
               {t('tab.portfolio')}
             </button>
           )}
-          <button
-            className={tab === 'insider' ? 'on' : undefined}
-            onClick={() => setTab('insider')}
-          >
-            {t('tab.insider')}
-          </button>
-          <button
-            className={tab === 'longterm' ? 'on' : undefined}
-            onClick={() => setTab('longterm')}
-          >
-            {t('tab.longterm')}
-          </button>
-          <button
-            className={tab === 'news' ? 'on' : undefined}
-            onClick={() => setTab('news')}
-          >
-            {t('tab.news')}
-          </button>
         </nav>
         <span className="spacer" />
         <SettingsMenu status={status} />

@@ -729,11 +729,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.loading': { vi: 'Đang tải bản đồ…', en: 'Loading the map…' },
   'hm.loadFailed': { vi: 'Không tải được bản đồ', en: 'Could not load the map' },
   'hm.title': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
-  'hm.subMap': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  /* Sub-tab labels: English in both languages, same rule as `tab.*` above. */
+  'hm.subMap': { vi: 'Heatmap', en: 'Heatmap' },
   'hm.subFearGreed': { vi: 'Fear & Greed', en: 'Fear & Greed' },
   'hm.subRrg': { vi: 'RRG', en: 'RRG' },
   'hm.subGex': { vi: 'GEX', en: 'GEX' },
-  'hm.subInternals': { vi: 'Bề rộng TT', en: 'Internals' },
+  'hm.subInternals': { vi: 'Internals', en: 'Internals' },
   'hm.head': {
     vi: (v: any) => `Bản đồ S&P 500 · ${v.count} mã · ${v.source}`,
     en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
@@ -1058,8 +1059,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colValue': { vi: 'Giá trị', en: 'Value' },
   'pf.colDayPl': { vi: 'Hôm nay', en: 'Today' },
   /* ---------------- Long-term Investment ---------------- */
-  'tab.longterm': { vi: 'Đầu tư dài hạn', en: 'Long-term' },
-  'tab.news': { vi: 'Tin tức', en: 'News' },
+  /* Tab labels are deliberately English in BOTH languages (chủ app: "để
+     tiếng anh tất cả các tab trong app... cho dù chuyển qua tiếng Việt") -
+     vi === en here on purpose, matching every other `tab.*`/sub-tab key
+     below (`hm.subMap`, `hm.subInternals`, `ins.subForm4`). Everything else
+     on the page still follows the language toggle; only tab names don't. */
+  'tab.longterm': { vi: 'Long-term', en: 'Long-term' },
+  'tab.news': { vi: 'News', en: 'News' },
   'lt.lead': {
     vi: 'Tìm mã ĐANG RỚT VỀ một vùng hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và định giá chưa đắt. Vùng hỗ trợ tự tính từ 3 năm nến ngày (đáy xoay đã được nến hai bên xác nhận, gom theo giá); bội số và giá mục tiêu từ Finviz; doanh thu/EPS/FCF nhiều năm và pha loãng cổ phiếu bóc từ 10-K trên SEC EDGAR.',
     en: 'Finds stocks FALLING TOWARD a support zone while the company is still profitable, still growing and not expensively priced. Support zones are computed here from 3 years of daily bars (confirmed pivot lows, clustered by price); multiples and the analyst target come from Finviz; multi-year revenue/EPS/FCF and share dilution are parsed from 10-K filings on SEC EDGAR.',
@@ -1892,9 +1898,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   /* ---- Người nội bộ (Form 4) ---- */
   'ins.title': { vi: 'Người nội bộ đang mua', en: 'Insider buying' },
-  'ins.subForm4': { vi: 'Người nội bộ', en: 'Insiders' },
-  'ins.subCongress': { vi: 'Quốc hội', en: 'Congress' },
-  'ins.subFlow': { vi: 'Quyền chọn', en: 'Options Flow' },
+  /* Sub-tab labels: English in both languages, same rule as `tab.*` above. */
+  'ins.subForm4': { vi: 'Insiders', en: 'Insiders' },
+  'ins.subCongress': { vi: 'Congress', en: 'Congress' },
+  'ins.subFlow': { vi: 'Options Flow', en: 'Options Flow' },
   'ins.subDarkpool': { vi: 'Dark Pool', en: 'Dark Pool' },
   'ins.intro': {
     vi: 'Sếp và thành viên hội đồng quản trị bắt buộc phải khai báo với SEC trong 2 ngày làm việc mỗi khi mua bán cổ phiếu công ty mình (mẫu Form 4). Bảng này chỉ đếm MỘT loại giao dịch: tự bỏ tiền túi mua ngoài thị trường (SEC ký hiệu là mã P). Cổ phiếu được thưởng, quyền chọn đem đi thực hiện, hay cổ phiếu nộp lại để đóng thuế đều KHÔNG tính — đó là lương, không phải niềm tin. Giao dịch nằm trong kế hoạch 10b5-1 đăng ký sẵn từ nhiều tháng trước cũng bị loại, vì nó chạy tự động và không nói lên sếp nghĩ gì hôm nay.',
