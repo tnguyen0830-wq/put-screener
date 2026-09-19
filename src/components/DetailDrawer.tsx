@@ -7,8 +7,6 @@ import GexChart from './GexChart';
 import {
   tvSymbol,
   tradingViewChartUrl,
-  tcpwGexUrl,
-  tcpwGexUrlEn,
 } from '@/lib/links';
 import type { Candidate } from '@/lib/types';
 
@@ -252,12 +250,6 @@ export default function DetailDrawer({
 
           <h3 className="dsec">{t('dd.external')}</h3>
           <div className="linkrow">
-            <a href={tcpwGexUrl(row.symbol)} target="_blank" rel="noopener">
-              {t('dd.gexTcpw')}
-            </a>
-            <a href={tcpwGexUrlEn(row.symbol)} target="_blank" rel="noopener">
-              {t('dd.gexTcpwEn')}
-            </a>
             <a
               href={tradingViewChartUrl(row.symbol, row.exchange)}
               target="_blank"
@@ -266,9 +258,6 @@ export default function DetailDrawer({
               {t('dd.fullChart')}
             </a>
           </div>
-          <p className="cap">
-            {t('dd.externalNote')}
-          </p>
         </div>
       </aside>
     </>
