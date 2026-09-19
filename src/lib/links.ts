@@ -1,8 +1,12 @@
 /**
- * Neither TradingView nor Tạp Chí Phố Wall publishes a retail data API, so the
- * integration is done the only way it honestly can be: TradingView's free
- * embeddable widgets for charting, and deep links into TCPW's per-symbol
- * gamma pages. Nothing here scrapes or re-hosts their data.
+ * TradingView publishes no retail data API, so the integration is done the only
+ * way it honestly can be: their free embeddable widgets for charting, plus a
+ * deep link to the full chart. Nothing here scrapes or re-hosts their data.
+ *
+ * Trước đây file này còn dựng link sang trang gamma của một trang ngoài; chủ
+ * app yêu cầu bỏ mọi thứ mang tên trang đó khỏi màn hình, nên cả hàm dựng URL
+ * lẫn hai nhãn link đã xoá hẳn - để lại hàm không ai gọi thì chuỗi tên miền
+ * vẫn nằm trong bundle gửi về trình duyệt.
  */
 
 /**
@@ -23,18 +27,4 @@ export function tvSymbol(symbol: string, exchange: string): string {
 export const tradingViewChartUrl = (symbol: string, exchange: string) =>
   `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(
     tvSymbol(symbol, exchange)
-  )}`;
-
-/**
- * Tạp Chí Phố Wall gamma page. Coverage is strongest on liquid optionable
- * names; thinner tickers may not have a page yet.
- */
-export const tcpwGexUrl = (symbol: string) =>
-  `https://tapchiphowall.com/options-gamma/${encodeURIComponent(
-    symbol.replace('/', '.')
-  )}`;
-
-export const tcpwGexUrlEn = (symbol: string) =>
-  `https://en.tapchiphowall.com/options-gamma/${encodeURIComponent(
-    symbol.replace('/', '.')
   )}`;

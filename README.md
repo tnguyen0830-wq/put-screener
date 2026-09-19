@@ -429,8 +429,10 @@ khoản của họ:
 Symbol dựng từ sàn niêm yết Schwab trả về (`NASDAQ:AAPL`, `NYSE:XOM`…). Logic
 ánh xạ ở `src/lib/links.ts`, gặp mã lạ thì sửa đúng một chỗ đó.
 
-Panel còn có link sang trang GEX của Tạp Chí Phố Wall để đối chiếu — thuần tuý
-deep-link, không cào dữ liệu, và app chạy đầy đủ mà không cần tới nó.
+Trước đây panel còn có hai link sang trang GEX của một trang ngoài để đối
+chiếu. Chủ app yêu cầu bỏ mọi thứ mang tên trang đó khỏi màn hình, nên cả hai
+link lẫn hàm dựng URL đã xoá hẳn — hàng "Đối chiếu ngoài" giờ chỉ còn link mở
+chart đầy đủ trên TradingView.
 
 ---
 

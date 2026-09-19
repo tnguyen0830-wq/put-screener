@@ -5,7 +5,7 @@ import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
 import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
-import { tvSymbol, tradingViewChartUrl, tcpwGexUrl } from '@/lib/links';
+import { tvSymbol, tradingViewChartUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
 import type { ProfileFields, TranslateReason } from '@/lib/profiletranslate';
 
@@ -676,9 +676,6 @@ export default function AnalysisPanel({
             <div className="linkrow">
               <a href={tradingViewChartUrl(data.symbol, data.exchange)} target="_blank" rel="noopener">
                 {tr('dd.fullChart')}
-              </a>
-              <a href={tcpwGexUrl(data.symbol)} target="_blank" rel="noopener">
-                {tr('dd.gexTcpw')}
               </a>
             </div>
 

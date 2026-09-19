@@ -562,9 +562,9 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'gex.srcCboe': { vi: 'App (CBOE)', en: 'App (CBOE)' },
   'gex.cboeSource': {
     vi: (v: any) =>
-      `Chuỗi quyền chọn ở đây lấy từ feed công khai trễ 15 phút của CBOE (file ${v.file}, dấu giờ CBOE: ${v.asOf}) - cùng nguồn mà tapchiphowall.com dùng - rồi app tự tính bằng đúng công thức như mọi mã khác. Không phải chuỗi Schwab: giá và greeks là của CBOE, trễ 15 phút; open interest chỉ đổi mỗi ngày một lần nên các mức tường không bị ảnh hưởng đáng kể.`,
+      `Chuỗi quyền chọn ở đây lấy từ feed công khai trễ 15 phút của CBOE (file ${v.file}, dấu giờ CBOE: ${v.asOf}), rồi app tự tính bằng đúng công thức như mọi mã khác. Không phải chuỗi Schwab: giá và greeks là của CBOE, trễ 15 phút; open interest chỉ đổi mỗi ngày một lần nên các mức tường không bị ảnh hưởng đáng kể.`,
     en: (v: any) =>
-      `This chain comes from CBOE's public 15-minute-delayed feed (file ${v.file}, CBOE timestamp ${v.asOf}) - the same source tapchiphowall.com reads - and the app computes it with the same formula as every other symbol. It is not the Schwab chain: prices and greeks are CBOE's and 15 minutes stale; open interest only changes once a day, so the walls are barely affected.`,
+      `This chain comes from CBOE's public 15-minute-delayed feed (file ${v.file}, CBOE timestamp ${v.asOf}), and the app computes it with the same formula as every other symbol. It is not the Schwab chain: prices and greeks are CBOE's and 15 minutes stale; open interest only changes once a day, so the walls are barely affected.`,
   },
   'gex.cboeWhy': {
     vi: (why: string) => `Đi đường CBOE vì chuỗi Schwab không dùng được cho mã này: ${why}`,
@@ -777,13 +777,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Computed here from the Schwab option chain: gamma × open interest summed per strike over a 60-day window. The put wall is the strike with the largest put gamma — where dealers must buy to hedge, so it often behaves like support. This is a model built on the assumption that dealers are long calls and short puts, not their actual positioning.',
   },
   'dd.external': { vi: 'Đối chiếu ngoài', en: 'Cross-check elsewhere' },
-  'dd.gexTcpw': { vi: 'GEX trên Tạp Chí Phố Wall ↗', en: 'GEX on Tạp Chí Phố Wall ↗' },
-  'dd.gexTcpwEn': { vi: 'TCPW (English) ↗', en: 'TCPW (English) ↗' },
   'dd.fullChart': { vi: 'Mở chart đầy đủ ↗', en: 'Open the full chart ↗' },
-  'dd.externalNote': {
-    vi: 'Mỗi nhà cung cấp GEX dùng giả định khác nhau (số kỳ đáo hạn, cách xử lý 0DTE), nên con số sẽ lệch nhau. Dùng để đối chiếu vùng giá, đừng kỳ vọng khớp từng số.',
-    en: 'Every GEX provider uses different assumptions (how many expirations, how 0DTE is handled), so the numbers will not agree. Use them to cross-check the zone, not to match figures.',
-  },
 
   // ---- heatmap ----
   'hm.range1d': { vi: '1 ngày', en: '1 day' },
@@ -1501,8 +1495,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'int.viewTv': { vi: 'TradingView', en: 'TradingView' },
   'int.viewApp': { vi: 'Số liệu app', en: "App's own data" },
   'int.tvNote': {
-    vi: 'Lưới lai theo bố cục tapchiphowall: ô nào app có dữ liệu tốt hơn widget nhúng (VIX tiền mặt, NYSE TICK nến 5 phút với đường ±600, UVOL−DVOL) là THẺ CỦA APP — app đọc được số, vẽ được đường tham chiếu; ô còn lại nhúng thẳng từ TradingView (nguồn USI), là KHUNG HÌNH: app không đọc được con số bên trong, không cảnh báo, không đưa vào "Hỏi Claude" được. Hàng nút dưới mỗi ô đổi nguồn, nhớ riêng từng ô.',
-    en: 'A hybrid grid in the tapchiphowall layout: boxes where the app has better data than the embed (cash VIX, NYSE TICK 5-min candles with ±600 lines, UVOL−DVOL) are the APP’S OWN cards — numbers the app can read, reference lines it can draw; the rest are embedded straight from TradingView (USI source) and are FRAMES: the app cannot read the numbers inside, no alerts, nothing for "Ask Claude". The button row under each box switches its source, remembered per box.',
+    vi: 'Lưới lai: ô nào app có dữ liệu tốt hơn widget nhúng (VIX tiền mặt, NYSE TICK nến 5 phút với đường ±600, UVOL−DVOL) là THẺ CỦA APP — app đọc được số, vẽ được đường tham chiếu; ô còn lại nhúng thẳng từ TradingView (nguồn USI), là KHUNG HÌNH: app không đọc được con số bên trong, không cảnh báo, không đưa vào "Hỏi Claude" được. Hàng nút dưới mỗi ô đổi nguồn, nhớ riêng từng ô.',
+    en: 'A hybrid grid: boxes where the app has better data than the embed (cash VIX, NYSE TICK 5-min candles with ±600 lines, UVOL−DVOL) are the APP’S OWN cards — numbers the app can read, reference lines it can draw; the rest are embedded straight from TradingView (USI source) and are FRAMES: the app cannot read the numbers inside, no alerts, nothing for "Ask Claude". The button row under each box switches its source, remembered per box.',
   },
   'int.tvFallback': {
     vi: 'TradingView KHÔNG báo lỗi khi mã sai — nó lặng lẽ vẽ một cổ phiếu khác (Apple), hoặc bật hộp "chỉ có trên TradingView", hoặc vẽ được nhưng không cho xem khung 1m/5m. Ô nào như vậy thì bấm một mã khác trong hàng nút dưới ô đó; lựa chọn được nhớ riêng cho từng ô trên trình duyệt này. Không mã nào chạy thì báo lại chuỗi mã đã thử.',
