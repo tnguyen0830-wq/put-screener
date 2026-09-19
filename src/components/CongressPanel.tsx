@@ -228,7 +228,8 @@ function partyClass(party: string | null): 'dem' | 'gop' | null {
   return null;
 }
 
-export default function CongressPanel() {
+/** `role`: xem chú thích cùng tên ở DarkpoolPanel.tsx. */
+export default function CongressPanel({ role = 'member' }: { role?: 'owner' | 'member' }) {
   const { t } = useLang();
   /**
    * Ai đứng tên tài khoản, dịch khi biết, giữ NGUYÊN chữ của UW khi không.
@@ -339,7 +340,7 @@ export default function CongressPanel() {
               data còn null (đang tải lần đầu), !data.configured phía dưới
               chưa kịp chặn vì nó đòi data !== null, nên nút sẽ lộ ra một
               nhịp trước khi biết có cấu hình UW_API_KEY hay không. */}
-          {data?.configured === true && (
+          {data?.configured === true && role === 'owner' && (
             <button onClick={sync} disabled={!!data?.syncing}>
               {data?.syncing ? t('cg.syncing') : t('cg.syncNow')}
             </button>

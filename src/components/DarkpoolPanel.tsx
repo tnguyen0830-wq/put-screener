@@ -51,7 +51,10 @@ const usd = (n: number | null) =>
     ? '—'
     : n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-export default function DarkpoolPanel() {
+/** `role`: nút "Đồng bộ ngay" chỉ hiện cho chủ app — POST /api/darkpool là
+ *  đường chỉ chủ app được đi (OWNER_ONLY_WRITES, lib/users.ts). Ẩn nút là
+ *  phép lịch sự; chặn thật nằm ở middleware. */
+export default function DarkpoolPanel({ role = 'member' }: { role?: 'owner' | 'member' }) {
   const { t } = useLang();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +120,7 @@ export default function DarkpoolPanel() {
           {data?.lastRun ? t('cg.lastRun', data.lastRun.at) : t('cg.neverRun')}{' '}
           {/* Chỉ hiện nút khi ĐÃ BIẾT chắc data.configured === true - xem
               chú thích trong CongressPanel.tsx cho lý do đầy đủ. */}
-          {data?.configured === true && (
+          {data?.configured === true && role === 'owner' && (
             <button onClick={sync} disabled={!!data?.syncing}>
               {data?.syncing ? t('cg.syncing') : t('cg.syncNow')}
             </button>

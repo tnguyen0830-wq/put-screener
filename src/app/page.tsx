@@ -470,11 +470,11 @@ export default function Page() {
           {insiderSub === 'form4' ? (
             <InsiderPanel />
           ) : insiderSub === 'congress' ? (
-            <CongressPanel />
+            <CongressPanel role={role} />
           ) : insiderSub === 'flow' ? (
-            <OptionFlowPanel />
+            <OptionFlowPanel role={role} />
           ) : (
-            <DarkpoolPanel />
+            <DarkpoolPanel role={role} />
           )}
         </div>
       ) : (
