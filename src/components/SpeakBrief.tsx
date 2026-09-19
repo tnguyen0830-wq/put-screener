@@ -36,6 +36,7 @@ const ERR_KEY: Record<string, string> = {
   TTS_NOT_CONFIGURED: 'tts.ai.notConfigured',
   TTS_BAD_KEY: 'tts.ai.badKey',
   TTS_QUOTA: 'tts.ai.quota',
+  TTS_VOICE_PLAN: 'tts.ai.voicePlan',
   TTS_BAD_VOICE: 'tts.ai.badVoice',
   TTS_EDGE: 'tts.ai.edge',
   TOO_LONG: 'tts.ai.tooLong',
@@ -232,8 +233,16 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
     setState('speaking');
   }, []);
 
+  /* `category` in NGUYÊN VĂN chữ ElevenLabs trả về, cho MỌI giọng — không
+     dịch, không tự phân loại "dùng được / không dùng được". Lý do: lỗi
+     `voice-plan` (#195) nói gói free không gọi được "library voices" qua
+     API, nhưng CHÍNH XÁC category nào tương ứng thì chưa đo được từ sandbox;
+     in chữ thật để chủ app tự đối chiếu giọng nào chạy, giọng nào không,
+     còn hơn app tự dán nhãn theo phỏng đoán rồi giấu mất một giọng vẫn
+     dùng được. */
   const label = (v: AiVoice) => {
     const bits = [v.labels.language, v.labels.accent, v.labels.gender].filter(Boolean);
+    if (v.category) bits.push(v.category);
     return bits.length ? `${v.name} · ${bits.join(', ')}` : v.name;
   };
 

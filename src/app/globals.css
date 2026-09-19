@@ -3797,4 +3797,11 @@ body {
 .ttserr {
   margin: 0;
   flex-basis: 100%;
+  /* Câu lỗi mang theo NGUYÊN VĂN thân trả lời của ElevenLabs, và thân đó là
+     JSON một dòng không có khoảng trắng nào - tức một "từ" dài hàng trăm ký
+     tự. Không có hai dòng này thì phần tử flex không co xuống dưới bề rộng
+     min-content của cái từ ấy và nửa câu lỗi nằm ngoài màn hình điện thoại:
+     đúng nửa nói ra nguyên nhân thật. Đo được ở 400px, cả hai theme (#195). */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

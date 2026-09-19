@@ -70,6 +70,10 @@ export type ElevenFailure =
   | 'not-configured'
   | 'bad-key'
   | 'quota'
+  /* Giọng này gói hiện tại KHÔNG dùng được qua API (gói free + giọng lấy từ
+     Voice Library). Khác hẳn `quota`, và tách ra vì ĐO ĐƯỢC ở production —
+     xem chú thích dài ở `classifyEleven`. */
+  | 'voice-plan'
   | 'bad-voice'
   | 'edge'
   | 'unavailable';
@@ -89,26 +93,75 @@ const clip = (s: string, n = 200) => s.replace(/\s+/g, ' ').slice(0, n);
 
 /**
  * Phân loại lỗi — hàm THUẦN, test được. Mỗi loại một cách sửa khác nhau:
- * key sai (đặt lại key) ≠ hết ký tự (chờ tháng sau / mua thêm) ≠ voice_id
+ * key sai (đặt lại key) ≠ hết ký tự (chờ tháng sau / mua thêm) ≠ GIỌNG NÀY
+ * gói hiện tại không dùng được qua API (đổi giọng, hoặc nâng gói) ≠ voice_id
  * không có trong tài khoản (đổi ELEVENLABS_VOICE_ID) ≠ bị chặn ở rìa (HTML,
  * request chưa tới API — #130) ≠ hỏng tạm.
  *
- * ElevenLabs trả lỗi dạng `{detail: {status: "quota_exceeded", message}}`
- * (nhớ được) — đọc `detail.status` nếu có, không thì đọc theo mã HTTP, và
- * KHÔNG khớp gì thì `unavailable` chứ không đoán.
+ * ElevenLabs trả lỗi dạng `{detail: {status, code, message}}`.
+ *
+ * ## `voice-plan` được tách ra sau MỘT PHÉP ĐO ở production (#195)
+ *
+ * Chủ app bấm Nghe và màn hình nói "Hết ký tự ElevenLabs của tháng này" —
+ * trong khi `/api/ttsprobe` đo được hạn mức còn NGUYÊN 0/10.000 (#185). Thân
+ * lỗi thật ElevenLabs trả về:
+ *
+ *   402 {"detail":{"type":"payment_required","code":"paid_plan_required",
+ *        "message":"Free users cannot use library voices via the API.
+ *                   Please upgrade your subscription to use this voice.",
+ *        "status":"payment_required"}}
+ *
+ * Tức KHÔNG phải hết ký tự: giọng "Tram" là giọng lấy từ **Voice Library**,
+ * và gói free của ElevenLabs cho dùng giọng đó trên TRANG WEB của họ nhưng
+ * KHÔNG cho gọi qua API. Bản cũ đọc `detail.status` = "payment_required",
+ * khớp `/payment/` rồi rơi vào `quota` — app khẳng định một điều SAI về tài
+ * khoản của chủ app, và còn khuyên "mua thêm ký tự", đúng cách sửa KHÔNG
+ * giải quyết được gì.
+ *
+ * Hai chi tiết của phép đo là lý do phải đọc nhiều trường chứ không một:
+ *  - `detail.status` và `detail.code` NÓI HAI CHUYỆN KHÁC NHAU cùng lúc
+ *    ("payment_required" vs "paid_plan_required"), mà bản cũ dùng `??` nên
+ *    thấy `status` là thôi, không bao giờ đọc tới `code`.
+ *  - Câu phân biệt rõ nhất nằm trong `message` ("library voices"), một
+ *    trường bản cũ không đọc.
  */
 export function classifyEleven(status: number, body: string): ElevenFailure {
   const b = (body ?? '').trim();
   const looksHtml = /^\s*<(!doctype|html)/i.test(b);
   if (looksHtml) return 'edge';
   let detailStatus = '';
+  let detailMessage = '';
   try {
     const j = JSON.parse(b);
-    detailStatus = String(j?.detail?.status ?? j?.detail?.code ?? j?.status ?? '').toLowerCase();
+    /* GỘP status + code + type chứ không `??`: ở chính thân lỗi đo được,
+       `status` nói "payment_required" (nghe như hết tiền) còn `code` nói
+       "paid_plan_required" (giọng đòi gói trả phí) — lấy cái đầu là bỏ mất
+       cái nói đúng chuyện. */
+    detailStatus = [j?.detail?.status, j?.detail?.code, j?.detail?.type, j?.status, j?.code]
+      .filter((x) => typeof x === 'string')
+      .join(' ')
+      .toLowerCase();
+    detailMessage = String(j?.detail?.message ?? j?.message ?? '').toLowerCase();
   } catch {
     /* không phải JSON */
   }
-  if (/quota|character_limit|insufficient|exceeded|payment/.test(detailStatus)) return 'quota';
+  /* Thứ tự ở bốn dòng dưới là CÓ CHỦ Ý, và đảo một dòng là đẻ lại đúng con
+     bug vừa vá, chỉ theo chiều ngược:
+
+     1. MÃ nói thẳng "đòi gói trả phí" thắng trước mọi thứ.
+     2. MÃ nói thẳng "hết hạn mức" đứng thứ hai — và cố ý KHÔNG còn chữ
+        "payment" ở đây, vì chính `payment_required` là thứ đã kéo lỗi giọng
+        vào nhánh này.
+     3. Chỉ tới lúc mã không nói gì rõ ràng mới đọc tới CÂU VĂN, và chỉ nhận
+        đúng cụm "library voice" — cụm chỉ có ở lỗi giọng. Cố ý KHÔNG bắt
+        "upgrade your subscription": lỗi hết ký tự thật cũng mời nâng gói
+        bằng đúng câu đó, nên bắt nó là biến một lỗi hết hạn mức thành lỗi
+        giọng — cùng một kiểu chẩn đoán sai, chỉ đổi chiều.
+     4. `payment` trơ trọi, không kèm mã nào rõ hơn, mới rơi về hết ký tự. */
+  if (/paid_plan_required|subscription_required|plan_required/.test(detailStatus)) return 'voice-plan';
+  if (/quota|character_limit|insufficient|exceeded/.test(detailStatus)) return 'quota';
+  if (/library voice/.test(detailMessage)) return 'voice-plan';
+  if (/payment/.test(detailStatus)) return 'quota';
   if (/voice_not_found|voice/.test(detailStatus) && status === 404) return 'bad-voice';
   if (/invalid_api_key|unauthorized|missing_permissions|api_key/.test(detailStatus)) return 'bad-key';
   if (status === 401 || status === 403) return 'bad-key';

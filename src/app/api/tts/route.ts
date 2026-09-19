@@ -59,7 +59,15 @@ export async function POST(req: Request) {
     });
   } catch (e: any) {
     if (e instanceof ElevenError) {
-      const status = e.kind === 'bad-key' ? 401 : e.kind === 'quota' ? 402 : e.kind === 'not-configured' ? 503 : 502;
+      /* `voice-plan` cũng là 402: ElevenLabs đòi gói trả phí cho GIỌNG này.
+         Cùng mã HTTP với hết ký tự nhưng là hai chuyện khác nhau — phần
+         phân biệt nằm ở `error` (`TTS_VOICE_PLAN` vs `TTS_QUOTA`), vì mã
+         HTTP không đủ chỗ để nói ra sự khác biệt ấy. */
+      const status =
+        e.kind === 'bad-key' ? 401
+        : e.kind === 'quota' || e.kind === 'voice-plan' ? 402
+        : e.kind === 'not-configured' ? 503
+        : 502;
       return NextResponse.json({ error: `TTS_${e.kind.toUpperCase().replace('-', '_')}`, detail: e.message.slice(0, 300) }, { status });
     }
     return NextResponse.json({ error: 'TTS_FAILED', detail: String(e?.message ?? e).slice(0, 300) }, { status: 502 });
