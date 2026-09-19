@@ -89,7 +89,8 @@ function volOverOi(a: Alert): number | null {
   return a.volume / a.openInterest;
 }
 
-export default function OptionFlowPanel() {
+/** `role`: xem chú thích cùng tên ở DarkpoolPanel.tsx. */
+export default function OptionFlowPanel({ role = 'member' }: { role?: 'owner' | 'member' }) {
   const { t } = useLang();
 
   /**
@@ -173,7 +174,7 @@ export default function OptionFlowPanel() {
           {data?.lastRun ? t('cg.lastRun', data.lastRun.at) : t('cg.neverRun')}{' '}
           {/* Chỉ hiện nút khi ĐÃ BIẾT chắc data.configured === true - xem
               chú thích trong CongressPanel.tsx cho lý do đầy đủ. */}
-          {data?.configured === true && (
+          {data?.configured === true && role === 'owner' && (
             <button onClick={sync} disabled={!!data?.syncing}>
               {data?.syncing ? t('cg.syncing') : t('cg.syncNow')}
             </button>

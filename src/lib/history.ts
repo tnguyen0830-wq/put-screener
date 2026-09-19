@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { dailyHistory } from './schwab';
+import { symbolFileKey } from './fskey';
 
 export type Bar = { datetime: number; close: number };
 
@@ -16,7 +17,7 @@ const HIST_DIR = path.resolve('./.cache/history');
 
 export async function historyBars(symbol: string): Promise<Bar[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const file = path.join(HIST_DIR, `${symbol.replace('/', '_')}.json`);
+  const file = path.join(HIST_DIR, `${symbolFileKey(symbol)}.json`);
   try {
     const cached = JSON.parse(await fs.readFile(file, 'utf8'));
     if (cached.d === today) return cached.bars as Bar[];
@@ -57,7 +58,7 @@ export async function historyCandles(
   years = 3
 ): Promise<LtCandle[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const file = path.join(LT_DIR, `${symbol.replace('/', '_')}-${years}y.json`);
+  const file = path.join(LT_DIR, `${symbolFileKey(symbol)}-${years}y.json`);
   try {
     const cached = JSON.parse(await fs.readFile(file, 'utf8'));
     if (cached.d === today) return cached.candles as LtCandle[];

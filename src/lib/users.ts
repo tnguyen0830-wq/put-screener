@@ -116,15 +116,49 @@ const OWNER_ONLY = [
   // TRẢ PHÍ của chủ app. Chỉ hình dạng, không key — nhưng vẫn là tài khoản
   // của chủ app, cùng lý do với ttprobe/xprobe.
   '/api/ttsprobe',
+  // Probe Unusual Whales: bốn lượt gọi trên hạn mức TRẢ PHÍ của chủ app.
+  // Ra đời (#105) TRƯỚC khi có tài khoản người nhà (#119) nên bị bỏ sót khi
+  // lập danh sách này — bốn probe kia đều đã nằm đây với đúng lý do đó.
+  '/api/uwprobe',
 ];
+
+/**
+ * Những đường mà chỉ phần GHI (POST/PUT/PATCH/DELETE) là của riêng chủ app,
+ * còn ĐỌC (GET) thì người nhà vẫn được.
+ *
+ * Ba tab của Unusual Whales: đọc kho đã đồng bộ là miễn phí, nhưng nút
+ * "Đồng bộ ngay" gọi UW với `force: true` — bỏ qua cả cổng giờ giao dịch
+ * lẫn nhịp giãn 1-trong-4-tick, mà chính đường dark pool từng đốt sạch hạn
+ * mức 30.000/ngày (#78). Hạn mức đó là của chủ app, và khi cạn thì MỌI tính
+ * năng UW của chủ app cùng chết (Quốc hội, Options Flow, so sánh GEX, tin
+ * UW). Cùng luật với các probe ở trên: người nhà không được là người bấm
+ * nút tiêu tiền trên tài khoản của chủ app. Tách danh sách riêng chứ không
+ * nhét vào OWNER_ONLY vì GET phải mở — người nhà vẫn xem được tab.
+ *
+ * `/api/insiders?force=1` cố ý KHÔNG ở đây: đó là SEC, miễn phí, không hạn
+ * mức trả tiền.
+ */
+const OWNER_ONLY_WRITES = ['/api/darkpool', '/api/optionflow', '/api/congress'];
+
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang
  *  chủ chứ không nhận JSON 403 - một trang trắng in chữ JSON đọc như app
  *  hỏng, trong khi đây là chuyện bình thường. */
 const OWNER_ONLY_PAGES = ['/accounts'];
 
-export function isOwnerOnly(pathname: string): boolean {
-  return OWNER_ONLY.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+const under = (list: string[], pathname: string) =>
+  list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+/**
+ * `method` mặc định GET để nơi gọi cũ không đổi; middleware truyền
+ * `req.method` thật. Chữ hoa/thường không quan trọng — chuẩn hoá ở đây, vì
+ * một cái `post` viết thường mà lọt qua là lọt thật.
+ */
+export function isOwnerOnly(pathname: string, method = 'GET'): boolean {
+  if (under(OWNER_ONLY, pathname)) return true;
+  if (READ_METHODS.has(method.toUpperCase())) return false;
+  return under(OWNER_ONLY_WRITES, pathname);
 }
 
 export function isOwnerOnlyPage(pathname: string): boolean {

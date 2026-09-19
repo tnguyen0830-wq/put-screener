@@ -86,7 +86,7 @@ export async function middleware(req: NextRequest) {
      trong cookie ĐÃ KÝ. */
   if (user) {
     if (roleOf(user) !== 'owner') {
-      if (isOwnerOnly(pathname)) {
+      if (isOwnerOnly(pathname, req.method)) {
         return NextResponse.json({ error: 'OWNER_ONLY' }, { status: 403 });
       }
       // Trang (không phải API): đưa về trang chủ, đừng ném JSON vào mặt.

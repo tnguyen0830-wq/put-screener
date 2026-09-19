@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { symbolFileKey } from './fskey';
 
 // Financial Modeling Prep - fills the fundamentals gap Schwab's Market
 // Data API leaves (revenue/EPS growth, margins, ROE, ROIC, debt ratios,
@@ -127,7 +128,7 @@ function volatilityScoreFromGrowthRates(rates: number[], band: number): number {
 
 export async function getFmpFundamentals(symbol: string): Promise<FmpFundamentals | null> {
   const key = apiKey();
-  const cacheFile = path.join(CACHE_DIR, `${symbol.replace('/', '_')}.json`);
+  const cacheFile = path.join(CACHE_DIR, `${symbolFileKey(symbol)}.json`);
   const cached = await readJsonSafe<FmpFundamentals>(cacheFile);
   const fresh = cached && Date.now() - new Date(cached.fetchedAt).getTime() < TTL_MS;
   if (fresh) return { ...cached!, stale: false };
