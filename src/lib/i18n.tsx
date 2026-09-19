@@ -1871,8 +1871,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (d: string) => `Blocked before reaching ElevenLabs (got HTML, not JSON): ${d}.`,
   },
   'tts.ai.tooLong': {
-    vi: (d: string) => `Bản tóm tắt dài hơn trần 4.000 ký tự nên không gửi đi: ${d}.`,
-    en: (d: string) => `The brief exceeds the 4,000-character ceiling, so it was not sent: ${d}.`,
+    vi: (d: { chars: number; max: number }) =>
+      `Bản tóm tắt ${d?.chars ?? '?'} ký tự, vượt trần ${d?.max ?? '?'} nên không gửi đi. Dùng tạm giọng trình duyệt (không có trần) cho bản này.`,
+    en: (d: { chars: number; max: number }) =>
+      `The brief is ${d?.chars ?? '?'} characters, over the ${d?.max ?? '?'} ceiling, so it was not sent. Use the browser voice (no ceiling) for this one.`,
   },
   'tts.ai.failed': { vi: 'Tạo giọng AI thất bại.', en: 'AI voice generation failed.' },
   'tts.howToAdd': {

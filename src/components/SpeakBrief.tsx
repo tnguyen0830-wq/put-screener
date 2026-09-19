@@ -128,7 +128,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
 }) {
   const [voiceId, setVoiceId] = useState<string>(() => defaultId ?? voices[0].id);
   const [state, setState] = useState<State>('idle');
-  const [err, setErr] = useState<{ key: string; detail?: string } | null>(null);
+  const [err, setErr] = useState<{ key: string; detail?: string | { chars: number; max: number } } | null>(null);
   const [meta, setMeta] = useState<{ cached: boolean; chars: number; voice: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -188,7 +188,13 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setErr({ key: ERR_KEY[j?.error] ?? 'tts.ai.failed', detail: j?.detail ?? `HTTP ${res.status}` });
+        if (j?.error === 'TOO_LONG') {
+          // Trần đo trên chuỗi đã dọn Markdown (#188) - trả về SỐ THẬT, không
+          // phải chuỗi "HTTP 413" người dùng không đọc ra được gì từ đó.
+          setErr({ key: 'tts.ai.tooLong', detail: { chars: Number(j?.chars ?? 0), max: Number(j?.max ?? 0) } });
+        } else {
+          setErr({ key: ERR_KEY[j?.error] ?? 'tts.ai.failed', detail: j?.detail ?? `HTTP ${res.status}` });
+        }
         setState('idle');
         return;
       }
