@@ -511,6 +511,33 @@ của tab báo "không bóc được dòng nào - khoá: …".
 
 ---
 
+## ElevenLabs (tuỳ chọn) — giọng đọc AI cho bản tóm tắt tin
+
+Giọng của trình duyệt là giọng máy; muốn giọng tự nhiên thì cần một dịch vụ
+neural có key. Chủ app chọn ElevenLabs.
+
+1. Đăng ký ở elevenlabs.io, vào **Profile → API Keys**, tạo key. Gói miễn
+   phí 10.000 ký tự/tháng (một bản tóm tắt ~2.000–2.500 ký tự); gói Starter
+   $5/tháng 30.000 ký tự. Con số này là NHỚ, không phải đo — xem trang giá
+   của họ trước khi trả tiền.
+2. Render → Environment: `ELEVENLABS_API_KEY`. Không cần gì khác để chạy.
+3. Mở `/api/ttsprobe` (chỉ chủ app) một lần: nó in ký tự đã dùng/hạn mức
+   tháng và danh sách giọng của tài khoản kèm nhãn ngôn ngữ. Chọn một giọng
+   hợp tiếng Việt rồi đặt `ELEVENLABS_VOICE_ID`, hoặc chọn thẳng trong ô
+   giọng trên tab Tin tức (app nhớ lựa chọn).
+4. Tuỳ chọn `ELEVENLABS_MODEL=eleven_flash_v2_5` nếu muốn rẻ một nửa.
+
+App giữ chi phí xuống bằng ba cách: cache audio trên đĩa theo nội dung +
+giọng (bấm lại hoặc người thứ hai bấm là 0 ký tự; `.cache/` mất khi deploy),
+trần 4.000 ký tự mỗi lượt (dài hơn thì từ chối chứ không cắt lặng lẽ), và
+chỉ tổng hợp khi bấm Nghe. Hết ký tự thì màn hình nói thẳng và nút "Giọng
+trình duyệt" vẫn còn.
+
+`api.elevenlabs.io` không gọi được từ môi trường phát triển, nên tên trường
+trong code là nhớ từ tài liệu: nếu probe báo `subscription.used: null` hay
+dòng giọng trống dù tài khoản có giọng, gửi JSON của probe cho Claude sửa
+theo hình dạng thật.
+
 ## Bước 3 — Thêm callback URL bên Schwab
 
 Ô **Callback URL(s)** trong Schwab Developer Portal nhận **nhiều URL**. Nên đây là
