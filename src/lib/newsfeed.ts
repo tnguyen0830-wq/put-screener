@@ -1,4 +1,4 @@
-import { rssDecode, rssShape, rssTag, gnewsTopic, gnewsBlockedUntil } from './gnews';
+import { rssDecode, rssShape, rssTag, imageOf, gnewsTopic, gnewsBlockedUntil } from './gnews';
 import { xConfigured, xGet, XError, parseSearch, authorQuery } from './xnews';
 import { uwConfigured, uwGet, UwError } from './unusualwhales';
 
@@ -70,6 +70,9 @@ export type Headline = {
   published: string;
   column: NewsColumn;
   kind: NewsKind;
+  /** Ảnh minh hoạ, khi nguồn có. `null` là bình thường (RSS/UW không phải
+   *  lúc nào cũng nhúng ảnh) - màn hình không vẽ gì thay vì một ô vỡ. */
+  image: string | null;
 };
 
 export type SourceStatus = {
@@ -157,7 +160,7 @@ const UA =
  *  Bóc RSS 2.0 / Atom. Hàm THUẦN, test được không cần mạng.
  * ------------------------------------------------------------------ */
 
-export type FeedItem = { title: string; link: string; published: string };
+export type FeedItem = { title: string; link: string; published: string; image: string | null };
 
 /**
  * `<link>` trong Atom là `<link href="..."/>` (rỗng bên trong), trong RSS
@@ -219,7 +222,7 @@ export function parseFeed(xml: string, now = Date.now(), maxAgeMs = MAX_AGE_MS):
     // Vài feed bọc tiêu đề trong thẻ HTML; gỡ thẻ SAU khi giải mã (#155).
     const title = rssTag(b, 'title').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     if (!title) continue;
-    out.push({ title, link, published: new Date(t).toISOString() });
+    out.push({ title, link, published: new Date(t).toISOString(), image: imageOf(b) });
   }
   return out.sort((a, b) => b.published.localeCompare(a.published));
 }
@@ -314,6 +317,11 @@ export function parseUwNews(payload: any, now = Date.now()): Headline[] {
     const t = when ? Date.parse(when) : NaN;
     if (!title || !Number.isFinite(t) || t < now - MAX_AGE_MS) continue;
     const outlet = pick(r, ['source', 'publisher', 'author']) ?? 'Unusual Whales';
+    // Tên trường ảnh CHƯA ĐO (cùng lý do mọi trường khác ở đây là phỏng
+    // đoán) — đọc dung thứ mấy tên hay gặp, không có thì `null` chứ không
+    // đoán một URL bịa.
+    const imageRaw = pick(r, ['image', 'image_url', 'thumbnail', 'thumbnail_url', 'photo_url']);
+    const image = imageRaw && /^https?:\/\//i.test(imageRaw) ? imageRaw : null;
     out.push({
       id: `uw:${pick(r, ['id']) ?? `${t}:${dedupKey(title)}`}`,
       title,
@@ -323,6 +331,7 @@ export function parseUwNews(payload: any, now = Date.now()): Headline[] {
       published: new Date(t).toISOString(),
       column: 'market',
       kind: 'uw',
+      image,
     });
   }
   if (rows.length && !out.length) {
@@ -369,6 +378,7 @@ async function fetchRss(feed: Feed): Promise<Headline[]> {
       published: it.published,
       column: feed.column,
       kind: 'rss' as const,
+      image: it.image,
     }));
   } finally {
     clearTimeout(timer);
@@ -423,6 +433,7 @@ async function fetchGnewsTopic(t: (typeof GNEWS_TOPICS)[number]): Promise<Headli
       published: it.published,
       column: t.column,
       kind: 'gnews' as const,
+      image: it.image,
     }));
 }
 
@@ -442,9 +453,10 @@ async function fetchX(column: NewsColumn, handles: string[]): Promise<Headline[]
   const { json } = await xGet('/tweets/search/recent', {
     query: q.query,
     max_results: 50,
-    'tweet.fields': 'created_at,author_id,entities',
-    expansions: 'author_id',
+    'tweet.fields': 'created_at,author_id,entities,attachments',
+    expansions: 'author_id,attachments.media_keys',
     'user.fields': 'username,name',
+    'media.fields': 'url,preview_image_url,type',
   });
   const s = parseSearch(json);
   if (s.apiErrors.length && !s.posts.length) throw new Error(`X: ${s.apiErrors.join(' | ')}`);
@@ -464,6 +476,7 @@ async function fetchX(column: NewsColumn, handles: string[]): Promise<Headline[]
       published: new Date(t).toISOString(),
       column,
       kind: 'x',
+      image: p.imageUrl,
     });
   }
   xCache.set(column, { at: Date.now(), items });

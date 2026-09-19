@@ -6,8 +6,32 @@ import { readRemembered, remember } from '@/lib/remember';
 import SpeakBrief from './SpeakBrief';
 
 /**
- * Tab Tin tức: hai cột (Thị trường | Chính trị-kinh tế), tiêu đề tiếng Anh
- * nguyên văn, một nút "Tóm tắt tiếng Việt" gọi Claude MỘT lần cho cả hai cột.
+ * Tab Tin tức: hai cột (Thị trường | Chính trị-kinh tế), ảnh minh hoạ khi
+ * nguồn có, một nút "Tóm tắt" gọi Claude MỘT lần cho cả hai cột. Chủ app đặt
+ * hàng thêm hai điều: "News phải có hình ảnh nữa" và cả tiêu đề LẪN bản tóm
+ * tắt phải theo đúng ngôn ngữ đang chọn (trước đó chỉ bản tóm tắt theo, tiêu
+ * đề luôn nguyên văn tiếng Anh).
+ *
+ * **Tiêu đề tự dịch khi `lang === 'vi'`, không cần bấm — khác hẳn nút "Tóm
+ * tắt".** Đây là dịch TỪNG DÒNG (`lib/newstranslate.ts`, `/api/news/translate`)
+ * chứ không phải văn xuôi, và cache theo THỜI GIAN SỐNG 72 giờ trong RAM
+ * (không phải trên đĩa như `profiletranslate.ts`, vì một tiêu đề không bao
+ * giờ lặp lại nguyên văn sau khi rơi khỏi cửa sổ 48 giờ của chính tab này —
+ * giữ nó lâu hơn thế chỉ là rác tích luỹ). Tiêu đề CHƯA dịch (đang chờ hoặc
+ * dịch lỗi) hiện NGUYÊN VĂN tiếng Anh — không bao giờ một ô trống hay gạch
+ * ngang, đúng luật của cả file này. `headlineViRef`/`triedTitlesRef` giữ
+ * trạng thái qua `useRef` để effect không tự kích lại chính nó mỗi lần
+ * `setState` (xem chú thích tại chỗ khai báo) — thiếu chặn đó là lặp vô hạn
+ * khi thiếu `ANTHROPIC_API_KEY`, vì object rỗng mới vẫn đổi identity.
+ *
+ * **Ảnh: bốn nguồn, bốn cách đọc, không nguồn nào đo được từ sandbox** (cùng
+ * lý do cả tab này là probe, xem `newsfeed.ts`). `imageOf()` trong `gnews.ts`
+ * thử `<media:thumbnail>` / `<media:content>` / `<enclosure>` / `<img>` đầu
+ * tiên trong mô tả theo thứ tự phổ biến nhất; X cần thêm `expansions=
+ * attachments.media_keys` trên chính request tìm kiếm; UW đọc dung thứ vài
+ * tên trường hay gặp, hoàn toàn chưa đo. Không có ảnh là bình thường (nhiều
+ * feed không nhúng ảnh) - `<Thumb>` tự gỡ khi ảnh lỗi, không bao giờ vẽ biểu
+ * tượng ảnh vỡ, cùng luật ảnh nghị sĩ #133/#134.
  *
  * Bốn trạng thái của một cột phải hiện khác nhau, vì bốn cách sửa khác nhau
  * (degradation idiom): đang tải / mọi nguồn của cột đều hỏng (in lỗi thật
@@ -56,6 +80,7 @@ type Headline = {
   published: string;
   column: Column;
   kind: 'rss' | 'gnews' | 'x' | 'uw';
+  image: string | null;
 };
 type SourceStatus = {
   id: string;
@@ -109,6 +134,54 @@ export default function NewsPanel() {
   // phải mỗi khi `load` đổi (lượt tự tải lại mỗi 5 phút không được phép
   // ghi đè một bản tóm tắt đang hiện hoặc vừa viết xong trong phiên này).
   const restoredRef = useRef(false);
+
+  /**
+   * Dịch tiêu đề sang tiếng Việt, TỰ ĐỘNG khi `lang === 'vi'` — khác nút
+   * "Tóm tắt", đây không cần bấm. `headlineViRef` giữ bản đầy đủ để tính
+   * "tiêu đề nào CHƯA dịch" mà không phải đưa `headlineVi` vào deps của
+   * effect (làm vậy sẽ tự kích lại chính nó mỗi lần setState, và nếu lượt
+   * dịch thất bại — ví dụ thiếu key — sẽ lặp lại vô hạn vì object rỗng mới
+   * vẫn đổi identity). `triedTitlesRef` nhớ những tiêu đề ĐÃ hỏi dù thành
+   * hay bại, nên một tiêu đề dịch lỗi không bị hỏi lại liên tục trong cùng
+   * một lượt mount — mở lại tab (App gỡ hẳn NewsPanel khi chuyển tab, xem
+   * chú thích đầu file) là mount mới, tự thử lại từ đầu.
+   */
+  const headlineViRef = useRef<Record<string, string>>({});
+  const [headlineVi, setHeadlineVi] = useState<Record<string, string>>({});
+  const [headlineTrReason, setHeadlineTrReason] = useState<string | null>(null);
+  const triedTitlesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (load.state !== 'ok' || lang !== 'vi') return;
+    const all = [...load.data.market, ...load.data.politics];
+    const need = [...new Set(all.map((h) => h.title))].filter(
+      (t) => !(t in headlineViRef.current) && !triedTitlesRef.current.has(t)
+    );
+    if (!need.length) return;
+    for (const t of need) triedTitlesRef.current.add(t);
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/news/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titles: need }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!alive) return;
+        if (j?.translations && Object.keys(j.translations).length) {
+          headlineViRef.current = { ...headlineViRef.current, ...j.translations };
+          setHeadlineVi(headlineViRef.current);
+        }
+        setHeadlineTrReason(j?.reason ?? null);
+      } catch {
+        if (alive) setHeadlineTrReason('failed');
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [load, lang]);
 
   const fetchNews = useCallback(async (refresh: boolean) => {
     if (refresh) setRefreshing(true);
@@ -290,12 +363,33 @@ export default function NewsPanel() {
           </div>
         )}
 
+        {/* Chỉ nói khi THẬT SỰ có lỗi — dịch xong không cần một dòng nào,
+            im lặng đúng là kết quả tốt. Tiêu đề chưa dịch vẫn hiện tiếng
+            Anh ngay bên dưới, không có ô trống hay gạch ngang nào. */}
+        {lang === 'vi' && headlineTrReason && (
+          <p className="cap warnline">
+            {t(
+              headlineTrReason === 'no-key'
+                ? 'nw.headlinesTrNoKey'
+                : headlineTrReason === 'bad-key'
+                  ? 'nw.headlinesTrBadKey'
+                  : headlineTrReason === 'rate-limited'
+                    ? 'nw.headlinesTrRateLimited'
+                    : headlineTrReason === 'truncated'
+                      ? 'nw.headlinesTrTruncated'
+                      : headlineTrReason === 'bad-request'
+                        ? 'nw.headlinesTrBadRequest'
+                        : 'nw.headlinesTrFailed'
+            )}
+          </p>
+        )}
+
         {load.state === 'error' ? (
           <p className="cap warnline">{t('nw.loadFailed', load.msg)}</p>
         ) : (
           <div className="newsgrid">
-            <NewsColumn column="market" load={load} now={now} t={t} />
-            <NewsColumn column="politics" load={load} now={now} t={t} />
+            <NewsColumn column="market" load={load} now={now} t={t} lang={lang} headlineVi={headlineVi} />
+            <NewsColumn column="politics" load={load} now={now} t={t} lang={lang} headlineVi={headlineVi} />
           </div>
         )}
 
@@ -310,11 +404,15 @@ function NewsColumn({
   load,
   now,
   t,
+  lang,
+  headlineVi,
 }: {
   column: Column;
   load: Load;
   now: number;
   t: (k: string, v?: any) => string;
+  lang: string;
+  headlineVi: Record<string, string>;
 }) {
   const title = column === 'market' ? t('nw.colMarket') : t('nw.colPolitics');
   if (load.state !== 'ok') {
@@ -346,22 +444,43 @@ function NewsColumn({
         </p>
       ) : (
         <ul className="newslist">
-          {items.map((h) => (
-            <li key={h.id} className={`newsitem kind-${h.kind}`}>
-              <a href={h.link} target="_blank" rel="noopener noreferrer" className="newstitle">
-                {h.title}
-              </a>
-              <span className="newsmeta">
-                {KIND_TAG[h.kind] && <span className={`newskind newskind-${h.kind}`}>{KIND_TAG[h.kind]}</span>}
-                <span className="newsoutlet">{h.outlet}</span>
-                <span className="newsago">{ago(h.published, now, t)}</span>
-              </span>
-            </li>
-          ))}
+          {items.map((h) => {
+            // Tiếng Việt: dùng bản dịch nếu ĐÃ dịch xong, nguyên văn tiếng
+            // Anh trong lúc chờ hoặc khi dịch lỗi — không bao giờ ô trống.
+            const title = lang === 'vi' ? headlineVi[h.title] ?? h.title : h.title;
+            return (
+              <li key={h.id} className={`newsitem kind-${h.kind}`}>
+                {h.image && <Thumb src={h.image} />}
+                <div className="newsbody">
+                  <a href={h.link} target="_blank" rel="noopener noreferrer" className="newstitle">
+                    {title}
+                  </a>
+                  <span className="newsmeta">
+                    {KIND_TAG[h.kind] && <span className={`newskind newskind-${h.kind}`}>{KIND_TAG[h.kind]}</span>}
+                    <span className="newsoutlet">{h.outlet}</span>
+                    <span className="newsago">{ago(h.published, now, t)}</span>
+                  </span>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
+}
+
+/**
+ * Ảnh minh hoạ một dòng tin. Ảnh hỏng (URL chết, chặn hotlink, CORS) thì tự
+ * GỠ chứ không để trình duyệt vẽ biểu tượng ảnh vỡ — cùng luật "không bao
+ * giờ hiện ảnh vỡ" đã áp cho ảnh nghị sĩ (#133/#134): fallback ở đây là
+ * KHÔNG có gì, đơn giản hơn ảnh nghị sĩ (không cần vẽ chữ cái thay thế) vì
+ * dòng tin vẫn đọc được đầy đủ mà không cần ảnh.
+ */
+function Thumb({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return <img className="newsthumb" src={src} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
 /**

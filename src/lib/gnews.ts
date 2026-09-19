@@ -30,6 +30,11 @@ export type GnewsItem = {
   link: string;
   /** ISO. Bài không có ngày đọc được thì bị loại (xem `parseGnewsRss`). */
   published: string;
+  /** `imageOf()` trên chính mục này. Google News RSS hay chỉ nhúng biểu
+   *  tượng nhỏ của báo trong `<description>`, không phải ảnh bài viết thật
+   *  - CHƯA ĐO được tỉ lệ, nên coi đây là "có thể có", không phải "luôn có
+   *  ảnh đẹp". `null` khi không tìm được gì hợp lệ. */
+  image: string | null;
 };
 
 const UA =
@@ -118,6 +123,62 @@ export function rssShape(xml: string): string {
 }
 
 /**
+ * Ảnh minh hoạ của MỘT mục RSS/Atom, dung thứ - thử theo thứ tự phổ biến
+ * nhất trước: `<media:thumbnail>`, `<media:content medium="image">`,
+ * `<enclosure type="image/...">`, rồi `<img>` đầu tiên trong phần mô tả
+ * (nhiều feed nhúng ảnh thẳng vào `<description>`/`<content:encoded>`).
+ * KHÔNG đo được từ sandbox (mọi feed RSS đều 403 ở CONNECT - xem đầu
+ * `newsfeed.ts`), nên đây là bốn cách đọc phổ biến chứ không phải hình dạng
+ * đã xác nhận của một feed cụ thể; sai một cách thì vẫn còn ba cách kia,
+ * và không cách nào khớp thì trả `null` - không có ảnh vẫn là một dòng tin
+ * đọc được bình thường, một ảnh vỡ mới là thứ trông như app hỏng.
+ */
+export function imageOf(block: string): string | null {
+  // Một điểm kiểm DUY NHẤT cho mọi nhánh - `url="/relative/path"` hay
+  // `url="data:..."` phải bị loại giống hệt nhau, không phải chỉ nhánh
+  // cuối cùng viết tay kiểm còn ba nhánh trên quên.
+  const asHttpUrl = (raw: string | undefined): string | null => {
+    if (!raw) return null;
+    const u = rssDecode(raw);
+    return /^https?:\/\//i.test(u) ? u : null;
+  };
+  const attrUrl = (attrs: string) => asHttpUrl(/\burl\s*=\s*"([^"]+)"/i.exec(attrs)?.[1]);
+
+  const thumb = /<media:thumbnail\b([^>]*)\/?>/i.exec(block);
+  if (thumb) {
+    const u = attrUrl(thumb[1]);
+    if (u) return u;
+  }
+
+  for (const m of block.matchAll(/<media:content\b([^>]*)\/?>/gi)) {
+    const attrs = m[1];
+    const medium = /\bmedium\s*=\s*"([^"]+)"/i.exec(attrs)?.[1];
+    const type = /\btype\s*=\s*"([^"]+)"/i.exec(attrs)?.[1];
+    if ((medium && medium !== 'image') || (type && !/^image\//i.test(type))) continue;
+    const u = attrUrl(attrs);
+    if (u) return u;
+  }
+
+  const enclosure = /<enclosure\b([^>]*)\/?>/i.exec(block);
+  if (enclosure) {
+    const type = /\btype\s*=\s*"([^"]+)"/i.exec(enclosure[1])?.[1];
+    if (!type || /^image\//i.test(type)) {
+      const u = attrUrl(enclosure[1]);
+      if (u) return u;
+    }
+  }
+
+  for (const tag of ['content:encoded', 'description', 'summary']) {
+    const body = rssTag(block, tag);
+    const img = /<img\b[^>]*\bsrc\s*=\s*"([^"]+)"/i.exec(body);
+    const u = asHttpUrl(img?.[1]);
+    if (u) return u;
+  }
+
+  return null;
+}
+
+/**
  * Bóc RSS.
  *
  * Tách riêng khỏi phần gọi mạng để test được mà không cần Internet - cùng
@@ -161,7 +222,7 @@ export function parseGnewsRss(xml: string, now = Date.now()): GnewsItem[] {
     }
     if (!title) continue;
 
-    out.push({ title, publisher: source, link, published: new Date(t).toISOString() });
+    out.push({ title, publisher: source, link, published: new Date(t).toISOString(), image: imageOf(b) });
   }
 
   return out.sort((a, b) => b.published.localeCompare(a.published));
