@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, remember } from '@/lib/remember';
-import { pickVoice, ttsChunks, voiceMatches } from '@/lib/tts';
+import { RATES, fmtRate, parseRate, pickVoice, ttsChunks, voiceMatches, type Rate } from '@/lib/tts';
 
 /**
  * Nút Nghe / Tạm dừng / Dừng cho bản tóm tắt, bằng giọng đọc của trình duyệt.
@@ -17,6 +17,7 @@ import { pickVoice, ttsChunks, voiceMatches } from '@/lib/tts';
 
 type State = 'idle' | 'speaking' | 'paused';
 const VOICE_KEY = 'ttsvoice';
+const RATE_KEY = 'ttsrate';
 
 export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 'en' }) {
   const { t } = useLang();
@@ -32,6 +33,10 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
   // Tự tăng mỗi lần bấm Dừng/đọc lại, để callback của đoạn cũ không xếp tiếp
   // đoạn kế của một lượt đã bị huỷ.
   const runRef = useRef(0);
+  const [rate, setRate] = useState<Rate>(1);
+  // Đọc qua ref lúc TẠO từng utterance, nên đổi tốc độ giữa chừng áp từ đoạn
+  // kế tiếp mà không phải dừng và đọc lại từ đầu.
+  const rateRef = useRef<Rate>(1);
 
   useEffect(() => {
     const ok = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -42,6 +47,9 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
     // Chrome: getVoices() rỗng cho tới khi voiceschanged bắn.
     window.speechSynthesis.addEventListener('voiceschanged', load);
     setVoiceName(readRemembered(VOICE_KEY));
+    const r = parseRate(readRemembered(RATE_KEY));
+    setRate(r);
+    rateRef.current = r;
     const timer = setTimeout(() => setSettled(true), 2000);
     return () => {
       clearTimeout(timer);
@@ -86,7 +94,7 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
       const u = new SpeechSynthesisUtterance(chunks[i]);
       u.voice = voice;
       u.lang = voice.lang;
-      u.rate = 1;
+      u.rate = rateRef.current;
       u.onend = () => {
         setProgress({ done: i + 1, total: chunks.length });
         speakAt(i + 1);
@@ -152,6 +160,23 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
       {progress && state !== 'idle' && (
         <span className="newsat">{t('tts.progress', progress)}</span>
       )}
+      <span className="chiprow ttsrates" role="radiogroup" aria-label={t('tts.rate')}>
+        {RATES.map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={r === rate ? 'on' : undefined}
+            aria-pressed={r === rate}
+            onClick={() => {
+              setRate(r);
+              rateRef.current = r;
+              remember(RATE_KEY, String(r));
+            }}
+          >
+            {fmtRate(r)}
+          </button>
+        ))}
+      </span>
       {sameLang.length > 1 ? (
         <select
           className="ttsvoice"

@@ -786,6 +786,9 @@ tiếng Việt thì nút tắt và app nói thẳng máy đang có những giọ
 cách cài thêm — cố ý không đọc tiếng Việt bằng giọng Anh, vì thứ đó không
 nghe được mà trông y như đang chạy. Văn bản được chia thành đoạn ngắn theo
 câu vì Chrome ngừng giữa chừng một đoạn dài quá ~15 giây mà không báo lỗi.
+Hàng nút **0.75× / 1× / 1.25× / 1.5× / 2×** chỉnh tốc độ đọc, nhớ lựa chọn,
+đổi giữa chừng thì áp từ đoạn kế tiếp. Không có 0.5× vì ở tốc độ đó một
+đoạn 150 ký tự dài quá 15 giây và lại rơi vào đúng lỗi ngắt của Chrome.
 
 ## Cấu trúc
 
