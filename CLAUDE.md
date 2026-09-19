@@ -1373,11 +1373,20 @@ still under the ~10,000/request multilingual_v2 is remembered to accept
 A rejection now also carries the real `chars`/`max` numbers all the way to
 the screen — the first version returned them in the JSON body but the UI
 never read them and fell back to printing the raw HTTP status, so the owner
-saw "HTTP 413" instead of a sentence. No remembered `voice_id` is hard-coded — the order
-is `ELEVENLABS_VOICE_ID` → the voice the user picked on screen (from the
-account's own `/v1/voices`, remembered and honoured only if still listed) →
-the first voice, and an env id absent from the account is warned about, not
-silently ignored. `classifyEleven()` separates HTML (edge block, never
+saw "HTTP 413" instead of a sentence. No remembered `voice_id` is hard-coded, and the
+precedence is the **opposite of what this file said until #195**: in
+`pickElevenVoice()` the voice **the user picked on screen wins**, then
+`ELEVENLABS_VOICE_ID`, then the first voice. What the env var actually
+decides is the *default* — `/api/tts/voices` computes `defaultId` as
+`pickElevenVoice(voices, envId, null)`, so it sets what the dropdown opens
+on, and a pick overrides it for that request. The distinction is
+load-bearing and was the first thing checked when the owner had to move off
+a refused voice (#195): if the env var won, picking a working voice on
+screen would change nothing. The pick is remembered per browser
+(`remember('elevenvoice')`, honoured only if still listed), so a household
+on several devices is fixed properly by changing the env var, not by
+clicking in one browser. An env id absent from the account is warned about,
+not silently ignored. `classifyEleven()` separates HTML (edge block, never
 reached the API, #130) from `bad-key`, `quota`, `voice-plan`, `bad-voice`
 and `unavailable`, and a 200 whose body is JSON or HTML rather than audio is
 a failure, not a finished read — playing an empty file is silence that reads
