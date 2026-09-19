@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { readRemembered, remember } from '@/lib/remember';
 import SpeakBrief from './SpeakBrief';
 
 /**
@@ -12,7 +13,39 @@ import SpeakBrief from './SpeakBrief';
  * (degradation idiom): đang tải / mọi nguồn của cột đều hỏng (in lỗi thật
  * từng nguồn) / nguồn sống mà không có bài trong 48 giờ / có bài. Cột trống
  * mà không nói vì sao trông y hệt "hôm nay không có tin".
+ *
+ * **Bản tóm tắt sống trong `localStorage`, không chỉ trong state.** Các tab
+ * lớn của app loại trừ nhau bằng một chuỗi `? :` trong `page.tsx`
+ * (`tab === 'news' ? <NewsPanel /> : …`), nên chuyển sang tab khác rồi quay
+ * lại là NewsPanel bị GỠ HẲN khỏi cây React chứ không chỉ ẩn đi — mọi state
+ * cục bộ (bản tóm tắt, lỗi, giờ viết) biến mất và mount lại từ đầu. Đúng
+ * hình dạng lỗi "SPX bị mất mỗi lần thoát ra" mà #110 đã sửa cho tab GEX,
+ * chủ app báo lại y hệt cho bản tóm tắt: "tóm tắt tiếng việt rồi ra app quay
+ * lại thì mất hết, làm lại giữa luôn". `briefKeyOf()` băm THUẦN (không
+ * `crypto`, chỉ so sánh cục bộ nên không cần) danh sách tiêu đề+cột hiện có;
+ * lần mount ĐẦU TIÊN sau khi tải xong tiêu đề, nếu khoá đó khớp bản đã lưu
+ * trong `localStorage` thì hiện lại ngay — KHÔNG gọi `/api/news/brief`, vì
+ * gọi lại là một lượt Claude tự động mà không ai bấm, trái đúng luật "chỉ
+ * chạy khi bấm" của route đó. Tiêu đề đã đổi (quá 5 phút, nguồn khác) thì
+ * khoá không khớp và bản cũ không hiện lại — đúng, vì nó có thể đang nói về
+ * một bộ tin đã cũ. Chỉ LƯU bản đã VIẾT XONG (`briefState === 'done'`), cùng
+ * luật với cache 20 phút phía server (#181): một bản bị cắt/lỗi mà lưu lại
+ * là lần sau ai quay lại cũng thấy đúng bản cụt đó.
  */
+
+const BRIEF_STORE_KEY = 'newsbrief';
+
+type StoredBrief = { key: string; lang: string; text: string; at: string | null };
+
+/** Khoá THUẦN từ nội dung tiêu đề đang hiện — không phụ thuộc thứ tự, không
+ *  phân biệt hoa/thường, giống hệt cách server tự băm (`briefKey()` trong
+ *  `lib/newsbrief.ts`) nhưng không cần SHA-256 vì chỉ so sánh trên máy này. */
+function briefKeyOf(items: { title: string; column: string }[]): string {
+  return items
+    .map((h) => `${h.column}|${h.title.trim().toLowerCase()}`)
+    .sort()
+    .join('\n');
+}
 
 type Column = 'market' | 'politics';
 type Headline = {
@@ -72,6 +105,10 @@ export default function NewsPanel() {
   const [briefErr, setBriefErr] = useState<string | null>(null);
   const [briefAt, setBriefAt] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Chỉ thử khôi phục MỘT lần, ngay sau lần tải tiêu đề đầu tiên — không
+  // phải mỗi khi `load` đổi (lượt tự tải lại mỗi 5 phút không được phép
+  // ghi đè một bản tóm tắt đang hiện hoặc vừa viết xong trong phiên này).
+  const restoredRef = useRef(false);
 
   const fetchNews = useCallback(async (refresh: boolean) => {
     if (refresh) setRefreshing(true);
@@ -103,6 +140,28 @@ export default function NewsPanel() {
       abortRef.current?.abort();
     };
   }, [fetchNews]);
+
+  // Khôi phục bản tóm tắt đã lưu, đúng MỘT lần, khi tiêu đề vừa tải xong lần
+  // đầu sau khi component này mount lại (tức sau khi chuyển tab rồi quay
+  // lại). So khoá bằng đúng bộ tiêu đề đang hiện — không gọi mạng, không
+  // tốn một lượt Claude nào.
+  useEffect(() => {
+    if (load.state !== 'ok' || restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = readRemembered(BRIEF_STORE_KEY);
+      if (!raw) return;
+      const saved: StoredBrief = JSON.parse(raw);
+      if (typeof saved?.text !== 'string' || !saved.text.trim() || saved.lang !== lang) return;
+      const key = briefKeyOf([...load.data.market, ...load.data.politics]);
+      if (saved.key !== key) return; // tiêu đề đã đổi - bản cũ có thể đang nói chuyện cũ
+      setBrief(saved.text);
+      setBriefAt(saved.at);
+      setBriefState('done');
+    } catch {
+      /* localStorage hỏng hoặc JSON hỏng - bỏ qua, không được làm hỏng trang */
+    }
+  }, [load, lang]);
 
   const summarize = useCallback(async () => {
     if (load.state !== 'ok' || briefState === 'busy') return;
@@ -138,7 +197,8 @@ export default function NewsPanel() {
         setBriefState('error');
         return;
       }
-      setBriefAt(res.headers.get('X-Brief-At'));
+      const at = res.headers.get('X-Brief-At');
+      setBriefAt(at);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let acc = '';
@@ -166,6 +226,14 @@ export default function NewsPanel() {
         setBrief(acc);
       }
       setBriefState('done');
+      // Lưu CHỈ bản đã viết xong (không phải bản dở dang) - qua tab khác rồi
+      // quay lại vẫn thấy được, đúng lý do effect khôi phục ở trên tồn tại.
+      try {
+        const stored: StoredBrief = { key: briefKeyOf(all), lang, text: acc, at };
+        remember(BRIEF_STORE_KEY, JSON.stringify(stored));
+      } catch {
+        /* localStorage đầy/bị chặn - chạy tiếp, chỉ không nhớ được */
+      }
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
       setBriefErr('ai.failed');
