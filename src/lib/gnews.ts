@@ -125,13 +125,26 @@ export function rssShape(xml: string): string {
 /**
  * Ảnh minh hoạ của MỘT mục RSS/Atom, dung thứ - thử theo thứ tự phổ biến
  * nhất trước: `<media:thumbnail>`, `<media:content medium="image">`,
- * `<enclosure type="image/...">`, rồi `<img>` đầu tiên trong phần mô tả
+ * `<enclosure type="image/...">`, `<link rel="enclosure" type="image/...">`
+ * (cách Atom viết cùng một ý - vài feed dùng thẻ này thay vì `<enclosure>`
+ * kiểu RSS), `<itunes:image href="...">` (namespace podcast, một số báo tái
+ * dùng cho ảnh đại diện bài viết), rồi `<img>` đầu tiên trong phần mô tả
  * (nhiều feed nhúng ảnh thẳng vào `<description>`/`<content:encoded>`).
  * KHÔNG đo được từ sandbox (mọi feed RSS đều 403 ở CONNECT - xem đầu
- * `newsfeed.ts`), nên đây là bốn cách đọc phổ biến chứ không phải hình dạng
- * đã xác nhận của một feed cụ thể; sai một cách thì vẫn còn ba cách kia,
+ * `newsfeed.ts`), nên đây là sáu cách đọc phổ biến chứ không phải hình dạng
+ * đã xác nhận của một feed cụ thể; sai một cách thì vẫn còn năm cách kia,
  * và không cách nào khớp thì trả `null` - không có ảnh vẫn là một dòng tin
  * đọc được bình thường, một ảnh vỡ mới là thứ trông như app hỏng.
+ *
+ * **Nâng cấp 2026-09-19**: chủ app báo "nhiều tin không có hình" ở production
+ * sau khi ảnh ĐÃ chạy cho một số tin - tức dây nối đúng, chỉ là cách đọc cũ
+ * bỏ sót vài kiểu nhúng ảnh HỢP LỆ theo đúng chuẩn XML/Atom, không phải đoán
+ * riêng cho một nguồn nào: (1) giá trị thuộc tính trong XML được phép bọc
+ * NHÁY ĐƠN hoặc nháy kép, code cũ chỉ đọc nháy kép nên `url='...'` (một cách
+ * viết hợp lệ, không hiếm ở feed tự sinh) bị bỏ qua hoàn toàn; (2) hai cách
+ * nhúng ảnh mới ở trên (`link rel=enclosure`, `itunes:image`) chưa từng được
+ * thử. Rộng hơn nhưng không đoán mò: cả ba đều là cú pháp RSS/Atom/podcast đã
+ * có chuẩn, không phải suy đoán riêng cho CNBC hay Yahoo.
  */
 export function imageOf(block: string): string | null {
   // Một điểm kiểm DUY NHẤT cho mọi nhánh - `url="/relative/path"` hay
@@ -142,7 +155,13 @@ export function imageOf(block: string): string | null {
     const u = rssDecode(raw);
     return /^https?:\/\//i.test(u) ? u : null;
   };
-  const attrUrl = (attrs: string) => asHttpUrl(/\burl\s*=\s*"([^"]+)"/i.exec(attrs)?.[1]);
+  // XML cho phép giá trị thuộc tính bọc nháy đơn HOẶC nháy kép - một điểm
+  // đọc DUY NHẤT cho cả hai, để không nhánh nào (cũ hay mới) quên nháy đơn.
+  const attrVal = (attrs: string, name: string): string | undefined => {
+    const m = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(attrs);
+    return m ? m[1] ?? m[2] : undefined;
+  };
+  const attrUrl = (attrs: string, name = 'url') => asHttpUrl(attrVal(attrs, name));
 
   const thumb = /<media:thumbnail\b([^>]*)\/?>/i.exec(block);
   if (thumb) {
@@ -152,8 +171,8 @@ export function imageOf(block: string): string | null {
 
   for (const m of block.matchAll(/<media:content\b([^>]*)\/?>/gi)) {
     const attrs = m[1];
-    const medium = /\bmedium\s*=\s*"([^"]+)"/i.exec(attrs)?.[1];
-    const type = /\btype\s*=\s*"([^"]+)"/i.exec(attrs)?.[1];
+    const medium = attrVal(attrs, 'medium');
+    const type = attrVal(attrs, 'type');
     if ((medium && medium !== 'image') || (type && !/^image\//i.test(type))) continue;
     const u = attrUrl(attrs);
     if (u) return u;
@@ -161,17 +180,36 @@ export function imageOf(block: string): string | null {
 
   const enclosure = /<enclosure\b([^>]*)\/?>/i.exec(block);
   if (enclosure) {
-    const type = /\btype\s*=\s*"([^"]+)"/i.exec(enclosure[1])?.[1];
+    const type = attrVal(enclosure[1], 'type');
     if (!type || /^image\//i.test(type)) {
       const u = attrUrl(enclosure[1]);
       if (u) return u;
     }
   }
 
+  // Atom: `<link rel="enclosure" type="image/..." href="...">` - cùng ý
+  // nghĩa với `<enclosure>` của RSS, khác cú pháp. `rel` khác "enclosure"
+  // (ví dụ "alternate", "self") bị bỏ qua - đó là link bài viết, không phải
+  // ảnh.
+  for (const m of block.matchAll(/<link\b([^>]*)\/?>/gi)) {
+    const attrs = m[1];
+    if (attrVal(attrs, 'rel')?.toLowerCase() !== 'enclosure') continue;
+    const type = attrVal(attrs, 'type');
+    if (type && !/^image\//i.test(type)) continue;
+    const u = attrUrl(attrs, 'href');
+    if (u) return u;
+  }
+
+  const itunesImg = /<itunes:image\b([^>]*)\/?>/i.exec(block);
+  if (itunesImg) {
+    const u = attrUrl(itunesImg[1], 'href');
+    if (u) return u;
+  }
+
   for (const tag of ['content:encoded', 'description', 'summary']) {
     const body = rssTag(block, tag);
-    const img = /<img\b[^>]*\bsrc\s*=\s*"([^"]+)"/i.exec(body);
-    const u = asHttpUrl(img?.[1]);
+    const img = /<img\b([^>]*)\/?>/i.exec(body);
+    const u = img ? attrUrl(img[1], 'src') : null;
     if (u) return u;
   }
 
