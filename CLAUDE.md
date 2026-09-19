@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-19 — Không có việc đang làm dở. Mới nhất: /api/ttsprobe bỏ qua cache 1 giờ của danh sách giọng ElevenLabs (#185) — chủ app add giọng tiếng Việt mới rồi bấm probe vẫn thấy bản cũ, đang chờ chủ app thêm giọng và xác nhận lại; giọng AI ElevenLabs cho bản tóm tắt tab Tin tức (#184).
+2026-09-19 — ĐANG LÀM: bản tóm tắt tab Tin tức mất khi chuyển tab rồi quay lại (#187, đã xong, đang merge) → tiếp theo là lỗi HTTP 413 "dài hơn trần 4.000 ký tự" khi bấm Nghe giọng AI, chủ app gửi ảnh chụp thật.
 
 **ĐÃ XÁC NHẬN Ở PRODUCTION (#153):** câu trả lời RA TIẾNG VIỆT; mã mục 8-K giải mã đúng và được dùng thật; hỏng-độc-lập chạy đúng (Claude tự nói "Google News 503 nên phần tin báo chí bị thiếu, ở đây tôi bị mù một phần"). **CÒN TREO:** Google News trả **503** từ Render — chưa biết là sập tạm hay chặn dải IP trung tâm dữ liệu; #153 đã cho lỗi mang theo BODY nên lần bấm tới sẽ nói ra (trang chặn của Google viết thẳng "unusual traffic from your computer network"). Chủ app bấm lại một lần nữa là đủ để quyết: thử-lại-được hay phải bỏ hẳn Google News.
 
