@@ -13,6 +13,7 @@ App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 | **My Portfolio** | Cái đang cầm có gì cần để ý |
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
 | **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
+| **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -737,6 +738,43 @@ theo phạm vi đó chứ không giữ lại bảng cũ. Đóng tab *giữa lúc
 mất lượt quét — tab này cố ý không có bộ máy chạy nền như tab Screener.
 
 ---
+
+## Tin tức — thị trường | chính trị-kinh tế
+
+Tab thứ bảy trả lời một câu đơn giản: *hôm nay có gì đang diễn ra*. Hai cột
+đặt cạnh nhau — **Thị trường** (cổ phiếu, earnings, lãi suất, số liệu vĩ mô)
+và **Chính trị - kinh tế** (chính phủ, Fed, thuế quan, ngân sách, những thứ
+từ chính trị chạm vào thị trường). Tiêu đề 48 giờ gần nhất, mới nhất trước,
+để **nguyên tiếng Anh** của toà báo; bấm vào dòng nào là mở bài gốc.
+
+**Bốn loại nguồn, mỗi loại một tư thế:**
+
+| Nguồn | Cần gì | Ghi chú |
+|---|---|---|
+| RSS báo lớn (CNBC, MarketWatch, WSJ, Yahoo, Bloomberg, Politico, The Hill, NPR, Fed) | không gì cả | miễn phí, cache 5 phút |
+| Google News theo chủ đề | không gì cả | nguồn PHỤ — Google từng trả 503 ở production; đo được là bị chặn thì app tự nghỉ 6 tiếng |
+| X theo danh sách tài khoản | `X_BEARER_TOKEN` + `X_NEWS_ACCOUNTS` / `X_NEWS_POLITICS_ACCOUNTS` | trả theo lượng đọc, nên cache riêng 15 phút mà nút Làm mới không vượt qua |
+| Unusual Whales `news/headlines` | `UW_API_KEY` | chưa đo hình dạng — chạy `/api/uwprobe` một lần rồi đọc bước `news-headlines` |
+
+Reuters và AP **không có** trong danh sách RSS dù là hai hãng lớn nhất:
+Reuters đã ngừng RSS công khai từ 2020, AP không có RSS chính thức. Bài của
+họ về qua Google News, vốn gom lại hàng trăm báo.
+
+**Không nguồn nào ở đây kiểm được từ môi trường phát triển** (mọi host tin
+tức đều bị chặn ở đó, kể cả Yahoo và Google News — hai nguồn đang chạy thật).
+Nên phần **Nguồn** dưới hai cột chính là phép đo: từng nguồn hiện ✓ kèm số
+bài, ✗ kèm mã HTTP và 160 ký tự đầu của thứ thật sự nhận được, hoặc · khi
+tắt vì thiếu key / đang nghỉ. Một cột trống nói rõ vì sao trống — mọi nguồn
+hỏng, hay nguồn sống mà 48 giờ không có bài — vì hai chuyện đó cần hai cách
+sửa khác nhau, và một cột trống câm trông y hệt "hôm nay không có tin".
+
+**"Tóm tắt tiếng Việt" là một nút, không tự chạy.** Bấm là Claude đọc cả hai
+cột trong MỘT lượt gọi (tối đa 60 tiêu đề) và viết bản tóm tắt bốn phần:
+tổng quan, thị trường, chính trị-kinh tế, cần để ý — chỉ từ tiêu đề, không
+có thân bài, không có dữ liệu ngoài, và được dặn gọi tên toà báo thay vì
+nói như sự thật đã kiểm. Bản viết xong được giữ 20 phút theo bộ tiêu đề,
+nên hai người trong nhà cùng bấm là một lượt gọi. Không dịch từng dòng: 60
+tiêu đề mỗi lần mở tab là 60 lượt gọi cho thứ người đọc lướt trong 10 giây.
 
 ## Cấu trúc
 
