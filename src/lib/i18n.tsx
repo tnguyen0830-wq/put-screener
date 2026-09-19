@@ -1804,6 +1804,37 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'X and Unusual Whales are optional keyed sources: unset means off, and the columns still run on RSS and Google News.',
   },
 
+  // ---- Giọng đọc (Web Speech API) ----
+  'tts.play': { vi: 'Nghe', en: 'Listen' },
+  'tts.pause': { vi: 'Tạm dừng', en: 'Pause' },
+  'tts.resume': { vi: 'Đọc tiếp', en: 'Resume' },
+  'tts.stop': { vi: 'Dừng', en: 'Stop' },
+  'tts.voice': { vi: 'Giọng đọc', en: 'Voice' },
+  'tts.online': { vi: 'trực tuyến', en: 'online' },
+  'tts.progress': {
+    vi: (p: { done: number; total: number }) => `đoạn ${p.done + 1}/${p.total}`,
+    en: (p: { done: number; total: number }) => `part ${p.done + 1}/${p.total}`,
+  },
+  'tts.loadingVoices': { vi: 'Đang tìm giọng đọc của trình duyệt…', en: 'Looking for browser voices…' },
+  'tts.unsupported': {
+    vi: 'Trình duyệt này không có giọng đọc (Web Speech API). Safari, Chrome và Edge đều có.',
+    en: 'This browser has no speech synthesis (Web Speech API). Safari, Chrome and Edge do.',
+  },
+  'tts.noVoice': {
+    vi: (v: { lang: string; n: number; have: string }) =>
+      `Máy này không có giọng đọc ${v.lang} — có ${v.n} giọng khác: ${v.have}. Đọc tiếng Việt bằng giọng khác sẽ không nghe được, nên nút Nghe tắt.`,
+    en: (v: { lang: string; n: number; have: string }) =>
+      `This device has no ${v.lang} voice — ${v.n} other voices exist: ${v.have}. Reading in another language's voice is unintelligible, so Listen is off.`,
+  },
+  'tts.noVoicesAtAll': {
+    vi: 'Trình duyệt này báo không có giọng đọc nào được cài trên máy, nên nút Nghe tắt.',
+    en: 'This browser reports no installed voices at all, so Listen is off.',
+  },
+  'tts.howToAdd': {
+    vi: 'Cách thêm: iPhone/iPad → Cài đặt → Trợ năng → Nội dung đọc → Giọng nói → Tiếng Việt; Android → Cài đặt → Ngôn ngữ → Chuyển văn bản sang giọng nói → Google → cài tiếng Việt; Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng nói.',
+    en: 'To add one: iPhone/iPad → Settings → Accessibility → Spoken Content → Voices; Android → Settings → Language → Text-to-speech → Google → install the language; Windows → Settings → Time & language → Speech → Add voices.',
+  },
+
   // ---- misc ----
   'common.saving': { vi: ' đang lưu…', en: ' saving…' },
   'scan.busy': {

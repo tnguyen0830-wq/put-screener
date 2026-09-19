@@ -776,6 +776,17 @@ nói như sự thật đã kiểm. Bản viết xong được giữ 20 phút the
 nên hai người trong nhà cùng bấm là một lượt gọi. Không dịch từng dòng: 60
 tiêu đề mỗi lần mở tab là 60 lượt gọi cho thứ người đọc lướt trong 10 giây.
 
+**Nghe bản tóm tắt.** Dưới bản tóm tắt có nút **Nghe** (kèm Tạm dừng / Dừng),
+đọc bằng **giọng có sẵn của chính trình duyệt** (Web Speech API) — không key,
+không tốn tiền, không gửi văn bản đi đâu. Vì vậy giọng tiếng Việt tuỳ máy:
+iPhone/iPad và Mac có sẵn, Android có Google TTS, Chrome máy tính có giọng
+Google trực tuyến, Windows phải cài thêm gói tiếng Việt. Máy có nhiều giọng
+tiếng Việt thì có ô chọn, và app nhớ giọng đã chọn. Máy **không có** giọng
+tiếng Việt thì nút tắt và app nói thẳng máy đang có những giọng nào cùng
+cách cài thêm — cố ý không đọc tiếng Việt bằng giọng Anh, vì thứ đó không
+nghe được mà trông y như đang chạy. Văn bản được chia thành đoạn ngắn theo
+câu vì Chrome ngừng giữa chừng một đoạn dài quá ~15 giây mà không báo lỗi.
+
 ## Cấu trúc
 
 `src/lib` có 28 file, liệt kê hết ra thì thành mục lục chứ không thành hiểu

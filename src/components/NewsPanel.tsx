@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import SpeakBrief from './SpeakBrief';
 
 /**
  * Tab Tin tức: hai cột (Thị trường | Chính trị-kinh tế), tiêu đề tiếng Anh
@@ -213,6 +214,9 @@ export default function NewsPanel() {
               )}
             </div>
             {brief ? <div className="newsbrieftext">{brief}</div> : briefState === 'busy' ? <p className="cap">{t('nw.briefBusy')}</p> : null}
+            {/* Chỉ khi ĐÃ VIẾT XONG: đọc một bản đang stream là đọc nửa câu
+                rồi im, hoặc đọc bản cụt. */}
+            {brief && briefState === 'done' && <SpeakBrief text={brief} lang={lang === 'en' ? 'en' : 'vi'} />}
             {briefErr && <p className="cap warnline">{t(briefErr)}</p>}
             <p className="cap">{t('nw.briefNote')}</p>
           </div>
