@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ElevenError, MAX_CHARS, elevenConfigured, listVoices, pickElevenVoice, synthesize } from '@/lib/eleventts';
+import { cleanForSpeech } from '@/lib/tts';
 
 /**
  * Đọc bản tóm tắt bằng giọng AI (ElevenLabs). Chỉ chạy khi BẤM; cache trên
@@ -7,8 +8,11 @@ import { ElevenError, MAX_CHARS, elevenConfigured, listVoices, pickElevenVoice, 
  *
  * Mở cho cả người nhà (không OWNER_ONLY): tab Tin tức là tab của cả nhà, và
  * cache khiến lượt bấm thứ hai trên cùng bản tóm tắt là 0 ký tự. Trần
- * 4.000 ký tự/lượt là chốt chặn chi phí; văn bản dài hơn bị TỪ CHỐI chứ
- * không cắt lặng lẽ.
+ * 8.000 ký tự/lượt là chốt chặn chi phí; văn bản dài hơn bị TỪ CHỐI chứ
+ * không cắt lặng lẽ — và trần được kiểm TRÊN BẢN ĐÃ DỌN MARKDOWN
+ * (`cleanForSpeech()`), không phải trên chuỗi thô client gửi lên: đếm cả
+ * `**`/`##`/gạch đầu dòng là tự cộng thêm vào đúng con số làm HTTP 413 xảy
+ * ra oan cho một bản tóm tắt thật bình thường (#188).
  */
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +24,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
-  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  const raw = typeof body?.text === 'string' ? body.text.trim() : '';
+  if (!raw) return NextResponse.json({ error: 'NO_TEXT' }, { status: 400 });
+  const text = cleanForSpeech(raw);
   if (!text) return NextResponse.json({ error: 'NO_TEXT' }, { status: 400 });
   if (text.length > MAX_CHARS) {
     return NextResponse.json({ error: 'TOO_LONG', chars: text.length, max: MAX_CHARS }, { status: 413 });

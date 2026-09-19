@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { cleanForSpeech } from './tts';
 
 /**
  * ElevenLabs — giọng đọc AI cho bản tóm tắt tab Tin tức.
@@ -25,9 +26,16 @@ import crypto from 'crypto';
  *    tắt đã cache 20 phút phía server (#181) nên cùng văn bản quay lại rất
  *    thường; hai người trong nhà cùng bấm Nghe là MỘT lần trả tiền, bấm lại
  *    là 0. `.cache/` mất được khi deploy — đúng tài liệu repo, chấp nhận.
- *  - **Trần 4.000 ký tự mỗi lượt** — một bản tóm tắt ~300-450 từ là
- *    ~2.500 ký tự; client gửi văn bản DÀI HƠN trần bị từ chối chứ không cắt
- *    lặng lẽ (một bản đọc thiếu đoạn cuối trông y hệt bản đủ).
+ *  - **Trần 8.000 ký tự mỗi lượt (sau khi đã dọn Markdown)** — SỬA từ 4.000
+ *    sau khi chủ app đo được trần cũ SAI ngay trong ngày đầu: prompt xin
+ *    "300-450 từ" nhưng một bản tóm tắt thật (hai cột 80/70 tiêu đề) dễ dàng
+ *    vượt 4.000 ký tự với đủ tiêu đề Tổng quan/Thị trường/Chính trị/Cần để
+ *    ý — HTTP 413 trên chính nút Nghe, đúng con số "~2.500" ghi ở đây trước
+ *    đó là một phỏng đoán không đo, không phải sự thật. Văn bản DÀI HƠN trần
+ *    vẫn bị TỪ CHỐI chứ không cắt lặng lẽ (một bản đọc thiếu đoạn cuối trông
+ *    y hệt bản đủ) — chỉ con số trần được sửa theo bằng chứng thật, và
+ *    trần được đo trên văn bản ĐÃ QUA `cleanForSpeech()` (xem ngay dưới),
+ *    không phải trên bản còn nguyên `**`/`##`/gạch đầu dòng.
  *  - **KHÔNG tự phát**: chỉ tổng hợp khi người dùng BẤM Nghe.
  *
  * Giọng: KHÔNG chôn một voice_id nhớ được vào code — id sai là 404 trông
@@ -49,10 +57,14 @@ export const elevenConfigured = () => !!process.env.ELEVENLABS_API_KEY;
 export const DEFAULT_MODEL = 'eleven_multilingual_v2';
 export const modelId = () => process.env.ELEVENLABS_MODEL?.trim() || DEFAULT_MODEL;
 
-/** Trần ký tự một lượt. Tài liệu nhớ được nói multilingual_v2 nhận tới
- *  10.000/request; 4.000 là trần CỦA APP để một cú bấm không bao giờ đốt
- *  nửa gói miễn phí. */
-export const MAX_CHARS = 4000;
+/** Trần ký tự một lượt, đo TRÊN văn bản đã dọn Markdown (`cleanForSpeech`).
+ *  Tài liệu nhớ được nói multilingual_v2 nhận tới 10.000/request — 8.000 là
+ *  trần CỦA APP, đủ thấp để còn khoảng lùi dưới con số đó (chưa đo, xem
+ *  đầu file), đủ cao để không chặn một bản tóm tắt thật bình thường như
+ *  4.000 đã chặn (#188). Nếu ElevenLabs vẫn từ chối ở 8.000 thì lỗi thật
+ *  của họ sẽ hiện ra qua `classifyEleven()` — đúng hơn một trần tự đoán
+ *  chặn trước cả khi chưa hỏi. */
+export const MAX_CHARS = 8000;
 
 export type ElevenFailure =
   | 'not-configured'
@@ -259,7 +271,13 @@ export type Synth = { audio: Buffer; cached: boolean; voiceId: string; model: st
  * trần; ở đây kiểm lại vì đây là chỗ TIÊU TIỀN.
  */
 export async function synthesize(text: string, voiceId: string): Promise<Synth> {
-  const t = text.trim();
+  // Dọn Markdown TRƯỚC khi đếm/gửi/cache: `**`/`##`/gạch đầu dòng không ai
+  // nghe thấy nhưng vẫn tính vào ký tự trả tiền và vào trần MAX_CHARS —
+  // đếm trên bản còn nguyên ký hiệu là tự cộng thêm vào đúng con số đã gây
+  // ra HTTP 413 ở #188. Idempotent nên gọi lại ở đây an toàn dù route đã
+  // dọn một lần (`/api/tts` route) — chỗ TIÊU TIỀN tự bảo vệ mình, không
+  // tin tưởng ngầm rằng nơi gọi đã dọn đúng.
+  const t = cleanForSpeech(text.trim());
   if (!t) throw new ElevenError('văn bản rỗng', 'unavailable');
   if (t.length > MAX_CHARS) throw new ElevenError(`văn bản ${t.length} ký tự vượt trần ${MAX_CHARS}`, 'unavailable');
   const model = modelId();

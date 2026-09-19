@@ -42,17 +42,32 @@ export function parseRate(raw: string | null | undefined): Rate {
 export const fmtRate = (r: number) => `${String(r).replace(/\.0+$/, '')}×`;
 
 /**
- * Bỏ ký hiệu trình bày (gạch đầu dòng, `**`, `#`) và chia theo câu / xuống
- * dòng thành đoạn ≤ CHUNK_MAX. Một câu dài hơn trần thì cắt ở dấu phẩy, rồi
- * ở khoảng trắng — không bao giờ cắt giữa một từ.
+ * Bỏ ký hiệu trình bày (gạch đầu dòng, `**`, `#`) khỏi văn bản trước khi đọc
+ * — dùng CHUNG cho cả hai máy đọc, giọng trình duyệt (`ttsChunks()` dưới
+ * đây) LẪN giọng AI (`synthesize()` trong `lib/eleventts.ts`). Một bản chép
+ * thứ hai của cùng phép dọn là bản sẽ trôi lệch (đúng lý do `ratelimit.ts`
+ * tách riêng) — và ở đây trôi lệch có giá thật: ElevenLabs tính tiền theo
+ * KÝ TỰ, nên gửi nguyên `**`/`##`/gạch đầu dòng là trả tiền đọc những ký tự
+ * không ai nghe thấy (mà ElevenLabs có thể đọc thành "hai sao" hoặc im lặng
+ * tuỳ giọng — không sạch dù thế nào). Hàm THUẦN, không đụng `window`, nên
+ * gọi được từ cả file phía server (`eleventts.ts`).
  */
-export function ttsChunks(text: string, max = CHUNK_MAX): string[] {
-  const clean = (text ?? '')
+export function cleanForSpeech(text: string): string {
+  return (text ?? '')
     .replace(/\*\*|__|`/g, '')
     .replace(/^\s*(?:[-*•]|\d+[.)])\s+/gm, '')
     .replace(/^\s*#+\s*/gm, '')
     .replace(/[ \t]+/g, ' ')
     .trim();
+}
+
+/**
+ * Chia theo câu / xuống dòng thành đoạn ≤ CHUNK_MAX, sau khi đã dọn ký hiệu
+ * trình bày qua `cleanForSpeech()`. Một câu dài hơn trần thì cắt ở dấu
+ * phẩy, rồi ở khoảng trắng — không bao giờ cắt giữa một từ.
+ */
+export function ttsChunks(text: string, max = CHUNK_MAX): string[] {
+  const clean = cleanForSpeech(text);
   if (!clean) return [];
 
   const units: string[] = [];
