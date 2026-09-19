@@ -50,6 +50,7 @@ export async function GET() {
     voices,
     note:
       'subscription.used/limit là ký tự đã dùng / hạn mức tháng (null = trường không có tên như nhớ, xem keys). ' +
-      'voices[].labels thường có language/accent — chọn giọng cho tiếng Việt rồi đặt ELEVENLABS_VOICE_ID, hoặc chọn ngay trong ô giọng trên tab Tin tức.',
+      'voices[].labels thường có language/accent — chọn giọng cho tiếng Việt rồi đặt ELEVENLABS_VOICE_ID, hoặc chọn ngay trong ô giọng trên tab Tin tức. ' +
+      'voices[].category là chữ NGUYÊN VĂN của ElevenLabs. ĐO ĐƯỢC ở production (#195): gói free trả 402 paid_plan_required "Free users cannot use library voices via the API" cho giọng lấy từ Voice Library, kể cả khi used/limit vẫn còn nguyên — nên hết ký tự và giọng-đòi-gói là HAI chuyện khác nhau. Giọng mặc định của chính ElevenLabs ghi category "premade"; category nào gọi được qua API ở gói này thì chỉ bấm Nghe thử mới biết.',
   });
 }

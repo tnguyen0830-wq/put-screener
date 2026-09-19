@@ -1951,8 +1951,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (d: string) => `ElevenLabs rejected the key: ${d}. Check ELEVENLABS_API_KEY on Render.`,
   },
   'tts.ai.quota': {
-    vi: (d: string) => `Hết ký tự ElevenLabs của tháng này: ${d}. Chuyển sang giọng trình duyệt hoặc mua thêm. Xem hạn mức ở /api/ttsprobe.`,
-    en: (d: string) => `Out of ElevenLabs characters this month: ${d}. Switch to the browser voice or top up. Quota at /api/ttsprobe.`,
+    vi: (d: string) => `Hết ký tự ElevenLabs của tháng này: ${d}. Chuyển sang giọng trình duyệt hoặc mua thêm. Kiểm lại hạn mức thật ở /api/ttsprobe — nếu ở đó vẫn còn ký tự thì lỗi này không phải hết hạn mức, gửi câu lỗi này cho Claude.`,
+    en: (d: string) => `Out of ElevenLabs characters this month: ${d}. Switch to the browser voice or top up. Check the real quota at /api/ttsprobe — if characters are still left there, this is not a quota problem; send this error to Claude.`,
+  },
+  'tts.ai.voicePlan': {
+    vi: (d: string) =>
+      `Gói ElevenLabs hiện tại KHÔNG gọi được giọng này qua API — đây là giọng lấy từ Voice Library, gói free chỉ cho dùng nó trên trang elevenlabs.io. Không phải hết ký tự: hạn mức vẫn còn, xem ở /api/ttsprobe. Cách sửa: chọn một giọng mặc định của chính ElevenLabs trong ô giọng (chữ category in cuối mỗi dòng — giọng của họ ghi "premade"), hoặc nâng gói. Tạm thời chuyển sang giọng trình duyệt là nghe được ngay. ${d}`,
+    en: (d: string) =>
+      `The current ElevenLabs plan cannot use this voice through the API — it is a Voice Library voice, and the free tier only allows it on elevenlabs.io. This is not the character quota: that is still there, see /api/ttsprobe. Fixes: pick one of ElevenLabs' own default voices in the dropdown (the category is printed at the end of each line — theirs read "premade"), or upgrade the plan. Switching to the browser voice works right now. ${d}`,
   },
   'tts.ai.badVoice': {
     vi: (d: string) => `Giọng này không còn trong tài khoản: ${d}. Chọn giọng khác.`,
