@@ -1059,6 +1059,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.colDayPl': { vi: 'Hôm nay', en: 'Today' },
   /* ---------------- Long-term Investment ---------------- */
   'tab.longterm': { vi: 'Đầu tư dài hạn', en: 'Long-term' },
+  'tab.news': { vi: 'Tin tức', en: 'News' },
   'lt.lead': {
     vi: 'Tìm mã ĐANG RỚT VỀ một vùng hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và định giá chưa đắt. Vùng hỗ trợ tự tính từ 3 năm nến ngày (đáy xoay đã được nến hai bên xác nhận, gom theo giá); bội số và giá mục tiêu từ Finviz; doanh thu/EPS/FCF nhiều năm và pha loãng cổ phiếu bóc từ 10-K trên SEC EDGAR.',
     en: 'Finds stocks FALLING TOWARD a support zone while the company is still profitable, still growing and not expensively priced. Support zones are computed here from 3 years of daily bars (confirmed pivot lows, clustered by price); multiples and the analyst target come from Finviz; multi-year revenue/EPS/FCF and share dilution are parsed from 10-K filings on SEC EDGAR.',
@@ -1731,6 +1732,76 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'ai.failed': {
     vi: 'Gọi Claude thất bại. Xem log trên Render để biết lý do.',
     en: 'The call to Claude failed. Check the Render logs for the reason.',
+  },
+
+  // ---- Tab Tin tức ----
+  'nw.title': { vi: 'Tin tức: thị trường & chính trị-kinh tế', en: 'News: markets & political economy' },
+  'nw.intro': {
+    vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước, để nguyên tiếng Anh của báo. Bấm "Tóm tắt tiếng Việt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc.',
+    en: 'Headlines from the last 48 hours, newest first, in the outlet\'s own English. Press "Summarise" to have Claude read both columns in ONE call and write a brief — from headlines only, no article bodies. Each line opens the original article.',
+  },
+  'nw.colMarket': { vi: 'Thị trường', en: 'Markets' },
+  'nw.colPolitics': { vi: 'Chính trị - kinh tế', en: 'Politics & economy' },
+  'nw.loading': { vi: 'Đang tải…', en: 'Loading…' },
+  'nw.refresh': { vi: 'Làm mới', en: 'Refresh' },
+  'nw.refreshing': { vi: 'Đang tải…', en: 'Refreshing…' },
+  'nw.updatedAt': { vi: (h: string) => `cập nhật ${h}`, en: (h: string) => `updated ${h}` },
+  'nw.justNow': { vi: 'vừa xong', en: 'just now' },
+  'nw.minAgo': { vi: (n: number) => `${n} phút trước`, en: (n: number) => `${n} min ago` },
+  'nw.hourAgo': { vi: (n: number) => `${n} giờ trước`, en: (n: number) => `${n} h ago` },
+  'nw.dayAgo': { vi: (n: number) => `${n} ngày trước`, en: (n: number) => `${n} d ago` },
+  'nw.loadFailed': {
+    vi: (m: string) => `Không tải được tin: ${m}`,
+    en: (m: string) => `Could not load the news: ${m}`,
+  },
+  'nw.emptyAlive': {
+    vi: (n: number) => `${n} nguồn trả lời nhưng không có bài nào trong 48 giờ qua — cuối tuần hoặc feed chỉ đăng bài cũ. Xem phần Nguồn bên dưới.`,
+    en: (n: number) => `${n} source(s) answered but carried nothing from the last 48 hours — a weekend, or feeds serving old items. See Sources below.`,
+  },
+  'nw.emptyFailed': {
+    vi: (n: number) => `Cả ${n} nguồn của cột này đều hỏng — đây KHÔNG phải "hôm nay không có tin". Mở phần Nguồn bên dưới để đọc lỗi thật của từng nguồn.`,
+    en: (n: number) => `All ${n} sources for this column failed — this is NOT "no news today". Open Sources below for each one\'s real error.`,
+  },
+  'nw.emptyNoSource': {
+    vi: 'Không nguồn nào được cấu hình cho cột này.',
+    en: 'No source is configured for this column.',
+  },
+  'nw.briefBtn': { vi: 'Tóm tắt tiếng Việt', en: 'Summarise' },
+  'nw.briefBusy': { vi: 'Claude đang đọc…', en: 'Claude is reading…' },
+  'nw.briefHead': { vi: 'Bản tóm tắt', en: 'Brief' },
+  'nw.briefAt': { vi: (h: string) => `viết lúc ${h}`, en: (h: string) => `written at ${h}` },
+  'nw.briefNote': {
+    vi: 'Claude chỉ đọc TIÊU ĐỀ đang hiện ở hai cột, không có thân bài, không có dữ liệu ngoài. Một tiêu đề là lời của toà báo, chưa phải sự thật đã kiểm. Đây không phải khuyến nghị mua bán.',
+    en: 'Claude reads only the HEADLINES shown in the two columns — no article bodies, no outside data. A headline is the outlet\'s claim, not a verified fact. This is not a recommendation to buy or sell.',
+  },
+  'nw.briefTruncated': {
+    vi: 'Bản tóm tắt bị cắt giữa chừng (chạm trần độ dài). Bấm lại để viết lại.',
+    en: 'The brief was cut off (length ceiling). Press again to rewrite it.',
+  },
+  'nw.sourcesSummary': {
+    vi: (v: { ok: number; bad: number; off: number }) => `Nguồn: ${v.ok} sống · ${v.bad} hỏng · ${v.off} tắt/nghỉ — bấm để xem từng nguồn`,
+    en: (v: { ok: number; bad: number; off: number }) => `Sources: ${v.ok} live · ${v.bad} failed · ${v.off} off/paused — click for each one`,
+  },
+  'nw.srcOk': { vi: (n: number) => `${n} bài trong 48 giờ`, en: (n: number) => `${n} items in 48 h` },
+  'nw.srcPaused': {
+    vi: (h: string) => `app tự nghỉ hỏi tới ${h} (lần trước đo được là bị chặn hoặc URL chết)`,
+    en: (h: string) => `paused by the app until ${h} (last call measured a block or a dead URL)`,
+  },
+  'nw.srcXNoToken': { vi: 'tắt: chưa đặt X_BEARER_TOKEN', en: 'off: X_BEARER_TOKEN not set' },
+  'nw.srcXNoAccounts': {
+    vi: 'tắt: chưa đặt danh sách tài khoản (X_NEWS_ACCOUNTS / X_NEWS_POLITICS_ACCOUNTS trên Render)',
+    en: 'off: no account list (X_NEWS_ACCOUNTS / X_NEWS_POLITICS_ACCOUNTS on Render)',
+  },
+  'nw.srcUwNoKey': { vi: 'tắt: chưa đặt UW_API_KEY', en: 'off: UW_API_KEY not set' },
+  'nw.srcOff': { vi: 'tắt', en: 'off' },
+  'nw.srcFailed': { vi: 'hỏng, không có lý do', en: 'failed, no reason given' },
+  'nw.sourcesNote': {
+    vi: 'Không nguồn nào ở đây kiểm được từ môi trường phát triển (mọi host tin tức đều bị chặn ở đó), nên dòng trạng thái này CHÍNH LÀ phép đo: một nguồn ✗ kèm "HTTP 404" là URL feed đã đổi, kèm trang chặn là báo không cho máy chủ đọc — gửi dòng đó cho Claude để gỡ hoặc đổi feed. Reuters và AP không còn RSS công khai; bài của họ về qua Google News. X có cache riêng 15 phút mà nút Làm mới không vượt qua, vì X tính tiền theo lượng đọc.',
+    en: 'None of these sources can be checked from the development environment (every news host is blocked there), so this status line IS the measurement: a ✗ with "HTTP 404" means the feed URL moved, one with a block page means the outlet refuses servers — send that line to Claude to drop or replace the feed. Reuters and AP no longer publish public RSS; their stories arrive via Google News. X has its own 15-minute cache that Refresh does not bypass, because X bills per read.',
+  },
+  'nw.sourcesOptional': {
+    vi: 'X và Unusual Whales là nguồn tuỳ chọn có key: chưa đặt thì tự tắt, cột vẫn chạy bằng RSS và Google News.',
+    en: 'X and Unusual Whales are optional keyed sources: unset means off, and the columns still run on RSS and Google News.',
   },
 
   // ---- misc ----

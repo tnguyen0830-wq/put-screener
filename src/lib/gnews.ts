@@ -91,7 +91,12 @@ const ENTITIES: Record<string, string> = {
   nbsp: ' ',
 };
 
-function decode(s: string): string {
+/**
+ * Ba hàm XML nhỏ được XUẤT ra để `newsfeed.ts` (tab Tin tức) dùng lại — một
+ * bản chép thứ hai của cùng bộ giải mã là bản sẽ trôi lệch (cùng lý do
+ * `ratelimit.ts` được tách ra).
+ */
+export function rssDecode(s: string): string {
   return s
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
@@ -100,13 +105,15 @@ function decode(s: string): string {
     .trim();
 }
 
-function tagOf(xml: string, name: string): string {
+export function rssTag(xml: string, name: string): string {
   const m = new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, 'i').exec(xml);
-  return m ? decode(m[1]) : '';
+  return m ? rssDecode(m[1]) : '';
 }
+const decode = rssDecode;
+const tagOf = rssTag;
 
 /** Vài chục ký tự đầu, để lỗi nói ra được THỨ THẬT SỰ NHẬN ĐƯỢC. */
-function shapeOf(xml: string): string {
+export function rssShape(xml: string): string {
   return xml.replace(/\s+/g, ' ').slice(0, 160);
 }
 
@@ -126,7 +133,7 @@ export function parseGnewsRss(xml: string, now = Date.now()): GnewsItem[] {
   const blocks = [...xml.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].map((m) => m[1]);
   if (!blocks.length) {
     if (!/<channel[\s>]/i.test(xml)) {
-      throw new Error(`Google News: not an RSS feed (${shapeOf(xml)})`);
+      throw new Error(`Google News: not an RSS feed (${rssShape(xml)})`);
     }
     return [];
   }
@@ -214,24 +221,27 @@ export function _resetGnewsBlock() {
 
 export const gnewsBlockedUntil = () => blockedUntil;
 
-export async function gnewsSearch(
-  symbol: string,
-  name?: string | null,
-  limit = 8
-): Promise<GnewsItem[]> {
+/**
+ * Gọi MỘT URL của Google News RSS, dùng chung cho tìm theo mã (`gnewsSearch`)
+ * và tìm theo CHỦ ĐỀ (`gnewsTopic`, tab Tin tức). Tách ra để cả hai đi qua
+ * cùng một cửa: cùng thời gian nghỉ khi bị chặn, cùng cách đọc body lỗi —
+ * hai bản chép của đoạn "đọc body rồi phân loại" là hai bản sẽ trôi lệch, và
+ * bản trôi là bản đang giữ một cái 503 câm.
+ */
+export async function gnewsFetch(url: string, label = 'Google News'): Promise<GnewsItem[]> {
   /* Đang trong thời gian nghỉ vì ĐÃ ĐO được là bị chặn: ném ngay, và nói
      rõ đây là quyết định của app chứ không phải câu trả lời của Google -
      hai chuyện đó cần hai cách sửa khác nhau. */
   if (Date.now() < blockedUntil) {
     const mins = Math.ceil((blockedUntil - Date.now()) / 60_000);
     throw new Error(
-      `Google News blocked - app tạm ngừng hỏi thêm ${mins} phút nữa. ` +
+      `${label} blocked - app tạm ngừng hỏi thêm ${mins} phút nữa. ` +
         'Lần gọi gần nhất nhận đúng trang chặn của Google (chặn dải IP trung ' +
         'tâm dữ liệu), nên thử lại ngay cũng chỉ nhận lại đúng trang đó.'
     );
   }
 
-  const r = await fetch(gnewsUrl(symbol, name), {
+  const r = await fetch(url, {
     headers: { 'User-Agent': UA },
     cache: 'no-store',
   });
@@ -253,10 +263,32 @@ export async function gnewsSearch(
        chuỗi này bị cắt ở 200 ký tự khi lên prompt và màn hình, nên thứ
        đáng giá nhất phải đứng trước (#102). */
     throw new Error(
-      `Google News ${r.status} ${kind}` +
+      `${label} ${r.status} ${kind}` +
         (kind === 'blocked' ? ' (trang chặn của Google, không phải sập tạm)' : '') +
-        (body ? ` - ${shapeOf(body)}` : ' (thân rỗng)')
+        (body ? ` - ${rssShape(body)}` : ' (thân rỗng)')
     );
   }
-  return parseGnewsRss(await r.text()).slice(0, limit);
+  return parseGnewsRss(await r.text());
+}
+
+export async function gnewsSearch(
+  symbol: string,
+  name?: string | null,
+  limit = 8
+): Promise<GnewsItem[]> {
+  return (await gnewsFetch(gnewsUrl(symbol, name))).slice(0, limit);
+}
+
+/**
+ * Tìm theo CHỦ ĐỀ, cho tab Tin tức: `q` là một câu tìm kiếm tự do
+ * ("stock market OR Wall Street"), không phải mã. Cùng cửa `gnewsFetch`,
+ * nên bị chặn một lần là cả hai đường cùng nghỉ — đúng, vì Google chặn
+ * theo IP thoát chứ không theo câu hỏi.
+ */
+export function gnewsTopicUrl(q: string): string {
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US%3Aen`;
+}
+
+export async function gnewsTopic(q: string, limit = 40): Promise<GnewsItem[]> {
+  return (await gnewsFetch(gnewsTopicUrl(q), 'Google News (chủ đề)')).slice(0, limit);
 }

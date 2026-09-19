@@ -3486,3 +3486,178 @@ body {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- tab Tin tức ---------- */
+
+.newshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.newsactions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.newsat {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.newsbriefbtn {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.newsgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.newscol {
+  min-width: 0;
+}
+
+.newscolhead {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: 6px;
+}
+
+.newscount {
+  font-weight: 400;
+  margin-left: 6px;
+  color: var(--stamp);
+}
+
+.newslist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.newsitem {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.newstitle {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.newstitle:hover {
+  color: var(--stamp);
+  text-decoration: underline;
+}
+
+.newsmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.newskind {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+/* Bài X là văn bản chưa kiểm chứng, yếu hơn báo — nhãn ra màu cảnh báo để
+   mắt phân biệt được trước khi đọc. */
+.newskind-x {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.newsbrief {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+
+.newsbriefhead {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.newsbrieftext {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.newssources {
+  margin-top: 14px;
+}
+
+.newssources > summary {
+  cursor: pointer;
+}
+
+.newssrclist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+.newssrclist li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+}
+
+.newssrclist li.good .newssrcname { color: var(--credit); }
+.newssrclist li.bad .newssrcname { color: var(--risk); }
+.newssrclist li.off .newssrcname { color: var(--muted); }
+
+.newssrccol {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.newssrcinfo {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.newssrclist li.bad .newssrcinfo {
+  color: var(--warn);
+}

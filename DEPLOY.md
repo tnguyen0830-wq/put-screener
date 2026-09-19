@@ -475,6 +475,18 @@ MÃ, X gộp cả watchlist vào vài lô trong một request nên không cần 
 thêm `X_SINCE_PATH` là tuỳ chọn: bỏ trống thì rơi vào `.cache/x-since.json`,
 mất được và dựng lại được — không cần `/var/data`.
 
+**Tab Tin tức (tuỳ chọn):** muốn cột tin có bài từ X thì đặt thêm
+`X_NEWS_ACCOUNTS` (cột Thị trường) và/hoặc `X_NEWS_POLITICS_ACCOUNTS` (cột
+Chính trị-kinh tế) — danh sách handle cách nhau bằng dấu phẩy, ví dụ
+`Reuters,CNBC,DeItaone`. Đây là danh sách CỦA BẠN: app không tự chọn ai đáng
+tin. Bỏ trống thì nguồn X trong tab tự tắt, hai cột vẫn chạy bằng RSS và
+Google News. Vì X trả theo lượng đọc, tab giữ cache riêng 15 phút cho X mà nút
+"Làm mới" không vượt qua được — bấm làm mới liên tục không tốn thêm tiền X.
+Nguồn Unusual Whales của tab dùng lại `UW_API_KEY` sẵn có, nhưng hình dạng
+endpoint `news/headlines` CHƯA đo: mở `/api/uwprobe` một lần, đọc bước
+`news-headlines`, và gửi cho Claude nếu dòng Unusual Whales trong phần Nguồn
+của tab báo "không bóc được dòng nào - khoá: …".
+
 ### Những gì cổng này gác, và không gác
 
 - **Gác:** mọi trang và mọi `/api/*`, kể cả `/api/auth/callback` của Schwab. Để ngỏ

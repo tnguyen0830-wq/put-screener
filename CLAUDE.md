@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-18 — Không có việc đang làm dở. Tab Đầu tư dài hạn: lưu kết quả quét (#144), ô tích trên SMA200 (#145), nút vốn hoá (#146), nút dòng tiền RRG (#147), nút "Tại sao rớt?" trả lời đúng tiếng Việt + nguồn hồ sơ SEC (#148), Google News thành nguồn tin thứ ba (#149), thêm chỉ số kỹ thuật/IV của tab Analyze (#151), sửa nhãn 424B + đọc body 503 (#153), cảnh báo sự kiện thời gian thực cho vị thế nắm + watchlist (#155). tiêu đề báo chí thành tầng cảnh báo thứ BA + tự phân loại cái 503 của Google (#157). probe X cho cảnh báo mã đang nắm (#159). sửa lại mô hình giá X sau ảnh chụp của chủ app (#161) — X giờ TRẢ THEO LƯỢNG DÙNG chứ không phải gói tháng. **MỚI: chủ app tự chạy `/api/xprobe`, cả ba câu quyết định đều đo được, tầng cảnh báo X đã BẬT THẬT (#162) — tầng thứ tư, nhanh nhất, chạy chung nhịp 15 phút với 8-K.**
+2026-09-19 — Không có việc đang làm dở. Mới nhất: tab Tin tức (#181) — hai cột thị trường | chính trị-kinh tế, bốn loại nguồn, nút tóm tắt tiếng Việt; KHÔNG nguồn nào đo được từ sandbox nên phần Nguồn trên màn hình chính là probe — chủ app mở tab ở production và đọc dòng nào ✗ để gỡ/đổi feed.
 
 **ĐÃ XÁC NHẬN Ở PRODUCTION (#153):** câu trả lời RA TIẾNG VIỆT; mã mục 8-K giải mã đúng và được dùng thật; hỏng-độc-lập chạy đúng (Claude tự nói "Google News 503 nên phần tin báo chí bị thiếu, ở đây tôi bị mù một phần"). **CÒN TREO:** Google News trả **503** từ Render — chưa biết là sập tạm hay chặn dải IP trung tâm dữ liệu; #153 đã cho lỗi mang theo BODY nên lần bấm tới sẽ nói ra (trang chặn của Google viết thẳng "unusual traffic from your computer network"). Chủ app bấm lại một lần nữa là đủ để quyết: thử-lại-được hay phải bỏ hẳn Google News.
 
@@ -137,6 +137,7 @@ before signing off - not a full changelog, just enough that the *other*
 account skimming this file sees roughly where things stand without a live git
 check. Trim entries once they are clearly old news (a dozen or so is plenty).
 
+- 2026-09-19 — #181 **Tab thứ BẢY: Tin tức — thị trường | chính trị-kinh tế, bốn loại nguồn, một nút tóm tắt tiếng Việt.** Chủ app: "Tôi muốn làm tab news chuyên về tính tin tức chứng khoán và chính trị liên quan kinh tế." Hỏi ba câu trước: nguồn = CẢ BỐN (RSS báo lớn, Google News theo chủ đề, X theo danh sách tài khoản, UW news); tiếng Việt = NÚT tóm tắt (một lượt Claude trên ≤60 tiêu đề, cache 20 phút theo bộ tiêu đề) chứ không dịch từng dòng; bố cục = hai cột. **ĐO 2026-09-19: 22 URL feed (CNBC/MarketWatch/WSJ/Reuters/AP/Bloomberg/FT/Yahoo/Fed/NPR/Politico/The Hill/WaPo/Investing/Seeking Alpha/Google News) ĐỀU 403 ở CONNECT từ sandbox** — y hệt Yahoo và Google News đang chạy thật ở production, nên không phải rủi ro mới; theo khuôn CBOE #109/#149: đọc dung thứ (RSS 2.0 + Atom, ba cách viết `<link>`, gỡ thẻ HTML sau khi giải mã), và **phần Nguồn dưới hai cột CHÍNH LÀ probe**: từng nguồn ✓ số bài / ✗ mã HTTP + 160 ký tự thật / · tắt-vì-thiếu-key hoặc đang nghỉ. Cột trống nói đúng lý do (mọi nguồn hỏng ≠ nguồn sống mà 48h không bài ≠ chưa cấu hình). Reuters ngừng RSS công khai từ 2020, AP không có RSS chính thức → cố ý KHÔNG có trong `FEEDS` dù chủ app nhắc; về qua Google News. Bốn tư thế chi phí: RSS cache 5′ (+ "Làm mới" cách nhau ≥45s, hai tab chung một lượt gọi); Google News là nguồn PHỤ qua đúng cửa `gnewsFetch` (tách từ `gnewsSearch`, thêm `gnewsTopic`) nên cùng thời gian nghỉ 6h khi đo được là bị chặn; **X có cache RIÊNG 15′ mà Làm mới KHÔNG vượt qua** vì X trả theo lượng đọc (#161), danh sách tài khoản là của chủ app (`X_NEWS_ACCOUNTS`/`X_NEWS_POLITICS_ACCOUNTS`, app không tự chọn ai đáng tin), dùng lại `authorQuery`/`parseSearch` của xnews.ts; UW `news/headlines` CHƯA ĐO → thêm bước `news-headlines` vào `/api/uwprobe`, `parseUwNews` đọc nhiều tên trường và NÉM kèm khoá thật khi có dòng mà không bóc được dòng nào. Nguồn hỏng kiểu "lần sau hỏng y hệt" (401/403/404/410/429) nghỉ 60′ chứ không hỏi lại mỗi 5′ — một dòng lỗi lặp vô hạn là một dòng lỗi bị bỏ qua; 5xx/timeout thử lại ngay. Trần mỗi nguồn 40 dòng trước, trần cột 80 sau (một feed 200 bài không nhấn chìm sáu feed 20 bài — bài học Form 4 #148); gộp trùng theo tiêu đề chuẩn hoá SAU khi xếp. Bản tóm tắt: neo tiếng Việt ở CẢ HAI ĐẦU prompt (#148), tiêu đề là DỮ LIỆU, dặn gọi tên toà báo thay vì nói như sự thật, bài X dán nhãn chưa kiểm chứng; chỉ cache bản VIẾT XONG (bản bị cắt mà cache 20′ là 20′ ai bấm cũng nhận bản cụt); header `X-Brief-At` để màn hình in "viết lúc HH:MM" — bản 19′ tuổi trông y hệt bản vừa viết nếu không nói. 52 khẳng định (bóc RSS/Atom, hai nhánh hỏng, gộp/trần, handle X, UW dung thứ + ném khoá, prompt neo hai đầu/không rò tiếng Việt sang bản EN, khoá cache không phụ thuộc thứ tự, đầu-cuối với fetch giả: 404→nghỉ, 500→thử lại, trang chặn Google→nghỉ và không gọi, mất mạng toàn bộ→cột trống kèm lỗi thật) + typecheck + build + đo trình duyệt 2 theme × 1280/400 (hai cột cạnh nhau ở 1280, xếp dọc ở 400, 0 tràn ngoài thanh tab vốn có, ✗ ra `--risk`, nhãn X và lỗi ra `--warn`, tóm tắt stream + "viết lúc", trạng thái thật của sandbox: 16 hỏng "Host not in allowlist" hiện đúng từng dòng). Không biến môi trường bắt buộc mới. Touches page.tsx, i18n (chỉ thêm), globals.css (chỉ thêm), gnews.ts (xuất `rssDecode`/`rssTag`/`rssShape`, tách `gnewsFetch`, thêm `gnewsTopic`), uwprobe route (thêm một endpoint), README, DEPLOY.md, .env.example; mới lib/newsfeed.ts, lib/newsbrief.ts, components/NewsPanel.tsx, api/news, api/news/brief.
 - 2026-09-18 — #180 **Probe #178 trả lời: `$UVOLQ`/`$DVOLQ` QUOTE ĐƯỢC nhưng không có nến → badge NASDAQ sống + chuỗi tự lấy mẫu.** Chủ app chạy `/api/internalsprobe`: cả hai `quoted: true`, `field: lastPrice`, `assetMainType: EQUITY`, `candleCount: 0` — cùng lớp $TICKQ/$ADV/$DECL/$PCCE (#165); `$UVOL.NQ`/`UVOLQ`/`DVOLQ` vào `invalidSymbols`. **Bẫy nhỏ đo được**: `DVOL` và `DECN` trần "quote được" nhưng mang `lastMICId` — đó là CỔ PHIẾU trùng tên, không phải chỉ báo; thang `$X` đứng trước là đúng, đừng "dọn" thành mã trần. Làm: hai mã vào `SAMPLED_SYMBOLS` (cùng MỘT request quotes 15′), `StoredPoint.uvolDvolNasdaq` (tuỳ chọn — điểm cũ đọc `undefined`, bộ lọc `typeof` sẵn có xử đúng), chuỗi `uvolDvolDiffQ` "NASDAQ UVOL − DVOL" (sampled, đường 0, tô theo dấu) trong chế độ app và là nguồn thứ tư của ô UVOL−DVOL bên TradingView; `nasdaqUpDown` từ quote SỐNG lúc mở trang, lấy chung request quotes của `chartableSeries()` (giờ trả cả `q`), badge "1.38:1 NASD" xanh/đỏ theo dấu, null → "— NASD" xám chứ không đoán. Sửa kèm: thẻ app trong lưới TradingView in nhãn của CHÍNH chuỗi chứ không phải nhãn ô — nếu không đổi ô NYSE sang chuỗi NASDAQ vẫn in "NYSE" lên số NASDAQ. Đo trình duyệt: hai badge đúng màu `--risk`/`--credit`, null ra xám, nút thứ tư đổi ô sang thẻ NASDAQ (mẫu 15′, đường 0), chế độ app có 11 thẻ. Touches internals.ts, InternalsCard.tsx, InternalsPanel.tsx, TradingViewInternals.tsx, i18n.
 - 2026-09-18 — #179 **Ảnh nghị sĩ do chủ app cung cấp — bộ ảnh cục bộ, tra theo Bioguide ID HOẶC tên.** Chủ app gửi zip 33 ảnh chân dung Bioguide (public domain) đặt tên `NN_Ten_BIOGUIDE.jpg` kèm DANH-SACH.txt (Alan Armstrong A000383 cố ý không có ảnh). Thu về 225×275 (tỉ lệ kho unitedstates/images, cắt giữa lệch lên 0,35 cho chân dung) bằng Pillow → `public/congress/<BIOGUIDE>.jpg`, 17 MB → 365 KB, ảnh lớn nhất 13 KB; manifest `data/congress-photos.json` (id → tên). **Vì sao cần bộ cục bộ**: `politicianPhoto()` chỉ dựng URL khi `politician_id` của UW đúng dạng Bioguide, mà màn hình "Theo nghị sĩ" của chủ app vẫn toàn vòng chữ cái (#134) — id UW có thể không phải Bioguide; bộ cục bộ tra được bằng CẢ id LẪN TÊN (thứ UW chắc chắn có). `localPortrait()` trong `lib/congressphotos.ts` (thuần, import JSON) — hai mức khớp, KHÔNG mức nào đoán: tên chuẩn hoá đầy đủ (bỏ dấu, chấm phẩy, hậu tố Jr/Sr/II/III/IV) hoặc cùng TÊN ĐẦU + HỌ bỏ đệm ("James A Himes" ↔ "James Himes"); KHÔNG khớp họ đơn lẻ (Kelly = họ Mike Kelly, tên Kelly Morrison), KHÔNG biệt danh (Jim ≠ James), "Last, First" đảo thứ tự cũng không — một ảnh gắn nhầm người trông y hệt ảnh đúng, và đây là mặt người thật; khoá mơ hồ (hai người cùng tên đầu+họ) bị LOẠI khỏi bảng chứ không chọn người đầu. Route: cục bộ trước, unitedstates sau. Màn hình: khi đã có ảnh cho một số người, in TÊN những người chưa có (`cg.photoMissing`) để chủ app bổ sung — một vòng chữ cái giữa hàng ảnh thật không tự nói mình thiếu vì sao; `cg.noPhotoBioguide` không còn bảo "gửi cho Claude nối bảng tra" (đã nối) mà bảo gửi vài TÊN đang hiện để đối chiếu cách UW viết. 58 khẳng định (33 file có thật, id/tên/hậu tố/đệm/biệt danh/họ đơn/mơ hồ) + đo trình duyệt (2 ảnh 225×275 tải được từ `/congress/`, dòng thiếu ảnh ra đúng tên, cả hai chế độ Theo mã/Theo nghị sĩ). Touches api/congress/route.ts, CongressPanel.tsx, i18n; mới lib/congressphotos.ts, data/congress-photos.json, public/congress/*.jpg (33).
 - 2026-09-18 — #178 **Probe thêm `$UVOLQ`/`$DVOLQ` (NASDAQ up/down volume) — chưa có tính năng, đúng luật đo trước.** Chủ app: "thêm $UVOLQ/$DVOLQ vào probe đi", sau khi #177 để badge NASDAQ ghi "chưa đo". Mỗi mã ba cách viết theo thang `$X` / `$X.NQ` / `X` như các mã đã đo; khuôn "NYSE + hậu tố Q" không chắc vì `$ADVQ`/`$DECLQ` từng KHÔNG quote được (#165). Chủ app chạy `/api/internalsprobe`, đọc `results.nasdaqUvol`/`nasdaqDvol`: `resolvedSymbol` + `intraday.candleCount` > 0 thì làm badge + chuỗi; `resolvedSymbol` null thì ghi nhận là không có ở Schwab, badge giữ "chưa đo" → đổi thành "Schwab không có". Chỉ probe route.
@@ -218,7 +219,7 @@ check. Trim entries once they are clearly old news (a dozen or so is plenty).
 - 2026-09-04 — #76 Dark Pool buy/sell colour-coding + volume summary.
 - 2026-09-03/04 — #68-75 Unusual Whales integration: Congress trading, Options Flow, Dark Pool, sub-tabs, abbreviation fixes.
 
-No PR is currently open and unmerged as of #162. If you're reading this and a
+No PR is currently open and unmerged as of #181. If you're reading this and a
 PR number below the highest merged one here is still open, something stalled
 - check it before starting new work.
 
@@ -1076,6 +1077,75 @@ operator availability change, and a misremembered number in a deploy runbook
 looks exactly like a checked one. The runbook names the two lines to find on
 X's own pricing page instead: whether `recent search` is in the plan, and
 whether the cashtag operator is.
+
+### News tab (`src/lib/newsfeed.ts`, `newsbrief.ts`, `NewsPanel.tsx`, `/api/news`, `/api/news/brief`)
+
+The seventh tab: two columns, **Markets** and **Politics & economy**, of
+English headlines from the last 48 hours, newest first, plus one button that
+asks Claude for a Vietnamese brief of both columns in a single call. The
+owner chose all three shapes before any code was written: all four source
+kinds, a brief on a button rather than per-line translation, two columns.
+
+**Not one source here can be reached from the sandbox, so the tab is its own
+probe.** Measured 2026-09-19: 22 candidate feed URLs across CNBC, MarketWatch,
+WSJ, Reuters, AP, Bloomberg, FT, Yahoo, the Fed, NPR, Politico, The Hill,
+WaPo, Investing.com, Seeking Alpha and Google News are all refused 403 at
+CONNECT. That is exactly the status of Yahoo and Google News, which run in
+production today, so it is not a new risk — but it means the `FEEDS` list is
+a deliberate guess. The CBOE/Google News posture applies: parse tolerantly
+(RSS 2.0 and Atom, three spellings of `<link>`, tags stripped after entity
+decoding as #155 taught), and put the measurement on screen. The **Sources**
+block under the columns prints every source as ✓ with a count, ✗ with the
+HTTP status and the first 160 characters of what actually came back, or ·
+for off-because-unconfigured / paused. The owner reads that block in
+production; a ✗ with an HTML 404 means the feed URL moved, a block page means
+the outlet refuses servers. Reuters (no public RSS since 2020) and AP (no
+official RSS) are deliberately absent; their stories arrive via Google News.
+
+**An empty column says which of three things happened**, because the fixes
+differ: every source for the column failed / sources answered but carried
+nothing in 48 hours (a weekend) / nothing is configured for the column. A
+mute empty column reads as "no news today", the lie this repo keeps
+outlawing.
+
+**Four sources, four cost postures**, and the postures are the design:
+
+- RSS: free, keyless. Page cache 5 minutes; "Refresh" still keeps 45 seconds
+  between fetches, and two tabs open at once share one in-flight collection
+  (the scan-job "join" idea).
+- Google News by topic: a **secondary** source, because production has
+  measured it at 503 (#153/#157). It goes through the same `gnewsFetch()`
+  door as the per-symbol search (extracted from `gnewsSearch()`, plus
+  `gnewsTopic()`), so one measured block pauses both for six hours and the
+  status line says the pause is the app's decision.
+- X: **pay-per-read** (#161), so it has its **own 15-minute cache that
+  Refresh does not bypass** — otherwise twenty presses a minute is twenty
+  charges for the same posts. The account lists are the owner's
+  (`X_NEWS_ACCOUNTS` for markets, `X_NEWS_POLITICS_ACCOUNTS` for politics);
+  the app never picks who is trustworthy. Reuses `authorQuery()` and
+  `parseSearch()` from `xnews.ts`; self-disables without a token or a list.
+- Unusual Whales `news/headlines`: keyed, **shape unmeasured**. `/api/uwprobe`
+  gained a `news-headlines` step; `parseUwNews()` reads several candidate
+  field names and, when rows exist but none parse, throws with the real keys
+  so the status line prints them. Rides the 5-minute page cache, so at most
+  ~288 requests/day against the 30,000 cap.
+
+A source that fails in a way that will fail identically next time (401, 403,
+404, 410, 429) is paused for 60 minutes rather than re-asked every 5; a 5xx or
+a timeout is retried at once. Per-source cap (40) applies before the column
+cap (80), so one 200-item feed cannot drown six 20-item feeds — the Form 4
+lesson from #148 — and duplicates are merged by normalised title after
+sorting so the newer copy survives.
+
+**The brief** posts exactly the headlines on screen (the `/api/ai` "post what
+you display" idiom, capped at 60 server-side), with the Vietnamese anchor at
+**both ends** of the system prompt (#148), headlines marked as data, outlets
+to be named rather than treated as fact, and X posts to be labelled as
+unverified. The finished text is cached 20 minutes keyed by the headline set
+and language, so two household members pressing within that window is one
+Claude call; a truncated or refused answer is deliberately **not** cached. The
+`X-Brief-At` header lets the panel print "written at HH:MM", because a
+19-minute-old brief looks identical to a fresh one otherwise.
 
 ### Long-term Investment (`src/lib/support.ts`, `longterm.ts`, `pehistory.ts`, `ltwhy.ts`)
 

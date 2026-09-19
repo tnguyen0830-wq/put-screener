@@ -28,6 +28,13 @@ const ENDPOINTS = (t: string) => [
   { name: 'spot-exposures', path: `/api/stock/${encodeURIComponent(t)}/spot-exposures` },
   // Cái app đang dùng, để đối chiếu trong cùng một lần đo.
   { name: 'gex-levels', path: `/api/stock/${encodeURIComponent(t)}/gex-levels` },
+  /* Tab Tin tức đọc `news/headlines` (newsfeed.ts, `parseUwNews`) theo tên
+     trường NHỚ ĐƯỢC từ tài liệu (`headline`, `source`, `created_at`, `url`,
+     `is_major`). Bước này in khoá + kiểu thật để sửa `parseUwNews` theo cái
+     đo được. Đường dẫn không phụ thuộc mã; `limit=5` là đủ để đọc hình
+     dạng. Endpoint không có trong gói thì UW tự nói bằng 403/404 — chính
+     lời từ chối là phát hiện. */
+  { name: 'news-headlines', path: `/api/news/headlines?limit=5` },
 ];
 
 /** Tên trường hay dùng cho strike.
