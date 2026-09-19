@@ -1810,6 +1810,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tts.resume': { vi: 'Đọc tiếp', en: 'Resume' },
   'tts.stop': { vi: 'Dừng', en: 'Stop' },
   'tts.voice': { vi: 'Giọng đọc', en: 'Voice' },
+  'tts.rate': { vi: 'Tốc độ đọc', en: 'Reading speed' },
   'tts.online': { vi: 'trực tuyến', en: 'online' },
   'tts.progress': {
     vi: (p: { done: number; total: number }) => `đoạn ${p.done + 1}/${p.total}`,

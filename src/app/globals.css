@@ -3686,3 +3686,12 @@ body {
   padding: 4px 8px;
   max-width: 100%;
 }
+
+.ttsrates {
+  margin: 0;
+}
+
+.ttsrates button {
+  font-size: 11px;
+  padding: 3px 8px;
+}

@@ -20,8 +20,26 @@
  *    có giọng" từ lần đọc đầu.
  */
 
-/** Trần ký tự mỗi đoạn: ~200 ký tự tiếng Việt đọc dưới 15 giây ở tốc độ 1. */
-export const CHUNK_MAX = 200;
+/**
+ * Trần ký tự mỗi đoạn. Chrome ngắt utterance dài quá ~15 giây; tiếng Việt đọc
+ * ~15 ký tự/giây ở tốc độ 1, nên 150 ký tự ở tốc độ CHẬM NHẤT cho chọn
+ * (0.75×) vẫn dưới ~13 giây. Đây là lý do 0.5× KHÔNG có trong `RATES`: ở
+ * 0.5× thì 150 ký tự là 20 giây, tức lại rơi vào đúng lỗi ngắt giữa chừng.
+ */
+export const CHUNK_MAX = 150;
+
+/** Tốc độ cho chọn. Danh sách CHO PHÉP: giá trị lạ trong bộ nhớ (bản cũ,
+ *  sửa tay) rơi về 1 chứ không thành `rate: NaN` — Chrome im lặng không đọc
+ *  khi rate không hợp lệ. */
+export const RATES = [0.75, 1, 1.25, 1.5, 2] as const;
+export type Rate = (typeof RATES)[number];
+
+export function parseRate(raw: string | null | undefined): Rate {
+  const n = Number(raw);
+  return (RATES as readonly number[]).includes(n) ? (n as Rate) : 1;
+}
+
+export const fmtRate = (r: number) => `${String(r).replace(/\.0+$/, '')}×`;
 
 /**
  * Bỏ ký hiệu trình bày (gạch đầu dòng, `**`, `#`) và chia theo câu / xuống
