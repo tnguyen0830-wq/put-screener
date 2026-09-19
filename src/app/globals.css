@@ -3661,3 +3661,28 @@ body {
 .newssrclist li.bad .newssrcinfo {
   color: var(--warn);
 }
+
+/* ---------- giọng đọc bản tóm tắt ---------- */
+
+.ttsrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ttsbtn {
+  font-size: 12px;
+}
+
+.ttsvoice {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 4px 8px;
+  max-width: 100%;
+}
