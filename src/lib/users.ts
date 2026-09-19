@@ -112,6 +112,10 @@ const OWNER_ONLY = [
   // giới tastytrade, và còn mở hẳn một phiên streaming trên tài khoản đó.
   // Cùng lý do với ttprobe/xprobe.
   '/api/breadthprobe',
+  // Probe ElevenLabs: đọc hạn mức ký tự và danh sách giọng của tài khoản
+  // TRẢ PHÍ của chủ app. Chỉ hình dạng, không key — nhưng vẫn là tài khoản
+  // của chủ app, cùng lý do với ttprobe/xprobe.
+  '/api/ttsprobe',
 ];
 
 /** Trang (không phải API) chỉ chủ app được mở. Người nhà bị đưa về trang

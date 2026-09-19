@@ -776,9 +776,16 @@ nói như sự thật đã kiểm. Bản viết xong được giữ 20 phút the
 nên hai người trong nhà cùng bấm là một lượt gọi. Không dịch từng dòng: 60
 tiêu đề mỗi lần mở tab là 60 lượt gọi cho thứ người đọc lướt trong 10 giây.
 
-**Nghe bản tóm tắt.** Dưới bản tóm tắt có nút **Nghe** (kèm Tạm dừng / Dừng),
-đọc bằng **giọng có sẵn của chính trình duyệt** (Web Speech API) — không key,
-không tốn tiền, không gửi văn bản đi đâu. Vì vậy giọng tiếng Việt tuỳ máy:
+**Nghe bản tóm tắt.** Dưới bản tóm tắt có nút **Nghe** (kèm Tạm dừng / Dừng)
+với hai máy đọc chọn được. **Giọng AI (ElevenLabs)** — giọng neural tự nhiên,
+cần `ELEVENLABS_API_KEY`, tính tiền theo ký tự; app cache audio theo nội dung
+nên bấm lại hay người thứ hai bấm là 0 ký tự, từ chối văn bản quá 4.000 ký tự,
+và in ra mỗi lần "đã dùng N ký tự" hay "bản đã tạo trước". Chọn giọng ngay
+trong ô giọng (danh sách lấy từ chính tài khoản của bạn); hết ký tự, key sai,
+giọng bị xoá — mỗi lỗi một câu riêng vì cách sửa khác nhau. **Giọng trình
+duyệt** là đường lùi khi chưa có key hoặc ElevenLabs hỏng: đọc bằng **giọng có
+sẵn của chính trình duyệt** (Web Speech API) — không key, không tốn tiền,
+không gửi văn bản đi đâu. Vì vậy giọng tiếng Việt tuỳ máy:
 iPhone/iPad và Mac có sẵn, Android có Google TTS, Chrome máy tính có giọng
 Google trực tuyến, Windows phải cài thêm gói tiếng Việt. Máy có nhiều giọng
 tiếng Việt thì có ô chọn, và app nhớ giọng đã chọn. Máy **không có** giọng

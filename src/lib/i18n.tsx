@@ -1831,6 +1831,50 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Trình duyệt này báo không có giọng đọc nào được cài trên máy, nên nút Nghe tắt.',
     en: 'This browser reports no installed voices at all, so Listen is off.',
   },
+  'tts.engine': { vi: 'Máy đọc', en: 'Reader' },
+  'tts.engineAi': { vi: 'Giọng AI (ElevenLabs)', en: 'AI voice (ElevenLabs)' },
+  'tts.engineBrowser': { vi: 'Giọng trình duyệt', en: 'Browser voice' },
+  'tts.ai.making': { vi: 'Đang tạo giọng…', en: 'Generating voice…' },
+  'tts.ai.cached': { vi: 'bản đã tạo trước, không tốn ký tự', en: 'previously generated, no characters spent' },
+  'tts.ai.charged': { vi: (n: number) => `đã dùng ${n} ký tự ElevenLabs`, en: (n: number) => `${n} ElevenLabs characters spent` },
+  'tts.ai.offNoKey': {
+    vi: 'Đang dùng giọng trình duyệt (giọng máy). Muốn giọng AI tự nhiên hơn thì đặt ELEVENLABS_API_KEY trên Render — xem DEPLOY.md.',
+    en: 'Using the browser voice (synthetic). For a natural AI voice set ELEVENLABS_API_KEY on Render — see DEPLOY.md.',
+  },
+  'tts.ai.noVoices': {
+    vi: 'ElevenLabs trả lời nhưng tài khoản không có giọng nào — thêm một giọng vào thư viện của bạn trên elevenlabs.io. Tạm dùng giọng trình duyệt.',
+    en: 'ElevenLabs answered but the account has no voices — add one to your library on elevenlabs.io. Browser voice for now.',
+  },
+  'tts.ai.listFailed': {
+    vi: (d: string) => `Không lấy được danh sách giọng ElevenLabs: ${d}. Tạm dùng giọng trình duyệt.`,
+    en: (d: string) => `Could not list ElevenLabs voices: ${d}. Browser voice for now.`,
+  },
+  'tts.ai.envVoiceMissing': {
+    vi: 'ELEVENLABS_VOICE_ID trên Render không có trong tài khoản — bỏ qua, dùng giọng đầu tiên. Kiểm lại id qua /api/ttsprobe.',
+    en: 'ELEVENLABS_VOICE_ID on Render is not in the account — ignored, first voice used. Check the id via /api/ttsprobe.',
+  },
+  'tts.ai.notConfigured': { vi: 'Server chưa có ELEVENLABS_API_KEY.', en: 'The server has no ELEVENLABS_API_KEY.' },
+  'tts.ai.badKey': {
+    vi: (d: string) => `ElevenLabs từ chối key: ${d}. Kiểm lại ELEVENLABS_API_KEY trên Render.`,
+    en: (d: string) => `ElevenLabs rejected the key: ${d}. Check ELEVENLABS_API_KEY on Render.`,
+  },
+  'tts.ai.quota': {
+    vi: (d: string) => `Hết ký tự ElevenLabs của tháng này: ${d}. Chuyển sang giọng trình duyệt hoặc mua thêm. Xem hạn mức ở /api/ttsprobe.`,
+    en: (d: string) => `Out of ElevenLabs characters this month: ${d}. Switch to the browser voice or top up. Quota at /api/ttsprobe.`,
+  },
+  'tts.ai.badVoice': {
+    vi: (d: string) => `Giọng này không còn trong tài khoản: ${d}. Chọn giọng khác.`,
+    en: (d: string) => `This voice is no longer in the account: ${d}. Pick another.`,
+  },
+  'tts.ai.edge': {
+    vi: (d: string) => `Bị chặn trước khi tới ElevenLabs (nhận HTML, không phải JSON): ${d}.`,
+    en: (d: string) => `Blocked before reaching ElevenLabs (got HTML, not JSON): ${d}.`,
+  },
+  'tts.ai.tooLong': {
+    vi: (d: string) => `Bản tóm tắt dài hơn trần 4.000 ký tự nên không gửi đi: ${d}.`,
+    en: (d: string) => `The brief exceeds the 4,000-character ceiling, so it was not sent: ${d}.`,
+  },
+  'tts.ai.failed': { vi: 'Tạo giọng AI thất bại.', en: 'AI voice generation failed.' },
   'tts.howToAdd': {
     vi: 'Cách thêm: iPhone/iPad → Cài đặt → Trợ năng → Nội dung đọc → Giọng nói → Tiếng Việt; Android → Cài đặt → Ngôn ngữ → Chuyển văn bản sang giọng nói → Google → cài tiếng Việt; Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng nói.',
     en: 'To add one: iPhone/iPad → Settings → Accessibility → Spoken Content → Voices; Android → Settings → Language → Text-to-speech → Google → install the language; Windows → Settings → Time & language → Speech → Add voices.',

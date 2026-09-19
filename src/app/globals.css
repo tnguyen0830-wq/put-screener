@@ -3695,3 +3695,25 @@ body {
   font-size: 11px;
   padding: 3px 8px;
 }
+
+.ttsbox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ttsbox .ttsrow {
+  margin-top: 0;
+}
+
+.ttsengines button,
+.ttsrates button {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.ttserr {
+  margin: 0;
+  flex-basis: 100%;
+}
