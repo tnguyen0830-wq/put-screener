@@ -105,9 +105,20 @@
  * AN TOÀN
  * ============================================================
  *
- * Tradovate KHÔNG có OAuth chỉ-đọc: `accesstokenrequest` nhận đúng TÊN +
- * MẬT KHẨU đăng nhập cộng cặp khoá API (`cid`/`sec`). Token về được dùng cho
- * CẢ đặt lệnh lẫn đọc — không có scope `read` như tastytrade. Nên:
+ * Tradovate KHÔNG có OAuth: `accesstokenrequest` nhận đúng TÊN + MẬT KHẨU
+ * đăng nhập cộng cặp khoá API (`cid`/`sec`) — nên rủi ro lớn nhất là MẬT
+ * KHẨU, không phải token.
+ *
+ * **Sửa một câu file này từng khẳng định sai.** Nó viết "token dùng được cho
+ * CẢ đặt lệnh lẫn đọc, không có scope `read` như tastytrade". Trang hỗ trợ
+ * của chính hãng (`support.ninjatrader.com` / `support.tradovate.com`, bài
+ * *Tradovate API Access*, đọc 2026-09-21) mô tả màn hình tạo key có bước
+ * **chọn quyền cho key** trước khi bấm `Generate`. Tức có thể có một bộ
+ * quyền hẹp hơn; danh sách quyền cụ thể **CHƯA ĐO ĐƯỢC** (gói API Access
+ * đòi tài khoản LIVE nạp tối thiểu $1.000, chủ app đang $200 nên tab
+ * `Add-Ons` không hiện card). Cách viết đúng lúc này: quyền là thứ chủ app
+ * chọn lúc tạo key, chọn hẹp nhất có thể, và ghi lại danh sách thật khi
+ * nhìn thấy nó — đừng để lại một lời khẳng định chưa ai kiểm. Nên:
  *   - Nếu tài khoản là tài khoản THẬT có tiền, mật khẩu nằm trong bảng env
  *     của Render là mật khẩu vào được tiền đó. `NT_ENV` mặc định `demo`; đặt
  *     `live` là quyết định có ý thức của chủ app, ghi ở DEPLOY.md.
