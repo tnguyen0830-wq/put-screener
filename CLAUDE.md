@@ -94,7 +94,7 @@ This is still just a snapshot, same caveat as "Recent work" below - a
 session that forgets to update it makes it stale. `git log` / open PRs are
 still the only *live* truth; this is the cheap first check before that.
 
-2026-09-21 — Không có việc đang làm dở. Mới nhất: #199 chế độ **Tra cứu nhanh** trong tab Learn — 22 thẻ kiểu nến/mẫu hình (hình riêng, một câu, xác nhận khi nào theo đúng luật máy dò, bẫy, link bài học, có được app dò ở Patterns không). Trước đó: #198 tab **Patterns** (tab thứ CHÍN) — dò mẫu nến/mẫu giá trên nến ngày, bảng quét + biểu đồ nến SVG vẽ mẫu + nút Claude đọc mẫu. **Chưa đo được**: máy dò chỉ chạy trên chuỗi tổng hợp (Schwab bị chặn) — chủ app quét watchlist một lần là biết ngưỡng có ồn hay im quá; mọi ngưỡng là hằng có tên trong `lib/patterns.ts`. Trước đó: #197 tab **Learn** (tab thứ TÁM) — 22 bài song ngữ có hình SVG vẽ bằng code, ôn tập chấm tại chỗ + điểm lưu theo người, nút "Hỏi Claude về bài này", nút nhảy sang tab có dữ liệu thật. **Chưa đo được**: lượt gọi Anthropic thật của `/api/ai/learn` — chủ app bấm Hỏi một lần là biết. Trước đó: #195 nút Nghe báo SAI nguyên nhân — ElevenLabs 402 `paid_plan_required` ("gói free không gọi được giọng Voice Library qua API") bị `classifyEleven()` gộp vào `quota` nên màn hình nói "Hết ký tự tháng này" trong khi hạn mức còn nguyên; giờ là một loại lỗi riêng, nói đúng nguyên nhân và hai cách sửa. **Chủ app làm tiếp**: đổi sang một giọng ghi "premade" trong ô giọng (hoặc giọng trình duyệt) là nghe được ngay; muốn giữ giọng "Tram" thì phải nâng gói ElevenLabs. Trước đó: #194 bỏ mọi thứ mang tên tapchiphowall.com khỏi màn hình người dùng (hai link ngoài + hai dòng chú thích); chú thích trong mã nguồn và README giữ lại vì đó là lịch sử thiết kế, không ai nhìn thấy trên màn hình. Trước đó: #193 nhật ký hoạt động người nhà (phần **Hoạt động** trong ⚙ → Quản lý tài khoản: ai đang mở tab nào + đã dùng gì; Telegram một dòng khi người nhà đăng nhập). **Chưa đo được từ sandbox**: chính cái tin Telegram — `api.telegram.org` bị chặn, nên nội dung tin nhắn có test thuần nhưng lượt GỬI thì chưa; chủ app bảo người nhà đăng nhập một lần là biết. Trước đó: #192 rà bảo mật owner/member (uwprobe vào OWNER_ONLY, nút Đồng bộ UW chỉ chủ app, `symbolFileKey()` chặn traversal tên file cache). **Còn treo, cần chủ app đo ở production**: mở `/api/me` khi đã đăng nhập và đọc hai trường `ip`/`xff` — nếu `xff` có NHIỀU hơn một IP và `ip` KHÔNG phải IP thật của mình thì Render đang nối thêm vào X-Forwarded-For, tức bộ đếm chống dò mật khẩu qua mặt được và phải đổi `clientIp()` sang lấy phần tử cuối. Còn treo từ #184: hình dạng ElevenLabs khi tổng hợp audio thật (`/api/ttsprobe` chỉ đo hai endpoint miễn phí, xem README/DEPLOY.md); tab Tin tức (#181/#190/#191) — phần Nguồn trên màn hình và hình dạng ảnh/UW news vẫn là probe, chưa đo được từ sandbox; chủ app cần xác nhận lại ở production xem #191 có kéo thêm được ảnh hay không.
+2026-09-21 — **ĐANG LÀM** (nhánh `claude/ntprobe`): probe NinjaTrader web / Tradovate — `/api/ntprobe` (OWNER_ONLY) đo xác thực `accesstokenrequest`, `account/list`, `contract/suggest`, và bắt tay WebSocket dữ liệu thị trường (`md.tradovateapi.com`) cho MỘT hợp đồng; CHƯA có tính năng nào, đúng luật host có key. Chủ app: "Tôi có đăng nhập được web.ninjatrader.com, làm probe đi". Sau probe mới bàn tab daytrade (cổ phiếu + 0DTE SPX, footprint). Trước đó: #199 chế độ **Tra cứu nhanh** trong tab Learn — 22 thẻ kiểu nến/mẫu hình (hình riêng, một câu, xác nhận khi nào theo đúng luật máy dò, bẫy, link bài học, có được app dò ở Patterns không). Trước đó: #198 tab **Patterns** (tab thứ CHÍN) — dò mẫu nến/mẫu giá trên nến ngày, bảng quét + biểu đồ nến SVG vẽ mẫu + nút Claude đọc mẫu. **Chưa đo được**: máy dò chỉ chạy trên chuỗi tổng hợp (Schwab bị chặn) — chủ app quét watchlist một lần là biết ngưỡng có ồn hay im quá; mọi ngưỡng là hằng có tên trong `lib/patterns.ts`. Trước đó: #197 tab **Learn** (tab thứ TÁM) — 22 bài song ngữ có hình SVG vẽ bằng code, ôn tập chấm tại chỗ + điểm lưu theo người, nút "Hỏi Claude về bài này", nút nhảy sang tab có dữ liệu thật. **Chưa đo được**: lượt gọi Anthropic thật của `/api/ai/learn` — chủ app bấm Hỏi một lần là biết. Trước đó: #195 nút Nghe báo SAI nguyên nhân — ElevenLabs 402 `paid_plan_required` ("gói free không gọi được giọng Voice Library qua API") bị `classifyEleven()` gộp vào `quota` nên màn hình nói "Hết ký tự tháng này" trong khi hạn mức còn nguyên; giờ là một loại lỗi riêng, nói đúng nguyên nhân và hai cách sửa. **Chủ app làm tiếp**: đổi sang một giọng ghi "premade" trong ô giọng (hoặc giọng trình duyệt) là nghe được ngay; muốn giữ giọng "Tram" thì phải nâng gói ElevenLabs. Trước đó: #194 bỏ mọi thứ mang tên tapchiphowall.com khỏi màn hình người dùng (hai link ngoài + hai dòng chú thích); chú thích trong mã nguồn và README giữ lại vì đó là lịch sử thiết kế, không ai nhìn thấy trên màn hình. Trước đó: #193 nhật ký hoạt động người nhà (phần **Hoạt động** trong ⚙ → Quản lý tài khoản: ai đang mở tab nào + đã dùng gì; Telegram một dòng khi người nhà đăng nhập). **Chưa đo được từ sandbox**: chính cái tin Telegram — `api.telegram.org` bị chặn, nên nội dung tin nhắn có test thuần nhưng lượt GỬI thì chưa; chủ app bảo người nhà đăng nhập một lần là biết. Trước đó: #192 rà bảo mật owner/member (uwprobe vào OWNER_ONLY, nút Đồng bộ UW chỉ chủ app, `symbolFileKey()` chặn traversal tên file cache). **Còn treo, cần chủ app đo ở production**: mở `/api/me` khi đã đăng nhập và đọc hai trường `ip`/`xff` — nếu `xff` có NHIỀU hơn một IP và `ip` KHÔNG phải IP thật của mình thì Render đang nối thêm vào X-Forwarded-For, tức bộ đếm chống dò mật khẩu qua mặt được và phải đổi `clientIp()` sang lấy phần tử cuối. Còn treo từ #184: hình dạng ElevenLabs khi tổng hợp audio thật (`/api/ttsprobe` chỉ đo hai endpoint miễn phí, xem README/DEPLOY.md); tab Tin tức (#181/#190/#191) — phần Nguồn trên màn hình và hình dạng ảnh/UW news vẫn là probe, chưa đo được từ sandbox; chủ app cần xác nhận lại ở production xem #191 có kéo thêm được ảnh hay không.
 
 **ĐÃ XÁC NHẬN Ở PRODUCTION (#153):** câu trả lời RA TIẾNG VIỆT; mã mục 8-K giải mã đúng và được dùng thật; hỏng-độc-lập chạy đúng (Claude tự nói "Google News 503 nên phần tin báo chí bị thiếu, ở đây tôi bị mù một phần"). **CÒN TREO:** Google News trả **503** từ Render — chưa biết là sập tạm hay chặn dải IP trung tâm dữ liệu; #153 đã cho lỗi mang theo BODY nên lần bấm tới sẽ nói ra (trang chặn của Google viết thẳng "unusual traffic from your computer network"). Chủ app bấm lại một lần nữa là đủ để quyết: thử-lại-được hay phải bỏ hẳn Google News.
 
@@ -1138,6 +1138,71 @@ Not built yet, deliberately: IV-rank-from-tastytrade (see the three
 disagreeing rank fields and the 0-1 vs 0-100 scale trap above — both are
 real traps, not details), and using tastytrade's `sector`/`industry` in
 place of the Finviz scrape.
+
+### NinjaTrader web / Tradovate (`src/lib/ninjatrader.ts`, `/api/ntprobe`)
+
+**Nothing reads this yet, and that is the state to preserve until the probe
+has run in production.** The owner logged in to `web.ninjatrader.com` and
+asked for a day-trading tab (stocks plus 0DTE SPX, a live stream, a
+footprint chart). NinjaTrader's web platform *is* Tradovate (acquired 2022),
+so this is a keyed host and the repo's rule applies: probe first, read the
+real shape, then write the feature against the measurement. **Measured
+2026-09-21: `live.tradovateapi.com`, `demo.tradovateapi.com` and
+`md.tradovateapi.com` are all refused at CONNECT from the sandbox**, so not
+one endpoint or field name in `ninjatrader.ts` is verified.
+
+**Five questions, ordered by how much each decides:**
+
+1. **Is this account allowed to call the API at all?** Tradovate sells API
+   access as a paid add-on, so logging in to the web platform does not imply
+   `accesstokenrequest` will answer. Its refusal *is* the finding. Tradovate
+   also answers **HTTP 200 carrying `errorText`** instead of a 4xx, so the
+   body is read before the status code is believed — the `classifyEleven()`
+   lesson (#195) applied to a new vendor.
+2. **Is there a `p-ticket`?** Repeated logins get
+   `{p-ticket, p-time, p-captcha}` instead of a token: wait `p-time` seconds
+   and resend with the ticket, and `p-captcha: true` means a captcha on the
+   web — i.e. **not automatable from a server at all**. Those are three
+   different situations and the probe names which one.
+3. **Is the market-data token separate** (`mdAccessToken`), and does the
+   `md.tradovateapi.com` WebSocket accept it? No md stream, no day-trade tab.
+4. **Does a Tick `md/getChart` carry `withHistogram`** — bid/ask volume per
+   price level is the only thing that makes a footprint chart possible. OHLC
+   alone means the feature cannot come from this source.
+5. **What is the real contract name** (`ESZ6`? `ESZ26`?). Spelling is the
+   single most misremembered thing about any feed here; SPX at Schwab cost
+   six PRs over exactly that.
+
+**Security, and it is worse than tastytrade's.** Tradovate has **no
+read-only scope**: the token comes from the actual login name and password
+plus an API key pair, and the same token can place orders. So the password
+in Render's environment table is the password to the money. Three
+consequences: `NT_ENV` defaults to `demo`, `live` being a deliberate choice
+documented in `DEPLOY.md`; this module contains no order-placing function
+and the probe calls only read endpoints; and nothing secret ever leaves —
+`redact()` masks the password, `sec` and both tokens inside every logged
+WebSocket frame *and* inside thrown error messages and bodies, and
+`scrubJson()` sweeps the finished response one more time so a token
+arriving under a field name I misremembered still cannot escape. Tests pin
+all of that, including a reply that echoes the password back inside
+`errorText`. `/api/ntprobe` is in `OWNER_ONLY` for the same reason as
+`/api/ttprobe`: a family member must not be the one pressing a button on
+the owner's brokerage account.
+
+**The WebSocket framing is SockJS-shaped and lives in pure functions**
+(`parseFrame`, `buildRequest`, `observe`) so it is testable without a
+network, exactly as `dxprobe.ts` is: `o` on open, `h` a heartbeat the client
+must answer with `[]`, `a[...]` a batch of messages, `c[...]` a close;
+requests are the text `endpoint\nid\nquery\nbody`. Every frame in both
+directions is logged (clipped, redacted) because **guessing the format wrong
+still buys an answer** — Tradovate's own rejection states the right one.
+
+**A pre-open WebSocket error finishes immediately rather than waiting out
+the listen window.** Found by running the route against a fake server whose
+md endpoint is plain HTTP: the handshake sat for the full 8 seconds and
+returned `error: null`, which reads as "connected and heard nothing" when
+the truth was "never connected". Those need opposite fixes, so the reason is
+surfaced the moment `onerror` fires before `open`.
 
 ### X (Twitter) (`src/lib/xnews.ts`, `/api/xprobe`)
 

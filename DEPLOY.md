@@ -377,6 +377,72 @@ có token nào trong câu trả lời. Ba dòng đáng đọc:
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
 
+### NinjaTrader web / Tradovate (tuỳ chọn): CHƯA có tính năng, mới có probe
+
+Chủ app đăng nhập được `web.ninjatrader.com`. Nền tảng web của NinjaTrader
+chính là **Tradovate** (NinjaTrader mua Tradovate năm 2022), và đây là host
+có key nên luật của repo là **đo trước, code sau**: `/api/ntprobe` in hình
+dạng thật của API rồi tab daytrade (nếu làm) viết theo cái đo được.
+
+> ### Token Tradovate KHÔNG có scope chỉ-đọc
+>
+> Khác tastytrade, Tradovate không có OAuth với scope `read`: token lấy
+> bằng ĐÚNG tên + mật khẩu đăng nhập cộng cặp khoá API, và token đó dùng
+> được cho cả **đặt lệnh**. Mật khẩu nằm trong bảng Environment của Render
+> là mật khẩu vào được tài khoản đó. Hai cách giảm rủi ro, cả hai đều là
+> quyết định của chủ app chứ code không kiểm soát được:
+>
+> - Đặt `NT_ENV=demo` (mặc định) nếu tài khoản có bản demo — probe chạy y
+>   hệt trên demo, và mọi thứ tab daytrade cần (quote, chart, DOM) đều đo
+>   được ở đó. Chỉ đổi `live` khi cần đúng tài khoản thật.
+> - Xoá `NT_USER`/`NT_PASSWORD` khỏi Render ngay khi đo xong nếu chưa quyết
+>   làm tính năng.
+>
+> App **không có** hàm đặt lệnh nào; probe chỉ gọi endpoint đọc.
+
+**Bước 1 — lấy cặp khoá API.** Trong tài khoản Tradovate/NinjaTrader web →
+phần **API Access** (tên menu có thể khác; tìm chữ "API") → tạo một API key:
+được `cid` (một số) và `sec` (chuỗi). Tradovate bán quyền gọi API như gói
+THÊM có phí — nếu tài khoản chưa có gói đó thì chính probe sẽ in lời từ chối
+của Tradovate, và đó là câu trả lời, không phải lỗi.
+
+Render → Environment:
+
+| Biến | Giá trị |
+|---|---|
+| `NT_USER` | tên đăng nhập web.ninjatrader.com |
+| `NT_PASSWORD` | mật khẩu đăng nhập (xem hộp cảnh báo trên) |
+| `NT_CID` | `cid` của API key |
+| `NT_SEC` | `sec` của API key |
+| `NT_ENV` | `demo` (mặc định) hoặc `live` |
+
+**Bước 2 — chạy probe một lần, đọc kết quả.** Đăng nhập bằng tài khoản chủ
+app và mở:
+
+```
+https://<app>/api/ntprobe
+```
+
+(thêm `?t=NQ` để hỏi gợi ý hợp đồng khác, `?symbol=ESZ6` để ép mã đăng ký).
+Nó chỉ trả về **hình dạng** — tên khoá, kiểu, số dòng, và nguyên văn hai
+chiều của WebSocket đã che token; không có mật khẩu/khoá/token nào trong câu
+trả lời. Năm dòng đáng đọc, theo thứ tự:
+
+- `auth.ok` — nếu `false`, `auth.body` là lời thật của Tradovate:
+  `errorText` (thiếu gói API Access? sai cid/sec?), `p-ticket` (đăng nhập
+  quá dày, chờ `p-time` giây), `p-captcha: true` (phải giải captcha trên
+  web — không tự động hoá được từ server).
+- `auth.hasMdAccessToken` — có token dữ liệu thị trường riêng không.
+- `contracts.picked` — tên hợp đồng THẬT (`ESZ6`? `ESZ26`?), cách viết là
+  thứ dễ nhớ sai nhất.
+- `md.authorized` + `md.observation.mdFrames` — luồng md có chạy không;
+  `md.observation.quoteEntryKeys` phải có Bid/Offer/Trade.
+- `md.observation.chartBarKeys` — thanh Tick có `bidVolume`/`offerVolume`
+  (hay tương đương) thì **footprint làm được**; chỉ có OHLC thì không.
+
+Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
+theo tài liệu.
+
 ## X (Twitter) — đọc tin cho mã đang nắm
 
 **Đo xong ở production ngày 2026-09-19, tầng cảnh báo đã CHẠY THẬT.** X là

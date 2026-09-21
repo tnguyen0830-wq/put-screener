@@ -120,6 +120,10 @@ const OWNER_ONLY = [
   // Ra đời (#105) TRƯỚC khi có tài khoản người nhà (#119) nên bị bỏ sót khi
   // lập danh sách này — bốn probe kia đều đã nằm đây với đúng lý do đó.
   '/api/uwprobe',
+  // Probe NinjaTrader/Tradovate: token Tradovate KHÔNG có scope chỉ-đọc —
+  // là token của tài khoản môi giới (có thể đặt lệnh). Chỉ trả hình dạng,
+  // nhưng người nhà không được là người bấm nút trên tài khoản đó.
+  '/api/ntprobe',
 ];
 
 /**
