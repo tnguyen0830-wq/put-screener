@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uwGet, uwConfigured, UwError } from '@/lib/unusualwhales';
-import { ttConfigured, ttGet, TtError } from '@/lib/tastytrade';
+import { ttConfigured } from '@/lib/tastytrade';
+import { fetchDxQuoteToken } from '@/lib/dxtoken';
 import { dxHandshake, BREADTH_CANDIDATES, CONTROL_SYMBOL, CONTROL_SYMBOLS } from '@/lib/dxprobe';
 
 /**
@@ -112,39 +113,15 @@ async function probeTastytrade() {
   if (!ttConfigured()) return { skipped: 'tastytrade chưa được cấu hình' as const };
 
   // --- Bước 1: xin token streamer (REST, rẻ, dứt điểm) ---
-  let tokenInfo: Record<string, unknown>;
-  let token: string | null = null;
-  let dxUrl: string | null = null;
+  // Phép bóc trường nằm ở `lib/dxtoken.ts`, dùng chung với
+  // `/api/dxtapeprobe`: tên trường ở đây chưa đo chắc, nên phải chỉ có MỘT
+  // chỗ sửa.
+  const got = await fetchDxQuoteToken();
 
-  try {
-    const { data, status } = await ttGet<any>('/api-quote-tokens');
-    const body = data?.data ?? data;
-    const rawToken = body?.token ?? body?.['streamer-token'] ?? null;
-    token = typeof rawToken === 'string' && rawToken ? rawToken : null;
-    const rawUrl = body?.['dxlink-url'] ?? body?.['websocket-url'] ?? body?.url ?? null;
-    dxUrl = typeof rawUrl === 'string' && rawUrl ? rawUrl : null;
-
-    tokenInfo = {
-      ok: true,
-      status,
-      topLevelKeys: Object.keys(data ?? {}),
-      bodyKeys: Object.keys(body ?? {}),
-      types: Object.fromEntries(Object.entries(body ?? {}).map(([k, v]) => [k, typeOf(v)])),
-      // Token KHÔNG đi ra ngoài - chỉ nói có hay không và dài bao nhiêu.
-      hasToken: token !== null,
-      tokenLength: token ? token.length : 0,
-      dxlinkUrl: dxUrl,
-      level: body?.level ?? null,
-    };
-  } catch (e: any) {
+  if (!got.ok && got.kind === 'failed') {
     return {
       skipped: null,
-      quoteToken: {
-        ok: false,
-        status: e instanceof TtError ? e.status ?? null : null,
-        error: String(e?.message ?? e).slice(0, 200),
-        body: e instanceof TtError ? (e.body ?? null)?.slice(0, 200) ?? null : null,
-      },
+      quoteToken: got.info,
       dxlink: {
         attempted: false,
         skipped: 'không xin được token streamer nên không bắt tay - hướng DXLink đóng ở ngay bước này',
@@ -153,16 +130,18 @@ async function probeTastytrade() {
     };
   }
 
-  if (!token || !dxUrl) {
+  if (!got.ok) {
     return {
       skipped: null,
-      quoteToken: tokenInfo,
+      quoteToken: got.info,
       dxlink: {
         attempted: false,
-        skipped: `200 nhưng thiếu ${!token ? 'token' : 'dxlink-url'} - đọc bodyKeys để thấy tên trường thật`,
+        skipped: `200 nhưng thiếu ${got.missing} - đọc bodyKeys để thấy tên trường thật`,
       },
     };
   }
+
+  const { token, url: dxUrl, info: tokenInfo } = got;
 
   // --- Bước 2: bắt tay thật, kèm hai mã đối chứng ---
   const symbols = [...CONTROL_SYMBOLS, ...BREADTH_CANDIDATES];

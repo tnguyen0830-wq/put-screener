@@ -366,6 +366,24 @@ export async function ttGet<T = any>(
         // Cùng tường chống bot chặn token endpoint cũng chặn đường này.
         'User-Agent': UA(),
       },
+      /* `fetch` trong route của Next 14 bị vá để CACHE TRÊN ĐĨA mặc định
+         (`.next/cache/fetch-cache`). ĐO ĐƯỢC khi chạy `/api/dxtapeprobe`
+         với máy chủ giả: thân câu trả lời của `/api-quote-tokens` — MANG
+         NGUYÊN token streamer — nằm dạng base64 trong `.next/cache/`; sau
+         khi thêm dòng này thì thư mục đó trống.
+
+         Hai lý do, lý do sau nặng hơn. Token streamer là thứ NGẮN HẠN:
+         phục vụ lại một bản cache nghĩa là một ngày nào đó bắt tay bằng
+         token đã hết hạn rồi báo "streaming hỏng", tức công cụ chẩn đoán
+         nói sai nguyên nhân — đúng bài học #185 (cache của `listVoices`
+         lọt vào `/api/ttsprobe`). Và không lượt gọi nào ở đây là dữ liệu
+         đáng cache: tất cả đều là số thị trường sống.
+
+         CHƯA ĐO: tastytrade thật có gửi `Cache-Control: no-store` không —
+         nếu có thì Next tôn trọng và chuyện trên chỉ xảy ra với máy chủ
+         giả. Không đoán chuyện đó: nói thẳng ra là mình không muốn cache,
+         đúng như chín module khác trong repo đã làm. */
+      cache: 'no-store',
     });
     const text = await res.text();
     return { res, text };
