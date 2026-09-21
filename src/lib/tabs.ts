@@ -24,6 +24,7 @@ export const TABS = [
   'insider',
   'learn',
   'patterns',
+  'daytrade',
   'portfolio',
 ] as const;
 

@@ -502,6 +502,27 @@ export async function dailyHistory(symbol: string, years = 1) {
 /** Một phiên, nến phút - dùng để dò xem một mã có lịch sử TRONG NGÀY hay
  *  không (market internals kiểu $TICK/$ADD chỉ có nghĩa vẽ theo phút; nến
  *  ngày không nói lên gì). */
+/**
+ * NHIỀU phiên nến trong ngày — nền cho tab Daytrade.
+ *
+ * Khác `intradayHistory()` bên dưới đúng MỘT tham số: `period`. Đó là chủ
+ * ý — lượt gọi kia đang chạy thật ở production cho tab Bề rộng TT, nên giữ
+ * mọi thứ còn lại y hệt làm bề mặt chưa-đo-được co lại còn một tham số.
+ *
+ * Một request trả về CẢ phiên hôm nay LẪN các phiên trước, nên mốc hôm qua
+ * và nền khối lượng tương đối không tốn thêm lượt gọi nào.
+ */
+export async function sessionHistory(symbol: string, days: number, minutes: number) {
+  return get('/pricehistory', {
+    symbol,
+    periodType: 'day',
+    period: String(days),
+    frequencyType: 'minute',
+    frequency: String(minutes),
+    needExtendedHoursData: 'false',
+  });
+}
+
 export async function intradayHistory(symbol: string, minutes = 5) {
   return get('/pricehistory', {
     symbol,

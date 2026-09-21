@@ -36,7 +36,145 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
   'tab.learn': { vi: 'Learn', en: 'Learn' },
   'tab.patterns': { vi: 'Patterns', en: 'Patterns' },
+  /* Nhãn tab giữ nguyên tiếng Anh ở cả hai ngôn ngữ, đúng luật #189. */
+  'tab.daytrade': { vi: 'Daytrade', en: 'Daytrade' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
+
+  /* ---- Tab Daytrade (lib/daytrade.ts, lib/zerodte.ts) ---- */
+  'dt.title': { vi: 'Giao dịch trong ngày', en: 'Intraday trading' },
+  'dt.subStocks': { vi: 'Cổ phiếu', en: 'Stocks' },
+  'dt.subZero': { vi: '0DTE', en: '0DTE' },
+  'dt.intro': {
+    vi: (v: { bar: number; days: number }) =>
+      `Nến ${v.bar} phút từ Schwab, phiên chính thức 09:30–16:00 New York. Nền khối lượng lấy từ ${v.days} phiên gần nhất — tất cả trong MỘT lượt gọi cho mỗi mã.`,
+    en: (v: { bar: number; days: number }) =>
+      `${v.bar}-minute Schwab candles, regular session 09:30–16:00 New York. The volume baseline comes from the last ${v.days} sessions — all in ONE request per symbol.`,
+  },
+  'dt.addPlaceholder': { vi: 'Thêm mã', en: 'Add symbol' },
+  'dt.add': { vi: 'Thêm', en: 'Add' },
+  'dt.removeSym': { vi: (s: string) => `Bỏ ${s}`, en: (s: string) => `Remove ${s}` },
+  'dt.orChip': { vi: (m: string) => `Mở cửa ${m}′`, en: (m: string) => `Open ${m}m` },
+  'dt.auto': { vi: 'Tự làm mới mỗi phút', en: 'Auto-refresh each minute' },
+  'dt.refresh': { vi: 'Làm mới', en: 'Refresh' },
+  'dt.loading': { vi: 'Đang tải…', en: 'Loading…' },
+  'dt.maxed': {
+    vi: (n: number) => `Đã đủ ${n} mã — trần này giữ cho tab không ăn vào hạn mức 100 request/phút mà lượt quét Screener đang dùng chung. Bỏ bớt một mã để thêm mã khác.`,
+    en: (n: number) => `${n} symbols is the cap — it keeps this tab from eating into the 100 requests/minute the Screener scan shares. Remove one to add another.`,
+  },
+  'dt.rejected': {
+    vi: (s: string) => `Không nhận mã: ${s} (sai định dạng). Nói ra chứ không bỏ im lặng.`,
+    en: (s: string) => `Rejected: ${s} (bad format). Said out loud rather than silently dropped.`,
+  },
+  'dt.reauth': {
+    vi: 'Phiên Schwab đã hết hạn — bấm kết nối lại trong ⚙ Cài đặt. Thử lại không giải quyết được.',
+    en: 'The Schwab session has expired — reconnect from ⚙ Settings. Retrying will not help.',
+  },
+  'dt.failed': { vi: (d: string) => `Không tải được: ${d}`, en: (d: string) => `Load failed: ${d}` },
+  'dt.colSymbol': { vi: 'Mã', en: 'Symbol' },
+  'dt.colLast': { vi: 'Giá', en: 'Last' },
+  'dt.colVwap': { vi: 'VWAP', en: 'VWAP' },
+  'dt.colVsVwap': { vi: 'So VWAP', en: 'vs VWAP' },
+  'dt.colGap': { vi: 'Gap', en: 'Gap' },
+  'dt.colOr': { vi: 'Khoảng mở cửa', en: 'Opening range' },
+  'dt.colRelVol': { vi: 'KL tương đối', en: 'Rel. volume' },
+  'dt.orInside': { vi: 'chưa phá', en: 'inside' },
+  'dt.orPending': {
+    vi: 'chưa đủ nến',
+    en: 'not enough bars yet',
+  },
+  'dt.relVolWarm': {
+    vi: (n: number) => `cần ≥3 phiên nền (mới có ${n})`,
+    en: (n: number) => `needs ≥3 baseline sessions (only ${n})`,
+  },
+  'dt.chartFor': {
+    vi: (v: { s: string; d: string }) => `${v.s} — phiên ${v.d}`,
+    en: (v: { s: string; d: string }) => `${v.s} — session ${v.d}`,
+  },
+  'dt.chartEmpty': { vi: 'Chưa có nến nào để vẽ.', en: 'No bars to draw yet.' },
+  'dt.chartLegend': {
+    vi: 'Đường xanh = VWAP · vùng cam = khoảng mở cửa · PDH/PDL/PDC = đỉnh/đáy/đóng cửa phiên trước. Rê chuột lên nến để xem chi tiết.',
+    en: 'Blue line = VWAP · orange band = opening range · PDH/PDL/PDC = prior session high/low/close. Hover a bar for detail.',
+  },
+  'dt.noVol': { vi: 'không có khối lượng', en: 'no volume' },
+  'dt.vwapCaveat': {
+    vi: 'VWAP ở đây tính trên nến 5 phút với giá điển hình (H+L+C)/3, nên là XẤP XỈ: VWAP thật tính trên từng giao dịch, mà Schwab /pricehistory không cung cấp dữ liệu từng giao dịch. Sát trong phiên thanh khoản tốt, lệch khi giá chạy mạnh trong một nến.',
+    en: 'VWAP here is computed from 5-minute bars using the typical price (H+L+C)/3, so it is an APPROXIMATION: true VWAP is per-trade, and Schwab /pricehistory does not provide per-trade data. Close in liquid sessions, off when price runs hard inside one bar.',
+  },
+  'dt.at': { vi: (s: string) => `Cập nhật lúc ${s}`, en: (s: string) => `Updated ${s}` },
+  'dt.note.NO_CANDLES': { vi: 'Schwab không trả nến nào.', en: 'Schwab returned no candles.' },
+  'dt.note.NO_REGULAR_SESSION_BARS': {
+    vi: 'Có nến nhưng không nến nào rơi vào phiên chính thức 09:30–16:00.',
+    en: 'Candles exist but none fall inside the 09:30–16:00 regular session.',
+  },
+  'dt.note.NO_PRIOR_SESSION': {
+    vi: 'Không có phiên trước trong dữ liệu — chưa có mốc hôm qua và chưa tính được gap.',
+    en: 'No prior session in the data — no prior-day levels and no gap.',
+  },
+  'dt.note.NO_VOLUME_FOR_VWAP': {
+    vi: 'Thiếu khối lượng ở một nến nên VWAP dừng tại đó (không coi khối lượng thiếu là 0).',
+    en: 'A bar is missing volume so VWAP stops there (a missing volume is never read as 0).',
+  },
+  'dt.note.OPEN_RANGE_INCOMPLETE': {
+    vi: 'Chưa đủ nến cho khoảng mở cửa — không dựng khoảng từ một phần.',
+    en: 'Not enough bars for the opening range — it is never built from a partial one.',
+  },
+  'dt.note.NO_VOLUME_FOR_RELVOL': {
+    vi: 'Thiếu khối lượng nên không tính được khối lượng tương đối.',
+    en: 'Missing volume, so relative volume cannot be computed.',
+  },
+  'dt.note.RELVOL_WARMING_UP': {
+    vi: 'Chưa đủ phiên nền cho khối lượng tương đối.',
+    en: 'Not enough baseline sessions for relative volume.',
+  },
+  /* ---- 0DTE ---- */
+  'dt.zeroIntro': {
+    vi: 'Chuỗi quyền chọn ĐÁO HẠN HÔM NAY, hỏi theo ngày giao dịch New York. Bảng này cũng là một phép đo: khối chẩn đoán dưới cùng đếm riêng số hợp đồng có giá chào, có open interest và có gamma — #103/#108 đã đo được Schwab trả OI = 0 cho chỉ số, nhưng chưa ai kiểm bid/ask, mà bảng này chỉ cần bid/ask.',
+    en: 'The option chain EXPIRING TODAY, asked by New York trading date. This table is also a measurement: the diagnosis block counts contracts with a quote, with open interest and with gamma separately — #103/#108 measured Schwab returning OI = 0 for indices, but nobody has checked bid/ask, and this table needs only bid/ask.',
+  },
+  'dt.emSpot': { vi: 'Giá hiện tại', en: 'Spot' },
+  'dt.emStraddle': {
+    vi: (k: number) => `Giá straddle ATM (${k})`,
+    en: (k: number) => `ATM straddle price (${k})`,
+  },
+  'dt.emPct': { vi: 'Biên theo %', en: 'Move as %' },
+  'dt.emRange': { vi: 'Khoảng thị trường đang định giá', en: 'Range the market is pricing' },
+  'dt.emNone': {
+    vi: 'Không tính được biên: cần CẢ call lẫn put có đủ bid và ask ở một strike gần giá. Không nhân đôi một chân để lấp — làm vậy là bịa ra một con số.',
+    en: 'No expected move: it needs BOTH a call and a put with bid and ask at a strike near spot. A single leg is never doubled to fill the gap — that would invent a number.',
+  },
+  'dt.calls': { vi: 'Call', en: 'Calls' },
+  'dt.puts': { vi: 'Put', en: 'Puts' },
+  'dt.strike': { vi: 'Strike', en: 'Strike' },
+  'dt.bid': { vi: 'Mua', en: 'Bid' },
+  'dt.ask': { vi: 'Bán', en: 'Ask' },
+  'dt.vol': { vi: 'KL', en: 'Vol' },
+  'dt.oi': { vi: 'OI', en: 'OI' },
+  'dt.zeroEmpty': {
+    vi: (d: string) => `Không có hợp đồng nào còn giá chào cho kỳ đáo hạn ${d}. Nếu hôm nay là cuối tuần hoặc ngày lễ thì đúng là không có kỳ đáo hạn; còn lại, đọc khối chẩn đoán bên dưới.`,
+    en: (d: string) => `No contract carries a quote for expiry ${d}. On a weekend or holiday there genuinely is no expiry; otherwise read the diagnosis below.`,
+  },
+  'dt.diagTitle': { vi: 'Chẩn đoán — Schwab thật sự gửi gì', en: 'Diagnosis — what Schwab actually sent' },
+  'dt.diagSymbol': {
+    vi: (v: { used: string; asked: string }) =>
+      v.used === v.asked ? `Cách viết dùng được: ${v.used}` : `Hỏi "${v.asked}", cách viết chạy được là "${v.used}"`,
+    en: (v: { used: string; asked: string }) =>
+      v.used === v.asked ? `Spelling used: ${v.used}` : `Asked "${v.asked}", the spelling that worked was "${v.used}"`,
+  },
+  'dt.diagAsked': {
+    vi: (v: { asked: string; got: string }) => `Hỏi kỳ đáo hạn ${v.asked}, Schwab trả ${v.got}`,
+    en: (v: { asked: string; got: string }) => `Asked for expiry ${v.asked}, Schwab returned ${v.got}`,
+  },
+  'dt.diagCounts': {
+    vi: (v: { n: number; q: number; oi: number; g: number }) =>
+      `${v.n} hợp đồng · có giá chào: ${v.q} · có open interest: ${v.oi} · có gamma: ${v.g}`,
+    en: (v: { n: number; q: number; oi: number; g: number }) =>
+      `${v.n} contracts · with a quote: ${v.q} · with open interest: ${v.oi} · with gamma: ${v.g}`,
+  },
+  'dt.diagIndexBug': {
+    vi: 'Không hợp đồng nào có open interest — đúng lỗi API Schwab với chỉ số đã ghi ở #108 (thinkorswim trên CÙNG tài khoản có OI thật, nên KHÔNG phải chuyện quyền dữ liệu). Bảng 0DTE không cần OI nên vẫn dùng được; nếu cần OI hay gamma thì dùng SPY/QQQ (ETF, đo được là chạy bình thường).',
+    en: 'No contract carries open interest — the Schwab index API defect recorded in #108 (thinkorswim on the SAME account shows real OI, so this is not an entitlement issue). This 0DTE table does not need OI and still works; for OI or gamma use SPY/QQQ, which are measured to work normally.',
+  },
+  'dt.diagAttempts': { vi: (s: string) => `Đã thử: ${s}`, en: (s: string) => `Attempted: ${s}` },
 
   /* ---- Tab Learn: chỉ NHÃN GIAO DIỆN; nội dung bài ở lib/learn/* ---- */
   'learn.title': { vi: 'Học đọc thị trường', en: 'Learn to read the market' },
