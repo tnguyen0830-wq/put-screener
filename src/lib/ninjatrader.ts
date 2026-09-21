@@ -16,6 +16,65 @@
  * KHÔNG một chữ nào về endpoint/trường trong file này được xác nhận từ đây.
  *
  * ============================================================
+ * ĐO 2026-09-21 TỪ MÀN HÌNH CHỦ APP — probe CHƯA TỪNG CHẠY, và ba trong
+ * năm câu hỏi dưới đây đã có đáp án mà không tốn một request nào
+ * ============================================================
+ *
+ * Chủ app mở `web.ninjatrader.com` và chụp màn hình từng tab. Sáu phép đo,
+ * xếp theo mức quyết định:
+ *
+ *  A. **Dữ liệu là TRỄ 10 PHÚT, nguyên văn lời Tradovate.** Bấm vào biểu
+ *     tượng đồng hồ cạnh mã, hộp thoại hiện: *"NQZ6 data is delayed by 10
+ *     minutes. To get real-time data, please subscribe to a CME data
+ *     package."* Khớp với `Settings → Subscriptions → Market Data` in
+ *     **"No rows"** — hai bề mặt độc lập nói cùng một điều (khác hẳn vụ SPX
+ *     #108, nơi bề mặt thứ hai lật ngược kết luận). Tức **câu hỏi 3 và 4
+ *     coi như đã trả lời**: không có gói dữ liệu CME thì luồng md qua API
+ *     giỏi lắm cũng trễ 10 phút, và một footprint dựng trên dữ liệu trễ 10
+ *     phút là thứ SAI mà TRÔNG Y HỆT ĐÚNG — đúng hình dạng lỗi nguy hiểm
+ *     nhất mà cả repo này chống.
+ *
+ *  B. **Cách viết tên hợp đồng: `NQZ6` — MỘT chữ số năm.** Đây là câu hỏi
+ *     5, và phỏng đoán `ESZ6` viết sẵn trong `/api/ntprobe` là ĐÚNG (không
+ *     phải `NQZ26`/`ESZ26`). Đọc thẳng từ màn hình hợp đồng E-MINI NASDAQ
+ *     100, hết hạn 12/18/2026.
+ *
+ *  C. **`Settings → API Access` có thật**, tiêu đề "API Access Add-On" —
+ *     xác nhận nó là gói THÊM như câu hỏi 1 giả định. Nhưng phần thân
+ *     TRỐNG, và danh sách `Add-Ons` (phần nhìn thấy được) KHÔNG có card
+ *     nào tên API Access. **Giá vẫn CHƯA ĐO ĐƯỢC.**
+ *
+ *  D. **Footprint đã có sẵn, đã trả tiền.** `Add-Ons` cho thấy
+ *     **Order Flow + ACTIVE, $59,00/tháng** — mô tả của chính Tradovate:
+ *     "Bid/Ask and TPO advanced chart types, Volume Profile indicators and
+ *     drawing tools, and VWAP and Cumulative Delta". Cộng thêm
+ *     **Advanced Charting** (ACTIVE, Free) có "Bid/ask volume candles" và
+ *     **Tick Stream** (ACTIVE, Free) có từng tick kèm mili-giây. Tức thứ
+ *     tab daytrade định xây thì chủ app ĐANG TRẢ TIỀN để dùng trong chính
+ *     nền tảng đó rồi.
+ *
+ *  E. **KHÔNG có tài khoản demo.** `Settings → Accounts` chỉ có MỘT tài
+ *     khoản, gắn nhãn `LIVE`. Nên lời khuyên "đặt `NT_ENV=demo` để đo an
+ *     toàn" ở DEPLOY.md **không áp dụng được cho tài khoản này** — mật khẩu
+ *     đặt lên Render sẽ là mật khẩu của tài khoản thật, và token Tradovate
+ *     đặt lệnh được. Xem phần AN TOÀN bên dưới.
+ *
+ *  F. **Quy mô không đỡ nổi chi phí.** Net Liquidity **$200**; NQ có
+ *     `Standard Day Margin` **$1.000**, tick value $5,00, $20/điểm. Cộng
+ *     $59/tháng đang trả + gói API Access (chưa biết giá) + gói dữ liệu CME
+ *     (chưa biết giá) thì tiền thuê hạ tầng mỗi tháng lớn hơn hẳn phần nó
+ *     phục vụ.
+ *
+ * **KẾT LUẬN (2026-09-21): đường NinjaTrader DỪNG, không xoá.** Không phải
+ * vì code hỏng — file này và `/api/ntprobe` vẫn đúng và vẫn chạy được ngay
+ * khi đặt 4 biến env. Mà vì điều kiện cần KHÔNG có: không dữ liệu real-time,
+ * không tài khoản demo, footprint đã có sẵn chỗ khác, và Tradovate là sàn
+ * FUTURES nên không bao giờ cho cổ phiếu hay 0DTE SPX — đúng nửa quan trọng
+ * của thứ chủ app đặt hàng. Nếu sau này chủ app mua gói dữ liệu CME và gói
+ * API Access thì bật lại bằng cách đặt env rồi mở `/api/ntprobe`; mọi câu
+ * hỏi còn lại (1, 2, và phần `withHistogram` của 4) vẫn chờ ở đó.
+ *
+ * ============================================================
  * NĂM CÂU HỎI PROBE PHẢI TRẢ LỜI, theo thứ tự quyết định thiết kế
  * ============================================================
  *
@@ -39,6 +98,8 @@
  *  5. **Tên hợp đồng thật** (`contract/suggest` ra `ESZ6`? `ESZ26`?) — mọi
  *     lượt đăng ký đều cần đúng cách viết, và cách viết là thứ dễ nhớ sai
  *     nhất (SPX ở Schwab tốn sáu PR vì chuyện này).
+ *     → **ĐÃ TRẢ LỜI 2026-09-21 bằng ảnh chụp: MỘT chữ số năm (`NQZ6`),
+ *     tức `ESZ6` là đúng.** Xem mục B của khối ĐO ĐƯỢC ở trên.
  *
  * ============================================================
  * AN TOÀN
@@ -50,6 +111,10 @@
  *   - Nếu tài khoản là tài khoản THẬT có tiền, mật khẩu nằm trong bảng env
  *     của Render là mật khẩu vào được tiền đó. `NT_ENV` mặc định `demo`; đặt
  *     `live` là quyết định có ý thức của chủ app, ghi ở DEPLOY.md.
+ *     → **ĐO 2026-09-21: tài khoản của chủ app KHÔNG có bản demo** (chỉ một
+ *     tài khoản, nhãn `LIVE`), nên mặc định `demo` KHÔNG cứu được ai ở đây:
+ *     muốn probe chạy là phải đặt `NT_ENV=live` và để mật khẩu tài khoản
+ *     thật trên Render. Đó là một lý do nữa để dừng, xem mục E ở trên.
  *   - File này KHÔNG có hàm đặt lệnh, và probe chỉ gọi endpoint đọc.
  *   - Không bao giờ trả mật khẩu, `sec`, hay bất kỳ token nào ra ngoài:
  *     `redact()` che chúng trong mọi thông điệp ghi lại, và route còn quét

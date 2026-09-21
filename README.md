@@ -924,15 +924,38 @@ Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có),
 chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
 các bài nến ở đó có nút nhảy thẳng sang tab này.
 
-## NinjaTrader web / Tradovate — mới có probe, chưa có tab
+## NinjaTrader web / Tradovate — ĐANG DỪNG, probe giữ lại
 
 Chủ app đăng nhập được `web.ninjatrader.com` (nền Tradovate) và muốn một tab
 daytrade (cổ phiếu + 0DTE SPX, luồng thời gian thực, footprint). Theo đúng
 luật của repo với host có key, việc đầu tiên là **đo**: `/api/ntprobe` (chỉ
 chủ app) lấy token, gọi ba endpoint đọc và bắt tay WebSocket dữ liệu thị
 trường cho một hợp đồng, rồi in **hình dạng** — tên khoá, kiểu, số dòng,
-nguyên văn hai chiều đã che token. Không có tính năng nào dùng nó cho tới khi
-kết quả đó được đọc. Cách đặt biến và cách đọc kết quả: `DEPLOY.md`.
+nguyên văn hai chiều đã che token. Cách đặt biến và cách đọc kết quả:
+`DEPLOY.md`.
+
+**Probe chưa từng chạy, và không cần chạy nữa lúc này.** Đo 2026-09-21 từ
+chính màn hình NinjaTrader web:
+
+- **Dữ liệu trễ 10 phút.** Nguyên văn hộp thoại Tradovate: *"NQZ6 data is
+  delayed by 10 minutes. To get real-time data, please subscribe to a CME
+  data package."* Khớp với `Subscriptions → Market Data` in **"No rows"** —
+  hai bề mặt độc lập nói cùng một điều. Một footprint dựng trên dữ liệu trễ
+  10 phút là thứ **sai mà trông y hệt đúng**.
+- **Footprint đã có sẵn và đã trả tiền**: add-on **Order Flow +** đang ACTIVE
+  ở **$59/tháng** (Bid/Ask chart type, Volume Profile, Cumulative Delta),
+  cộng **Advanced Charting** miễn phí có "bid/ask volume candles".
+- **Không có tài khoản demo** (chỉ một tài khoản `LIVE`), nên không đo được
+  an toàn — token Tradovate đặt lệnh được.
+- **Tradovate là sàn futures**, nên không bao giờ có cổ phiếu hay 0DTE SPX —
+  đúng nửa quan trọng của yêu cầu ban đầu. Nửa đó nằm ở Schwab, đã nối sẵn.
+
+Một thứ đo được và đáng giữ: **tên hợp đồng viết MỘT chữ số năm** (`NQZ6`,
+`ESZ6`), tức phỏng đoán trong probe là đúng — cách viết mã là thứ đã tốn sáu
+PR ở chuyện SPX của Schwab.
+
+Code giữ nguyên, không xoá: mua gói dữ liệu CME + gói API Access, đặt 4 biến
+env, mở `/api/ntprobe` là chạy lại được ngay.
 
 ## Cấu trúc
 
