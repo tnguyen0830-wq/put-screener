@@ -924,6 +924,16 @@ Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có),
 chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
 các bài nến ở đó có nút nhảy thẳng sang tab này.
 
+## NinjaTrader web / Tradovate — mới có probe, chưa có tab
+
+Chủ app đăng nhập được `web.ninjatrader.com` (nền Tradovate) và muốn một tab
+daytrade (cổ phiếu + 0DTE SPX, luồng thời gian thực, footprint). Theo đúng
+luật của repo với host có key, việc đầu tiên là **đo**: `/api/ntprobe` (chỉ
+chủ app) lấy token, gọi ba endpoint đọc và bắt tay WebSocket dữ liệu thị
+trường cho một hợp đồng, rồi in **hình dạng** — tên khoá, kiểu, số dòng,
+nguyên văn hai chiều đã che token. Không có tính năng nào dùng nó cho tới khi
+kết quả đó được đọc. Cách đặt biến và cách đọc kết quả: `DEPLOY.md`.
+
 ## Cấu trúc
 
 `src/lib` có 28 file, liệt kê hết ra thì thành mục lục chứ không thành hiểu
