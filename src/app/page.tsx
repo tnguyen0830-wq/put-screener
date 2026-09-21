@@ -21,6 +21,7 @@ import SettingsMenu from '@/components/SettingsMenu';
 import LongTermPanel from '@/components/LongTermPanel';
 import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
+import PatternsPanel from '@/components/PatternsPanel';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import { TABS, type Tab } from '@/lib/tabs';
@@ -400,6 +401,12 @@ export default function Page() {
           >
             {t('tab.learn')}
           </button>
+          <button
+            className={tab === 'patterns' ? 'on' : undefined}
+            onClick={() => setTab('patterns')}
+          >
+            {t('tab.patterns')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -485,6 +492,16 @@ export default function Page() {
               app, không phải một cuốn sách rời. `sub` chỉ áp cho hai tab có
               tab con; tên tab/sub đã được `validateLessons()` kiểm ở test. */}
           <LearnPanel
+            onOpen={(to, sub) => {
+              if (sub && to === 'heatmap' && (HEATMAP_SUBS as readonly string[]).includes(sub)) setHeatmapSub(sub as HeatmapSub);
+              if (sub && to === 'insider' && (INSIDER_SUBS as readonly string[]).includes(sub)) setInsiderSub(sub as InsiderSub);
+              if ((TABS as readonly string[]).includes(to)) setTab(to as Tab);
+            }}
+          />
+        </div>
+      ) : tab === 'patterns' ? (
+        <div className="shell solo">
+          <PatternsPanel
             onOpen={(to, sub) => {
               if (sub && to === 'heatmap' && (HEATMAP_SUBS as readonly string[]).includes(sub)) setHeatmapSub(sub as HeatmapSub);
               if (sub && to === 'insider' && (INSIDER_SUBS as readonly string[]).includes(sub)) setInsiderSub(sub as InsiderSub);

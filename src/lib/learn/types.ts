@@ -53,7 +53,7 @@ export type FigureId = (typeof FIGURE_IDS)[number];
 
 /** Nút "Xem thật ở tab …" — nhảy tới đúng tab (và tab con) đang có dữ liệu sống. */
 export type SeeIn = {
-  tab: 'news' | 'longterm' | 'screener' | 'analyze' | 'heatmap' | 'insider';
+  tab: 'news' | 'longterm' | 'screener' | 'analyze' | 'heatmap' | 'insider' | 'patterns';
   /** Tab con của Heatmap (`map|feargreed|rrg|gex|internals`) hoặc Insider Trade (`form4|congress|flow|darkpool`). */
   sub?: string;
   label: L;

@@ -35,6 +35,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
   'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
   'tab.learn': { vi: 'Learn', en: 'Learn' },
+  'tab.patterns': { vi: 'Patterns', en: 'Patterns' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
 
   /* ---- Tab Learn: chỉ NHÃN GIAO DIỆN; nội dung bài ở lib/learn/* ---- */
@@ -81,6 +82,120 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'learn.ask.placeholder': { vi: 'Ví dụ: vì sao tường call tính trên gamma ròng chứ không phải gamma call lớn nhất?', en: 'e.g. why is the call wall computed on net gamma rather than the biggest call gamma?' },
   'learn.ask.send': { vi: 'Hỏi', en: 'Ask' },
   'learn.ask.caveat': { vi: 'Giải thích khái niệm, không phải khuyến nghị đầu tư.', en: 'An explanation of the concept, not investment advice.' },
+
+  /* ---- Tab Patterns ---- */
+  'pat.lead': {
+    vi: 'Dò mẫu hình NẾN (doji, búa, nhấn chìm, sao mai/sao hôm) và mẫu hình GIÁ (hai đáy/hai đỉnh, vai-đầu-vai, tam giác, cờ, phá vỡ vùng) trên nến NGÀY Schwab — cùng nến và cùng vùng hỗ trợ tab Long-term dùng. Mỗi mẫu ghi rõ ĐÃ XÁC NHẬN (✓) hay ĐANG HÌNH THÀNH (…). Bấm một dòng để mở biểu đồ có vẽ mẫu.',
+    en: 'Detects CANDLESTICK patterns (doji, hammer, engulfing, morning/evening star) and CHART patterns (double bottom/top, head & shoulders, triangles, flags, zone breaks) on Schwab DAILY bars — the same candles and support zones the Long-term tab uses. Every pattern says whether it is CONFIRMED (✓) or FORMING (…). Click a row to open the chart with the pattern drawn on it.',
+  },
+  'pat.watchlist': { vi: 'Watchlist', en: 'Watchlist' },
+  'pat.sp500': { vi: 'Cả rổ S&P 500', en: 'Whole S&P 500' },
+  'pat.sp500Note': {
+    vi: 'Cả rổ là ~503 lượt nến, lần đầu trong ngày mất vài phút (giới hạn 100 request/phút của Schwab); nến cache theo ngày nên lần sau — hoặc sau một lượt quét Long-term cả rổ — gần như tức thì.',
+    en: 'The whole basket is ~503 candle requests; the first run of the day takes a few minutes (Schwab’s 100 req/min limit). Candles are cached per day, so a second run — or one after a whole-basket Long-term scan — is nearly instant.',
+  },
+  'pat.scan': { vi: 'Quét mẫu hình', en: 'Scan for patterns' },
+  'pat.scanning': { vi: 'Đang đọc nến…', en: 'Reading candles…' },
+  'pat.error': { vi: (m: string) => `Lượt quét lỗi: ${m}`, en: (m: string) => `Scan failed: ${m}` },
+  'pat.errExpired': {
+    vi: 'Phiên Schwab đã hết hạn. Bấm ⚙ → Kết nối lại rồi quét lại.',
+    en: 'The Schwab session has expired. Open ⚙ → Reconnect, then scan again.',
+  },
+  'pat.summary': {
+    vi: (v: any) => `Đã đọc ${v.scanned} mã, ${v.kept} mã đang có mẫu.`,
+    en: (v: any) => `Read ${v.scanned} symbols, ${v.kept} currently show a pattern.`,
+  },
+  'pat.skipped': { vi: 'Bỏ qua —', en: 'Skipped —' },
+  'pat.skipExpired': { vi: 'hết phiên Schwab', en: 'Schwab session expired' },
+  'pat.saved': {
+    vi: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const gio = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const ngay = same ? 'hôm nay' : d.toLocaleDateString('vi-VN');
+      return `Kết quả của lần quét lúc ${gio} ${ngay} - đây là ảnh chụp, giá đã cũ. Bấm quét lại để lấy số mới.`;
+    },
+    en: (at: number) => {
+      const d = new Date(at);
+      const same = d.toDateString() === new Date().toDateString();
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const day = same ? 'today' : d.toLocaleDateString('en-US');
+      return `From the scan at ${time} ${day} - a snapshot, so prices are stale. Run the scan again for fresh numbers.`;
+    },
+  },
+  'pat.caveat': {
+    vi: 'Mẫu hình là thống kê của quá khứ, không phải lời hứa: một mẫu "đang hình thành" chỉ là một khả năng, và một mẫu "đã xác nhận" vẫn thất bại thường xuyên. Mục tiêu đo là phép chiếu theo quy ước, không phải dự báo. Không phải khuyến nghị mua bán.',
+    en: 'A pattern is a statistic about the past, not a promise: a "forming" pattern is only a possibility, and a "confirmed" one still fails often. The measured target is a conventional projection, not a forecast. Not a buy/sell recommendation.',
+  },
+  'pat.empty': {
+    vi: 'Không mã nào có mẫu trong cửa sổ gần đây (mẫu nến: 3 nến cuối; mẫu giá: xác nhận trong 15 nến hoặc đang hình thành trong 25 nến). Bảng trống là một câu trả lời, không phải lỗi.',
+    en: 'No symbol shows a pattern in the recent window (candle patterns: last 3 bars; chart patterns: confirmed within 15 bars or forming within 25). An empty table is an answer, not a failure.',
+  },
+  'pat.col.symbol': { vi: 'Mã', en: 'Symbol' },
+  'pat.col.price': { vi: 'Đóng cửa', en: 'Close' },
+  'pat.col.patterns': { vi: 'Mẫu hình', en: 'Patterns' },
+  'pat.col.levels': { vi: 'Hỗ trợ / kháng cự gần nhất', en: 'Nearest support / resistance' },
+  'pat.nearS': { vi: 'Hỗ trợ', en: 'Support' },
+  'pat.nearR': { vi: 'Kháng cự', en: 'Resistance' },
+  'pat.symbolPh': { vi: 'Mã bất kỳ, ví dụ AAPL', en: 'Any symbol, e.g. AAPL' },
+  'pat.open': { vi: 'Mở biểu đồ', en: 'Open chart' },
+  'pat.chartTitle': { vi: (s: string) => `Nến ngày ${s}`, en: (s: string) => `${s} daily candles` },
+  'pat.chart.loading': { vi: 'Đang tải nến…', en: 'Loading candles…' },
+  'pat.chart.noHistory': { vi: (s: string) => `Schwab không có lịch sử nến cho ${s}.`, en: (s: string) => `Schwab has no candle history for ${s}.` },
+  'pat.chart.badSymbol': { vi: 'Mã không hợp lệ.', en: 'Invalid symbol.' },
+  'pat.chart.err': { vi: (m: string) => `Không tải được biểu đồ: ${m}`, en: (m: string) => `Could not load the chart: ${m}` },
+  'pat.chart.asOf': {
+    vi: (v: any) => `Nến ngày tới ${v.bar}; mẫu dò trên 3 năm nến ngày. Vùng xanh = hỗ trợ, vùng đỏ = kháng cự (đỉnh/đáy xoay ≥ 2 lần chạm, gom 2,5%). Đường liền = SMA50, đứt = SMA200.`,
+    en: (v: any) => `Daily bars through ${v.bar}; patterns detected on 3 years of daily bars. Green band = support, red band = resistance (pivots with ≥ 2 touches, clustered 2.5%). Solid line = SMA50, dashed = SMA200.`,
+  },
+  'pat.bars': { vi: ' nến', en: ' bars' },
+  'pat.legend': { vi: 'bấm một mẫu trong danh sách dưới để chỉ vẽ mẫu đó', en: 'click a pattern in the list below to draw only that one' },
+  'pat.hoverHint': { vi: 'Rê chuột lên nến để xem O/H/L/C.', en: 'Hover a candle for O/H/L/C.' },
+  'pat.none': { vi: 'Không có mẫu nào trong cửa sổ gần đây cho mã này.', en: 'No pattern in the recent window for this symbol.' },
+  'pat.vol': { vi: (r: string) => `KL ${r}× TB 20 phiên`, en: (r: string) => `vol ${r}× 20-day avg` },
+  'pat.volUnknown': { vi: 'KL: không có dữ liệu', en: 'volume: no data' },
+  'pat.volUnknownAll': { vi: 'Schwab không trả khối lượng cho mã này, nên không đo được khối lượng phá vỡ.', en: 'Schwab returned no volume for this symbol, so breakout volume cannot be measured.' },
+  'pat.kind.candle': { vi: 'Mẫu nến', en: 'Candlestick pattern' },
+  'pat.kind.chart': { vi: 'Mẫu hình giá', en: 'Chart pattern' },
+  'pat.kind.level': { vi: 'Phá vùng', en: 'Zone break' },
+  'pat.level.neckline': { vi: 'Đường cổ', en: 'Neckline' },
+  'pat.level.target': { vi: 'Mục tiêu đo', en: 'Measured target' },
+  'pat.level.base': { vi: 'Mức đáy/đỉnh', en: 'Base' },
+  'pat.level.upper': { vi: 'Cạnh trên', en: 'Upper edge' },
+  'pat.level.lower': { vi: 'Cạnh dưới', en: 'Lower edge' },
+  'pat.level.low': { vi: 'Đáy mẫu', en: 'Pattern low' },
+  'pat.level.high': { vi: 'Đỉnh mẫu', en: 'Pattern high' },
+  'pat.level.zone': { vi: 'Vùng', en: 'Zone' },
+  'pat.level.zoneHigh': { vi: 'Biên trên vùng', en: 'Zone top' },
+  'pat.level.zoneLow': { vi: 'Biên dưới vùng', en: 'Zone bottom' },
+  'pat.name.doji': { vi: 'Doji', en: 'Doji' },
+  'pat.name.hammer': { vi: 'Búa', en: 'Hammer' },
+  'pat.name.hanging-man': { vi: 'Người treo cổ', en: 'Hanging man' },
+  'pat.name.inverted-hammer': { vi: 'Búa ngược', en: 'Inverted hammer' },
+  'pat.name.shooting-star': { vi: 'Sao băng', en: 'Shooting star' },
+  'pat.name.bull-engulfing': { vi: 'Nhấn chìm tăng', en: 'Bullish engulfing' },
+  'pat.name.bear-engulfing': { vi: 'Nhấn chìm giảm', en: 'Bearish engulfing' },
+  'pat.name.morning-star': { vi: 'Sao mai', en: 'Morning star' },
+  'pat.name.evening-star': { vi: 'Sao hôm', en: 'Evening star' },
+  'pat.name.double-bottom': { vi: 'Hai đáy', en: 'Double bottom' },
+  'pat.name.double-top': { vi: 'Hai đỉnh', en: 'Double top' },
+  'pat.name.head-shoulders': { vi: 'Vai-đầu-vai', en: 'Head & shoulders' },
+  'pat.name.inv-head-shoulders': { vi: 'Vai-đầu-vai ngược', en: 'Inverse head & shoulders' },
+  'pat.name.asc-triangle': { vi: 'Tam giác tăng', en: 'Ascending triangle' },
+  'pat.name.desc-triangle': { vi: 'Tam giác giảm', en: 'Descending triangle' },
+  'pat.name.sym-triangle': { vi: 'Tam giác cân', en: 'Symmetrical triangle' },
+  'pat.name.bull-flag': { vi: 'Cờ tăng', en: 'Bull flag' },
+  'pat.name.bear-flag': { vi: 'Cờ giảm', en: 'Bear flag' },
+  'pat.name.breakout': { vi: 'Phá kháng cự', en: 'Breakout' },
+  'pat.name.breakdown': { vi: 'Thủng hỗ trợ', en: 'Breakdown' },
+  'pat.read.title': { vi: 'Đọc mẫu hình này', en: 'Read these patterns' },
+  'pat.read.run': { vi: 'Hỏi Claude', en: 'Ask Claude' },
+  'pat.read.idle': {
+    vi: 'Claude chỉ nhận danh sách mẫu và mức giá app đã tính ở trên — không nhận nến, không có tin tức — và chỉ diễn giải, không khuyến nghị. Mỗi lần bấm là một lượt gọi API trả tiền.',
+    en: 'Claude receives only the pattern list and levels computed above — no candles, no news — and only interprets, never recommends. Each press is one paid API call.',
+  },
+  'pat.read.caveat': { vi: 'Diễn giải các mẫu app đã dò, không phải khuyến nghị đầu tư.', en: 'An interpretation of what the app detected, not investment advice.' },
+  'pat.learnLink': { vi: 'Học cách đọc các mẫu này ở tab Learn', en: 'Learn how to read these patterns in the Learn tab' },
 
   /* ---- Chú thích cho từng mã trên thanh giá cuộn đầu trang ---- */
   'tape.spx': { vi: 'Chỉ số S&P 500', en: 'S&P 500 Index' },
@@ -320,6 +435,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'act.kind.tts': { vi: 'Giọng đọc AI', en: 'AI voice' },
   'act.kind.watchlist': { vi: 'Sửa watchlist', en: 'Edited watchlist' },
   'act.kind.learn': { vi: 'Hỏi Claude về bài học', en: 'Asked Claude about a lesson' },
+  'act.kind.patscan': { vi: 'Quét mẫu hình', en: 'Pattern scan' },
+  'act.kind.patai': { vi: 'Hỏi Claude đọc mẫu hình', en: 'Asked Claude to read patterns' },
 
   'acct.ownerNoCode': {
     vi: 'Mã đặt lại chỉ dành cho người nhà. Mật khẩu của chính bạn là APP_PASSWORD trên Render — cố tình để ngoài kho tài khoản, để một cái mã lọt ra ngoài không bao giờ chạm được tới danh mục.',

@@ -47,7 +47,7 @@ export const CANDLE_LESSONS: Lesson[] = [
         en: 'Ignoring volume: a long wick on heavy volume is a real fight; a long wick on thin volume may be a few stray orders.',
       },
     ],
-    seeIn: { tab: 'analyze', label: { vi: 'Xem nến ngày thật ở tab Analyze', en: 'See real daily candles in Analyze' } },
+    seeIn: { tab: 'patterns', label: { vi: 'Xem nến ngày thật và mẫu app dò được (tab Patterns)', en: 'See real daily candles and detected patterns (Patterns tab)' } },
     quiz: [
       {
         q: { vi: 'Nến có râu dưới rất dài, thân nhỏ ở trên, xuất hiện sau nhiều ngày rớt. Điều gì đã xảy ra trong ngày đó?', en: 'A candle with a very long lower wick and a small body near the top appears after several down days. What happened that day?' },
@@ -91,6 +91,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       en: 'A near-zero body means a draw — and a draw AFTER a trend is what matters.',
     },
     figures: ['doji'],
+    seeIn: { tab: 'patterns', label: { vi: 'Xem mẫu này app đang dò được trên nến thật (tab Patterns)', en: 'See this pattern detected on real candles (Patterns tab)' } },
     body: [
       {
         vi: '**Doji** là nến mở và đóng gần như cùng giá: thân là một vạch. **Con quay** (spinning top) là thân nhỏ với râu hai đầu. Cả hai nói cùng một điều: trong khoảng đó, không bên nào giữ được ưu thế.',
@@ -152,6 +153,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       en: 'A long wick toward a price level means that level was defended.',
     },
     figures: ['hammer'],
+    seeIn: { tab: 'patterns', label: { vi: 'Xem mẫu này app đang dò được trên nến thật (tab Patterns)', en: 'See this pattern detected on real candles (Patterns tab)' } },
     body: [
       {
         vi: '**Búa** (hammer): thân nhỏ ở trên, râu dưới dài ít nhất gấp đôi thân, gần như không có râu trên. Xuất hiện **sau một đợt giảm**. Câu chuyện: giá bị bán xuống sâu trong phiên, rồi người mua nhấc nó về gần mức mở. Mức đáy của râu là nơi có người chờ mua.',
@@ -223,6 +225,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       en: 'A candle swallowing the one before it means one side changed its mind decisively.',
     },
     figures: ['engulfing', 'star'],
+    seeIn: { tab: 'patterns', label: { vi: 'Xem mẫu này app đang dò được trên nến thật (tab Patterns)', en: 'See this pattern detected on real candles (Patterns tab)' } },
     body: [
       {
         vi: '**Nhấn chìm tăng** (bullish engulfing): sau một đợt giảm, một nến đỏ nhỏ rồi một nến xanh có thân **bao trọn** thân nến đỏ — mở thấp hơn đáy thân đỏ, đóng cao hơn đỉnh thân đỏ. Mọi người bán của ngày trước giờ đều đang lỗ. **Nhấn chìm giảm** là hình ngược lại ở đỉnh.',
@@ -251,7 +254,6 @@ export const CANDLE_LESSONS: Lesson[] = [
         en: 'A bearish engulfing after one small up day inside a large uptrend: it reverses one day, not the trend.',
       },
     ],
-    seeIn: { tab: 'longterm', label: { vi: 'Xem vùng hỗ trợ thật ở tab Long-term', en: 'See real support zones in Long-term' } },
     quiz: [
       {
         q: { vi: 'Nhấn chìm tăng cần điều kiện nào?', en: 'What does a bullish engulfing require?' },
@@ -353,6 +355,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       en: 'The big reversal patterns — and the neckline decides, not the shape.',
     },
     figures: ['head-shoulders', 'double'],
+    seeIn: { tab: 'patterns', label: { vi: 'Xem mẫu này app đang dò được trên nến thật (tab Patterns)', en: 'See this pattern detected on real candles (Patterns tab)' } },
     body: [
       {
         vi: '**Vai-đầu-vai**: ba đỉnh, đỉnh giữa cao nhất, hai đỉnh bên thấp hơn và xấp xỉ nhau. Nối hai đáy giữa các đỉnh được **đường cổ**. Mẫu chỉ **hoàn thành khi giá đóng cửa dưới đường cổ** — trước đó nó chỉ là ba cái đỉnh. Mục tiêu giá thường ước bằng chiều cao từ đầu tới đường cổ, chiếu xuống từ điểm thủng.',
@@ -414,6 +417,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       en: 'The market pauses mid-move, then usually continues the old direction.',
     },
     figures: ['triangle', 'flag'],
+    seeIn: { tab: 'patterns', label: { vi: 'Xem mẫu này app đang dò được trên nến thật (tab Patterns)', en: 'See this pattern detected on real candles (Patterns tab)' } },
     body: [
       {
         vi: 'Không phải mẫu nào cũng đảo chiều. **Tam giác** và **cờ** là chỗ thị trường **nghỉ**: biên độ hẹp dần, khối lượng cạn dần, rồi giá bung ra — và thường bung theo **hướng đã đi vào**.',

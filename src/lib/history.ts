@@ -51,7 +51,26 @@ export async function historyBars(symbol: string): Promise<Bar[]> {
  */
 const LT_DIR = path.resolve('./.cache/history-lt');
 
-export type LtCandle = { t: number; high: number; low: number; close: number };
+/**
+ * `open` và `volume` được thêm cho tab Patterns (mẫu hình nến cần thân nến,
+ * tức cần `open`; phá vỡ có khối lượng cần `volume`). Thêm trường là ĐỦ cho
+ * mọi nơi đang dùng (Long-term chỉ đọc t/high/low/close), nhưng cache cũ trên
+ * đĩa ghi trước thay đổi này THIẾU hai trường — đọc chúng ra `undefined` sẽ
+ * làm mọi mẫu nến câm lặng trong đúng ngày deploy. Nên một bản cache không có
+ * `open` bị coi là MISS và nạp lại, thay vì tin nó.
+ *
+ * `volume` là `null` khi Schwab không trả (không phải 0): 0 đọc thành "không
+ * ai giao dịch", null đọc thành "không biết" — tỉ lệ khối lượng của một cú
+ * phá vỡ phải ra `null` chứ không ra một con số trông như thật.
+ */
+export type LtCandle = {
+  t: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number | null;
+};
 
 export async function historyCandles(
   symbol: string,
@@ -61,7 +80,10 @@ export async function historyCandles(
   const file = path.join(LT_DIR, `${symbolFileKey(symbol)}-${years}y.json`);
   try {
     const cached = JSON.parse(await fs.readFile(file, 'utf8'));
-    if (cached.d === today) return cached.candles as LtCandle[];
+    const first = cached.candles?.[0];
+    /* Bản cache ghi trước khi có `open`: coi là miss (xem chú thích LtCandle). */
+    const hasOpen = !first || typeof first.open === 'number';
+    if (cached.d === today && hasOpen) return cached.candles as LtCandle[];
   } catch {
     /* cache miss */
   }
@@ -69,9 +91,11 @@ export async function historyCandles(
   const candles: LtCandle[] = (data?.candles ?? [])
     .map((c: any) => ({
       t: Number(c.datetime),
+      open: Number(c.open),
       high: Number(c.high),
       low: Number(c.low),
       close: Number(c.close),
+      volume: Number.isFinite(Number(c.volume)) && c.volume !== null && c.volume !== undefined ? Number(c.volume) : null,
     }))
     /* Một nến thiếu giá trị làm hỏng cả phép tìm đáy xoay một cách im lặng
        (Math.min với NaN ra NaN, và NaN so sánh nào cũng false nên nến hỏng
@@ -80,6 +104,7 @@ export async function historyCandles(
     .filter(
       (c: LtCandle) =>
         Number.isFinite(c.t) &&
+        Number.isFinite(c.open) &&
         Number.isFinite(c.high) &&
         Number.isFinite(c.low) &&
         Number.isFinite(c.close)

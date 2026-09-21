@@ -3,7 +3,7 @@
 Quét toàn bộ rổ S&P 500 và trả về những hợp đồng **cash-secured put** đáp ứng
 tiêu chí của bạn, lấy dữ liệu trực tiếp từ tài khoản Charles Schwab.
 
-App có tám tab, đi theo đúng vòng đời của một lệnh bán put:
+App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 
 | Tab | Trả lời câu hỏi |
 |---|---|
@@ -15,6 +15,7 @@ App có tám tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
 | **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
 | **Learn** | Đọc nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider và cách app chấm bán put — bài song ngữ có hình vẽ, câu ôn tập, nút hỏi Claude |
+| **Patterns** | Mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu lên, nút hỏi Claude đọc mẫu |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -873,6 +874,47 @@ một đáy đơn không phải hỗ trợ. Đọc xong bài là đọc được
 cạnh — đó là lý do tab này nằm trong app thay vì là một trang web riêng.
 
 Nhãn tab "Learn" giữ tiếng Anh ở cả hai ngôn ngữ, cùng luật với bảy tab kia.
+
+## Patterns — mẫu hình nến và mẫu hình giá, dò trên nến ngày Schwab
+
+Tab thứ chín. Quét **watchlist** hoặc **cả rổ S&P 500**, liệt kê mã nào đang
+có mẫu, bấm một dòng (hoặc gõ mã bất kỳ) để mở **biểu đồ nến ngày** có vẽ mẫu
+lên, và một nút để Claude **diễn giải** đúng những mẫu app đã dò.
+
+Nến là nến ngày Schwab, 3 năm, cache theo ngày — **cùng file cache tab Đầu tư
+dài hạn dùng**, và vùng hỗ trợ/kháng cự cũng tính bằng đúng phép của tab đó
+(đỉnh/đáy xoay 5 nến mỗi bên, gom 2,5%, ≥ 2 lần chạm). Quét cả rổ lần đầu
+trong ngày là ~503 lượt nến (vài phút, giới hạn 100 request/phút của Schwab);
+lần sau trong ngày gần như tức thì.
+
+**Mẫu nến** (chỉ 3 nến cuối): doji · búa / người treo cổ · búa ngược / sao
+băng · nhấn chìm tăng/giảm · sao mai / sao hôm. Cùng một hình, bối cảnh quyết
+định tên: râu dưới dài sau đợt GIẢM là búa, sau đợt TĂNG là người treo cổ;
+không có xu hướng trước thì app không gọi tên. Một nến đơn chỉ **✓ xác nhận**
+khi nến sau đóng đúng hướng; nến cuối chuỗi luôn là **… đang chờ**.
+
+**Mẫu giá** (xác nhận trong 15 nến, hoặc đang hình thành với đỉnh/đáy cuối
+trong 25 nến): hai đáy / hai đỉnh · vai-đầu-vai và ngược · tam giác tăng /
+giảm / cân · cờ tăng / giảm · phá kháng cự / thủng hỗ trợ (kèm khối lượng so
+với trung bình 20 phiên). Mỗi mẫu mang đường cổ và **mục tiêu đo** — phép
+chiếu theo quy ước (chiều cao mẫu cộng từ điểm phá), không phải dự báo.
+
+Ba điều cố ý:
+
+- **"Đang hình thành" và "đã xác nhận" không bao giờ hiện giống nhau.** Hai
+  đáy chưa vượt đường cổ chỉ là hai cái đáy; chip ghi `…`, biểu đồ vẽ đường
+  cổ để biết mức nào mới là xác nhận. Một mẫu đã xác nhận lâu hơn 15 nến là
+  lịch sử, không hiện.
+- **Thiếu khối lượng ra "không có dữ liệu", không ra 0.** Một cú phá vỡ
+  không đo được khối lượng là một cú phá vỡ yếu hơn về bằng chứng, không phải
+  một cú phá vỡ "không ai giao dịch".
+- **Claude chỉ nhận danh sách mẫu và mức giá app đã tính** — không nhận nến,
+  không có tin tức — và được dặn chỉ diễn giải: cái gì sẽ xác nhận, cái gì sẽ
+  phủ nhận, mẫu nào đang mâu thuẫn nhau. Không khuyến nghị.
+
+Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có), kèm câu "ảnh
+chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
+các bài nến ở đó có nút nhảy thẳng sang tab này.
 
 ## Cấu trúc
 
