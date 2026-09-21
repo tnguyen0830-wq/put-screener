@@ -179,8 +179,18 @@ export const config = {
    * Chặn theo đuôi file cũng an toàn hơn liệt kê từng tên: thêm một ảnh mới
    * vào public/ sau này sẽ không âm thầm làm hỏng trang đăng nhập nữa. Không có
    * route API nào mang đuôi file, nên chúng vẫn được gác đầy đủ.
+   *
+   * `js` có trong danh sách vì `/sw.js`, và đây là một lỗi ĐO ĐƯỢC chứ không
+   * phải phòng xa: chưa đăng nhập thì `/sw.js` trả 307 về `/login`, mà một
+   * script service worker bị CHUYỂN HƯỚNG là một lượt nạp HỎNG theo đúng đặc
+   * tả — trình duyệt có thể gỡ luôn bản đăng ký. Đăng ký lần đầu thì vẫn
+   * chạy (lúc đó có cookie), nên hỏng chỉ lộ ra ở lượt trình duyệt TỰ kiểm
+   * tra bản mới sau khi phiên hết hạn: đăng ký biến mất và thông báo đẩy
+   * lặng lẽ chết. Bundle của Next nằm dưới `_next/static` vốn đã được chừa,
+   * và không route API nào có đuôi `.js`, nên đây không nới cổng cho thứ gì
+   * khác. `public/sw.js` không mang bí mật nào (chỉ vẽ thông báo).
    */
   matcher: [
-    '/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|txt|xml|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|txt|xml|webmanifest|js)$).*)',
   ],
 };

@@ -4265,3 +4265,61 @@ body {
 /* Mẫu JSON của Schwab là một "từ" dài không có khoảng trắng — không cho
    xuống dòng thì nửa câu nằm ngoài màn hình ở 400px (#195). */
 .dtdiag code { overflow-wrap: anywhere; word-break: break-word; }
+
+/* ── Nút "Cài app" (PWA) ──────────────────────────────────────────────
+   Dùng lại `.settings` cho vị trí tương đối và `.settingspop` cho bảng,
+   nên ở đây chỉ còn đúng phần khác: nút này có CHỮ chứ không phải ô vuông
+   34px như nút ⚙ — chữ mới là thứ chủ app hỏi ("muốn hiện chữ install
+   app"), nên KHÔNG ẩn nhãn ở màn hình hẹp: điện thoại đúng là nơi việc cài
+   đáng giá nhất. Thanh `.rail` vốn đã `flex-wrap: wrap` nên nút xuống dòng
+   chứ không đẩy tràn. */
+.installbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 11px;
+  font-family: var(--data);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--on-navy);
+  background: var(--navy);
+  border: 1px solid var(--navy);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.installbtn:hover {
+  filter: brightness(1.08);
+}
+
+/* Rộng hơn bảng ⚙ vì nội dung là câu chỉ đường nhiều chữ, không phải hàng
+   nút. */
+.installpop {
+  width: 290px;
+  max-width: calc(100vw - 32px);
+}
+
+/* Xem chú thích trong `InstallApp.tsx`: nút nằm ở hàng thứ hai sát mép trái
+   khi thanh đầu trang xuống dòng, và bảng neo phải khi ấy lòi ra ngoài màn
+   hình. Lớp này do phép đo bật lên, không phải do đoán bề ngang. */
+.installpop-left {
+  left: 0;
+  right: auto;
+}
+
+/* Thân lỗi thật của manifest/SW đi vào đây, và nó có thể là một "từ" dài
+   không khoảng trắng (URL, chuỗi JSON) — không cho xuống dòng thì nửa câu
+   nằm ngoài màn hình ở 400px, đúng bẫy `.ttserr` của #195. */
+.installrow {
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
+.installok {
+  color: var(--credit);
+  border-color: var(--credit);
+  text-transform: none;
+  letter-spacing: 0;
+}
