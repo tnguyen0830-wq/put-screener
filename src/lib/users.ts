@@ -124,6 +124,9 @@ const OWNER_ONLY = [
   // là token của tài khoản môi giới (có thể đặt lệnh). Chỉ trả hình dạng,
   // nhưng người nhà không được là người bấm nút trên tài khoản đó.
   '/api/ntprobe',
+  // Probe tape DXLink: mở một phiên streaming trên TÀI KHOẢN MÔI GIỚI
+  // tastytrade của chủ app, cùng lý do với breadthprobe/ttprobe.
+  '/api/dxtapeprobe',
 ];
 
 /**

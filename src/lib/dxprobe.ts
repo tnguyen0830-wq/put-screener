@@ -38,6 +38,16 @@ export type DxProbeResult = {
   /** Có nhận được AUTH_STATE: AUTHORIZED không - cổng chính của cả phép đo. */
   authorized: boolean;
   channelOpened: boolean;
+  /** Kênh nào thật sự mở được. Một phép đo có thể xin NHIỀU kênh trên cùng
+   *  một kết nối (xem `tapePlan()` trong dxtape.ts): kênh này chết không
+   *  được kéo kênh kia chết theo, nên phải biết kênh nào sống. */
+  channelsOpened: number[];
+  /** Lời máy chủ TỰ NÓI về cấu hình feed nó cấp cho từng kênh. Đây là phép
+   *  đo có thẩm quyền nhất của cả cuộc bắt tay: `aggregationPeriod` máy chủ
+   *  CẤP (không phải cái ta XIN) nói tape có bị gộp nhịp không, và
+   *  `eventFields` nói ra tên trường THẬT nó sẽ gửi - thứ không được phép
+   *  đoán. */
+  feedConfigs: DxFeedConfig[];
   /** Mã có dữ liệu chảy về, theo đúng tên mã đã hỏi. CÓ DỮ LIỆU KHÔNG có
    *  nghĩa là đúng chỉ báo cần tìm - xem `observations`. */
   symbolsWithData: string[];
@@ -89,6 +99,146 @@ export const BREADTH_CANDIDATES = [
 export type Sender = (text: string) => void;
 
 /**
+ * Một loại sự kiện cần đăng ký trên một kênh.
+ *
+ * `symbols` bỏ trống = dùng danh sách mã chung của cả cuộc bắt tay. Đặt
+ * riêng khi cách viết mã KHÁC hẳn: nến của dxFeed là `AAPL{=5m}`, không
+ * phải `AAPL`, nên nó không thể đi chung danh sách với Quote/Trade.
+ */
+export type DxSubscription = {
+  type: string;
+  symbols?: string[];
+  /** Sự kiện CHUỖI THỜI GIAN (TimeAndSale, Candle) - theo tài liệu tôi NHỚ
+   *  thì phải kèm `fromTime`, đăng ký thường có thể không trả gì. CHƯA xác
+   *  nhận; đoán sai vẫn thu được câu trả lời vì lời từ chối của DXLink nói
+   *  ra dạng đúng, và nó nằm nguyên văn trong `messages`. */
+  timeSeries?: boolean;
+  /** Lùi về quá khứ bao nhiêu mili giây khi `timeSeries`. Không phải để
+   *  tiết kiệm: ngoài giờ giao dịch mà `fromTime = bây giờ` thì tape rỗng,
+   *  và "không có sự kiện nào" trông Y HỆT "feed này không có TimeAndSale"
+   *  - hai chuyện dẫn tới hai kết luận ngược nhau. Lùi lại đủ xa thì phép
+   *  đo về hình dạng chạy được cả khi sàn đã đóng. */
+  lookbackMs?: number;
+};
+
+/**
+ * Một kênh FEED: một bộ trường, một nhịp gộp, một danh sách đăng ký.
+ *
+ * NHIỀU kênh trên cùng một kết nối là có chủ đích, không phải cho vui: một
+ * tên trường tôi nhớ sai trong `acceptEventFields` có thể làm máy chủ từ
+ * chối CẢ kênh, và khi đó một phép đo một-kênh về tay trắng. Nên phép đo
+ * tape đi hai kênh - một kênh KHÔNG gửi `acceptEventFields` (không thể bị
+ * từ chối vì tên trường, và bộ trường mặc định máy chủ chọn CHÍNH LÀ một
+ * phép đo), một kênh xin hẳn danh sách tên nhớ được. Kênh nào chết thì chỉ
+ * mình nó chết.
+ */
+export type DxChannelPlan = {
+  channel: number;
+  /** `null` = KHÔNG gửi khoá `acceptEventFields` chút nào. */
+  acceptEventFields: Record<string, string[]> | null;
+  acceptAggregationPeriod: number;
+  subscriptions: DxSubscription[];
+};
+
+export type DxPlan = { channels: DxChannelPlan[] };
+
+/**
+ * Phép đo bề rộng thị trường (#166) - GIỮ NGUYÊN từng byte những gì bản
+ * trước gửi đi, kể cả THỨ TỰ các mục trong `add` (vòng ngoài là mã, vòng
+ * trong là loại sự kiện). Một phép đo đang chạy thật không được đổi vì
+ * người sau dọn code.
+ */
+export const BREADTH_PLAN: DxPlan = {
+  channels: [
+    {
+      channel: 1,
+      acceptEventFields: {
+        Quote: ['eventType', 'eventSymbol', 'bidPrice', 'askPrice'],
+        Trade: ['eventType', 'eventSymbol', 'price'],
+      },
+      acceptAggregationPeriod: 1,
+      subscriptions: [{ type: 'Quote' }, { type: 'Trade' }],
+    },
+  ],
+};
+
+export type DxState = {
+  authorized: boolean;
+  channelOpened: boolean;
+  subscribed: boolean;
+  /** Kênh đã mở. Mảng chứ không phải boolean vì một kế hoạch có thể xin
+   *  nhiều kênh và ta cần biết CÁI NÀO sống. */
+  opened: number[];
+};
+
+export function emptyState(): DxState {
+  return { authorized: false, channelOpened: false, subscribed: false, opened: [] };
+}
+
+/**
+ * Danh sách mục `add` của một FEED_SUBSCRIPTION.
+ *
+ * Vòng ngoài là MÃ, vòng trong là loại sự kiện - đúng thứ tự bản trước gửi
+ * (`symbols.flatMap(s => [Quote(s), Trade(s)])`), để phép đo bề rộng không
+ * đổi. Trùng (cùng mã + cùng loại) bị bỏ: đăng ký hai lần trên cùng một
+ * kênh là tự nhân đôi số sự kiện đếm được.
+ */
+export function subscriptionEntries(
+  ch: DxChannelPlan,
+  symbols: string[],
+  nowMs = Date.now()
+): Array<Record<string, unknown>> {
+  const lists = ch.subscriptions.map((sub) => sub.symbols ?? symbols);
+  const longest = lists.reduce((m, l) => Math.max(m, l.length), 0);
+  const out: Array<Record<string, unknown>> = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < longest; i++) {
+    for (let j = 0; j < ch.subscriptions.length; j++) {
+      const sub = ch.subscriptions[j];
+      const symbol = lists[j][i];
+      if (typeof symbol !== 'string') continue;
+      const key = `${sub.type}\u0000${symbol}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const entry: Record<string, unknown> = { symbol, type: sub.type };
+      if (sub.timeSeries) entry.fromTime = nowMs - (sub.lookbackMs ?? 0);
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+/** Cấu hình feed do CHÍNH máy chủ trả về (FEED_CONFIG). */
+export type DxFeedConfig = {
+  channel: number | null;
+  /** Nhịp gộp máy chủ CẤP. Khác cái ta xin thì cái này mới là sự thật - và
+   *  với một cái tape thì > 0 nghĩa là dữ liệu đã bị gộp, tức footprint
+   *  dựng trên đó SAI mà TRÔNG ĐÚNG. */
+  aggregationPeriod: number | null;
+  dataFormat: string | null;
+  /** Tên trường THẬT máy chủ sẽ gửi, theo từng loại sự kiện. */
+  eventFields: Record<string, string[]> | null;
+};
+
+export function readFeedConfig(raw: string): DxFeedConfig | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (msg?.type !== 'FEED_CONFIG') return null;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  return {
+    channel: n(msg.channel),
+    aggregationPeriod: n(msg.aggregationPeriod),
+    dataFormat: typeof msg.dataFormat === 'string' ? msg.dataFormat : null,
+    eventFields: msg.eventFields && typeof msg.eventFields === 'object' ? msg.eventFields : null,
+  };
+}
+
+/**
  * Phần THUẦN của cuộc bắt tay: nhận một thông điệp, quyết định gửi gì tiếp.
  *
  * Tách ra khỏi WebSocket để test được bằng cách gọi tay từng bước, không
@@ -96,9 +246,11 @@ export type Sender = (text: string) => void;
  */
 export function step(
   raw: string,
-  state: { authorized: boolean; channelOpened: boolean; subscribed: boolean },
+  state: DxState,
   send: Sender,
-  symbols: string[]
+  symbols: string[],
+  plan: DxPlan = BREADTH_PLAN,
+  nowMs = Date.now()
 ): void {
   let msg: any;
   try {
@@ -109,38 +261,37 @@ export function step(
 
   if (msg?.type === 'AUTH_STATE' && msg?.state === 'AUTHORIZED') {
     state.authorized = true;
-    send(
-      JSON.stringify({
-        type: 'CHANNEL_REQUEST',
-        channel: 1,
-        service: 'FEED',
-        parameters: { contract: 'AUTO' },
-      })
-    );
+    for (const ch of plan.channels) {
+      send(
+        JSON.stringify({
+          type: 'CHANNEL_REQUEST',
+          channel: ch.channel,
+          service: 'FEED',
+          parameters: { contract: 'AUTO' },
+        })
+      );
+    }
     return;
   }
 
-  if (msg?.type === 'CHANNEL_OPENED' && msg?.channel === 1) {
+  if (msg?.type === 'CHANNEL_OPENED' && typeof msg?.channel === 'number') {
+    const ch = plan.channels.find((c) => c.channel === msg.channel);
+    if (!ch) return; // kênh lạ: không phải của ta, không đăng ký gì
+    if (state.opened.includes(ch.channel)) return; // đã mở rồi, đừng đăng ký lần hai
+    state.opened.push(ch.channel);
     state.channelOpened = true;
-    send(
-      JSON.stringify({
-        type: 'FEED_SETUP',
-        channel: 1,
-        acceptAggregationPeriod: 1,
-        acceptDataFormat: 'FULL',
-        acceptEventFields: { Quote: ['eventType', 'eventSymbol', 'bidPrice', 'askPrice'], Trade: ['eventType', 'eventSymbol', 'price'] },
-      })
-    );
-    send(
-      JSON.stringify({
-        type: 'FEED_SUBSCRIPTION',
-        channel: 1,
-        add: symbols.flatMap((s) => [
-          { symbol: s, type: 'Quote' },
-          { symbol: s, type: 'Trade' },
-        ]),
-      })
-    );
+
+    const setup: Record<string, unknown> = {
+      type: 'FEED_SETUP',
+      channel: ch.channel,
+      acceptAggregationPeriod: ch.acceptAggregationPeriod,
+      acceptDataFormat: 'FULL',
+    };
+    if (ch.acceptEventFields) setup.acceptEventFields = ch.acceptEventFields;
+    send(JSON.stringify(setup));
+
+    const add = subscriptionEntries(ch, symbols, nowMs);
+    if (add.length) send(JSON.stringify({ type: 'FEED_SUBSCRIPTION', channel: ch.channel, add }));
     state.subscribed = true;
   }
 }
@@ -231,17 +382,32 @@ export function observeFeed(raw: string, into: Map<string, SymbolObservation>): 
  * Chạy cuộc bắt tay thật. Trả về những gì quan sát được, KHÔNG BAO GIỜ
  * chứa token (thông điệp AUTH được ghi lại dưới dạng đã che).
  */
+export type DxHandshakeOpts = {
+  /** Kênh/trường/đăng ký. Mặc định là phép đo bề rộng, không đổi. */
+  plan?: DxPlan;
+  /** Chạy trên MỖI thông điệp nhận được, để nơi gọi tự gom quan sát riêng
+   *  (phép đo tape gom theo kênh + mã, khác hẳn phép đo bề rộng). */
+  onMessage?: (raw: string) => void;
+  /** Trả `true` để đóng sớm. Mặc định là luật của phép đo bề rộng; phép đo
+   *  tape truyền `() => false` vì nó cần nghe hết cửa sổ. */
+  stopWhen?: (seen: Map<string, SymbolObservation>) => boolean;
+};
+
 export async function dxHandshake(
   url: string,
   token: string,
   symbols: string[],
-  timeoutMs = 9000
+  timeoutMs = 9000,
+  opts: DxHandshakeOpts = {}
 ): Promise<DxProbeResult> {
+  const plan = opts.plan ?? BREADTH_PLAN;
   const out: DxProbeResult = {
     attempted: true,
     skipped: null,
     authorized: false,
     channelOpened: false,
+    channelsOpened: [],
+    feedConfigs: [],
     symbolsWithData: [],
     observations: [],
     messages: [],
@@ -262,7 +428,7 @@ export async function dxHandshake(
   return new Promise<DxProbeResult>((resolve) => {
     let ws: any;
     let done = false;
-    const state = { authorized: false, channelOpened: false, subscribed: false };
+    const state = emptyState();
     const found = new Set<string>();
     const seen = new Map<string, SymbolObservation>();
 
@@ -272,6 +438,7 @@ export async function dxHandshake(
       if (err && !out.error) out.error = err;
       out.authorized = state.authorized;
       out.channelOpened = state.channelOpened;
+      out.channelsOpened = [...state.opened];
       out.symbolsWithData = [...found];
       // Chỉ giữ quan sát của những mã ĐÃ HỎI: dxFeed có thể gửi kèm mã khác.
       out.observations = [...seen.values()].filter((o) => symbols.includes(o.symbol));
@@ -320,9 +487,12 @@ export async function dxHandshake(
       const text = typeof ev?.data === 'string' ? ev.data : String(ev?.data ?? '');
       log('recv', text);
       try {
-        step(text, state, send, symbols);
+        step(text, state, send, symbols, plan);
+        const cfg = readFeedConfig(text);
+        if (cfg) out.feedConfigs.push(cfg);
         for (const s of symbolsInFeed(text, symbols)) found.add(s);
         observeFeed(text, seen);
+        opts.onMessage?.(text);
         /* Chỉ dừng sớm khi tìm được thứ ĐANG TÌM: một mã không phải đối
            chứng, VÀ trông như một chỉ số (có giá Trade nhưng không có
            bid/ask thật - xem observeFeed).
@@ -331,10 +501,12 @@ export async function dxHandshake(
            mã đối chứng về (237ms). Lần hai suýt dừng vì `ADV`/`DVOL` có dữ
            liệu - mà chúng là cổ phiếu trùng tên, không phải chỉ báo bề
            rộng. Dừng vì một câu trả lời sai còn tệ hơn chờ hết giờ. */
-        const realFind = [...seen.values()].some(
-          (o) => !CONTROL_SYMBOLS.includes(o.symbol) && o.tradePrice !== null && !o.tradeableQuote
-        );
-        if (realFind) {
+        const stop = opts.stopWhen
+          ? opts.stopWhen(seen)
+          : [...seen.values()].some(
+              (o) => !CONTROL_SYMBOLS.includes(o.symbol) && o.tradePrice !== null && !o.tradeableQuote
+            );
+        if (stop) {
           clearTimeout(timer);
           finish();
         }

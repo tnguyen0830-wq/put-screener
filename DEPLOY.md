@@ -377,6 +377,37 @@ có token nào trong câu trả lời. Ba dòng đáng đọc:
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
 
+### Probe tape DXLink — tastytrade có dựng được footprint không?
+
+**Không cần thêm biến môi trường nào.** Dùng đúng tài khoản tastytrade đã
+cấu hình ở trên. Mở, **trong giờ giao dịch** (09:30–16:00 New York):
+
+```
+https://<app>/api/dxtapeprobe
+```
+
+(`?symbols=AAPL,SPY,SPX` và `?seconds=20` đổi được; trần 5 mã / 30 giây.)
+
+Chỉ trả **hình dạng**, không token, không số dư. Đọc theo thứ tự:
+
+1. `footprintRoute` — `feed` (chính feed mang phía chủ động → dựng footprint
+   thẳng), `infer` (phải suy phía từ bid/ask, kèm tỉ lệ suy được),
+   `no-side` (có tape mà không ra được phía), `no-tape` (không có
+   TimeAndSale nào).
+2. `aggregationGranted` — **quan trọng nhất**. Xin `0` mà được cấp số > 0
+   nghĩa là máy chủ GỘP NHỊP, tức tape đã bị làm mỏng và một footprint dựng
+   trên nó **sai mà trông đúng** — đúng lý do đường NinjaTrader bị dừng.
+3. `tape[].fieldKeys` và `tape[].sample` — tên trường THẬT và một sự kiện
+   nguyên văn. Mọi tên trong `src/lib/dxtape.ts` là NHỚ, chưa xác nhận; đây
+   là chỗ sửa theo.
+4. `candlesReceived` — có nến 5 phút thời gian thực thì tab Daytrade thôi
+   phải hỏi-đáp `/pricehistory` của Schwab.
+5. `howToRead` — câu kết luận viết sẵn, gồm cả trường hợp bấm ngoài giờ
+   (`marketOpen: false` + `lookbackWindowAllClosed: true` nghĩa là tape rỗng
+   KHÔNG chứng minh được gì, phải bấm lại trong phiên).
+
+Gửi nguyên khối JSON đó về; tính năng viết theo cái đo được.
+
 ### NinjaTrader web / Tradovate: ĐANG DỪNG (đo 2026-09-21) — probe vẫn còn, chưa có tính năng
 
 > ## ⛔ Đọc trước: đường này đã dừng, đừng đặt env rồi mới biết

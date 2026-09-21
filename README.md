@@ -1015,9 +1015,41 @@ PR ở chuyện SPX của Schwab.
 Code giữ nguyên, không xoá: mua gói dữ liệu CME + gói API Access, đặt 4 biến
 env, mở `/api/ntprobe` là chạy lại được ngay.
 
+## Tape DXLink (tastytrade) — probe, chưa có tính năng
+
+Bỏ NinjaTrader thì còn thiếu đúng **hai** thứ: luồng **thời gian thực**
+(Schwab là hỏi-đáp, và chính vì thế VWAP của tab Daytrade chỉ là xấp xỉ) và
+**footprint** (khối lượng mua/bán theo từng mức giá, cần từng lệnh khớp kèm
+phía chủ động).
+
+DXLink của tastytrade là đường **duy nhất đã đo được là chạy** (2026-09-18:
+AAPL và VIX đều có dữ liệu), trên tài khoản chủ app đã có, không tốn thêm
+tiền, và **không thêm mật khẩu môi giới nào** vào biến môi trường — đúng
+điểm đã khiến đường Tradovate bị dừng. Nhưng phép đo cũ chỉ hỏi `Quote` và
+`Trade`, mà `Trade` là *giá cuối*, không phải cái tape.
+
+`/api/dxtapeprobe` (chỉ chủ app) hỏi bốn câu, và chúng quyết định có làm
+được footprint hay không:
+
+1. `TimeAndSale` có chảy về không.
+2. Có **phía chủ động** không — và trường đó có *dùng được* không. Một
+   trường lúc nào cũng "Undefined" là **có mặt mà vô dụng**, và trên màn
+   hình nó không được trông giống "không có".
+3. Không có phía thì có `bid`/`ask` **tại lúc khớp** để tự suy ra không —
+   kèm **con số**: lệnh khớp nằm *giữa* bid và ask thì không suy được, và
+   được đếm riêng chứ không gán bừa về một phía.
+4. Máy chủ có **gộp nhịp** không. Câu nguy hiểm nhất: footprint dựng trên
+   tape đã gộp là thứ **sai mà trông đúng** — đúng hình dạng lỗi đã làm
+   đường NinjaTrader phải dừng.
+
+Mọi tên trường trong `src/lib/dxtape.ts` là **nhớ, chưa xác nhận** (host bị
+chặn từ môi trường phát triển), nên probe không kết luận theo tên: nó in tên
+trường **thật** của mọi sự kiện nhận được, đếm giá trị từng trường chuỗi, và
+chỉ khẳng định ở chỗ dữ liệu tự nói ra. Cách bấm và cách đọc: `DEPLOY.md`.
+
 ## Cấu trúc
 
-`src/lib` có 28 file, liệt kê hết ra thì thành mục lục chứ không thành hiểu
+`src/lib` có 89 file, liệt kê hết ra thì thành mục lục chứ không thành hiểu
 biết. Dưới đây là năm nhóm chức năng, mỗi nhóm kèm chỗ nên mở ra đọc trước.
 
 **Hạ tầng** — `schwab.ts` là cửa duy nhất ra ngoài: OAuth, rate limiter 100
