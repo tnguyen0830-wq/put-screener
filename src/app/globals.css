@@ -4194,3 +4194,74 @@ body {
   text-align: left;
   line-height: 1.35;
 }
+
+
+/* ---- Tab Daytrade ----
+   Chỉ dùng biến màu đã khai ở cả ba khối theme (:root, prefers-dark,
+   [data-theme=dark]), nên không phải sửa ba chỗ. */
+.dtcontrols {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.dtchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.dtchip {
+  font: 600 12px/1 var(--data);
+  padding: 6px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.dtchip:hover { background: var(--hover); border-color: var(--risk); color: var(--risk); }
+.dtadd { display: inline-flex; gap: 4px; align-items: center; }
+.dtadd input {
+  font: 600 12px/1 var(--data);
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+  /* min-width: 0 để ô không đẩy hàng nút tràn ra ngoài ở 400px — đúng lỗi
+     .ttserr của #195, chặn trước thay vì chờ nó xảy ra. */
+  min-width: 0;
+}
+.dtadd button {
+  font: 600 12px/1 var(--data);
+  padding: 6px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--stamp);
+  cursor: pointer;
+}
+.dtsub { font: 700 14px/1.3 var(--display); margin: 14px 0 6px; color: var(--label); }
+.dtchartwrap { margin: 6px 0 2px; }
+.dtchart {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+}
+.dthover { min-height: 1.4em; margin-top: 4px; }
+.dttable tr.on > td { background: var(--stamp-tint); }
+.dtcallhead { color: var(--gexcall); }
+.dtputhead { color: var(--gexput); }
+.dtmove { margin: 10px 0; }
+.dtdiag { margin-top: 12px; }
+.dtdiag summary { cursor: pointer; font: 600 12px/1.4 var(--data); color: var(--label); }
+.dtdiag ul { margin: 6px 0 0; padding-left: 18px; }
+.dtdiag li { margin: 3px 0; }
+/* Mẫu JSON của Schwab là một "từ" dài không có khoảng trắng — không cho
+   xuống dòng thì nửa câu nằm ngoài màn hình ở 400px (#195). */
+.dtdiag code { overflow-wrap: anywhere; word-break: break-word; }

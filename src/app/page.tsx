@@ -22,6 +22,7 @@ import LongTermPanel from '@/components/LongTermPanel';
 import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
 import PatternsPanel from '@/components/PatternsPanel';
+import DaytradePanel from '@/components/DaytradePanel';
 import { useLang } from '@/lib/i18n';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import { TABS, type Tab } from '@/lib/tabs';
@@ -407,6 +408,12 @@ export default function Page() {
           >
             {t('tab.patterns')}
           </button>
+          <button
+            className={tab === 'daytrade' ? 'on' : undefined}
+            onClick={() => setTab('daytrade')}
+          >
+            {t('tab.daytrade')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -508,6 +515,10 @@ export default function Page() {
               if ((TABS as readonly string[]).includes(to)) setTab(to as Tab);
             }}
           />
+        </div>
+      ) : tab === 'daytrade' ? (
+        <div className="shell solo">
+          <DaytradePanel />
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">

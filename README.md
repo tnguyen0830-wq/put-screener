@@ -924,6 +924,64 @@ Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có),
 chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
 các bài nến ở đó có nút nhảy thẳng sang tab này.
 
+## Daytrade — giao dịch trong ngày, bằng Schwab
+
+Tab thứ MƯỜI, và nó là câu trả lời cho đúng thứ đường NinjaTrader không cho
+được: **cổ phiếu và 0DTE SPX trong ngày**. Hai tab con.
+
+**Cổ phiếu** — tối đa 10 mã tự chọn, nến 5 phút Schwab, phiên chính thức
+09:30–16:00 New York:
+
+| Chỉ báo | Cách tính |
+|---|---|
+| **VWAP** + độ lệch | Cộng dồn trong phiên, giá điển hình (H+L+C)/3 |
+| **Mốc phiên trước** | Đỉnh/đáy/đóng cửa phiên liền trước + khoảng gap |
+| **Khoảng mở cửa** 15 hoặc 30 phút | Đỉnh/đáy N phút đầu, và cú phá vỡ |
+| **Khối lượng tương đối** | So với **trung vị** cùng vị trí nến của 10 phiên trước |
+
+**Cả bốn đến từ MỘT request mỗi mã.** `periodType=day&period=10&frequency=5`
+trả cả phiên hôm nay lẫn mười phiên trước, nên mốc hôm qua và nền khối lượng
+không tốn thêm lượt gọi nào. 10 mã = 10 request/phút, dưới hẳn trần 100/phút
+mà lượt quét Screener đang dùng chung — và đó cũng là lý do có trần 10 mã.
+
+Bốn luật số học, mỗi luật là một chỗ "thà không nói còn hơn nói sai":
+
+- **Khoảng mở cửa chưa đủ nến thì không dựng.** Lúc 9:40 mà in "khoảng 30
+  phút" từ hai nến là in một con số sẽ đổi trong hai mươi phút nữa, trong
+  khi nó trông y hệt con số cuối cùng.
+- **Phá vỡ tính trên giá ĐÓNG, không phải râu nến** — đúng quy ước
+  `confirmed` mà tab Patterns đã đặt, nên hai tab không nói hai nghĩa khác
+  nhau cho cùng chữ "phá vỡ".
+- **Khối lượng tương đối dùng TRUNG VỊ và cần ≥3 phiên nền.** Một ngày
+  earnings trong mười phiên kéo lệch trung bình chứ không kéo lệch trung vị;
+  dưới 3 phiên thì ra `—` kèm số phiên đang có, không đoán.
+- **Nến thiếu khối lượng làm VWAP dừng tại đó**, không coi như 0 — coi là 0
+  sẽ vẽ ra một đường VWAP trông hoàn toàn bình thường mà sai.
+
+VWAP ở đây là **xấp xỉ** và màn hình nói ra: VWAP thật tính trên từng giao
+dịch, mà `/pricehistory` chỉ cho OHLCV — đúng câu `learn/flow.ts` đã ghi khi
+giải thích vì sao app không có footprint.
+
+**0DTE** — chuỗi quyền chọn đáo hạn HÔM NAY, hỏi theo ngày giao dịch New
+York (hỏi theo ngày UTC thì sau 20:00 ET sẽ trả chuỗi rỗng trông y như "hôm
+nay không có kỳ đáo hạn"). Hiện giá straddle ATM làm biên dao động thị
+trường đang định giá — **cố ý không nhân hệ số nào**: nhiều nơi nhân 0,85
+cho "chính xác hơn", nhưng đó là một MÔ HÌNH, và luật của repo là code chỉ
+tính từ số thật.
+
+**Nửa 0DTE cũng LÀ một phép đo.** #103/#108 đo được Schwab trả chuỗi SPX đủ
+3600 hợp đồng với `openInterest: 0` và `gamma: 0` ở tất cả — lỗi API với chỉ
+số, không phải chuyện quyền dữ liệu (thinkorswim cùng tài khoản có OI thật).
+Nhưng hai phép đo đó chỉ soi gamma và OI, vì GEX = gamma × OI; **chưa ai
+nhìn `bid`/`ask`, mà bảng 0DTE chỉ cần bid/ask**. Nên phép kiểm "chuỗi này
+dùng được không" ở đây đếm theo **báo giá**, không theo OI — dùng lại
+`usableContractCount()` của `gex.ts` sẽ loại sạch SPX vì một lý do bảng này
+không quan tâm, và loại một cách im lặng. Khối chẩn đoán dưới bảng đếm RIÊNG
+ba thứ (có giá chào / có OI / có gamma) nên một lần mở tab là biết nửa này
+sống hay chết, và biết vì sao; chuỗi rỗng vẫn được TRẢ VỀ kèm chẩn đoán thay
+vì ném lỗi, vì chẩn đoán mới là thứ cần đọc. Không có OI thì màn hình chỉ
+thẳng sang SPY/QQQ (ETF, đo được là chạy bình thường).
+
 ## NinjaTrader web / Tradovate — ĐANG DỪNG, probe giữ lại
 
 Chủ app đăng nhập được `web.ninjatrader.com` (nền Tradovate) và muốn một tab

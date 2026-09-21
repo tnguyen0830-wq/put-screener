@@ -68,6 +68,7 @@ export type ActKind =
   | 'scan'
   | 'ltscan'
   | 'patscan'
+  | 'daytrade'
   | 'analyze'
   /* Tốn tiền Anthropic */
   | 'why'

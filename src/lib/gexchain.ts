@@ -33,7 +33,11 @@ import { fetchCboeChain, isIndexSymbol } from './cboe';
  * trả 200 với OI = 0. Giữ vòng thử vì nó rẻ và vì nó chính là bằng chứng
  * cho kết luận đó; đừng mở lại cuộc săn cách viết.)
  */
-function indexSymbolCandidates(symbol: string): string[] {
+/* Xuất ra để bảng 0DTE (`daytradefetch.ts`) dùng CHUNG thang cách viết này.
+   Một bản chép thứ hai là một bản sẽ trôi lệch, và ở đây trôi lệch nghĩa là
+   một tab thử đủ ba cách viết còn tab kia dừng ở cách đầu — đúng con bug
+   #100 đã sửa một lần rồi. */
+export function indexSymbolCandidates(symbol: string): string[] {
   const bare = symbol.startsWith('$') ? symbol.slice(1) : symbol;
   // Nhận ra mã chỉ số kể cả khi người dùng gõ tay KHÔNG có "$" - chuyện đã
   // xảy ra thật: gõ "SPX" vào ô tìm mã chỉ thử đúng một cách viết rồi báo
