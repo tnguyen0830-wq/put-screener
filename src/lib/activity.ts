@@ -73,6 +73,7 @@ export type ActKind =
   | 'ai'
   | 'brief'
   | 'translate'
+  | 'learn'
   /* Tốn ký tự ElevenLabs */
   | 'tts'
   /* Đổi trạng thái */
