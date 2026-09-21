@@ -28,3 +28,14 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+/* Trình xử lý `fetch` RỖNG, và nó có lý do chứ không phải sót lại.
+
+   Chrome (các bản cũ) chỉ coi một trang là CÀI ĐƯỢC khi service worker của
+   nó có trình xử lý `fetch`; bản mới đã bỏ điều kiện đó. Một listener rỗng
+   thoả mãn cả hai đời mà KHÔNG đổi một byte nào của mạng: không gọi
+   `respondWith()` thì trình duyệt đi tiếp đúng đường mặc định của nó.
+
+   CỐ Ý không cache gì ở đây — xem chú thích đầu file: app này luôn cần dữ
+   liệu sống, và một bản cache cũ hiện giá cũ còn tệ hơn là không mở được. */
+self.addEventListener('fetch', () => {});

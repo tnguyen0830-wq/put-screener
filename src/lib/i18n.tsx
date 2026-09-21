@@ -396,6 +396,65 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Trang này CHƯA KHOÁ — ai có đường link đều xem được danh mục của bạn. Đặt biến APP_PASSWORD trên server rồi deploy lại.',
     en: 'This site is NOT LOCKED — anyone with the link can see your portfolio. Set APP_PASSWORD on the server and redeploy.',
   },
+  /* Nút "Cài app" (PWA). Sáu kết luận của `verdictOf()` là sáu câu khác
+     nhau, cố ý — một cái nút bấm vào không ra gì đọc y hệt một cái nút
+     hỏng, và người đọc sẽ đi sửa nhầm chỗ. */
+  'install.btn': { vi: 'Cài app', en: 'Install app' },
+  'install.label': {
+    vi: 'Cài app này vào màn hình chính',
+    en: 'Install this app to your home screen',
+  },
+  'install.title': { vi: 'Cài app vào máy', en: 'Install this app' },
+  'install.why': {
+    vi: 'Cài xong thì app có biểu tượng riêng, mở toàn màn hình không còn thanh địa chỉ. Vẫn là trang web này, không phải bản tải từ chợ ứng dụng.',
+    en: 'Once installed it gets its own icon and opens full-screen with no address bar. It is still this same site, not a store download.',
+  },
+  'install.accepted': {
+    vi: 'Đã bắt đầu cài — tìm biểu tượng con bò trên màn hình chính.',
+    en: 'Installing — look for the bull icon on your home screen.',
+  },
+  'install.dismissed': {
+    vi: 'Bạn vừa đóng hộp cài đặt của trình duyệt. Bấm lại để mở lần nữa; nếu không mở nữa thì dùng menu của trình duyệt.',
+    en: 'You closed the browser install dialog. Press again to reopen; if it stops appearing, use the browser menu.',
+  },
+  'install.ios': {
+    vi: 'iPhone/iPad KHÔNG tự mời cài — phải tự thêm: bấm nút Chia sẻ (ô vuông có mũi tên lên) ở thanh dưới Safari, kéo xuống chọn "Thêm vào MH chính" / "Add to Home Screen", rồi bấm Thêm.',
+    en: 'iPhone and iPad never offer to install — you add it yourself: tap the Share button (square with an up arrow) in Safari, scroll to "Add to Home Screen", then tap Add.',
+  },
+  'install.iosNote': {
+    vi: 'Phải mở bằng Safari. Chrome/Edge trên iPhone cũng có mục đó trong nút Chia sẻ, nhưng Safari là đường chắc chắn nhất.',
+    en: 'Use Safari. Chrome and Edge on iPhone have the same item in their Share menu, but Safari is the surest path.',
+  },
+  'install.android': {
+    vi: 'Nếu nút này không tự mời: mở menu ⋮ của Chrome rồi chọn "Cài ứng dụng" / "Thêm vào MH chính".',
+    en: 'If this button does not offer to install: open Chrome\u2019s ⋮ menu and pick "Install app" / "Add to Home screen".',
+  },
+  'install.desktop': {
+    vi: 'Nếu nút này không tự mời: Chrome/Edge có biểu tượng cài ở cuối thanh địa chỉ, hoặc menu ⋮ → "Cài …". Safari trên máy Mac dùng File → Add to Dock. Firefox trên máy tính KHÔNG hỗ trợ cài.',
+    en: 'If this button does not offer to install: Chrome and Edge show an install icon at the end of the address bar, or ⋮ → "Install …". Safari on macOS uses File → Add to Dock. Firefox on desktop does not support installing.',
+  },
+  'install.browser': {
+    vi: 'Ba điều kiện của app đều đạt, nên phần còn lại là ở trình duyệt: có loại không hỗ trợ cài, có loại đợi bạn ở lại trang một lúc mới mời.',
+    en: 'All three app-side requirements pass, so the rest is up to the browser: some never support installing, some wait until you have spent a little time on the page.',
+  },
+  'install.insecure': {
+    vi: 'Trang đang KHÔNG chạy trên HTTPS. Không trình duyệt nào cho cài một trang http, nên phải mở bằng địa chỉ https trước.',
+    en: 'This page is NOT on HTTPS. No browser installs an http page, so open it over https first.',
+  },
+  'install.noManifest': {
+    vi: (d: string) => `Không đọc được /manifest.webmanifest (${d}). Đây là lỗi phía app, không phải máy bạn.`,
+    en: (d: string) => `Could not read /manifest.webmanifest (${d}). That is an app-side fault, not your device.`,
+  },
+  'install.noSw': {
+    vi: (d: string) => `Service worker chưa đăng ký (${d}). Thử tải lại trang một lần.`,
+    en: (d: string) => `The service worker is not registered (${d}). Try reloading the page once.`,
+  },
+  'install.checks': { vi: 'Tự kiểm', en: 'Self-check' },
+  'install.checking': { vi: 'Đang kiểm…', en: 'Checking…' },
+  'install.checkSecure': { vi: 'HTTPS', en: 'HTTPS' },
+  'install.checkManifest': { vi: 'Manifest', en: 'Manifest' },
+  'install.checkSw': { vi: 'Service worker', en: 'Service worker' },
+  'install.close': { vi: 'Đóng', en: 'Close' },
   'settings.reconnect': { vi: 'Kết nối lại', en: 'Reconnect' },
   'settings.daysLeft': {
     vi: (d: string) =>

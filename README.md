@@ -1015,6 +1015,26 @@ PR ở chuyện SPX của Schwab.
 Code giữ nguyên, không xoá: mua gói dữ liệu CME + gói API Access, đặt 4 biến
 env, mở `/api/ntprobe` là chạy lại được ngay.
 
+## Cài app vào máy (nút "Cài app")
+
+Trên thanh đầu trang có nút **⤓ Cài app**. Cài xong thì app có biểu tượng
+riêng trên màn hình chính và mở toàn màn hình, không còn thanh địa chỉ —
+vẫn là trang web này, không phải bản tải từ chợ ứng dụng.
+
+**Từng máy một kiểu, và nút nói rõ đang ở kiểu nào thay vì im lặng:**
+
+- **Android / Chrome, Edge trên máy tính**: trình duyệt tự mời, bấm nút là
+  hộp cài đặt của chính nó hiện ra.
+- **iPhone / iPad**: Safari **không bao giờ** tự mời — bấm nút Chia sẻ (ô
+  vuông có mũi tên lên) → **Thêm vào MH chính**. Bấm nút trong app sẽ chỉ
+  đúng các bước đó.
+- **Firefox trên máy tính**: không hỗ trợ cài. Safari trên máy Mac dùng
+  File → Add to Dock.
+
+Bấm nút mà trình duyệt chưa mời thì bảng hiện ra **tự kiểm ba điều kiện**
+(HTTPS, manifest, service worker) kèm lý do thật của từng cái — nếu có gì
+hỏng phía app thì đọc được ngay tại chỗ, không phải đoán.
+
 ## Tape DXLink (tastytrade) — probe, chưa có tính năng
 
 Bỏ NinjaTrader thì còn thiếu đúng **hai** thứ: luồng **thời gian thực**

@@ -18,6 +18,7 @@ import CongressPanel from '@/components/CongressPanel';
 import OptionFlowPanel from '@/components/OptionFlowPanel';
 import DarkpoolPanel from '@/components/DarkpoolPanel';
 import SettingsMenu from '@/components/SettingsMenu';
+import InstallApp from '@/components/InstallApp';
 import LongTermPanel from '@/components/LongTermPanel';
 import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
@@ -424,6 +425,7 @@ export default function Page() {
           )}
         </nav>
         <span className="spacer" />
+        <InstallApp />
         <SettingsMenu status={status} />
       </header>
 
