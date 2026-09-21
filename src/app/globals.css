@@ -4098,3 +4098,99 @@ body {
 .patlearn {
   margin-top: 14px;
 }
+
+/* ---- Learn: bảng tra cứu nhanh (#199) ---- */
+.learnmode {
+  margin: 0 0 10px;
+}
+.refbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.refbar input {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13px;
+}
+.refgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.refcard {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  padding: 10px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.refcard .learnfig {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  max-width: none;
+}
+.refhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.refhead h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.refcard p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.refcard p b {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+.reffoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.refdet {
+  font-family: var(--data);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.refdet.yes {
+  color: var(--credit);
+}
+/* Nút "Bài học: <tên bài dài> →" trong thẻ tra cứu: `.rrgfullbtn` mặc định
+   `flex: none` (nút toàn màn hình một chữ), nên tên bài dài đẩy nút ra
+   ngoài thẻ ở MỌI bề ngang — đo được 6 nút tràn ở 400px lẫn 1280px. Ở đây
+   nút phải co và xuống dòng. */
+.reffoot .rrgfullbtn {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.35;
+}

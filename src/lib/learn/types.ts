@@ -21,7 +21,7 @@ export type SectionId = (typeof SECTION_IDS)[number];
  * Hình vẽ đi kèm bài — vẽ bằng SVG trong `LearnFigure.tsx`, KHÔNG phải ảnh
  * tải từ host ngoài (không đo được từ sandbox, và ảnh vỡ trông như app hỏng
  * — bài học #133). Mỗi id ở đây phải có một nhánh vẽ VÀ được ít nhất một
- * bài dùng; test ghim cả hai chiều.
+ * bài học HOẶC một mục tra cứu (`reference.ts`) dùng; test ghim cả hai chiều.
  */
 export const FIGURE_IDS = [
   'candle-anatomy',
@@ -34,6 +34,20 @@ export const FIGURE_IDS = [
   'double',
   'triangle',
   'flag',
+  /* Hình riêng cho bảng tra cứu (#199) — mỗi kiểu nến/mẫu một hình đứng
+     một mình, thay vì hình ghép của bài học. */
+  'hanging-man',
+  'inverted-hammer',
+  'shooting-star',
+  'bull-engulfing',
+  'bear-engulfing',
+  'morning-star',
+  'inv-head-shoulders',
+  'bear-flag',
+  'desc-triangle',
+  'sym-triangle',
+  'breakout',
+  'resistance',
   'gex-profile',
   'gamma-regime',
   'tick',

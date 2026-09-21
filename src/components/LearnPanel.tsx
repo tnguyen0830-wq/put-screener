@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLang } from '@/lib/i18n';
-import { LESSONS, SECTIONS, SECTION_IDS, lessonById, pick, type Lesson, type SectionId } from '@/lib/learn';
+import { LESSONS, REFERENCE, REF_GROUPS, SECTIONS, SECTION_IDS, lessonById, pick, type Lesson, type RefEntry, type RefGroup, type SectionId } from '@/lib/learn';
 import type { LessonResult } from '@/lib/learnstore';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import AskLesson from './AskLesson';
@@ -55,9 +55,15 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
   const [lessonId, setLessonId] = useState<string>(SECTIONS[0].lessons[0].id);
   const [progress, setProgress] = useState<Progress>({});
   const [progressErr, setProgressErr] = useState<string | null>(null);
+  /* Hai chế độ: đọc BÀI (một lần) và TRA CỨU (xem lại). Chủ app đặt hàng
+     cái thứ hai đúng bằng lời này: "có những kiểu nến và pattern để coi lại
+     khi học hết rồi". */
+  const [mode, setMode] = useState<'lessons' | 'reference'>('lessons');
 
   /* Đọc bộ nhớ SAU hydration (#110): render đầu phải giống server. */
   useEffect(() => {
+    const m = readRememberedOneOf<'lessons' | 'reference'>('learnMode', ['lessons', 'reference'] as const);
+    if (m) setMode(m);
     const s = readRememberedOneOf<SectionId>('learnSection', SECTION_IDS);
     const l = readRemembered('learnLesson');
     const lesson = l ? lessonById(l) : undefined;
@@ -119,6 +125,19 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
         <span className="cap">{t('learn.done', { n: passed, m: LESSONS.length })}</span>
       </div>
       <div className="panel-body">
+        <div className="segmented hmranges learnmode" role="tablist">
+          {(['lessons', 'reference'] as const).map((m) => (
+            <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'on' : undefined}
+              onClick={() => { setMode(m); remember('learnMode', m); }}>
+              {t(`learn.mode.${m}`)}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'reference' ? (
+          <ReferenceView onLesson={(id) => { choose(id); setMode('lessons'); remember('learnMode', 'lessons'); }} onOpen={onOpen} />
+        ) : (
+        <>
         <p className="cap">{t('learn.intro')}</p>
 
         <div className="segmented hmranges learnsecs" role="tablist">
@@ -165,8 +184,71 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
 
         {progressErr && <p className="hint hint-warn">{t('learn.progress.loadFailed', progressErr)}</p>}
         <p className="cap">{t('learn.progress.note')}</p>
+        </>
+        )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Bảng tra cứu: mọi kiểu nến / mẫu hình trên một trang. Nội dung ở
+ * `lib/learn/reference.ts`; ở đây chỉ lọc (nhóm + tìm tên) và dựng thẻ.
+ */
+function ReferenceView({ onLesson, onOpen }: { onLesson: (lessonId: string) => void; onOpen: (tab: string, sub?: string) => void }) {
+  const { t, lang } = useLang();
+  const [group, setGroup] = useState<RefGroup | 'all'>('all');
+  const [q, setQ] = useState('');
+  const norm = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const needle = norm(q.trim());
+  const items = REFERENCE.filter((r) => (group === 'all' || r.group === group) && (!needle || norm(pick(r.name, lang)).includes(needle) || norm(r.name.en).includes(needle) || norm(r.name.vi).includes(needle)));
+  return (
+    <div className="learnref">
+      <p className="cap">{t('learn.ref.intro')}</p>
+      <div className="refbar">
+        <div className="chiprow" role="group">
+          {(['all', ...REF_GROUPS] as const).map((g) => (
+            <button key={g} className={group === g ? 'on' : undefined} aria-pressed={group === g} onClick={() => setGroup(g)}>
+              {t(`learn.ref.group.${g}`)}
+            </button>
+          ))}
+        </div>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('learn.ref.search')} aria-label={t('learn.ref.search')} />
+        <span className="cap">{t('learn.ref.count', { n: items.length })}</span>
+      </div>
+      {items.length === 0 && <p className="hint">{t('learn.ref.empty')}</p>}
+      <div className="refgrid">
+        {items.map((r) => (
+          <RefCard key={r.id} r={r} onLesson={onLesson} />
+        ))}
+      </div>
+      <p className="cap patlearn">
+        <button className="rrgfullbtn" onClick={() => onOpen('patterns')}>{t('learn.ref.seePatterns')} →</button>
+      </p>
+    </div>
+  );
+}
+
+function RefCard({ r, onLesson }: { r: RefEntry; onLesson: (lessonId: string) => void }) {
+  const { t, lang } = useLang();
+  const lesson = lessonById(r.lesson);
+  return (
+    <article className="refcard" data-ref={r.id}>
+      <div className="refhead">
+        <h4>{pick(r.name, lang)}</h4>
+        <span className={`patchip ${r.side}`}>{t(`learn.ref.side.${r.side}`)}</span>
+      </div>
+      <LearnFigure id={r.figure} lang={lang} />
+      <p>{pick(r.gist, lang)}</p>
+      <p><b>{t('learn.ref.confirm')}</b>{pick(r.confirm, lang)}</p>
+      <p><b>{t('learn.ref.trap')}</b>{pick(r.trap, lang)}</p>
+      <div className="reffoot">
+        <span className={`refdet${r.patternId ? ' yes' : ''}`}>{r.patternId ? `✓ ${t('learn.ref.detected')}` : t('learn.ref.notDetected')}</span>
+        {lesson && (
+          <button className="rrgfullbtn" onClick={() => onLesson(lesson.id)}>{t('learn.ref.lesson')}: {pick(lesson.title, lang)} →</button>
+        )}
+      </div>
+    </article>
   );
 }
 
