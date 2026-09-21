@@ -392,7 +392,7 @@ theo tài liệu.
 > | **Order Flow + đang ACTIVE, $59,00/tháng** — đã có Bid/Ask chart (footprint), Volume Profile, Cumulative Delta | Tab `Add-Ons` |
 > | **Không có tài khoản demo** — chỉ một tài khoản, nhãn `LIVE` | Tab `Accounts` |
 > | Net Liquidity **$200**, NQ day margin **$1.000** | Tab `Accounts` + màn hình hợp đồng |
-> | Giá gói **API Access** | **VẪN CHƯA ĐO ĐƯỢC** — tab để trống, không có card trong `Add-Ons` |
+> | Giá gói **API Access** | Tab `Add-Ons` của chủ app **KHÔNG có card nào** — và trang hỗ trợ của hãng (2026-09-21) nói vì sao: gói đó đòi tài khoản **LIVE đã nạp tối thiểu $1.000**, giá **$25/tháng**. Net Liquidity đang là **$200**, nên card không hiện là ĐÚNG chứ không phải lỗi giao diện. |
 >
 > **Vì sao dừng:** không có dữ liệu real-time thì luồng md giỏi lắm cũng trễ
 > 10 phút, và một biểu đồ footprint dựng trên dữ liệu trễ 10 phút là thứ
@@ -410,13 +410,22 @@ chính là **Tradovate** (NinjaTrader mua Tradovate năm 2022), và đây là ho
 có key nên luật của repo là **đo trước, code sau**: `/api/ntprobe` in hình
 dạng thật của API rồi tab daytrade (nếu làm) viết theo cái đo được.
 
-> ### Token Tradovate KHÔNG có scope chỉ-đọc
+> ### Mật khẩu đăng nhập nằm trong env — và quyền của key do chủ app chọn
 >
-> Khác tastytrade, Tradovate không có OAuth với scope `read`: token lấy
-> bằng ĐÚNG tên + mật khẩu đăng nhập cộng cặp khoá API, và token đó dùng
-> được cho cả **đặt lệnh**. Mật khẩu nằm trong bảng Environment của Render
-> là mật khẩu vào được tài khoản đó. Hai cách giảm rủi ro, cả hai đều là
-> quyết định của chủ app chứ code không kiểm soát được:
+> Khác tastytrade, Tradovate không có OAuth: token lấy bằng ĐÚNG tên +
+> mật khẩu đăng nhập cộng cặp khoá API, nên **mật khẩu nằm trong bảng
+> Environment của Render là mật khẩu vào được tài khoản đó**. Đó là rủi ro
+> lớn nhất ở đây và code không giảm được.
+>
+> **Sửa một câu đã viết sai:** trang hỗ trợ của hãng (đọc 2026-09-21) nói
+> màn hình tạo key có bước **chọn quyền cho key** trước khi bấm Generate —
+> tức KHÔNG phải "token luôn đặt lệnh được, không có đường nào khác" như
+> file này từng khẳng định. Danh sách quyền cụ thể **chưa đo được** (tài
+> khoản chưa mở được gói), nên khi tạo key hãy **tick đúng phần đọc dữ
+> liệu và bỏ mọi ô liên quan tới đặt lệnh**, rồi chụp màn hình danh sách
+> quyền gửi về để ghi lại cho chính xác.
+>
+> Hai cách giảm rủi ro còn lại, cả hai đều là quyết định của chủ app:
 >
 > - Đặt `NT_ENV=demo` (mặc định) nếu tài khoản có bản demo — probe chạy y
 >   hệt trên demo, và mọi thứ tab daytrade cần (quote, chart, DOM) đều đo
@@ -430,11 +439,33 @@ dạng thật của API rồi tab daytrade (nếu làm) viết theo cái đo đ�
 >
 > App **không có** hàm đặt lệnh nào; probe chỉ gọi endpoint đọc.
 
-**Bước 1 — lấy cặp khoá API.** Trong tài khoản Tradovate/NinjaTrader web →
-phần **API Access** (tên menu có thể khác; tìm chữ "API") → tạo một API key:
-được `cid` (một số) và `sec` (chuỗi). Tradovate bán quyền gọi API như gói
-THÊM có phí — nếu tài khoản chưa có gói đó thì chính probe sẽ in lời từ chối
-của Tradovate, và đó là câu trả lời, không phải lỗi.
+**Bước 1 — lấy cặp khoá API.** Các bước dưới đây đọc từ trang hỗ trợ của
+chính hãng (`support.ninjatrader.com` / `support.tradovate.com`, bài
+*Tradovate API Access*, đọc 2026-09-21) — **chưa đi hết được bằng tài khoản
+của chủ app**, vì điều kiện cần chưa đủ (xem ngay bên dưới).
+
+*Điều kiện cần, và đây là chỗ đang tắc:*
+
+- Tài khoản **LIVE đã nạp tiền, số dư tối thiểu $1.000**. Đo được: Net
+  Liquidity đang là **$200** → chưa đủ.
+- Gói **API Access** đang hoạt động, **$25/tháng**, mua trong app. Đo được:
+  tab `Add-Ons` của chủ app không hiện card nào — khớp với điều kiện trên.
+
+*Các bước khi đã đủ điều kiện:*
+
+1. **Application Settings → tab `Add-Ons`** → kéo tìm **API Access** → mua
+   gói.
+2. Vẫn trong Application Settings → **tab `API Access`** → bấm
+   **`Generate API Key`**.
+3. Đọc và xác nhận loạt **self-attestation** (hãng bắt tự cam kết là hiểu
+   giao dịch futures và hiểu hậu quả khi dùng API).
+4. **Chọn quyền cho key** — tick tối thiểu, bỏ mọi ô liên quan tới đặt lệnh;
+   chụp màn hình danh sách quyền để ghi lại vào file này.
+5. Bấm **`Generate`**. Key hiện **ĐÚNG MỘT LẦN** → chép ngay `cid` (một số)
+   và `sec` (chuỗi) và cất chỗ an toàn. Đóng cửa sổ là mất, phải tạo key mới.
+
+Nếu tài khoản chưa có gói thì probe sẽ in **nguyên văn lời từ chối của
+Tradovate** — đó là câu trả lời, không phải lỗi của probe.
 
 Render → Environment:
 

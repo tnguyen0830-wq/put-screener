@@ -1282,11 +1282,31 @@ one endpoint or field name in `ninjatrader.ts` is verified.
    single most misremembered thing about any feed here; SPX at Schwab cost
    six PRs over exactly that.
 
+**What it takes to un-stop this, priced (read from the vendor's support
+article 2026-09-21, not measured on the account):** the API Access add-on is
+**$25/month** and requires a **live account funded to at least $1,000**, on
+top of the $59/month Order Flow subscription already running and a CME
+real-time data package. The owner's `Add-Ons` tab showing no API Access card
+is therefore the expected state at $200 Net Liquidity, not a broken screen —
+which also answers, for free, the "is this account allowed to call the API"
+question the probe was built to ask. Steps to generate the key, when the
+conditions are met, are in `DEPLOY.md`.
+
 **Security, and it is worse than tastytrade's.** Tradovate has **no
-read-only scope**: the token comes from the actual login name and password
-plus an API key pair, and the same token can place orders. So the password
-in Render's environment table is the password to the money. Three
-consequences: `NT_ENV` defaults to `demo`, `live` being a deliberate choice
+OAuth**: the token comes from the actual login name and password plus an API
+key pair, so the password in Render's environment table is the password to
+the money — that is the risk no code here can reduce.
+
+**One claim in this section was wrong and is corrected.** It said the token
+can always place orders because there is "no read-only scope". The vendor's
+own support article (*Tradovate API Access*, read 2026-09-21) describes a
+**permission-selection step** on the key-generation screen, before
+`Generate`. So a narrower key may well exist; the actual permission list is
+**unmeasured**, because the API Access add-on requires a live account funded
+to **$1,000** (measured Net Liquidity: $200, which is why the owner's
+`Add-Ons` tab shows no card). The honest form: permissions are chosen when
+the key is created, choose the narrowest, and record the real list when
+someone can see it. Three consequences: `NT_ENV` defaults to `demo`, `live` being a deliberate choice
 documented in `DEPLOY.md`; this module contains no order-placing function
 and the probe calls only read endpoints; and nothing secret ever leaves —
 `redact()` masks the password, `sec` and both tokens inside every logged
