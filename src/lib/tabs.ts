@@ -1,5 +1,5 @@
 /**
- * Danh sách bảy tab chính — thuần, không đụng đĩa, để CẢ HAI phía dùng chung.
+ * Danh sách tám tab chính — thuần, không đụng đĩa, để CẢ HAI phía dùng chung.
  *
  * Trước đây danh sách này nằm trong `page.tsx`. Từ khi có nhịp báo "đang mở
  * tab nào" (`/api/activity`), server phải kiểm tên tab client gửi lên dựa
@@ -22,6 +22,7 @@ export const TABS = [
   'analyze',
   'heatmap',
   'insider',
+  'learn',
   'portfolio',
 ] as const;
 

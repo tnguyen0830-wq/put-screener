@@ -34,7 +34,53 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // Cố ý giữ NGUYÊN VĂN "Insider Trade" ở cả hai ngôn ngữ - người dùng
   // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
   'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
+  'tab.learn': { vi: 'Learn', en: 'Learn' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
+
+  /* ---- Tab Learn: chỉ NHÃN GIAO DIỆN; nội dung bài ở lib/learn/* ---- */
+  'learn.title': { vi: 'Học đọc thị trường', en: 'Learn to read the market' },
+  'learn.intro': {
+    vi: 'Bốn phần, mỗi bài có hình vẽ, bẫy thường gặp, vài câu ôn tập và nút nhảy sang tab đang có dữ liệu thật. Định nghĩa trong bài là ĐÚNG cách app này tính (tường GEX trên gamma ròng, dấu ? là chưa có dữ liệu…), nên đọc xong là đọc được chính màn hình bên cạnh.',
+    en: 'Four sections. Each lesson has a drawn figure, common traps, a short quiz and a button to the tab showing the real thing. Definitions follow exactly how THIS app computes them (GEX walls on net gamma, ? means no data…), so what you learn here reads straight off the screens next door.',
+  },
+  'learn.done': { vi: (v: any) => `Đã qua ${v.n}/${v.m} bài`, en: (v: any) => `${v.n}/${v.m} lessons passed` },
+  'learn.sec.candles': { vi: 'Nến & mẫu hình', en: 'Candles & patterns' },
+  'learn.sec.gex': { vi: 'GEX & bề rộng TT', en: 'GEX & internals' },
+  'learn.sec.flow': { vi: 'Flow · Dark pool · Insider', en: 'Flow · Dark pool · Insiders' },
+  'learn.sec.putselling': { vi: 'Bán put có bảo đảm', en: 'Cash-secured puts' },
+  'learn.traps': { vi: 'Bẫy thường gặp', en: 'Common traps' },
+  'learn.seeIn': { vi: 'Xem thật:', en: 'See it live:' },
+  'learn.quiz.title': { vi: 'Ôn tập', en: 'Quiz' },
+  'learn.quiz.grade': { vi: 'Chấm điểm', en: 'Grade' },
+  'learn.quiz.retry': { vi: 'Làm lại', en: 'Try again' },
+  'learn.quiz.answerAll': { vi: 'Trả lời đủ các câu rồi bấm Chấm điểm.', en: 'Answer every question, then press Grade.' },
+  'learn.quiz.result': { vi: (v: any) => `Đúng ${v.score}/${v.total}`, en: (v: any) => `${v.score}/${v.total} correct` },
+  'learn.quiz.correct': { vi: 'Đúng.', en: 'Correct.' },
+  'learn.quiz.wrong': { vi: 'Chưa đúng.', en: 'Not quite.' },
+  'learn.quiz.prev': {
+    vi: (v: any) => `Điểm cao nhất của bạn: ${v.best}/${v.total} (đã làm ${v.attempts} lần).`,
+    en: (v: any) => `Your best: ${v.best}/${v.total} (${v.attempts} attempt${v.attempts === 1 ? '' : 's'}).`,
+  },
+  'learn.quiz.saveFailed': {
+    vi: (v: string) => `Điểm này chưa lưu được (${v}) — vẫn hiện ở đây, nhưng mở lại tab sẽ không thấy. Tải lại trang rồi làm lại là lưu.`,
+    en: (v: string) => `This score was not saved (${v}) — it shows here but will not survive reopening the tab. Reload and retake to save it.`,
+  },
+  'learn.progress.loadFailed': {
+    vi: (v: string) => `Không đọc được điểm đã lưu (${v}). Bài vẫn học được; điểm cũ tạm không hiện.`,
+    en: (v: string) => `Saved scores could not be loaded (${v}). Lessons still work; earlier scores are hidden for now.`,
+  },
+  'learn.progress.note': {
+    vi: 'Điểm lưu theo tài khoản, phía server — mở ở máy khác vẫn thấy. Chỉ giữ điểm cao nhất và số lần làm, không lưu câu trả lời.',
+    en: 'Scores are stored per account on the server, so another device sees them too. Only the best score and the attempt count are kept, never the answers.',
+  },
+  'learn.ask.title': { vi: 'Hỏi Claude về bài này', en: 'Ask Claude about this lesson' },
+  'learn.ask.hint': {
+    vi: 'Claude chỉ thấy ĐÚNG bài này, không thấy giá hay dữ liệu sống — hỏi về khái niệm, không hỏi nên mua gì. Mỗi câu hỏi là một lượt gọi API trả tiền.',
+    en: 'Claude sees ONLY this lesson, no prices or live data — ask about the concept, not what to buy. Each question is one paid API call.',
+  },
+  'learn.ask.placeholder': { vi: 'Ví dụ: vì sao tường call tính trên gamma ròng chứ không phải gamma call lớn nhất?', en: 'e.g. why is the call wall computed on net gamma rather than the biggest call gamma?' },
+  'learn.ask.send': { vi: 'Hỏi', en: 'Ask' },
+  'learn.ask.caveat': { vi: 'Giải thích khái niệm, không phải khuyến nghị đầu tư.', en: 'An explanation of the concept, not investment advice.' },
 
   /* ---- Chú thích cho từng mã trên thanh giá cuộn đầu trang ---- */
   'tape.spx': { vi: 'Chỉ số S&P 500', en: 'S&P 500 Index' },
@@ -273,6 +319,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'act.kind.translate': { vi: 'Dịch tiêu đề tin', en: 'Translated headlines' },
   'act.kind.tts': { vi: 'Giọng đọc AI', en: 'AI voice' },
   'act.kind.watchlist': { vi: 'Sửa watchlist', en: 'Edited watchlist' },
+  'act.kind.learn': { vi: 'Hỏi Claude về bài học', en: 'Asked Claude about a lesson' },
 
   'acct.ownerNoCode': {
     vi: 'Mã đặt lại chỉ dành cho người nhà. Mật khẩu của chính bạn là APP_PASSWORD trên Render — cố tình để ngoài kho tài khoản, để một cái mã lọt ra ngoài không bao giờ chạm được tới danh mục.',

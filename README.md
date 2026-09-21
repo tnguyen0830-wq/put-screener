@@ -3,7 +3,7 @@
 Quét toàn bộ rổ S&P 500 và trả về những hợp đồng **cash-secured put** đáp ứng
 tiêu chí của bạn, lấy dữ liệu trực tiếp từ tài khoản Charles Schwab.
 
-App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
+App có tám tab, đi theo đúng vòng đời của một lệnh bán put:
 
 | Tab | Trả lời câu hỏi |
 |---|---|
@@ -14,6 +14,7 @@ App có năm tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
 | **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
 | **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
+| **Learn** | Đọc nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider và cách app chấm bán put — bài song ngữ có hình vẽ, câu ôn tập, nút hỏi Claude |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -834,6 +835,44 @@ câu vì Chrome ngừng giữa chừng một đoạn dài quá ~15 giây mà kh�
 Hàng nút **0.75× / 1× / 1.25× / 1.5× / 2×** chỉnh tốc độ đọc, nhớ lựa chọn,
 đổi giữa chừng thì áp từ đoạn kế tiếp. Không có 0.5× vì ở tốc độ đó một
 đoạn 150 ký tự dài quá 15 giây và lại rơi vào đúng lỗi ngắt của Chrome.
+
+## Learn — học đọc đúng những màn hình bên cạnh
+
+Tab thứ tám, cho người nhà mới dùng app (và cho chính chủ app khi quên một
+định nghĩa). Bốn phần, 22 bài, mỗi bài song ngữ Việt/Anh theo đúng cờ ngôn
+ngữ của app:
+
+| Phần | Bài |
+|---|---|
+| **Nến & mẫu hình** | Cấu tạo nến · doji · búa/người treo cổ · nhấn chìm + sao mai/sao hôm · vùng hỗ trợ (đúng cách tab Đầu tư dài hạn tính: đáy xoay 5 nến mỗi bên, gom 2,5%, tối thiểu 2 lần chạm) · vai-đầu-vai + hai đỉnh/hai đáy · tam giác + cờ |
+| **GEX & bề rộng TT** | GEX là gì · đọc biểu đồ (put wall / call wall / abs gamma / zero gamma — tính trên gamma RÒNG, và vì sao zero gamma có thể trống) · gamma dương/âm · TICK ±600, ADD, VOLD, put/call · Fear & Greed + RRG |
+| **Flow · Dark pool · Insider** | Options flow (KL/OI > 1, và vì sao flow KHÔNG cho biết ai mua ai bán) · dark pool (≥ 1 triệu đô, 14 ngày) · Form 4 (chỉ mã P, loại 10b5-1, đếm NGƯỜI mua) · Quốc hội (khoảng tiền, độ trễ đo được ~116 ngày) · footprint — và thứ gần nhất app đang có |
+| **Bán put có bảo đảm** | Cash-secured put là gì · công thức điểm 45/25/15/15 · bảy hard gate và dấu `?` · IV so với HV · quản lý vị thế (21 DTE, sizing 5/20/50/30) |
+
+Mỗi bài có:
+
+- **Hình vẽ** — SVG vẽ bằng code, dùng đúng màu theme của app (nến xanh/đỏ,
+  call/put của GEX, đường tham chiếu màu cảnh báo). Không có ảnh tải từ ngoài,
+  nên không có ảnh vỡ, và đổi theme là hình đổi theo.
+- **Bẫy thường gặp** — vài câu, mỗi câu một cách đọc sai đã thấy thật.
+- **Nút "Xem thật"** — nhảy sang đúng tab (và tab con) đang có dữ liệu sống:
+  bài GEX mở Heatmap → GEX, bài Form 4 mở Insider Trade → Insiders.
+- **Ôn tập** — 2–3 câu trắc nghiệm, chấm ngay, hiện lời giải cho cả câu đúng
+  lẫn câu sai. Điểm lưu **theo tài khoản, phía server** (mở ở máy khác vẫn
+  thấy), chỉ giữ điểm cao nhất + số lần làm; dấu ✓ cạnh tên bài khi đã đúng
+  hết. Lưu hỏng thì màn hình nói HTTP thật, không im.
+- **Hỏi Claude về bài này** — hộp câu hỏi ≤ 500 ký tự. Claude chỉ thấy ĐÚNG
+  bài đang mở, không thấy giá hay dữ liệu sống, và được dặn: chỉ giải thích
+  khái niệm, không khuyến nghị mua bán, dùng đúng định nghĩa của app. Mỗi câu
+  hỏi là một lượt gọi API trả tiền và được ghi vào Hoạt động như mọi nút tốn
+  tiền khác.
+
+Định nghĩa trong bài là **đúng cách app này tính**, không phải sách giáo khoa
+chung: tường GEX trên gamma ròng, dấu `?` là chưa có dữ liệu chứ không phải ✓,
+một đáy đơn không phải hỗ trợ. Đọc xong bài là đọc được chính màn hình bên
+cạnh — đó là lý do tab này nằm trong app thay vì là một trang web riêng.
+
+Nhãn tab "Learn" giữ tiếng Anh ở cả hai ngôn ngữ, cùng luật với bảy tab kia.
 
 ## Cấu trúc
 

@@ -3805,3 +3805,201 @@ body {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* ---- Tab Learn ----------------------------------------------------------
+   Chỉ dùng biến màu đã có (--ink/--muted/--rule/--paper/--card/--stamp/
+   --credit/--warn) nên không đụng bẫy ba khối theme. Hình SVG tự vẽ trong
+   LearnFigure.tsx và cũng đọc các biến này, nên đổi theme là hình đổi theo. */
+.learnsecs {
+  width: auto;
+  flex-wrap: wrap;
+}
+.learnsecs button {
+  flex: 1 1 auto;
+}
+/* Nút bọc dòng thì đường viền trái của `.segmented button + button` thành
+   một vạch lửng ở đầu dòng hai — đổi sang viền quanh từng nút cho gọn. */
+.learnsecs button + button {
+  border-left: 1px solid var(--rule);
+}
+
+.learnwrap {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .learnwrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.learnnav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.learnnav li + li {
+  border-top: 1px solid var(--rule);
+}
+.learnnav button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  background: var(--paper);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--ink);
+}
+.learnnav button.on {
+  background: var(--card);
+  font-weight: 700;
+}
+.learnnum {
+  font-family: var(--data);
+  font-size: 11px;
+  color: var(--muted);
+}
+.learnttl {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.learnmark {
+  font-family: var(--data);
+  font-size: 11px;
+  color: var(--muted);
+}
+.learnmark.ok {
+  color: var(--credit);
+  font-weight: 700;
+}
+.learnmark.part {
+  color: var(--warn);
+}
+
+.learnlesson {
+  min-width: 0;
+}
+.learnh {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+.learnsum {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.learnfigwrap {
+  margin: 0 0 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  padding: 8px;
+  line-height: 0;
+}
+.learnfig {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.learnbody p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.learnlist {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.learnlist li + li {
+  margin-top: 4px;
+}
+.learntraps {
+  margin-top: 6px;
+}
+.learnsee {
+  margin: 8px 0 14px;
+}
+
+.learnquiz {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+.learnq {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  min-width: 0;
+}
+.learnq legend {
+  padding: 0 4px;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.learnq.right {
+  border-color: var(--credit);
+}
+.learnq.wrong {
+  border-color: var(--warn);
+}
+.learnchoice {
+  font-weight: 400;
+  color: var(--ink);
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.learnchoice input[type='radio'] {
+  accent-color: var(--stamp);
+  margin-top: 3px;
+  flex: none;
+}
+.learnkey {
+  color: var(--credit);
+  font-weight: 700;
+}
+.learnwhy {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.learnscore {
+  font-family: var(--data);
+  font-size: 14px;
+}
+
+.learnask-q {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14px;
+  resize: vertical;
+}
+.learnask-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 8px;
+  flex-wrap: wrap;
+}
