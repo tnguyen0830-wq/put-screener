@@ -547,6 +547,174 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
         </g>
       );
     }
+    /* ---- hình riêng cho bảng tra cứu (#199): mỗi kiểu một hình ---- */
+    case 'hanging-man': {
+      const up: OHLC[] = [[90, 94, 89, 93], [93, 97, 92, 96], [96, 100, 95, 99], [99, 103, 98, 102], [102, 106, 101, 105], [105, 106.5, 98, 105.8], [105.8, 106, 101, 101.5]];
+      const y = scale(86, 110);
+      return (
+        <g>
+          <Candles data={up} x0={40} step={30} w={14} lo={86} hi={110} />
+          <T x={40 + 5 * 30} y={y(107.5)} anchor="middle" ink>{l('người treo cổ', 'hanging man')}</T>
+          <T x={40 + 6 * 30} y={y(99.5)} anchor="middle">{l('xác nhận: đóng thấp hơn', 'confirm: closes lower')}</T>
+          <T x={16} y={H - 4}>{l('hình cây búa, nhưng SAU đợt tăng → cảnh báo giảm', 'a hammer shape, but AFTER a rise → bearish warning')}</T>
+        </g>
+      );
+    }
+    case 'inverted-hammer': {
+      const dn: OHLC[] = [[110, 111, 105, 106], [106, 107, 101, 102], [102, 103, 97, 98], [98, 99, 94, 95], [95, 102, 94.5, 95.8], [95.8, 100, 95, 99.5]];
+      const y = scale(90, 114);
+      return (
+        <g>
+          <Candles data={dn} x0={40} step={34} w={14} lo={90} hi={114} />
+          <T x={40 + 4 * 34} y={y(104)} anchor="middle" ink>{l('búa ngược', 'inverted hammer')}</T>
+          <T x={40 + 5 * 34} y={y(102)} anchor="middle">{l('xác nhận: đóng cao hơn', 'confirm: closes higher')}</T>
+          <T x={16} y={H - 4}>{l('râu trên dài SAU đợt giảm: phe mua đã thử', 'long upper wick AFTER a decline: buyers tried')}</T>
+        </g>
+      );
+    }
+    case 'shooting-star': {
+      const up: OHLC[] = [[92, 96, 91, 95], [95, 99, 94, 98], [98, 102, 97, 101], [101, 105, 100, 104], [104, 113, 103.5, 104.8], [104.8, 105, 99, 100]];
+      const y = scale(88, 116);
+      return (
+        <g>
+          <Candles data={up} x0={40} step={34} w={14} lo={88} hi={116} />
+          <T x={40 + 4 * 34} y={y(115)} anchor="middle" ink>{l('sao băng', 'shooting star')}</T>
+          <T x={40 + 5 * 34} y={y(97)} anchor="middle">{l('xác nhận: đóng thấp hơn', 'confirm: closes lower')}</T>
+          <T x={16} y={H - 4}>{l('râu trên dài SAU đợt tăng: bị bán ngay trong phiên', 'long upper wick AFTER a rise: sold within the session')}</T>
+        </g>
+      );
+    }
+    case 'bull-engulfing': {
+      const d: OHLC[] = [[110, 111, 105, 106], [106, 107, 101, 102], [102, 103, 97, 98], [98, 99, 95.5, 96.5], [96, 101.5, 95.5, 101], [101, 104, 100.5, 103.5]];
+      const y = scale(92, 113);
+      return (
+        <g>
+          <Candles data={d} x0={40} step={34} w={16} lo={92} hi={113} />
+          <rect x={40 + 3 * 34 - 12} y={y(101.5) - 3} width={34 + 24} height={y(95.5) - y(101.5) + 6} style={WARN} strokeDasharray="3 2" />
+          <T x={40 + 3.5 * 34} y={y(103.5)} anchor="middle" ink>{l('thân bao thân', 'body wraps body')}</T>
+          <T x={16} y={H - 4}>{l('sau đợt giảm: đỏ nhỏ → xanh mở thấp hơn, đóng cao hơn', 'after a decline: small red → green opens lower, closes higher')}</T>
+        </g>
+      );
+    }
+    case 'bear-engulfing': {
+      const d: OHLC[] = [[90, 95, 89, 94], [94, 99, 93, 98], [98, 103, 97, 102], [102, 104.5, 101, 103.5], [104, 104.5, 98.5, 99], [99, 99.5, 95, 96]];
+      const y = scale(87, 108);
+      return (
+        <g>
+          <Candles data={d} x0={40} step={34} w={16} lo={87} hi={108} />
+          <rect x={40 + 3 * 34 - 12} y={y(104.5) - 3} width={34 + 24} height={y(98.5) - y(104.5) + 6} style={WARN} strokeDasharray="3 2" />
+          <T x={40 + 3.5 * 34} y={y(107)} anchor="middle" ink>{l('thân bao thân', 'body wraps body')}</T>
+          <T x={16} y={H - 4}>{l('sau đợt tăng: xanh nhỏ → đỏ mở cao hơn, đóng thấp hơn', 'after a rise: small green → red opens higher, closes lower')}</T>
+        </g>
+      );
+    }
+    case 'morning-star': {
+      const d: OHLC[] = [[110, 111, 105, 106], [106, 107, 101, 102], [102, 103, 96, 96.5], [96, 96.8, 95, 95.6], [95.8, 101, 95.5, 100.5], [100.5, 104, 100, 103.5]];
+      const y = scale(90, 113);
+      return (
+        <g>
+          <Candles data={d} x0={40} step={34} w={16} lo={90} hi={113} />
+          <line x1={40 + 2 * 34 - 14} x2={40 + 4 * 34 + 14} y1={y(99.25)} y2={y(99.25)} style={WARN} strokeDasharray="4 3" />
+          <T x={40 + 4 * 34 + 18} y={y(99.25) + 3}>{l('điểm giữa nến 1', 'midpoint of bar 1')}</T>
+          <T x={40 + 3 * 34} y={y(111)} anchor="middle" ink>{l('sao mai: giảm → do dự → tăng', 'morning star: down → pause → up')}</T>
+          <T x={16} y={H - 4}>{l('nến 3 phải đóng QUA điểm giữa thân nến 1', 'bar 3 must close PAST the midpoint of bar 1’s body')}</T>
+        </g>
+      );
+    }
+    case 'inv-head-shoulders': {
+      const y = scale(88, 112);
+      const pts = [[20, y(108)], [50, y(99)], [80, y(105)], [120, y(92)], [160, y(105.5)], [190, y(99.5)], [220, y(104)], [250, y(109)], [290, y(114 - 2)]];
+      return (
+        <g>
+          <polyline points={pts.map((p) => p.join(',')).join(' ')} style={INK} strokeWidth={2} />
+          <line x1={70} x2={290} y1={y(105)} y2={y(105.9)} style={WARN} strokeDasharray="4 3" />
+          <T x={50} y={y(99) + 12} anchor="middle" ink>{l('vai', 'shoulder')}</T>
+          <T x={120} y={y(92) + 12} anchor="middle" ink>{l('đầu', 'head')}</T>
+          <T x={190} y={y(99.5) + 12} anchor="middle" ink>{l('vai', 'shoulder')}</T>
+          <T x={100} y={y(107)} anchor="middle">{l('đường cổ', 'neckline')}</T>
+          <T x={252} y={y(110) - 4} anchor="middle">{l('đóng trên cổ = hoàn thành', 'close above neckline = complete')}</T>
+        </g>
+      );
+    }
+    case 'bear-flag': {
+      const y = scale(80, 110);
+      const pole = [[30, y(108)], [90, y(86)]];
+      const flag = [[90, y(86)], [110, y(90)], [130, y(88)], [150, y(92)], [170, y(90)], [190, y(93.5)]];
+      const out = [[190, y(93.5)], [230, y(82)]];
+      return (
+        <g>
+          <polyline points={pole.map((p) => p.join(',')).join(' ')} style={INK} strokeWidth={2} />
+          <polyline points={flag.map((p) => p.join(',')).join(' ')} style={INK} strokeWidth={1.5} />
+          <polyline points={out.map((p) => p.join(',')).join(' ')} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={2} />
+          <line x1={88} x2={192} y1={y(85)} y2={y(92)} style={WARN} strokeDasharray="4 3" />
+          <line x1={88} x2={192} y1={y(88.5)} y2={y(95.5)} style={WARN} strokeDasharray="4 3" />
+          <T x={40} y={y(96)} ink>{l('cột cờ', 'pole')}</T>
+          <T x={140} y={y(83)} anchor="middle" ink>{l('cờ (hồi nhẹ)', 'flag (weak bounce)')}</T>
+          <T x={236} y={y(82) + 3}>{l('thủng tiếp', 'breakdown')}</T>
+        </g>
+      );
+    }
+    case 'desc-triangle': {
+      const px = [112, 104, 111, 104.5, 110, 105, 108.5, 104.5, 107.5, 104.6, 107, 104, 101, 99];
+      const data: OHLC[] = px.map((c, i) => { const o = i ? px[i - 1] : c; return [o, Math.max(o, c) + 0.8, Math.min(o, c) - 0.8, c]; });
+      const y = scale(96, 116);
+      return (
+        <g>
+          <Candles data={data} x0={24} step={18} w={9} lo={96} hi={116} />
+          <line x1={24} x2={24 + 10 * 18} y1={y(103.7)} y2={y(103.7)} style={WARN} strokeDasharray="4 3" />
+          <line x1={24} x2={24 + 10 * 18} y1={y(112.8)} y2={y(107.5)} style={WARN} strokeDasharray="4 3" />
+          <T x={24 + 5 * 18} y={y(115)} anchor="middle" ink>{l('tam giác giảm', 'descending triangle')}</T>
+          <T x={16} y={H - 4}>{l('đáy ngang, đỉnh thấp dần → thủng xuống', 'flat lows, falling highs → breaks down')}</T>
+        </g>
+      );
+    }
+    case 'sym-triangle': {
+      const px = [100, 112, 101.5, 110.5, 103, 109, 104, 108, 105, 107.2, 105.8, 106.8, 106.2, 106.5];
+      const data: OHLC[] = px.map((c, i) => { const o = i ? px[i - 1] : c; return [o, Math.max(o, c) + 0.6, Math.min(o, c) - 0.6, c]; });
+      const y = scale(96, 116);
+      return (
+        <g>
+          <Candles data={data} x0={24} step={18} w={9} lo={96} hi={116} />
+          <line x1={24} x2={24 + 13 * 18} y1={y(112.6)} y2={y(106.6)} style={WARN} strokeDasharray="4 3" />
+          <line x1={24} x2={24 + 13 * 18} y1={y(99.4)} y2={y(106)} style={WARN} strokeDasharray="4 3" />
+          <line x1={270} x2={296} y1={y(106.3)} y2={y(111)} style={{ stroke: 'var(--credit)', fill: 'none' }} strokeWidth={2} />
+          <line x1={270} x2={296} y1={y(106.3)} y2={y(101.5)} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={2} />
+          <T x={24 + 5 * 18} y={y(115)} anchor="middle" ink>{l('tam giác cân', 'symmetrical triangle')}</T>
+          <T x={16} y={H - 4}>{l('cả hai cạnh co lại; hướng do cạnh nào bị phá quyết định', 'both edges converge; the broken edge sets the direction')}</T>
+        </g>
+      );
+    }
+    case 'breakout': {
+      const px = [96, 99, 102, 104.5, 103, 100, 98, 101, 104.6, 103.5, 101, 99.5, 102, 104.4, 107.5, 109];
+      const data: OHLC[] = px.map((c, i) => { const o = i ? px[i - 1] : c; return [o, Math.max(o, c) + 0.7, Math.min(o, c) - 0.7, c]; });
+      const y = scale(93, 112, 14, H - 50);
+      const vol = [1, 1.2, 1, 0.9, 1.1, 1, 0.8, 1, 1.1, 0.9, 0.8, 0.7, 0.9, 1, 2.6, 1.8];
+      return (
+        <g>
+          <rect x={12} y={y(105.3)} width={W - 24} height={y(103.8) - y(105.3)} fill="var(--warn-tint)" />
+          <T x={W - 14} y={y(105.3) - 3} anchor="end">{l('kháng cự · 2 lần chạm', 'resistance · 2 touches')}</T>
+          <Candles data={data} x0={20} step={18} w={9} lo={93} hi={112} top={14} bottom={H - 50} />
+          {vol.map((v, i) => (
+            <rect key={i} x={20 + i * 18 - 4.5} y={H - 18 - v * 11} width={9} height={v * 11} fill={i === 14 ? 'var(--credit)' : 'var(--muted)'} opacity={i === 14 ? 0.9 : 0.5} />
+          ))}
+          <T x={20 + 14 * 18} y={H - 42} anchor="middle" ink>{l('phá vỡ + KL 2,6×', 'breakout + 2.6× volume')}</T>
+          <T x={16} y={H - 4}>{l('khối lượng so với TB 20 phiên là bằng chứng', 'volume vs the 20-day average is the evidence')}</T>
+        </g>
+      );
+    }
+    case 'resistance': {
+      const px = [100, 103, 106, 108.5, 109, 107, 104, 101, 99, 102, 105, 108, 109.2, 107.5, 105, 102, 100, 97, 99, 101, 103, 104.5, 105.5];
+      const data: OHLC[] = px.map((c, i) => { const o = i ? px[i - 1] : c; return [o, Math.max(o, c) + 1.2, Math.min(o, c) - 1.2, c]; });
+      const y = scale(92, 114);
+      return (
+        <g>
+          <rect x={12} y={y(111)} width={W - 24} height={y(107.5) - y(111)} fill="var(--warn-tint)" />
+          <Candles data={data} x0={16} step={12.5} w={7} lo={92} hi={114} />
+          <T x={W - 14} y={y(111) - 3} anchor="end">{l('vùng kháng cự · 2 lần chạm', 'resistance zone · 2 touches')}</T>
+          <T x={16} y={H - 4}>{l('nơi người mua đã bỏ cuộc hai lần — phá được thì thành hỗ trợ', 'where buyers gave up twice — once broken, it becomes support')}</T>
+        </g>
+      );
+    }
     default: {
       /* Một id mới thêm vào FIGURE_IDS mà quên vẽ: lộ ra trên màn hình, không im. */
       return (

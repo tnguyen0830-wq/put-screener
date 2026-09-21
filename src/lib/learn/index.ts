@@ -3,9 +3,11 @@ import { GEX_LESSONS } from './gex';
 import { FLOW_LESSONS } from './flow';
 import { PUT_LESSONS } from './putselling';
 import { FIGURE_IDS, SECTION_IDS, type L, type Lesson, type SectionId } from './types';
+import { REFERENCE, REF_GROUPS } from './reference';
 
 export type { L, Lesson, QuizQ, SeeIn, SectionId, FigureId } from './types';
 export { SECTION_IDS, FIGURE_IDS } from './types';
+export { REFERENCE, REF_GROUPS, refById, type RefEntry, type RefGroup } from './reference';
 
 /**
  * Bốn phần, thứ tự hiển thị. Tên phần là NHÃN GIAO DIỆN nên nằm ở `i18n.tsx`
@@ -88,6 +90,22 @@ export function validateLessons(): string[] {
       });
     }
   }
-  for (const f of FIGURE_IDS) if (!usedFigures.has(f)) errs.push(`hình ${f} đã vẽ nhưng không bài nào dùng`);
+  /* Bảng tra cứu: hai ngôn ngữ, hình có thật, bài học có thật, id máy dò
+     có thật, và không id trùng. Hình dùng ở đây cũng tính là "có người
+     dùng" cho phép kiểm mồ côi bên dưới. */
+  const refIds = new Set<string>();
+  const PAT_IDS = new Set(['doji','hammer','hanging-man','inverted-hammer','shooting-star','bull-engulfing','bear-engulfing','morning-star','evening-star','double-bottom','double-top','head-shoulders','inv-head-shoulders','asc-triangle','desc-triangle','sym-triangle','bull-flag','bear-flag','breakout','breakdown']);
+  for (const r of REFERENCE) {
+    const w = `ref/${r.id}`;
+    if (refIds.has(r.id)) errs.push(`${w}: id trùng`);
+    refIds.add(r.id);
+    if (!(REF_GROUPS as readonly string[]).includes(r.group)) errs.push(`${w}: group lạ ${r.group}`);
+    if (!(FIGURE_IDS as readonly string[]).includes(r.figure)) errs.push(`${w}: figure lạ ${r.figure}`);
+    usedFigures.add(r.figure);
+    hasBoth(r.name, `${w}.name`); hasBoth(r.gist, `${w}.gist`); hasBoth(r.confirm, `${w}.confirm`); hasBoth(r.trap, `${w}.trap`);
+    if (!ids.has(r.lesson)) errs.push(`${w}: lesson lạ ${r.lesson}`);
+    if (r.patternId && !PAT_IDS.has(r.patternId)) errs.push(`${w}: patternId lạ ${r.patternId}`);
+  }
+  for (const f of FIGURE_IDS) if (!usedFigures.has(f)) errs.push(`hình ${f} đã vẽ nhưng không bài/mục tra cứu nào dùng`);
   return errs;
 }

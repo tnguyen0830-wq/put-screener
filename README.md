@@ -873,6 +873,14 @@ chung: tường GEX trên gamma ròng, dấu `?` là chưa có dữ liệu chứ
 một đáy đơn không phải hỗ trợ. Đọc xong bài là đọc được chính màn hình bên
 cạnh — đó là lý do tab này nằm trong app thay vì là một trang web riêng.
 
+**Hai chế độ trong tab**: **Bài học** (đọc một lần, ở trên) và **Tra cứu
+nhanh** — một trang có đủ 22 kiểu nến và mẫu hình để xem lại sau khi học
+xong: mỗi thẻ một hình vẽ đứng riêng, một câu nó là gì, **xác nhận khi nào**
+(đúng luật máy dò ở tab Patterns: búa chỉ ✓ khi nến sau đóng cao hơn, hai
+đáy chỉ ✓ khi đóng trên đường cổ), **bẫy hay gặp**, bài học nói kỹ, và app
+có tự dò kiểu đó ở tab Patterns không. Lọc theo nhóm (nến / đảo chiều /
+tiếp diễn / mức giá) hoặc tìm theo tên.
+
 Nhãn tab "Learn" giữ tiếng Anh ở cả hai ngôn ngữ, cùng luật với bảy tab kia.
 
 ## Patterns — mẫu hình nến và mẫu hình giá, dò trên nến ngày Schwab
