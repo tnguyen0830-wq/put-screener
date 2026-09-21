@@ -377,7 +377,33 @@ có token nào trong câu trả lời. Ba dòng đáng đọc:
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
 
-### NinjaTrader web / Tradovate (tuỳ chọn): CHƯA có tính năng, mới có probe
+### NinjaTrader web / Tradovate: ĐANG DỪNG (đo 2026-09-21) — probe vẫn còn, chưa có tính năng
+
+> ## ⛔ Đọc trước: đường này đã dừng, đừng đặt env rồi mới biết
+>
+> **Đo 2026-09-21 từ màn hình chủ app, chưa từng chạy probe.** Sáu phát
+> hiện, và ba câu hỏi của probe đã có đáp án miễn phí:
+>
+> | Đo được | Nguồn |
+> |---|---|
+> | **Dữ liệu TRỄ 10 PHÚT** — *"NQZ6 data is delayed by 10 minutes. To get real-time data, please subscribe to a CME data package."* | Hộp thoại của chính Tradovate |
+> | `Subscriptions → Market Data` = **"No rows"** — không có gói dữ liệu nào | Ảnh chụp, khớp với dòng trên |
+> | Tên hợp đồng là **`NQZ6`** — MỘT chữ số năm, tức `ESZ6` đoán đúng | Màn hình hợp đồng |
+> | **Order Flow + đang ACTIVE, $59,00/tháng** — đã có Bid/Ask chart (footprint), Volume Profile, Cumulative Delta | Tab `Add-Ons` |
+> | **Không có tài khoản demo** — chỉ một tài khoản, nhãn `LIVE` | Tab `Accounts` |
+> | Net Liquidity **$200**, NQ day margin **$1.000** | Tab `Accounts` + màn hình hợp đồng |
+> | Giá gói **API Access** | **VẪN CHƯA ĐO ĐƯỢC** — tab để trống, không có card trong `Add-Ons` |
+>
+> **Vì sao dừng:** không có dữ liệu real-time thì luồng md giỏi lắm cũng trễ
+> 10 phút, và một biểu đồ footprint dựng trên dữ liệu trễ 10 phút là thứ
+> **sai mà trông y hệt đúng**. Thêm nữa footprint đã có sẵn trong chính
+> NinjaTrader web (đang trả $59/tháng), không có tài khoản demo để đo an
+> toàn, và Tradovate là sàn **futures** nên không bao giờ cho cổ phiếu hay
+> 0DTE SPX — đúng nửa quan trọng của thứ chủ app đặt hàng.
+>
+> **Code KHÔNG bị xoá.** `src/lib/ninjatrader.ts` và `/api/ntprobe` vẫn
+> đúng. Bật lại bằng cách mua gói dữ liệu CME + gói API Access, đặt 4 biến
+> env, mở `/api/ntprobe`. Mọi bước dưới đây vẫn dùng được nguyên.
 
 Chủ app đăng nhập được `web.ninjatrader.com`. Nền tảng web của NinjaTrader
 chính là **Tradovate** (NinjaTrader mua Tradovate năm 2022), và đây là host
@@ -395,6 +421,10 @@ dạng thật của API rồi tab daytrade (nếu làm) viết theo cái đo đ�
 > - Đặt `NT_ENV=demo` (mặc định) nếu tài khoản có bản demo — probe chạy y
 >   hệt trên demo, và mọi thứ tab daytrade cần (quote, chart, DOM) đều đo
 >   được ở đó. Chỉ đổi `live` khi cần đúng tài khoản thật.
+>   **⚠ Đo 2026-09-21: tài khoản của chủ app KHÔNG có bản demo** (tab
+>   `Accounts` chỉ có một tài khoản, nhãn `LIVE`), nên mặc định `demo` không
+>   bảo vệ được gì ở đây — muốn chạy probe là phải `NT_ENV=live` và để mật
+>   khẩu tài khoản thật trên Render. Cân nhắc kỹ trước khi làm.
 > - Xoá `NT_USER`/`NT_PASSWORD` khỏi Render ngay khi đo xong nếu chưa quyết
 >   làm tính năng.
 >
@@ -433,8 +463,8 @@ trả lời. Năm dòng đáng đọc, theo thứ tự:
   quá dày, chờ `p-time` giây), `p-captcha: true` (phải giải captcha trên
   web — không tự động hoá được từ server).
 - `auth.hasMdAccessToken` — có token dữ liệu thị trường riêng không.
-- `contracts.picked` — tên hợp đồng THẬT (`ESZ6`? `ESZ26`?), cách viết là
-  thứ dễ nhớ sai nhất.
+- `contracts.picked` — tên hợp đồng THẬT. **Đã đo 2026-09-21: một chữ số
+  năm (`NQZ6`), tức `ESZ6` là đúng** — dùng dòng này để xác nhận lại thôi.
 - `md.authorized` + `md.observation.mdFrames` — luồng md có chạy không;
   `md.observation.quoteEntryKeys` phải có Bid/Offer/Trade.
 - `md.observation.chartBarKeys` — thanh Tick có `bidVolume`/`offerVolume`
