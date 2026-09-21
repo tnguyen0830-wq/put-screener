@@ -69,7 +69,7 @@ export function validateLessons(): string[] {
       }
       if (l.seeIn) {
         hasBoth(l.seeIn.label, `${w}.seeIn.label`);
-        const okTab = ['news', 'longterm', 'screener', 'analyze', 'heatmap', 'insider'].includes(l.seeIn.tab);
+        const okTab = ['news', 'longterm', 'screener', 'analyze', 'heatmap', 'insider', 'patterns'].includes(l.seeIn.tab);
         if (!okTab) errs.push(`${w}: seeIn.tab lạ ${l.seeIn.tab}`);
         const subs: Record<string, string[]> = {
           heatmap: ['map', 'feargreed', 'rrg', 'gex', 'internals'],

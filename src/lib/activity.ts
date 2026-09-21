@@ -67,6 +67,7 @@ export type ActKind =
   /* Tốn hạn mức Schwab */
   | 'scan'
   | 'ltscan'
+  | 'patscan'
   | 'analyze'
   /* Tốn tiền Anthropic */
   | 'why'
@@ -74,6 +75,7 @@ export type ActKind =
   | 'brief'
   | 'translate'
   | 'learn'
+  | 'patai'
   /* Tốn ký tự ElevenLabs */
   | 'tts'
   /* Đổi trạng thái */
