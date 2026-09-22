@@ -49,6 +49,11 @@ type ZeroDte = {
     contracts: number; withQuote: number; withOpenInterest: number; withGamma: number;
     expirations: string[]; sample: Record<string, unknown> | null;
   };
+  source: 'schwab' | 'uw';
+  uwAsOf?: string | null;
+  uwDiag?: string;
+  uwDetail?: string;
+  trimmed: number;
   attempts: { symbol: string; error: string }[];
 };
 
@@ -353,6 +358,26 @@ export default function DaytradePanel() {
 
             {zdata && (
               <>
+                {/* Nguồn: chỉ nói khi KHÁC mặc định. Đường Schwab là bình
+                    thường nên không cần một dòng; đường UW thì phải nói,
+                    vì người đọc cần biết mấy con số này không đến từ chỗ
+                    quen thuộc. */}
+                {zdata.source === 'uw' && (
+                  <p className="cap">
+                    {t('dt.zeroSrcUw', { as: zdata.uwAsOf ?? '—', diag: zdata.uwDiag ?? '' })}
+                  </p>
+                )}
+                {/* Bảng đã cắt KHÔNG được trông giống bảng đầy đủ. */}
+                {zdata.trimmed > 0 && (
+                  <p className="cap">{t('dt.zeroTrimmed', zdata.trimmed)}</p>
+                )}
+                {/* Chỉ nói vì sao UW hỏng khi bảng THẬT SỰ rỗng — nếu Schwab
+                    đã cho số thì UW chưa bao giờ được gọi tới, và in một lý
+                    do ở đó là nói về một chuyện không xảy ra. */}
+                {zdata.rows.length === 0 && zdata.uwDetail && (
+                  <p className="cap warnline">{t('dt.zeroUwFailed', zdata.uwDetail)}</p>
+                )}
+
                 {/* Biên dao động — nói đúng tên: đây là GIÁ STRADDLE, không
                     phải một mô hình. */}
                 {zdata.move ? (

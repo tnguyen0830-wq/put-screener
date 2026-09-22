@@ -1,5 +1,6 @@
 import { fullChain, sessionHistory } from './schwab';
 import { indexSymbolCandidates, loadGexChain, type ChainSource } from './gexchain';
+import { fetchUwChain, uwChainConfigured, uwDiagLine } from './uwchain';
 import { buildRow, parseCandles, type DaytradeRow, type IntraBar } from './daytrade';
 import { buildExposure, type ExposureProfile } from './mmexposure';
 import {
@@ -9,6 +10,7 @@ import {
   nyToday,
   underlyingPrice,
   usableQuoteCount,
+  nearestRows,
   zeroDteDiagnosis,
   type ExpectedMove,
   type LadderRow,
@@ -99,11 +101,42 @@ export type ZeroDteResult = {
   rows: LadderRow[];
   move: ExpectedMove | null;
   diagnosis: ZeroDteDiagnosis;
+  /** Nguồn thật sự cho bảng này. Ba mức tươi khác nhau nên màn hình PHẢI
+   *  nói ra cái nào — xem `ZERODTE_NO_CBOE` về việc vì sao không có CBOE. */
+  source: 'schwab' | 'uw';
+  /** Chỉ khi source = 'uw': giao dịch gần nhất trên tape UW, và một dòng
+   *  đếm hợp đồng thực sự lấy được. */
+  uwAsOf?: string | null;
+  uwDiag?: string;
+  /** Vì sao chuỗi UW không dùng được (khi đã phải rơi về bảng rỗng của
+   *  Schwab). 'chưa cấu hình' khi không có khoá. */
+  uwDetail?: string;
+  /** Số strike bị cắt khỏi bảng vì ở xa giá. 0 trên đường Schwab. */
+  trimmed: number;
   /** Mọi cách viết đã thử và lý do thất bại — cùng lối `attempts` của
    *  `fetchSchwabChainWithFallback`, vì "không cách viết nào chạy" và
    *  "chạy nhưng rỗng" là hai chuyện. */
   attempts: { symbol: string; error: string }[];
 };
+
+/** Trần số dòng của bảng, áp cho CẢ HAI nguồn (xem `nearestRows`).
+ *
+ *  81 = `ZERODTE_STRIKES` × 2 + 1, và con số đó là CÓ LÝ DO: tham số
+ *  `strikeCount` của Schwab được hiểu là số strike TRÊN VÀ DƯỚI giá, nên
+ *  một request `strikeCount: 40` có thể trả tới ~81 dòng. Đặt trần thấp
+ *  hơn là lặng lẽ cắt bớt đường Schwab vốn đang chạy đúng — tức đổi hành vi
+ *  cũ trong một PR chỉ định THÊM một nguồn. */
+const MAX_LADDER_ROWS = ZERODTE_STRIKES * 2 + 1;
+
+/** CỐ Ý không có nấc CBOE ở đây, dù `loadGexChain()` có.
+ *
+ *  Feed CBOE trễ 15 phút, và với GEX điều đó gần như vô hại vì open
+ *  interest chỉ đổi một lần mỗi ngày. Bảng này thì ngược lại: nó tồn tại
+ *  để hiện BID/ASK và giá straddle của quyền chọn ĐÁO HẠN HÔM NAY — thứ
+ *  biến động nhanh nhất trên màn hình. Một giá chào 0DTE cũ 15 phút không
+ *  phải "hơi cũ", nó là một con số không giao dịch được mà trông y hệt một
+ *  con số giao dịch được. Thà nói không có còn hơn. */
+const ZERODTE_NO_CBOE = true;
 
 /**
  * Chuỗi quyền chọn ĐÁO HẠN HÔM NAY.
@@ -131,20 +164,61 @@ export async function loadZeroDte(symbol: string, now = new Date()): Promise<Zer
     } catch (e: any) {
       const msg = String(e?.message ?? e);
       attempts.push({ symbol: candidate, error: msg });
-      // Chỉ "tham số sai" mới đáng đổi cách viết. REAUTH_REQUIRED hay lỗi
-      // mạng sẽ lặp lại y hệt cho mọi cách viết.
-      if (!/ 400:/.test(msg)) throw e;
+      /* Hết phiên thì DỪNG NGAY và để 401 nổi lên: người dùng cần bấm kết
+         nối lại, không cần một bảng 0DTE trông vẫn bình thường trong khi cả
+         app đã mất Schwab (#101). UW KHÔNG được che chỗ này. */
+      if (msg.includes('REAUTH_REQUIRED')) throw e;
+      /* Chỉ "tham số sai" (400) mới đáng đổi CÁCH VIẾT — lỗi mạng lặp lại y
+         hệt cho mọi cách viết. Nhưng nó KHÔNG còn ném ra ngoài: rơi xuống
+         nấc UW bên dưới, đúng như `loadGexChain()` làm. Bản trước ném, nên
+         một cú hụt mạng tới Schwab giết cả bảng trong khi UW phục vụ được —
+         hai cái thang cho cùng một việc mà hành xử khác nhau, đúng thứ
+         #96/#99 dạy là sẽ trôi lệch. */
+      if (!/ 400:/.test(msg)) break;
       continue;
     }
-    if (usableQuoteCount(chain) > 0) return shape(candidate, symbol, day, chain, attempts);
+    if (usableQuoteCount(chain) > 0) {
+      return shape(candidate, symbol, day, chain, attempts, { source: 'schwab' });
+    }
     if (!fallback) fallback = { sym: candidate, chain };
     attempts.push({ symbol: candidate, error: 'Schwab 200: không hợp đồng nào có giá chào' });
   }
 
-  // Không cách viết nào cho chuỗi có giá: vẫn TRẢ VỀ cái rỗng kèm chẩn đoán,
+  /* Schwab không cho chuỗi CÓ GIÁ CHÀO: sang Unusual Whales.
+     Phép kiểm vẫn là `usableQuoteCount()`, KHÔNG phải open interest — đó là
+     cả lý do bảng này không gọi `loadGexChain()`, và nó không được đổi chỉ
+     vì nguồn đổi. Với SPX, Schwab trả OI = 0 ở mọi hợp đồng (#108) nhưng
+     `bid`/`ask` thì CHƯA AI ĐO; nên nấc này là đường cứu khi phép đo đó
+     hoá ra cũng rỗng, chứ không phải phép thay thế Schwab. */
+  let uwDetail = uwChainConfigured() ? undefined : 'chưa cấu hình UW_API_KEY';
+  if (uwChainConfigured()) {
+    try {
+      /* `days: 0` giữ ĐÚNG kỳ đáo hạn hôm nay. Nó cũng cho `fetchUwChain`
+         một ô cache riêng (khoá gồm `days`), nên bảng này và tab GEX không
+         giẫm lên nhau dù cùng một mã. */
+      const u = await fetchUwChain(symbol, { days: 0, today: day });
+      if (usableQuoteCount(u.chain) > 0) {
+        return shape(symbol, symbol, day, u.chain, attempts, {
+          source: 'uw',
+          uwAsOf: u.asOf,
+          uwDiag: uwDiagLine(u.diag),
+        });
+      }
+      uwDetail = `UW trả ${u.diag.kept} hợp đồng nhưng không cái nào có giá chào · ${uwDiagLine(u.diag)}`;
+    } catch (e: any) {
+      uwDetail = `${String(e?.message ?? e)}${e?.detail ? ` — ${String(e.detail)}` : ''}`;
+    }
+  }
+
+  // Không nguồn nào cho chuỗi có giá: vẫn TRẢ VỀ cái rỗng kèm chẩn đoán,
   // thay vì ném lỗi. Màn hình cần nói được Schwab thật sự gửi gì — đó chính
   // là phép đo mà bảng này tồn tại để lấy.
-  if (fallback) return shape(fallback.sym, symbol, day, fallback.chain, attempts);
+  if (fallback) {
+    return shape(fallback.sym, symbol, day, fallback.chain, attempts, {
+      source: 'schwab',
+      uwDetail,
+    });
+  }
   return {
     symbol,
     requested: symbol,
@@ -154,6 +228,9 @@ export async function loadZeroDte(symbol: string, now = new Date()): Promise<Zer
     rows: [],
     move: null,
     diagnosis: zeroDteDiagnosis(null),
+    source: 'schwab',
+    uwDetail,
+    trimmed: 0,
     attempts,
   };
 }
@@ -163,10 +240,12 @@ function shape(
   requested: string,
   day: string,
   chain: any,
-  attempts: { symbol: string; error: string }[]
+  attempts: { symbol: string; error: string }[],
+  meta: { source: 'schwab' | 'uw'; uwAsOf?: string | null; uwDiag?: string; uwDetail?: string }
 ): ZeroDteResult {
   const spot = underlyingPrice(chain);
-  const rows = buildLadder(chain, spot);
+  const all = buildLadder(chain, spot);
+  const { rows, trimmed } = nearestRows(all, spot, MAX_LADDER_ROWS);
   const diagnosis = zeroDteDiagnosis(chain);
   return {
     symbol: used,
@@ -175,9 +254,15 @@ function shape(
     expiry: diagnosis.expirations.length ? expiryDate(diagnosis.expirations[0]) : null,
     spot,
     rows,
+    /* Biên dao động tính trên bảng ĐÃ CẮT, không phải bảng đầy đủ — và đó
+       là đúng: straddle ATM lấy strike gần giá nhất, thứ không bao giờ bị
+       cắt. Tính trên bảng đầy đủ rồi hiện cạnh một bảng đã cắt sẽ là một
+       con số không tra ngược được từ chính mấy dòng bên dưới nó. */
     move: expectedMove(rows, spot),
     diagnosis,
+    trimmed,
     attempts,
+    ...meta,
   };
 }
 

@@ -234,6 +234,38 @@ export function buildLadder(chain: any, spot: number | null): LadderRow[] {
 }
 
 /**
+ * Giữ `max` strike GẦN GIÁ nhất, trả lại theo thứ tự strike.
+ *
+ * Vì sao cần, và vì sao áp cho CẢ HAI nguồn chứ không riêng UW: trên đường
+ * Schwab, việc thu hẹp do CHÍNH Schwab làm (`strikeCount: ZERODTE_STRIKES`
+ * trong request). UW không có tham số nào như vậy — nó trả trọn kỳ đáo hạn,
+ * mà SPX một kỳ là hàng trăm strike. Không cắt thì cùng một bảng hiện ~40
+ * dòng khi chạy Schwab và ~500 dòng khi chạy UW, tức bố cục đổi theo nguồn
+ * mà không gì trên màn hình nói ra.
+ *
+ * Trần đặt CAO HƠN hẳn thứ Schwab trả về (xem `MAX_LADDER_ROWS`), nên trên
+ * đường Schwab đây là phép KHÔNG LÀM GÌ — một luật cho cả hai đường thay vì
+ * hai luật sẽ trôi lệch. Số dòng bị cắt được TRẢ RA chứ không nuốt: một
+ * bảng đã cắt trông y hệt một bảng đầy đủ.
+ */
+export function nearestRows(
+  rows: LadderRow[],
+  spot: number | null,
+  max: number
+): { rows: LadderRow[]; trimmed: number } {
+  if (rows.length <= max) return { rows, trimmed: 0 };
+  /* Không có spot thì KHÔNG cắt theo khoảng cách — "gần giá" không có
+     nghĩa gì khi chưa biết giá, và cắt theo thứ tự strike sẽ vứt mất đúng
+     nửa bảng một cách im lặng. Giữ nguyên và để màn hình nói là thiếu spot. */
+  if (spot === null) return { rows, trimmed: 0 };
+  const kept = [...rows]
+    .sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot))
+    .slice(0, max)
+    .sort((a, b) => a.strike - b.strike);
+  return { rows: kept, trimmed: rows.length - kept.length };
+}
+
+/**
  * Biên dao động thị trường đang định giá cho hôm nay = giá straddle ATM.
  *
  * CỐ Ý không nhân thêm hệ số nào. Nhiều nơi nhân 0,85 cho "chính xác hơn";

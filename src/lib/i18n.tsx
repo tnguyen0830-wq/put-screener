@@ -240,6 +240,20 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Not enough baseline sessions for relative volume.',
   },
   /* ---- 0DTE ---- */
+  'dt.zeroSrcUw': {
+    vi: (v: any) =>
+      `Nguồn: chuỗi Unusual Whales (THỜI GIAN THỰC, giao dịch gần nhất ${v.as}) — Schwab không trả hợp đồng nào có giá chào cho kỳ hôm nay. ${v.diag}`,
+    en: (v: any) =>
+      `Source: Unusual Whales chain (LIVE, last trade ${v.as}) — Schwab returned no quoted contract for today's expiry. ${v.diag}`,
+  },
+  'dt.zeroTrimmed': {
+    vi: (n: number) => `Bảng chỉ hiện các strike gần giá nhất; đã bỏ ${n} strike ở xa.`,
+    en: (n: number) => `Only the strikes nearest spot are shown; ${n} far strikes were left out.`,
+  },
+  'dt.zeroUwFailed': {
+    vi: (d: string) => `Chuỗi thời gian thực của UW cũng không dùng được: ${d}`,
+    en: (d: string) => `UW's real-time chain was unusable too: ${d}`,
+  },
   'dt.zeroIntro': {
     vi: 'Chuỗi quyền chọn ĐÁO HẠN HÔM NAY, hỏi theo ngày giao dịch New York. Bảng này cũng là một phép đo: khối chẩn đoán dưới cùng đếm riêng số hợp đồng có giá chào, có open interest và có gamma — #103/#108 đã đo được Schwab trả OI = 0 cho chỉ số, nhưng chưa ai kiểm bid/ask, mà bảng này chỉ cần bid/ask.',
     en: 'The option chain EXPIRING TODAY, asked by New York trading date. This table is also a measurement: the diagnosis block counts contracts with a quote, with open interest and with gamma separately — #103/#108 measured Schwab returning OI = 0 for indices, but nobody has checked bid/ask, and this table needs only bid/ask.',
