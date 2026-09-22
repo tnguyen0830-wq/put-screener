@@ -4,15 +4,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import IntradayChart from './IntradayChart';
+import MmExposurePanel from './MmExposurePanel';
 import type { DaytradeRow } from '@/lib/daytrade';
 
 /**
- * Tab Daytrade — hai nửa, chọn bằng tab con (cùng khuôn Heatmap/Insider):
+ * Tab Daytrade — ba phần, chọn bằng tab con (cùng khuôn Heatmap/Insider):
  *
  *   • **Cổ phiếu**: VWAP, mốc phiên trước, khoảng mở cửa, khối lượng tương
  *     đối cho tối đa 10 mã, kèm biểu đồ nến 5 phút của mã đang chọn.
  *   • **0DTE**: thang strike của kỳ đáo hạn HÔM NAY, biên dao động thị
  *     trường đang định giá, và khối chẩn đoán nói thẳng Schwab gửi gì.
+ *
+ *   • **Phơi nhiễm MM**: ba biểu đồ theo bố cục Unusual Whales — gamma
+ *     ròng theo strike cạnh nến phiên, gamma trên hai cơ sở (OI và khối
+ *     lượng), và delta theo strike cho một kỳ. Mọi con số app tự tính từ
+ *     chuỗi quyền chọn; xem đầu `src/lib/mmexposure.ts`.
  *
  * Nửa 0DTE cũng LÀ phép đo: xem đầu `src/lib/zerodte.ts`.
  */
@@ -46,7 +52,7 @@ type ZeroDte = {
   attempts: { symbol: string; error: string }[];
 };
 
-const MODES = ['stocks', 'zerodte'] as const;
+const MODES = ['stocks', 'zerodte', 'mmexposure'] as const;
 type Mode = (typeof MODES)[number];
 const OR_CHOICES = ['15', '30'] as const;
 const ZERO_PRESETS = ['$SPX', 'SPY', 'QQQ', 'IWM'];
@@ -201,6 +207,10 @@ export default function DaytradePanel() {
           <button className={mode === 'zerodte' ? 'on' : undefined} onClick={() => setMode2('zerodte')}>
             {t('dt.subZero')}
           </button>
+          <button className={mode === 'mmexposure' ? 'on' : undefined}
+                  onClick={() => setMode2('mmexposure')}>
+            {t('dt.subExposure')}
+          </button>
         </nav>
 
         {mode === 'stocks' ? (
@@ -324,7 +334,7 @@ export default function DaytradePanel() {
             <p className="cap">{t('dt.vwapCaveat')}</p>
             {data && <p className="cap">{t('dt.at', new Date(data.at).toLocaleTimeString())}</p>}
           </>
-        ) : (
+        ) : mode === 'zerodte' ? (
           <>
             <p className="cap">{t('dt.zeroIntro')}</p>
             <div className="chiprow">
@@ -416,6 +426,8 @@ export default function DaytradePanel() {
               </>
             )}
           </>
+        ) : (
+          <MmExposurePanel />
         )}
       </div>
     </section>
