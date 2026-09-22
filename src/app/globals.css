@@ -35,6 +35,12 @@
   --stamp: #0079a9;
   /* Nền rất nhạt cùng tông với --stamp, cho góc phần tư "đang hồi" của RRG. */
   --stamp-tint: #e2f0f7;
+  /* Nền ô "trong tiền" của bảng 0DTE. CỐ Ý trung tính chứ không lấy
+     tông call/put: hàng ATM đã dùng --stamp-tint (xanh), và hai nền
+     xanh cạnh nhau thì không ai đọc được cái nào nghĩa gì. Ở đây vị
+     trí cột đã nói call hay put rồi, nền chỉ cần nói "có lãi nội
+     tại". */
+  --itm-tint: #e9edf1;
   /* Chart series colour. Stepped to pass the lightness band and 3:1 contrast
      against each theme's card surface, checked with the palette validator. */
   --fg-line: #0079a9;
@@ -100,6 +106,12 @@
   --warn-tint: #33230b;
   --stamp: #009dda;
   --stamp-tint: #0a2a38;
+  /* Nền ô "trong tiền" của bảng 0DTE. CỐ Ý trung tính chứ không lấy
+     tông call/put: hàng ATM đã dùng --stamp-tint (xanh), và hai nền
+     xanh cạnh nhau thì không ai đọc được cái nào nghĩa gì. Ở đây vị
+     trí cột đã nói call hay put rồi, nền chỉ cần nói "có lãi nội
+     tại". */
+  --itm-tint: #212930;
   --fg-line: #009dda;
   --heat-flat: #5a636b;
   /* GEX giữ nguyên: đây là màu PHÂN LOẠI call/put đã được kiểm riêng (#93,
@@ -152,6 +164,12 @@
     --warn-tint: #33230b;
     --stamp: #009dda;
     --stamp-tint: #0a2a38;
+    /* Nền ô "trong tiền" của bảng 0DTE. CỐ Ý trung tính chứ không lấy
+       tông call/put: hàng ATM đã dùng --stamp-tint (xanh), và hai nền
+       xanh cạnh nhau thì không ai đọc được cái nào nghĩa gì. Ở đây vị
+       trí cột đã nói call hay put rồi, nền chỉ cần nói "có lãi nội
+       tại". */
+    --itm-tint: #212930;
     --fg-line: #009dda;
     --heat-flat: #5a636b;
     /* GEX giữ nguyên: đây là màu PHÂN LOẠI call/put đã được kiểm riêng (#93,
@@ -4285,10 +4303,93 @@ body {
   border-radius: var(--r-sm);
 }
 .dthover { min-height: 1.4em; margin-top: 4px; }
-.dttable tr.on > td { background: var(--stamp-tint); }
 .dtcallhead { color: var(--gexcall); }
 .dtputhead { color: var(--gexput); }
 .dtmove { margin: 10px 0; }
+
+/* ── Bảng 0DTE đọc được ───────────────────────────────────────────────
+   Bảng cũ có CHÍN cột toàn chữ số và không một mốc nào cho mắt bám vào.
+   Năm cột, ô hai dòng, một vạch "giá hiện tại" và nền cho ô trong tiền —
+   không bỏ đi con số nào, chỉ xếp lại theo câu hỏi người đọc đang hỏi. */
+
+/* `.pftable td` đặt `white-space: nowrap` cho các cột SỐ; ô ở đây có hai
+   dòng nên phải tự dựng khối, và `nowrap` vẫn giữ nguyên cho từng dòng. */
+.dttable .dtprice,
+.dttable .dtsize,
+.dttable .dtstrike { vertical-align: middle; line-height: 1.25; }
+.dttable .dtprice b,
+.dttable .dtsize b,
+.dttable .dtstrike b { display: block; }
+.dtsmall {
+  display: block;
+  font: 500 11px/1.3 var(--data);
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Cột strike là mốc của cả bảng, nên nó — chứ không phải giá — là thứ to
+   nhất trên hàng. */
+.dttable .dtstrike { text-align: center; }
+.dttable .dtstrike b { font-size: 15px; }
+
+/* Thang CHUNG cả bảng: xem `maxVolume()`. `min-width` giữ lại một sợi tóc
+   để "rất nhỏ" không biến mất thành "không có" — nhưng KHÔNG có sàn phần
+   trăm, nên một strike lèo tèo vẫn trông lèo tèo. */
+.dtvolbar {
+  display: block;
+  height: 3px;
+  margin: 3px 0 2px;
+  border-radius: 2px;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+.dtvolbar > i { display: block; height: 100%; min-width: 1px; border-radius: 2px; }
+.dtvolbar-call > i { background: var(--gexcall); }
+.dtvolbar-put > i { background: var(--gexput); }
+
+/* Ô trong tiền. Đặt TRƯỚC quy tắc hàng ATM bên dưới, vì hai selector có
+   cùng độ đặc hiệu (0,2,0) và cái viết sau thắng — hàng ATM phải thắng,
+   nếu không thì đúng cái hàng quan trọng nhất lại mất dấu. Bài học độ đặc
+   hiệu của repo này (#58/#101/#117) là lý do thứ tự ở đây có chủ đích. */
+.dttable td.itm { background: var(--itm-tint); }
+.dttable tr.on > td { background: var(--stamp-tint); }
+
+/* Vạch giá hiện tại — mốc duy nhất trên bảng cho biết mình đang đứng đâu. */
+.dttable tr.dtspotrow > td {
+  background: var(--card);
+  border-top: 2px solid var(--stamp);
+  border-bottom: 2px solid var(--stamp);
+  color: var(--stamp);
+  font: 700 12px/1.6 var(--data);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Câu dẫn trên bảng: một câu thay cho bốn ô số rời. `.dtlead.warnline` là
+   selector GHÉP (0,2,0) chứ không phải hai lớp rời: `.warnline` một mình có
+   cùng độ đặc hiệu với `.dtlead` và sẽ thua theo thứ tự — đúng cái bẫy đã
+   nuốt màu cảnh báo ba lần trong repo này (#58/#101/#117). */
+.dtlead { margin: 10px 0 2px; font: 500 13px/1.5 var(--data); color: var(--ink); }
+.dtlead.warnline { color: var(--warn); }
+
+/* ── Màn hình hẹp: bảng thu còn GIÁ ───────────────────────────────────
+   Ở 400px bảng năm cột rộng hơn khung nhìn, nên cột strike — mốc của cả
+   bảng — nằm ngoài màn hình và phải cuộn mới thấy. Với một bảng SỐ thì
+   cuộn ngang là đúng (tab Quốc hội làm vậy), nhưng ở đây thứ bị đẩy ra
+   ngoài lại chính là cái neo, nên bảng đổi thành ba cột: giá call, strike,
+   giá put — đúng cái thang mọi app môi giới hiện trên điện thoại.
+   Hai cột cỡ bị GIẤU chứ không mất, và `.dtnarrowonly` nói ra điều đó ở
+   đúng bề ngang ấy: một cột biến mất lặng lẽ là thứ repo này cấm. */
+.dtnarrowonly { display: none; }
+@media (max-width: 560px) {
+  /* `.pftable` ép `min-width: 640px` cho MỌI bảng kiểu danh mục — đúng khi
+     bảng có tám cột số, nhưng ở đây nó giữ nguyên 640px sau khi đã giấu hai
+     cột, tức vẫn phải cuộn để thấy strike. Selector GHÉP (0,2,0) để thắng
+     bất kể ai sắp xếp lại file sau này, và chỉ trong đúng media query này. */
+  .pftable.dttable { min-width: 0; }
+  .dttable .dtsize,
+  .dttable .dtsizehead { display: none; }
+  .dtnarrowonly { display: block; }
+}
 .dtdiag { margin-top: 12px; }
 .dtdiag summary { cursor: pointer; font: 600 12px/1.4 var(--data); color: var(--label); }
 .dtdiag ul { margin: 6px 0 0; padding-left: 18px; }

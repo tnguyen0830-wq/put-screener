@@ -1,8 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
+/* Cả hai file đều THUẦN (không `node:fs`), nên một client component
+   import thẳng được — và phải import thay vì chép, vì bản chép thứ hai
+   của một ngưỡng là bản sẽ nói khác bản gốc. `sessionOpenAt` là CÙNG
+   định nghĩa phiên mà tab Bề rộng TT đang dùng, nên hai màn hình không
+   nói hai nghĩa cho chữ "sàn đang mở". */
+import { sessionOpenAt } from '@/lib/internals-pure';
+import {
+  bookOneSided, maxVolume, moneynessPct, nearestStrike, quoteHealth, spotDividerIndex,
+} from '@/lib/zerodte';
+/* Kiểu lấy THẲNG từ module tính, không khai lại: bản khai lại ở đây từng
+   thiếu `symbol` và sẽ còn lệch nữa mỗi lần `toLeg()` thêm một trường. */
+import type { LadderRow, Leg } from '@/lib/zerodte';
 import IntradayChart from './IntradayChart';
 import MmExposurePanel from './MmExposurePanel';
 import type { DaytradeRow } from '@/lib/daytrade';
@@ -36,11 +48,6 @@ type Payload = {
   at: number;
 };
 
-type Leg = {
-  bid: number | null; ask: number | null; mid: number | null; last: number | null;
-  volume: number | null; openInterest: number | null; delta: number | null;
-};
-type LadderRow = { strike: number; call: Leg | null; put: Leg | null; distance: number };
 type ZeroDte = {
   symbol: string; requested: string; expiry: string | null; asked: string;
   spot: number | null; rows: LadderRow[];
@@ -79,6 +86,65 @@ const pct = (v: number | null | undefined, d = 2) =>
    đã tính trong trình duyệt mới thấy, đọc CSS thì không. */
 const signCls = (v: number | null | undefined) =>
   v === null || v === undefined || !Number.isFinite(v) ? undefined : v >= 0 ? 'good' : 'bad';
+
+/* Khối lượng và open interest là SỐ NGUYÊN đếm hợp đồng, và ở SPX chúng
+   lên tới năm chữ số — không có dấu phân cách thì "24310" và "2431" trông
+   gần giống nhau ở cỡ chữ bảng. Cố định `en-US` chứ không theo máy người
+   đọc: bảng này đặt cạnh mấy con số Schwab vốn đã viết theo quy ước đó. */
+const INT = new Intl.NumberFormat('en-US');
+const int = (v: number | null | undefined) =>
+  v === null || v === undefined || !Number.isFinite(v) ? '—' : INT.format(v);
+
+/**
+ * Ô GIÁ — một cột thay cho hai.
+ *
+ * Số lớn là giá giữa, dòng nhỏ là chính hai giá chào. Gộp được vì chúng
+ * trả lời một câu hỏi ("hợp đồng này giá bao nhiêu"), và tách ra thành hai
+ * cột số là thứ khiến bảng cũ có chín cột toàn chữ số.
+ *
+ * Dòng nhỏ KHÔNG bỏ đi được: `mid` chỉ tồn tại khi có CẢ HAI bên, nên khi
+ * sổ lệnh một bên thì số lớn là một dấu gạch ngang — và nếu không in hai
+ * giá chào bên dưới thì "không ai mua" đọc thành "không có dữ liệu", hai
+ * chuyện cần hai cách xử lý khác nhau.
+ */
+function PriceCell({ leg, itm }: { leg: Leg | null; itm: boolean }) {
+  const cls = itm ? 'dtprice itm' : 'dtprice';
+  if (!leg || (leg.bid === null && leg.ask === null)) return <td className={cls}>—</td>;
+  return (
+    <td className={cls}>
+      <b>{n2(leg.mid)}</b>
+      <span className="dtsmall">{n2(leg.bid)} × {n2(leg.ask)}</span>
+    </td>
+  );
+}
+
+/**
+ * Ô CỠ — khối lượng hôm nay (số + thanh) và open interest.
+ *
+ * Thanh chạy trên thang CHUNG cả bảng (`maxVolume`), đúng lý do Options
+ * Flow đã ghi: thang theo từng hàng thì mọi hàng đều dài bằng nhau và cái
+ * thanh nói ngược lại con số ngay cạnh nó. Không có sàn bề rộng tối thiểu
+ * — một strike lèo tèo PHẢI trông lèo tèo; CSS chỉ giữ lại một sợi tóc
+ * 1px để "có mà rất nhỏ" không biến mất thành "không có".
+ */
+function SizeCell(
+  { leg, itm, side, max }: { leg: Leg | null; itm: boolean; side: 'call' | 'put'; max: number }
+) {
+  const cls = itm ? 'dtsize itm' : 'dtsize';
+  const v = leg?.volume ?? null;
+  const w = max > 0 && v !== null && v > 0 ? (v / max) * 100 : 0;
+  return (
+    <td className={cls}>
+      <b>{int(v)}</b>
+      {w > 0 && (
+        <span className={`dtvolbar dtvolbar-${side}`} aria-hidden="true">
+          <i style={{ width: `${w}%` }} />
+        </span>
+      )}
+      <span className="dtsmall">OI {int(leg?.openInterest)}</span>
+    </td>
+  );
+}
 
 export default function DaytradePanel() {
   const { t } = useLang();
@@ -200,6 +266,26 @@ export default function DaytradePanel() {
   const rows = useMemo(() => data?.results ?? [], [data]);
   const current = rows.find((r) => r.ok && r.symbol === picked);
   const chartRow = current && current.ok ? current.row : null;
+
+  /* ---- nửa 0DTE: mấy phép đo nhỏ để bảng đọc được ----
+     Cố ý KHÔNG bọc `useMemo`: mỗi phép là một vòng duyệt trên tối đa 81
+     hàng, rẻ hơn hẳn việc giữ một danh sách deps sẽ trôi lệch. */
+  const zrows = zdata?.rows ?? [];
+  const zspot = zdata?.spot ?? null;
+  const zhealth = quoteHealth(zrows);
+  const zVolMax = maxVolume(zrows);
+  /* Hàng được tô là hàng gần GIÁ nhất, không phải strike của straddle:
+     thường trùng nhau, và khi không trùng thì cái gần giá mới trả lời câu
+     "tiền đang ở đâu". Không có spot thì lùi về strike straddle, vì một
+     bảng không có mốc nào là bảng khó đọc nhất. */
+  const zAtm = nearestStrike(zrows, zspot) ?? zdata?.move?.strike ?? null;
+  const zDivider = spotDividerIndex(zrows, zspot);
+  /* HAI phép đo độc lập về độ tươi, cố ý không gộp: đồng hồ trả lời "sàn
+     có mở không", sổ lệnh trả lời "mấy con số này có giao dịch được
+     không". Một mã èo uột giữa phiên hỏng theo kiểu thứ hai mà không hỏng
+     theo kiểu thứ nhất, và ngược lại. */
+  const zClosed = !!zdata && !sessionOpenAt(new Date());
+  const zOneSided = bookOneSided(zhealth);
 
   return (
     <section className="panel">
@@ -378,53 +464,126 @@ export default function DaytradePanel() {
                   <p className="cap warnline">{t('dt.zeroUwFailed', zdata.uwDetail)}</p>
                 )}
 
-                {/* Biên dao động — nói đúng tên: đây là GIÁ STRADDLE, không
-                    phải một mô hình. */}
+                {/* ---- ĐỘ TƯƠI, đứng TRƯỚC con số ----
+                    Ảnh chụp production 2026-09-22 là lý do khối này tồn
+                    tại: sau giờ đóng cửa của chính ngày đáo hạn, mọi put
+                    chỉ còn giá chào bán và biên ra ±0,02% — số học đúng,
+                    nhưng in nó dưới tiêu đề "khoảng thị trường đang định
+                    giá" là nói rằng thị trường dự báo một ngày đứng yên,
+                    trong khi sự thật là mấy hợp đồng này đã xong. Hai
+                    dòng, không gộp, vì hai nguyên nhân độc lập. */}
+                {zClosed && <p className="cap warnline">{t('dt.closedNow')}</p>}
+                {zOneSided && (
+                  <p className="cap warnline">
+                    {t('dt.oneSided', { askOnly: zhealth.askOnly, legs: zhealth.legs })}
+                  </p>
+                )}
+
+                {/* Biên dao động — MỘT CÂU trước, bốn ô số sau. Bốn ô rời
+                    bắt người đọc tự ghép lại thành một câu trong đầu; câu
+                    dẫn làm sẵn việc đó và gọi đúng tên con số (giá
+                    straddle, không phải một mô hình). Khi sổ lệnh đã đóng
+                    thì câu dẫn đổi hẳn nghĩa, không chỉ thêm một lời cảnh
+                    báo bên cạnh. */}
                 {zdata.move ? (
-                  <div className="stats dtmove">
-                    <div><dt>{t('dt.emSpot')}</dt><dd>{n2(zdata.spot)}</dd></div>
-                    <div><dt>{t('dt.emStraddle', zdata.move.strike)}</dt><dd>{n2(zdata.move.straddle)}</dd></div>
-                    <div><dt>{t('dt.emPct')}</dt><dd>±{zdata.move.pct.toFixed(2)}%</dd></div>
-                    <div><dt>{t('dt.emRange')}</dt><dd>{n2(zdata.move.low)} – {n2(zdata.move.high)}</dd></div>
-                  </div>
+                  <>
+                    <p className={zClosed || zOneSided ? 'dtlead warnline' : 'dtlead'}>
+                      {t(zClosed || zOneSided ? 'dt.emLeadStale' : 'dt.emLead', {
+                        straddle: n2(zdata.move.straddle),
+                        pct: zdata.move.pct.toFixed(2),
+                        spot: n2(zdata.spot),
+                        low: n2(zdata.move.low),
+                        high: n2(zdata.move.high),
+                        strike: n2(zdata.move.strike, zdata.move.strike >= 100 ? 0 : 2),
+                      })}
+                    </p>
+                    <div className="stats dtmove">
+                      <div><dt>{t('dt.emSpot')}</dt><dd>{n2(zdata.spot)}</dd></div>
+                      <div><dt>{t('dt.emStraddle', zdata.move.strike)}</dt><dd>{n2(zdata.move.straddle)}</dd></div>
+                      <div><dt>{t('dt.emPct')}</dt><dd>±{zdata.move.pct.toFixed(2)}%</dd></div>
+                      <div><dt>{t('dt.emRange')}</dt><dd>{n2(zdata.move.low)} – {n2(zdata.move.high)}</dd></div>
+                    </div>
+                  </>
                 ) : (
                   <p className="cap warnline">{t('dt.emNone')}</p>
                 )}
 
                 {zdata.rows.length > 0 ? (
-                  <div className="tablewrap">
-                    <table className="pftable dttable">
-                      <thead>
-                        <tr>
-                          <th colSpan={4} className="dtcallhead">{t('dt.calls')}</th>
-                          <th>{t('dt.strike')}</th>
-                          <th colSpan={4} className="dtputhead">{t('dt.puts')}</th>
-                        </tr>
-                        <tr>
-                          <th>{t('dt.bid')}</th><th>{t('dt.ask')}</th><th>{t('dt.vol')}</th><th>{t('dt.oi')}</th>
-                          <th />
-                          <th>{t('dt.bid')}</th><th>{t('dt.ask')}</th><th>{t('dt.vol')}</th><th>{t('dt.oi')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {zdata.rows.map((r) => {
-                          const atm = zdata.move && r.strike === zdata.move.strike;
-                          return (
-                            <tr key={r.strike} className={atm ? 'on' : undefined}>
-                              <td>{n2(r.call?.bid)}</td><td>{n2(r.call?.ask)}</td>
-                              <td>{r.call?.volume ?? '—'}</td><td>{r.call?.openInterest ?? '—'}</td>
-                              <td><b>{n2(r.strike, r.strike >= 100 ? 0 : 2)}</b></td>
-                              <td>{n2(r.put?.bid)}</td><td>{n2(r.put?.ask)}</td>
-                              <td>{r.put?.volume ?? '—'}</td><td>{r.put?.openInterest ?? '—'}</td>
+                  <>
+                    <p className="cap">{t('dt.howToRead')}</p>
+                    {/* Không có spot thì ba thứ cùng biến mất (vạch giá, ô
+                        trong tiền, cột %) — nói ra một lần, thay vì để
+                        người đọc tưởng bảng hỏng. */}
+                    {zspot === null && <p className="cap warnline">{t('dt.noSpot')}</p>}
+                    {/* Màn hình hẹp giấu hai cột cỡ (xem globals.css) — và
+                        một cột bị giấu mà không ai nói là đúng thứ repo này
+                        cấm, nên câu này chỉ hiện đúng ở bề ngang đó. */}
+                    <p className="cap dtnarrowonly">{t('dt.narrowNote')}</p>
+                    <div className="tablewrap">
+                      <table className="pftable dttable">
+                        <thead>
+                          <tr>
+                            <th colSpan={2} className="dtcallhead">{t('dt.calls')}</th>
+                            <th>{t('dt.strike')}</th>
+                            <th colSpan={2} className="dtputhead">{t('dt.puts')}</th>
+                          </tr>
+                          {/* Cột giá nằm SÁT strike ở cả hai bên (bảng cũ
+                              không đối xứng, nên OI của call lại là thứ
+                              chạm vào strike). Hai con số người ta so với
+                              nhau nhiều nhất — giá call và giá put ở cùng
+                              một strike — giờ ngồi cạnh nhau. */}
+                          <tr>
+                            <th className="dtsizehead">{t('dt.size')}</th><th>{t('dt.price')}</th>
+                            <th />
+                            <th>{t('dt.price')}</th><th className="dtsizehead">{t('dt.size')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {zdata.rows.map((r, i) => {
+                            const mny = moneynessPct(r.strike, zspot);
+                            /* "Trong tiền" chỉ có nghĩa khi đã biết giá:
+                               không có spot thì KHÔNG tô ô nào, chứ không
+                               tô theo một mốc đoán. */
+                            const callItm = zspot !== null && r.strike < zspot;
+                            const putItm = zspot !== null && r.strike > zspot;
+                            return (
+                              <Fragment key={r.strike}>
+                                {i === zDivider && (
+                                  <tr className="dtspotrow">
+                                    <td colSpan={5}>{t('dt.spotHere', n2(zdata.spot))}</td>
+                                  </tr>
+                                )}
+                                <tr className={zAtm === r.strike ? 'on' : undefined}>
+                                  <SizeCell leg={r.call} itm={callItm} side="call" max={zVolMax} />
+                                  <PriceCell leg={r.call} itm={callItm} />
+                                  <td className="dtstrike">
+                                    <b>{n2(r.strike, r.strike >= 100 ? 0 : 2)}</b>
+                                    <span className="dtsmall">
+                                      {mny === null ? '' : `${mny >= 0 ? '+' : ''}${mny.toFixed(2)}%`}
+                                    </span>
+                                  </td>
+                                  <PriceCell leg={r.put} itm={putItm} />
+                                  <SizeCell leg={r.put} itm={putItm} side="put" max={zVolMax} />
+                                </tr>
+                              </Fragment>
+                            );
+                          })}
+                          {/* Giá nằm NGOÀI dải strike của bảng: vạch rơi
+                              xuống đáy. Đó là sự thật đáng thấy, không
+                              phải lỗi — nên vẫn vẽ. */}
+                          {zDivider === zdata.rows.length && (
+                            <tr className="dtspotrow">
+                              <td colSpan={5}>{t('dt.spotHere', n2(zdata.spot))}</td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 ) : (
                   <p className="cap warnline">{t('dt.zeroEmpty', zdata.asked)}</p>
                 )}
+
 
                 {/* KHỐI CHẨN ĐOÁN — lý do nửa này tồn tại. Nó trả lời câu
                     #103/#108 chưa hỏi: chuỗi rỗng-ruột-về-OI có mang GIÁ
