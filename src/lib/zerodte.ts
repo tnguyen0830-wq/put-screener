@@ -315,3 +315,117 @@ export function expiryDate(key: string): string {
   const i = key.indexOf(':');
   return i === -1 ? key : key.slice(0, i);
 }
+
+/* ------------------------------------------------------------------ *
+ * Đọc bảng cho dễ — mấy phép đo nhỏ mà màn hình cần
+ * ------------------------------------------------------------------ */
+
+/**
+ * Sổ lệnh có hai bên hay một bên.
+ *
+ * Vì sao đây là một phép ĐO chứ không phải trang trí: một chân chỉ có giá
+ * chào BÁN mà không có giá chào MUA là một hợp đồng **không bán được** —
+ * và trên màn hình nó trông y hệt một hợp đồng bình thường, vì cột "Mua"
+ * chỉ hiện một dấu gạch ngang giữa mấy chục dấu gạch ngang khác. Với bảng
+ * 0DTE thì đó là tình huống thường gặp nhất trong ngày: sau 16:00 của
+ * chính ngày đáo hạn, sổ lệnh rỗng một bên và mọi con số còn lại là giá
+ * CUỐI CÙNG chứ không phải giá giao dịch được.
+ *
+ * Đếm theo CHÂN (mỗi strike tối đa hai chân) chứ không theo hàng: một hàng
+ * có call hai bên và put một bên là nửa lành nửa hỏng, gộp thành "hàng
+ * tốt" hay "hàng hỏng" đều sai.
+ */
+export type QuoteHealth = {
+  /** Chân có ít nhất MỘT bên giá chào. Mẫu số của mọi tỉ lệ dưới đây. */
+  legs: number;
+  twoSided: number;
+  askOnly: number;
+  bidOnly: number;
+};
+
+export function quoteHealth(rows: LadderRow[]): QuoteHealth {
+  let legs = 0;
+  let twoSided = 0;
+  let askOnly = 0;
+  let bidOnly = 0;
+  for (const r of rows) {
+    for (const leg of [r.call, r.put]) {
+      if (!leg) continue;
+      const b = leg.bid !== null;
+      const a = leg.ask !== null;
+      if (!b && !a) continue;
+      legs++;
+      if (b && a) twoSided++;
+      else if (a) askOnly++;
+      else bidOnly++;
+    }
+  }
+  return { legs, twoSided, askOnly, bidOnly };
+}
+
+/**
+ * Tỉ lệ chân hai-bên tối thiểu để coi sổ lệnh là còn giao dịch được.
+ *
+ * Con số này có LÝ DO chứ không phải số tròn. Ảnh chụp production ngày
+ * 2026-09-22 ($SPX sau giờ đóng cửa của chính ngày đáo hạn) là trường hợp
+ * cần bắt: MỌI call còn hai bên, MỌI put chỉ còn giá chào bán — tức đúng
+ * **0,50**. Nên ngưỡng phải nằm TRÊN 0,5, nếu không nó bỏ lọt đúng cái ca
+ * nó sinh ra để bắt. Và phải nằm đủ xa 1,0 để vài strike xa tiền không có
+ * người mua — chuyện bình thường trong mọi phiên — không làm nó kêu.
+ */
+export const TWO_SIDED_MIN = 0.6;
+
+export function bookOneSided(h: QuoteHealth): boolean {
+  return h.legs > 0 && h.twoSided / h.legs < TWO_SIDED_MIN;
+}
+
+/**
+ * Khối lượng lớn nhất trong bảng — thang CHUNG cho mọi thanh khối lượng.
+ *
+ * Thang chung chứ không phải thang từng hàng, đúng lý do Options Flow đã
+ * ghi: tô theo từng hàng thì một strike 3 hợp đồng vẽ dài bằng một strike
+ * 30.000 hợp đồng, tức cái thanh nói ngược lại con số ngay cạnh nó.
+ */
+export function maxVolume(rows: LadderRow[]): number {
+  let m = 0;
+  for (const r of rows) {
+    for (const leg of [r.call, r.put]) {
+      if (leg?.volume != null && leg.volume > m) m = leg.volume;
+    }
+  }
+  return m;
+}
+
+/** Strike gần giá hiện tại nhất — hàng được tô đậm để mắt có một mốc.
+ *  KHÁC `expectedMove().strike`, vốn là strike gần nhất **có đủ hai chân
+ *  mang giá giữa**; thường trùng nhau, nhưng khi không trùng thì cái này
+ *  mới trả lời đúng câu "tiền đang ở đâu". */
+export function nearestStrike(rows: LadderRow[], spot: number | null): number | null {
+  if (spot === null || !rows.length) return null;
+  let best = rows[0];
+  for (const r of rows) {
+    if (Math.abs(r.strike - spot) < Math.abs(best.strike - spot)) best = r;
+  }
+  return best.strike;
+}
+
+/**
+ * Vị trí chèn vạch "giá hiện tại" — số hàng nằm DƯỚI giá.
+ *
+ * Trả về chỉ số của hàng đầu tiên có strike > spot, nên vạch luôn nằm đúng
+ * giữa hai strike ôm lấy giá. Giá nằm ngoài dải bảng thì vạch rơi lên đầu
+ * hoặc cuối, và đó là sự thật đáng thấy chứ không phải lỗi.
+ */
+export function spotDividerIndex(rows: LadderRow[], spot: number | null): number | null {
+  if (spot === null || !rows.length) return null;
+  let i = 0;
+  while (i < rows.length && rows[i].strike <= spot) i++;
+  return i;
+}
+
+/** Khoảng cách tới giá theo %, có dấu. `null` khi chưa biết giá — 0 sẽ đọc
+ *  thành "đúng bằng giá hiện tại", tức biến CHƯA BIẾT thành một khẳng định. */
+export function moneynessPct(strike: number, spot: number | null): number | null {
+  if (spot === null || !(spot > 0)) return null;
+  return ((strike - spot) / spot) * 100;
+}

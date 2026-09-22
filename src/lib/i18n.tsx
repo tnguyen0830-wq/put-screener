@@ -269,6 +269,50 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không tính được biên: cần CẢ call lẫn put có đủ bid và ask ở một strike gần giá. Không nhân đôi một chân để lấp — làm vậy là bịa ra một con số.',
     en: 'No expected move: it needs BOTH a call and a put with bid and ask at a strike near spot. A single leg is never doubled to fill the gap — that would invent a number.',
   },
+  /* --- Đọc cho dễ: một câu dẫn thay vì bốn ô số rời, và HAI phép đo về
+     độ tươi. Câu dẫn "đang định giá" chỉ đúng khi sổ lệnh còn sống; sau
+     16:00 của chính ngày đáo hạn nó là giá CUỐI, và in nó dưới dạng một
+     dự báo là nói sai về thứ người đọc sắp hành động theo. --- */
+  'dt.emLead': {
+    vi: (v: any) =>
+      `Thị trường đang chào một biên ±${v.straddle} (±${v.pct}%) quanh ${v.spot} từ nay tới hết phiên hôm nay — tức khoảng ${v.low} – ${v.high}. Con số này là GIÁ STRADDLE tại strike ${v.strike}, không phải một mô hình.`,
+    en: (v: any) =>
+      `The market is quoting a ±${v.straddle} (±${v.pct}%) band around ${v.spot} for the rest of today — roughly ${v.low} – ${v.high}. That number is the STRADDLE PRICE at strike ${v.strike}, not a model.`,
+  },
+  'dt.emLeadStale': {
+    vi: (v: any) =>
+      `Đây là giá CUỐI CÙNG chứ không phải một dự báo: straddle tại strike ${v.strike} đóng ở ${v.straddle} (±${v.pct}% quanh ${v.spot}), tức ${v.low} – ${v.high}. Kỳ này đã đáo hạn hoặc sổ lệnh đã đóng, nên không còn gì để giao dịch theo con số đó.`,
+    en: (v: any) =>
+      `This is the LAST price, not a forecast: the straddle at strike ${v.strike} closed at ${v.straddle} (±${v.pct}% around ${v.spot}), i.e. ${v.low} – ${v.high}. The expiry is done or the book is shut, so there is nothing left to trade on it.`,
+  },
+  'dt.closedNow': {
+    vi: 'Sàn đang đóng cửa (phiên chính thức 09:30–16:00 New York; ngày lễ không được xét). Mọi giá dưới đây là lần in cuối của phiên gần nhất.',
+    en: 'The exchange is closed (regular session 09:30–16:00 New York; holidays are not checked). Every price below is the last print of the most recent session.',
+  },
+  'dt.oneSided': {
+    vi: (v: any) =>
+      `${v.askOnly}/${v.legs} chân quyền chọn chỉ còn giá chào BÁN mà không có giá chào MUA — tức không bán lại được. Trên bảng, chuyện đó chỉ hiện ra thành một dấu gạch ngang ở ô "mua", nên nó được nói thẳng ở đây.`,
+    en: (v: any) =>
+      `${v.askOnly} of ${v.legs} option legs have only an ASK and no BID — nothing to sell into. On the table that shows up as a single dash in the bid slot, so it is said outright here.`,
+  },
+  'dt.howToRead': {
+    vi: 'Cách đọc: cột giữa là strike, call bên trái, put bên phải. Ô có nền xám là hợp đồng ĐANG TRONG TIỀN (call ở strike dưới giá, put ở strike trên giá). Số lớn là giá giữa (mua+bán)/2, dòng nhỏ dưới nó là chính hai giá chào. Bên cỡ: số lớn là khối lượng hôm nay, thanh ngang so với strike sôi động nhất trong bảng, dòng nhỏ là open interest.',
+    en: 'How to read it: the middle column is the strike, calls on the left, puts on the right. A shaded cell is a contract that is IN THE MONEY (calls below spot, puts above). The large number is the mid (bid+ask)/2 and the small line under it is the two quotes themselves. On the size side, the large number is today\u2019s volume, the bar compares it with the busiest strike in the table, and the small line is open interest.',
+  },
+  'dt.spotHere': {
+    vi: (n: string) => `Giá hiện tại ${n}`,
+    en: (n: string) => `Spot ${n}`,
+  },
+  'dt.narrowNote': {
+    vi: 'Màn hình hẹp nên bảng chỉ hiện GIÁ — xoay ngang máy hoặc mở trên màn hình rộng để thấy thêm khối lượng và open interest.',
+    en: 'On a narrow screen the table shows PRICE only — rotate the device or open it on a wider screen to also see volume and open interest.',
+  },
+  'dt.price': { vi: 'Giá', en: 'Price' },
+  'dt.size': { vi: 'KL · OI', en: 'Vol · OI' },
+  'dt.noSpot': {
+    vi: 'Chưa biết giá hiện tại nên bảng không đánh dấu được vạch giá, ô trong tiền hay khoảng cách theo %.',
+    en: 'Spot is unknown, so the table cannot mark the price line, the in-the-money cells or the % distance.',
+  },
   'dt.calls': { vi: 'Call', en: 'Calls' },
   'dt.puts': { vi: 'Put', en: 'Puts' },
   'dt.strike': { vi: 'Strike', en: 'Strike' },
