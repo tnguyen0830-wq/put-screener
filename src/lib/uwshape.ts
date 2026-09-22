@@ -17,7 +17,27 @@
  *  cho một endpoint hoàn toàn không theo strike. Một cái nhãn sai còn tệ hơn
  *  không có nhãn, vì nó khiến người đọc tin vào kết luận sai. */
 const STRIKE_HINTS = ['strike'];
-const GAMMA_HINTS = ['gamma', 'call_gamma', 'put_gamma', 'gamma_exposure', 'charm', 'vanna'];
+/** `gex` có trong danh sách này, và việc nó THIẾU ở vòng đo đầu là một lỗi
+ *  THẬT của probe — không phải chi tiết.
+ *
+ *  `greek-exposure/strike` trả `call_gex`/`put_gex`, tức gamma exposure ĐÃ
+ *  NHÂN sẵn, theo từng strike (802 dòng cho SPX, 483 cho SPY). Đó chính là
+ *  endpoint đáng giá nhất trong cả vòng đo. Vì hint thiếu chữ `gex`, probe
+ *  báo `gammaKeys` chỉ có charm/vanna rồi kết luận `usableForExposure:
+ *  false` — một BÁO NHẦM ÂM, tức nói "không dùng được" về thứ dùng được.
+ *
+ *  Cùng một lớp lỗi với vụ `price` bị tính là strike ở #106, chỉ ngược
+ *  chiều: lần đó nhãn sai nói CÓ, lần này nhãn sai nói KHÔNG. Cái sau nguy
+ *  hiểm hơn vì nó im lặng — một endpoint tốt bị loại khỏi bảng và không ai
+ *  đi kiểm lại. */
+const GAMMA_HINTS = [
+  'gamma', 'call_gamma', 'put_gamma', 'gamma_exposure', 'gex', 'charm', 'vanna',
+];
+/** Phơi nhiễm ĐÃ NHÂN SẴN. Tách riêng khỏi GAMMA_HINTS vì nó đổi hẳn phép
+ *  kiểm bên dưới: `gamma` thô thì PHẢI có OI hoặc khối lượng để nhân, còn
+ *  `gex` thì UW đã nhân rồi — đòi thêm một cơ sở nữa là đòi thứ không tồn
+ *  tại, và đó đúng là cách vòng đo đầu tự loại mất endpoint tốt nhất. */
+const EXPOSURE_HINTS = ['gex', 'exposure', 'per_one_percent_move'];
 /** Tách RIÊNG khỏi GAMMA_HINTS, vì chủ app hỏi tab "Gamma VÀ Delta". Gộp
  *  vào một danh sách thì một endpoint chỉ có gamma và một endpoint có cả
  *  hai đọc ra giống hệt nhau, mà panel 3 (delta theo strike) cần đúng vế
@@ -46,6 +66,26 @@ export function describeShape(payload: any) {
     ? new Set(rows.map((r) => r?.[strikeKeys[0]])).size
     : 0;
 
+  /* `option-contracts` KHÔNG có trường strike — strike nằm TRONG mã hợp
+     đồng (`SPY260922P00773000` → 8 chữ số cuối / 1000 = 773). Phép đo đầu
+     vì thế báo `looksPerStrike: false` cho một chuỗi quyền chọn đầy đủ, mà
+     đó lại là endpoint duy nhất trả greek THÔ kèm OI và khối lượng — tức
+     đường DUY NHẤT dùng lại được `computeGex()` nguyên si.
+     Đây là phép đo, không phải phép đoán: nếu bóc được strike từ mã hợp
+     đồng thì nói ra, còn không thì để null chứ không suy ra từ gì khác. */
+  const symbolKeys = recordKeys.filter((k) =>
+    ['option_symbol', 'call_option_symbol', 'put_option_symbol'].includes(k.toLowerCase())
+  );
+  let strikesFromSymbol: number | null = null;
+  if (symbolKeys.length && rows.length) {
+    const seen = new Set<number>();
+    for (const r of rows) {
+      const m = /^[A-Z]{1,6}\d{6}[CP](\d{8})$/.exec(String(r?.[symbolKeys[0]] ?? ''));
+      if (m) seen.add(Number(m[1]) / 1000);
+    }
+    strikesFromSymbol = seen.size || null;
+  }
+
   /* Một endpoint có `price` + một trường thời gian có thể là HAI thứ khác
      hẳn nhau, và chỉ đếm tổng số giá thì không phân biệt được:
 
@@ -62,7 +102,13 @@ export function describeShape(payload: any) {
      theo `time` thì mỗi nhóm đúng một dòng và phép đo thành vô nghĩa. Bản
      đầu lấy theo thứ tự khoá trong bản ghi, mà production trả về `time`
      đứng trước `start_time`, nên rơi đúng vào cái bẫy đó. */
-  const TIME_PREFERENCE = ['start_time', 'date', 'timestamp', 'time'];
+  /* `date` bị ĐẨY XUỐNG CUỐI sau phép đo SPY: `spot-exposures/strike` mang
+     CẢ `date` lẫn `time`, mà `date` chỉ có một giá trị cho cả 50 dòng — gom
+     theo nó thì 50 dòng vào một nhóm và `looksLikePriceCurve` báo `true`
+     cho một bảng thật ra là strike × vài mốc thời gian. Cùng đúng cái bẫy
+     đã ghi ở trên với `time` vs `start_time`, chỉ khác khoá. Thứ tự đúng là
+     từ MỊN tới THÔ: mốc riêng của dòng trước, ngày chung sau cùng. */
+  const TIME_PREFERENCE = ['start_time', 'timestamp', 'time', 'date'];
   const timeKeys = TIME_PREFERENCE.filter((p) =>
     recordKeys.some((k) => k.toLowerCase() === p)
   ).map((p) => recordKeys.find((k) => k.toLowerCase() === p)!);
@@ -99,6 +145,9 @@ export function describeShape(payload: any) {
     looksPerStrike: strikeKeys.length > 0 && distinctStrikes > 1,
     strikeKeys,
     distinctStrikes,
+    /** Số strike bóc được từ mã hợp đồng OSI khi không có trường strike.
+     *  null = payload không mang mã hợp đồng nào đọc được. */
+    strikesFromSymbol,
     /** Chỉ có khi payload vừa có thời gian vừa có `price` - phân biệt đường
      *  cong theo giá với chuỗi thời gian. null = không áp dụng. */
     curveShape,
@@ -109,11 +158,30 @@ export function describeShape(payload: any) {
        không: theo strike + có gamma + có một cơ sở để nhân. Thiếu delta
        KHÔNG làm mất tư cách — panel 1 và 2 chỉ cần gamma; delta là panel 3,
        nên nó được ĐẾM RIÊNG thay vì kéo cả kết luận xuống. */
+    /** ĐÃ NHÂN SẴN hay chưa — quyết định phép kiểm bên dưới, và cũng là
+     *  thứ quyết định có phải tự tính hay không. */
+    preMultiplied: has(EXPOSURE_HINTS).length > 0,
     usableForExposure:
       strikeKeys.length > 0 &&
       distinctStrikes > 1 &&
       has(GAMMA_HINTS).length > 0 &&
-      has(SIZE_HINTS).length > 0,
+      // Greek THÔ cần một cơ sở để nhân (phơi nhiễm = gamma × OI); greek ĐÃ
+      // NHÂN thì không. Gộp hai ca này vào một điều kiện là loại oan đúng
+      // những endpoint trả thẳng exposure — lỗi của vòng đo đầu.
+      (has(EXPOSURE_HINTS).length > 0 || has(SIZE_HINTS).length > 0),
+    /** Chuỗi quyền chọn THÔ: greek chưa nhân + OI/khối lượng + mã hợp đồng
+     *  mang strike. Cờ này tách khỏi `usableForExposure` vì nó trả lời một
+     *  câu KHÁC và là câu tốt hơn: không phải "vẽ được panel không" mà
+     *  "chuyển được sang hình dạng chuỗi Schwab không" — tức dùng lại được
+     *  `computeGex()`, `mmexposure.ts`, trade briefing và 0DTE nguyên si,
+     *  với ĐƠN VỊ và QUY ƯỚC DẤU của chính app. Một endpoint đã-nhân-sẵn
+     *  không làm được việc đó dù `usableForExposure` là true. */
+    usableAsRawChain:
+      (strikesFromSymbol ?? 0) > 1 &&
+      has(['gamma']).length > 0 &&
+      has(['delta']).length > 0 &&
+      has(SIZE_HINTS).length > 0 &&
+      has(EXPOSURE_HINTS).length === 0,
     /** Một bản ghi thật kèm KIỂU của từng trường - chỉ có kiểu mới phân biệt
      *  "không gửi" với "gửi dưới dạng chuỗi", đúng bài học từ #97. */
     sampleTypes:
