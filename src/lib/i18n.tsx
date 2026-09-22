@@ -44,6 +44,113 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dt.title': { vi: 'Giao dịch trong ngày', en: 'Intraday trading' },
   'dt.subStocks': { vi: 'Cổ phiếu', en: 'Stocks' },
   'dt.subZero': { vi: '0DTE', en: '0DTE' },
+  'dt.subExposure': { vi: 'Phơi nhiễm MM', en: 'MM exposure' },
+
+  // ---- Daytrade: phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales) ----
+  'mm.intro': {
+    vi: 'Ba biểu đồ theo bố cục Unusual Whales, nhưng mọi con số do app TỰ TÍNH từ chuỗi quyền chọn của chính tài khoản — gamma và delta không phải dữ liệu độc quyền, chúng là số học trên greek và open interest mà Schwab (hoặc CBOE) đã trả. Một lượt gọi lấy đủ cả ba.',
+    en: 'Three charts laid out like Unusual Whales, but every number is computed HERE from the account\u2019s own option chain — gamma and delta are not proprietary data, they are arithmetic on the greeks and open interest the chain already returns. One request feeds all three.',
+  },
+  'mm.symPlaceholder': { vi: 'Mã…', en: 'Ticker…' },
+  'mm.go': { vi: 'Xem', en: 'Go' },
+  'mm.reauth': {
+    vi: 'Phiên Schwab đã hết hạn — bấm kết nối lại ở menu ⚙ rồi mở lại tab này.',
+    en: 'The Schwab session has expired — reconnect from the ⚙ menu, then reopen this tab.',
+  },
+  'mm.badSymbol': { vi: 'Mã không hợp lệ.', en: 'Invalid ticker.' },
+  'mm.failed': {
+    vi: (d: string) => `Không lấy được chuỗi: ${d}`,
+    en: (d: string) => `Could not load the chain: ${d}`,
+  },
+  'mm.srcSchwab': { vi: 'Nguồn: chuỗi Schwab (thời gian thực).', en: 'Source: Schwab chain (live).' },
+  'mm.srcCboe': {
+    vi: (v: { as: string; why: string }) =>
+      `Nguồn: CBOE, TRỄ 15 PHÚT (đóng dấu ${v.as}) — Schwab không dùng được: ${v.why}`,
+    en: (v: { as: string; why: string }) =>
+      `Source: CBOE, 15 MINUTES DELAYED (stamped ${v.as}) — Schwab was unusable: ${v.why}`,
+  },
+  'mm.readAt': { vi: (s: string) => `đọc lúc ${s}`, en: (s: string) => `read at ${s}` },
+  'mm.noStrikes': {
+    vi: 'Chuỗi không có strike nào dựng được bảng — đọc khối chẩn đoán bên dưới.',
+    en: 'The chain yielded no usable strikes — read the diagnosis block below.',
+  },
+  'mm.p1Title': { vi: (s: string) => `1 · Phơi nhiễm nhà tạo lập — ${s}`, en: (s: string) => `1 · Market maker exposure — ${s}` },
+  'mm.window': { vi: (p: string) => `±${p}%`, en: (p: string) => `±${p}%` },
+  'mm.p1Note': {
+    vi: (pct: string) =>
+      `Nến 5 phút của phiên hôm nay bên trái, gamma RÒNG theo từng strike bên phải, dùng CHUNG một trục giá — đó là thứ duy nhất cho thấy mức gamma nằm ở đâu so với đường giá đang chạy. Cột xanh = gamma ròng dương, đỏ = âm. Cửa sổ ±${pct}% quanh giá.`,
+    en: (pct: string) =>
+      `Today\u2019s 5-minute candles on the left, NET gamma per strike on the right, sharing one price axis — that is the only thing showing where the gamma levels sit against the running price. Green = net positive gamma, red = negative. Window ±${pct}% around spot.`,
+  },
+  'mm.p1Alt': {
+    vi: (s: string) => `Nến phiên và gamma theo strike của ${s}`,
+    en: (s: string) => `Session candles and gamma by strike for ${s}`,
+  },
+  'mm.noCandles': {
+    vi: (why: string) =>
+      `Không có nến cho mã này nên panel chỉ vẽ phần gamma. Lý do thật: ${why}. Dải cột bên phải vẫn đúng — nó đến từ chuỗi quyền chọn, không từ lịch sử giá.`,
+    en: (why: string) =>
+      `No candles for this symbol, so the panel draws the gamma half only. The real reason: ${why}. The bars are still correct — they come from the option chain, not from price history.`,
+  },
+  'mm.p2Title': { vi: '2 · Gamma theo strike — hai cơ sở', en: '2 · Gamma by strike — two bases' },
+  'mm.p2Note': {
+    vi: 'Cùng một phép tính trên hai cơ sở khác nhau: OPEN INTEREST là vị thế đang tồn tại, KHỐI LƯỢNG là giao dịch của riêng hôm nay. Hai cột chênh nhau nhiều nghĩa là dòng tiền hôm nay đang đi ngược vị thế cũ. Một hợp đồng có OI mà hôm nay chưa ai giao dịch đóng góp 0 vào cột khối lượng — nó KHÔNG bị loại khỏi bảng.',
+    en: 'One calculation on two different bases: OPEN INTEREST is positions that already exist, VOLUME is only today\u2019s trading. A large gap between the two bars means today\u2019s flow is running against the standing position. A contract with open interest but no trades today contributes 0 to the volume bar — it is NOT dropped from the table.',
+  },
+  'mm.p2Alt': { vi: 'Gamma theo strike trên hai cơ sở', en: 'Gamma by strike on two bases' },
+  'mm.basisOi': { vi: 'Theo open interest', en: 'By open interest' },
+  'mm.basisVolume': { vi: 'Theo khối lượng hôm nay', en: 'By today\u2019s volume' },
+  'mm.spot': { vi: (s: string) => `Giá ${s}`, en: (s: string) => `Spot ${s}` },
+  'mm.p3Title': { vi: '3 · Delta theo strike và kỳ đáo hạn', en: '3 · Delta by strike and expiration' },
+  'mm.p3Note': {
+    vi: 'Delta tính trên OPEN INTEREST, KHÔNG quy ước theo phía nhà tạo lập: put mang dấu âm sẵn nên nằm bên trái, call bên phải, và cột ròng là tổng hai bên. Đổi dấu theo quy ước dealer sẽ lật NGƯỢC biểu đồ mà trông vẫn hoàn toàn bình thường.',
+    en: 'Delta on OPEN INTEREST, NOT dealer-signed: puts already carry a negative delta so they sit on the left, calls on the right, and the net bar is their sum. Applying the dealer convention would flip the chart while it still looked perfectly normal.',
+  },
+  'mm.p3Alt': { vi: 'Delta theo strike cho một kỳ đáo hạn', en: 'Delta by strike for one expiration' },
+  'mm.putDelta': { vi: 'Delta put', en: 'Put delta' },
+  'mm.callDelta': { vi: 'Delta call', en: 'Call delta' },
+  'mm.netDelta': { vi: 'Delta ròng', en: 'Net delta' },
+  'mm.noExpRows': {
+    vi: 'Kỳ đáo hạn này không có strike nào trong cửa sổ quanh giá.',
+    en: 'This expiration has no strikes inside the window around spot.',
+  },
+  'mm.hoverGamma': {
+    vi: (v: { strike: string; v: string }) => `Strike ${v.strike} · gamma ròng ${v.v} $ / 1%`,
+    en: (v: { strike: string; v: string }) => `Strike ${v.strike} · net gamma ${v.v} $ per 1%`,
+  },
+  'mm.hoverBoth': {
+    vi: (v: { strike: string; oi: string; vol: string }) =>
+      `Strike ${v.strike} · theo OI ${v.oi} · theo khối lượng ${v.vol}`,
+    en: (v: { strike: string; oi: string; vol: string }) =>
+      `Strike ${v.strike} · by OI ${v.oi} · by volume ${v.vol}`,
+  },
+  'mm.hoverDelta': {
+    vi: (v: { strike: string; put: string; call: string; net: string }) =>
+      `Strike ${v.strike} · put ${v.put} · call ${v.call} · ròng ${v.net}`,
+    en: (v: { strike: string; put: string; call: string; net: string }) =>
+      `Strike ${v.strike} · put ${v.put} · call ${v.call} · net ${v.net}`,
+  },
+  'mm.diagTitle': { vi: 'Chuỗi thật sự trả về những gì', en: 'What the chain actually returned' },
+  'mm.diagLine': {
+    vi: (v: { contracts: number; used: number; oi: number; vol: number; noDelta: number; zeroDelta: number }) =>
+      `${v.contracts} hợp đồng, dùng được ${v.used} · có open interest ${v.oi} · có khối lượng ${v.vol} · thiếu delta ${v.noDelta} · delta đúng bằng 0 ${v.zeroDelta}`,
+    en: (v: { contracts: number; used: number; oi: number; vol: number; noDelta: number; zeroDelta: number }) =>
+      `${v.contracts} contracts, ${v.used} usable · with open interest ${v.oi} · with volume ${v.vol} · delta missing ${v.noDelta} · delta exactly 0 ${v.zeroDelta}`,
+  },
+  'mm.diagDropped': {
+    vi: (v: { gamma: number; sentinel: number; strike: number }) =>
+      `Loại bỏ: gamma thiếu ${v.gamma} · gamma = −999 (Schwab báo "không có greek") ${v.sentinel} · thiếu strike ${v.strike}`,
+    en: (v: { gamma: number; sentinel: number; strike: number }) =>
+      `Dropped: gamma missing ${v.gamma} · gamma = −999 (Schwab\u2019s "greek unavailable") ${v.sentinel} · strike missing ${v.strike}`,
+  },
+  'mm.diagNoOi': {
+    vi: 'KHÔNG hợp đồng nào có open interest. Đây đúng là lỗi API Schwab cho chỉ số đã ghi ở #108 — thử SPY hoặc QQQ để đối chiếu; nếu nguồn ở trên ghi CBOE thì con số vẫn dùng được.',
+    en: 'NO contract carries open interest. This is the Schwab index API defect recorded in #108 — try SPY or QQQ to compare; if the source line above says CBOE, the numbers are still usable.',
+  },
+  'mm.caveat': {
+    vi: 'Quy ước dealer (long call, short put) là một MÔ HÌNH, không phải vị thế quan sát được — cùng giả định mà mọi biểu đồ GEX công khai dùng. Gamma tính bằng đô-la delta cho một bước dịch 1%, đúng cùng công thức với tab GEX bên Heatmap.',
+    en: 'The dealer convention (long calls, short puts) is a MODEL, not observed positioning — the same assumption every public GEX chart makes. Gamma is in dollars of delta per 1% move, the exact formula the Heatmap GEX tab uses.',
+  },
   'dt.intro': {
     vi: (v: { bar: number; days: number }) =>
       `Nến ${v.bar} phút từ Schwab, phiên chính thức 09:30–16:00 New York. Nền khối lượng lấy từ ${v.days} phiên gần nhất — tất cả trong MỘT lượt gọi cho mỗi mã.`,

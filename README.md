@@ -982,6 +982,31 @@ sống hay chết, và biết vì sao; chuỗi rỗng vẫn được TRẢ VỀ 
 vì ném lỗi, vì chẩn đoán mới là thứ cần đọc. Không có OI thì màn hình chỉ
 thẳng sang SPY/QQQ (ETF, đo được là chạy bình thường).
 
+**Phơi nhiễm nhà tạo lập** (tab con thứ ba) — ba biểu đồ theo bố cục
+Unusual Whales, nhưng **mọi con số app tự tính từ chuỗi quyền chọn của
+chính tài khoản**, không mua của ai: gamma và delta không phải dữ liệu độc
+quyền, chúng là số học trên greek và open interest mà `/chains` đã trả.
+
+| Panel | Trả lời câu gì |
+|---|---|
+| **1 · Gamma ròng theo strike, cạnh nến phiên** | Mức gamma nằm ở đâu so với đường giá đang chạy — hai nửa dùng CHUNG một trục giá |
+| **2 · Gamma theo strike, hai cơ sở** | Vị thế đang tồn tại (open interest) và giao dịch hôm nay (khối lượng) có nói cùng một chuyện không |
+| **3 · Delta theo strike, một kỳ đáo hạn** | Kỳ này đang gánh bao nhiêu delta, lệch về phía nào |
+
+Một lượt gọi lấy đủ cả ba, vì cả ba đọc chung một chuỗi — và chuỗi đó đi
+qua đúng thang Schwab → CBOE mà tab GEX đang dùng, nên SPX (Schwab trả OI =
+0 ở mọi hợp đồng) vẫn có số thật từ CBOE, kèm dòng nói rõ feed trễ 15 phút.
+
+Ba điều màn hình **nói thẳng** thay vì để người đọc đoán: delta ở đây là
+delta theo open interest **không** quy ước theo phía nhà tạo lập (put mang
+dấu âm sẵn nên nằm bên trái); một hợp đồng có OI mà hôm nay chưa ai giao
+dịch đóng góp **0** vào cột khối lượng chứ không bị loại khỏi bảng; và khi
+`/pricehistory` không trả nến cho một mã chỉ số thì panel 1 vẫn vẽ phần
+gamma và in nguyên văn lý do — dải cột vẫn đúng vì nó đến từ chuỗi quyền
+chọn, không từ lịch sử giá. Nút ±0,5/±1/±2% cắt cửa sổ quanh giá ngay ở
+trình duyệt, không tốn thêm request.
+
+
 ## NinjaTrader web / Tradovate — ĐANG DỪNG, probe giữ lại
 
 Chủ app đăng nhập được `web.ninjatrader.com` (nền Tradovate) và muốn một tab

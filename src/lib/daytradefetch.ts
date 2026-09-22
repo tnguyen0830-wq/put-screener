@@ -1,6 +1,7 @@
 import { fullChain, sessionHistory } from './schwab';
-import { indexSymbolCandidates } from './gexchain';
-import { buildRow, type DaytradeRow } from './daytrade';
+import { indexSymbolCandidates, loadGexChain, type ChainSource } from './gexchain';
+import { buildRow, parseCandles, type DaytradeRow, type IntraBar } from './daytrade';
+import { buildExposure, type ExposureProfile } from './mmexposure';
 import {
   buildLadder,
   expectedMove,
@@ -178,4 +179,133 @@ function shape(
     diagnosis,
     attempts,
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales)
+ * ------------------------------------------------------------------ */
+
+/* Cửa sổ quanh giá KHÔNG cắt ở server. Route trả về MỌI strike (SPX đo
+   được là ~498 strike, vài chục KB) và phía màn hình tự cắt, nên đổi bề
+   rộng là tức thì và không tốn thêm một request nào. Quan trọng hơn: một
+   con số bề rộng ở server cộng một con số ở client là hai nguồn sẽ trôi
+   lệch — màn hình ghi ±1% trong khi dữ liệu đã bị cắt ở ±2% thì không gì
+   nói ra được. Một chủ sở hữu duy nhất, và đó là phía vẽ. */
+
+export type ExposureResult = {
+  symbol: string;
+  /** Nguồn chuỗi thật sự trả lời: Schwab hay CBOE (trễ 15 phút). */
+  source: ChainSource;
+  /** Chỉ khi source = 'cboe'. */
+  schwabDetail?: string;
+  cboeAsOf?: string | null;
+  spot: number;
+  /** Gamma theo OI và theo khối lượng — HAI bảng, vì đó là hai câu hỏi
+   *  khác nhau (vị thế đang tồn tại vs. giao dịch hôm nay), và panel 2 vẽ
+   *  cả hai chồng lên nhau. */
+  oi: ExposureProfile;
+  volume: ExposureProfile;
+  /** Delta cho MỘT kỳ đáo hạn (panel 3). */
+  byExpiration: ExposureProfile | null;
+  expiration: string | null;
+  expirations: string[];
+  /** Nến 5 phút của phiên hôm nay cho panel 1. Rỗng KHÔNG phải lỗi — xem
+   *  `candlesError`. */
+  bars: IntraBar[];
+  /** Vì sao không có nến, nguyên văn. `/pricehistory` cho một mã CHỈ SỐ là
+   *  thứ CHƯA ĐO ĐƯỢC từ sandbox: $VIX chạy thật ở tab Bề rộng TT, nhưng
+   *  $SPX thì chưa ai thử. Nên panel 1 vẫn vẽ được dải cột gamma khi không
+   *  có nến, và NÓI RA lý do thay vì hiện một khung trống trông như hỏng. */
+  candlesError: string | null;
+  candleSymbol: string | null;
+};
+
+/**
+ * Ba panel chỉ tốn MỘT chuỗi quyền chọn.
+ *
+ * `loadGexChain()` được dùng lại nguyên vẹn, không viết thang mới: nó đã
+ * mang sẵn Schwab → CBOE, và CBOE là thứ DUY NHẤT đo được là có OI thật cho
+ * SPX (#143) trong khi Schwab trả OI = 0 ở mọi hợp đồng (#108). Một thang
+ * thứ hai ở đây là một thang sẽ trôi lệch với `/api/gex` ngay bên cạnh.
+ *
+ * Nến chạy SONG SONG và hỏng ĐỘC LẬP: một chuỗi quyền chọn hoàn hảo không
+ * được biến mất chỉ vì `/pricehistory` từ chối một mã chỉ số, và ngược lại.
+ */
+export async function loadExposure(
+  symbol: string,
+  opts: { expiration?: string | null } = {}
+): Promise<ExposureResult> {
+  const [chainR, barsR] = await Promise.allSettled([
+    loadGexChain(symbol),
+    loadExposureCandles(symbol),
+  ]);
+
+  // Chuỗi hỏng là hỏng cả ba panel, nên lỗi này được NÉM — khác hẳn nến.
+  if (chainR.status === 'rejected') throw chainR.reason;
+  const load = chainR.value;
+
+  const oi = buildExposure(load.chain, symbol, { basis: 'oi' });
+  const volume = buildExposure(load.chain, symbol, { basis: 'volume' });
+  if (!oi || !volume) {
+    throw new Error(`Chuỗi ${symbol} không dựng được bảng phơi nhiễm`);
+  }
+
+  const expirations = oi.expirations;
+  // Kỳ được chọn phải CÓ THẬT trong chuỗi. Một kỳ client gửi lên mà chuỗi
+  // không có sẽ ra bảng rỗng trông y hệt "kỳ này không có hợp đồng nào".
+  const wanted = opts.expiration && expirations.includes(opts.expiration)
+    ? opts.expiration
+    : expirations[0] ?? null;
+  const byExpiration = wanted
+    ? buildExposure(load.chain, symbol, { basis: 'oi', expiration: wanted })
+    : null;
+
+  const bars = barsR.status === 'fulfilled' ? barsR.value.bars : [];
+  const candlesError =
+    barsR.status === 'rejected'
+      ? String(barsR.reason?.message ?? barsR.reason).slice(0, 200)
+      : barsR.value.error;
+
+  return {
+    symbol,
+    source: load.source,
+    schwabDetail: load.schwabDetail,
+    cboeAsOf: load.cboeAsOf,
+    spot: oi.spot,
+    oi,
+    volume,
+    byExpiration,
+    expiration: wanted,
+    expirations,
+    bars,
+    candlesError,
+    candleSymbol: barsR.status === 'fulfilled' ? barsR.value.symbol : null,
+  };
+}
+
+/**
+ * Nến phiên hôm nay cho panel 1, thử lần lượt các cách viết mã chỉ số.
+ *
+ * Dùng chung `indexSymbolCandidates()` với chuỗi quyền chọn — bản chép thứ
+ * hai là bản sẽ dừng ở cách viết đầu tiên, đúng con bug #100. Không bao giờ
+ * ném: người gọi nhận `{bars: [], error}` và panel vẫn vẽ phần gamma.
+ */
+async function loadExposureCandles(
+  symbol: string
+): Promise<{ symbol: string | null; bars: IntraBar[]; error: string | null }> {
+  const attempts: string[] = [];
+  for (const candidate of indexSymbolCandidates(symbol)) {
+    try {
+      const payload = await sessionHistory(candidate, 1, BAR_MINUTES);
+      const bars = parseCandles(payload);
+      if (bars.length) return { symbol: candidate, bars, error: null };
+      attempts.push(`${candidate}: 200 nhưng 0 nến`);
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      attempts.push(`${candidate}: ${msg.slice(0, 80)}`);
+      // Hết phiên thì mọi cách viết đều hỏng y hệt — dừng ngay.
+      if (msg.includes('REAUTH_REQUIRED')) break;
+    }
+  }
+  return { symbol: null, bars: [], error: attempts.join(' · ').slice(0, 200) || 'không có nến' };
 }

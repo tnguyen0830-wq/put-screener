@@ -4354,3 +4354,140 @@ body {
   text-transform: none;
   letter-spacing: 0;
 }
+
+/* ---------- Daytrade: phơi nhiễm nhà tạo lập (ba panel) ----------
+   Chỉ dùng biến màu đã có ở CẢ BA khối theme, nên không đụng bẫy "sửa màu
+   phải sửa ba chỗ". Quy ước: dấu của một con số → --credit/--risk; phân
+   loại call/put → --gexcall/--gexput; hai CƠ SỞ (OI vs khối lượng) không
+   phải call/put nên lấy --stamp/--warn. Xem đầu MmExposureCharts.tsx. */
+.mmchart {
+  margin: 6px 0 2px;
+}
+.mmsvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.mmup {
+  stroke: var(--credit);
+  fill: var(--credit);
+}
+.mmdown {
+  stroke: var(--risk);
+  fill: var(--risk);
+}
+.mmgpos {
+  fill: var(--credit);
+}
+.mmgneg {
+  fill: var(--risk);
+}
+.mmoi {
+  fill: var(--stamp);
+}
+.mmvol {
+  fill: var(--warn);
+}
+.mmput {
+  fill: var(--gexput);
+}
+.mmcall {
+  fill: var(--gexcall);
+}
+/* Delta RÒNG cố ý KHÔNG dùng --stamp: đo được `--gexput` là #5aa9ff và
+   `--stamp` là #009dda (dark), #1f6fd0 và #0079a9 (light) — hai màu xanh
+   dương cách nhau 12° sắc độ, nên hai ô chú giải "Delta put" và "Delta
+   ròng" đọc thành MỘT màu. Ảnh chụp thấy, đọc CSS không thấy. Cột ròng là
+   một TỔNG dẫn xuất chứ không phải chuỗi thứ ba ngang hàng, nên màu chữ
+   nền (--ink) vừa đúng nghĩa vừa cách xa cả xanh lẫn đỏ ở cả hai theme. */
+.mmnet {
+  fill: var(--ink);
+}
+.mmgrid {
+  stroke: var(--rule-soft);
+  stroke-width: 1;
+}
+.mmzero {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.mmspot {
+  stroke: var(--stamp);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.mmspotlabel {
+  fill: var(--stamp);
+  font-size: 10px;
+  font-weight: 700;
+}
+.mmaxis {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.mmwatermark {
+  fill: var(--muted);
+  opacity: 0.12;
+  font-size: 54px;
+  font-weight: 800;
+}
+.mmlegend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mmkey {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  margin-left: 8px;
+}
+.mmkey:first-child {
+  margin-left: 0;
+}
+.mmkoi {
+  background: var(--stamp);
+}
+.mmkvol {
+  background: var(--warn);
+}
+.mmkput {
+  background: var(--gexput);
+}
+.mmkcall {
+  background: var(--gexcall);
+}
+.mmknet {
+  background: var(--ink);
+}
+/* Dòng hover giữ chỗ cố định: không có nó, chữ hiện/biến làm cả biểu đồ
+   bên dưới nhảy lên xuống mỗi lần rê chuột. */
+.mmhover {
+  min-height: 1.2em;
+  font-variant-numeric: tabular-nums;
+}
+.mmexps {
+  margin: 4px 0 2px;
+}
+.mmdiag {
+  margin: 10px 0 4px;
+}
+.mmdiag > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+/* Mẫu hợp đồng in NGUYÊN VĂN JSON — một "từ" dài hàng trăm ký tự không có
+   khoảng trắng nào. Thiếu hai dòng này thì ở 400px nửa câu nằm ngoài màn
+   hình, đúng con bug .ttserr của #195. */
+.mmsample {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.mmwin {
+  margin-left: 4px;
+}
