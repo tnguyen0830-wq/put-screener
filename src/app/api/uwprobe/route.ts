@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { uwGet, uwConfigured } from '@/lib/unusualwhales';
 import { uwTicker } from '@/lib/uwgex';
 import { describeShape } from '@/lib/uwshape';
+import { mapWithLimit } from '@/lib/maplimit';
 
 /**
  * Dò HÌNH DẠNG thật của các endpoint GEX còn lại bên Unusual Whales.
@@ -41,6 +42,23 @@ import { describeShape } from '@/lib/uwshape';
  * giờ đi ra ngoài - uwGet() giữ nó ở phía máy chủ.
  */
 export const dynamic = 'force-dynamic';
+
+/** Ngày hôm nay theo giờ NEW YORK, không phải UTC.
+ *
+ *  SPX có kỳ đáo hạn gần như mọi ngày giao dịch, nên "hôm nay" là một kỳ
+ *  thật để thử lọc. Hỏi theo ngày UTC thì sau 20:00 ET ngày đã sang hôm
+ *  sau và endpoint trả rỗng — trông y hệt "không lọc được theo kỳ", tức
+ *  một kết luận SAI về UW. Cùng lý do `nyDate()` tồn tại trong daytrade.ts;
+ *  viết lại ở đây bốn dòng thay vì import, để route không kéo theo cả một
+ *  module không liên quan. */
+function nyToday(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
 type Probe = { name: string; path: string; params?: Record<string, string> };
 
@@ -92,6 +110,39 @@ const ENDPOINTS = (t: string): Probe[] => [
     path: `/api/stock/${encodeURIComponent(t)}/option-contracts`,
     params: { limit: '50' },
   },
+
+  /* CÂU HỎI CHẶN ĐƯỜNG, sinh ra từ vòng đo thứ hai.
+     `option-contracts` là endpoint DUY NHẤT trả greek THÔ (delta, gamma là
+     SỐ) kèm open interest, khối lượng và NBBO — tức chuyển được sang hình
+     dạng chuỗi Schwab y như `cboeToChain()`, và khi đó `computeGex()`,
+     `mmexposure.ts`, trade briefing và 0DTE chạy NGUYÊN SI, cùng một đơn vị
+     và cùng một quy ước dấu. Không có đường tính thứ hai, không phải hiệu
+     chỉnh đơn vị của UW.
+     Chặn ở chỗ ĐẾM: `option-chains` đếm được 30.470 hợp đồng cho SPX và
+     12.380 cho SPY, mà `limit=50` trả đúng 50. Nếu phải phân 610 trang thì
+     đường này CHẾT ở trần 3 request đồng thời. Nên hỏi đúng hai thứ, và
+     `rowCount` trả lời thay cho mọi phỏng đoán:
+       - `limit` có được tôn trọng quá 50 không, tới đâu;
+       - có lọc được theo MỘT kỳ đáo hạn không (một kỳ SPX vài trăm hợp
+         đồng, tức một hai trang — vừa đủ cho panel và cho bảng 0DTE).
+     Hai tên tham số `expiry` và `expiration` đều là NHỚ ĐƯỢC. Cái nào sai
+     thì UW nói bằng 4xx, hoặc lặng lẽ bỏ qua và `rowCount` vẫn ra 50 — nên
+     đọc `rowCount` chứ đừng đọc mỗi `ok`. */
+  {
+    name: 'option-contracts?limit=500',
+    path: `/api/stock/${encodeURIComponent(t)}/option-contracts`,
+    params: { limit: '500' },
+  },
+  {
+    name: 'option-contracts?expiry=<nearest>',
+    path: `/api/stock/${encodeURIComponent(t)}/option-contracts`,
+    params: { limit: '500', expiry: nyToday() },
+  },
+  {
+    name: 'greeks?limit=500',
+    path: `/api/stock/${encodeURIComponent(t)}/greeks`,
+    params: { limit: '500' },
+  },
   /* Tab Tin tức đọc `news/headlines` (newsfeed.ts, `parseUwNews`) theo tên
      trường NHỚ ĐƯỢC từ tài liệu (`headline`, `source`, `created_at`, `url`,
      `is_major`). Bước này in khoá + kiểu thật để sửa `parseUwNews` theo cái
@@ -100,6 +151,28 @@ const ENDPOINTS = (t: string): Probe[] => [
      lời từ chối là phát hiện. */
   { name: 'news-headlines', path: `/api/news/headlines?limit=5` },
 ];
+
+/** UW cho TỐI ĐA 3 request CÙNG LÚC trên gói này — đo được, nguyên văn lời
+ *  UW ở vòng đo thứ hai:
+ *
+ *    429 "You have exceeded 3 concurrent requests, the maximum allowed for
+ *         your current plan."
+ *
+ *  Vòng đo đầu bắn cả 12 endpoint bằng `Promise.allSettled`, nên `oi-per-
+ *  strike` ăn 429 và đọc y hệt "endpoint này không có" — trong khi nó có
+ *  thật và chạy được. Tức chính probe tự làm hỏng phép đo của nó, và lỗi
+ *  hiện ra dưới dạng một kết luận SAI về UW chứ không dưới dạng một lỗi.
+ *
+ *  Đây KHÔNG phải chuyện riêng của probe: 3 là trần của CẢ TÀI KHOẢN, nên
+ *  mọi chỗ trong app gọi UW đều dùng chung cái trần đó — vòng lặp cảnh báo
+ *  đồng bộ dark pool có thể đang giữ một suất lúc chủ app bấm. Để 2 chứ
+ *  không phải 3 chính vì vậy: chừa một suất cho nền, và một route chẩn đoán
+ *  bấm tay thì chậm hơn vài giây không ai mất gì.
+ *
+ *  Giới hạn NHỊP (`RateLimiter` trong unusualwhales.ts) là một thứ khác và
+ *  không thay được cái này: nhịp nói "bao nhiêu request mỗi phút", trần
+ *  đồng thời nói "bao nhiêu cái đang bay cùng lúc". */
+const CONCURRENCY = 2;
 
 export async function GET(req: NextRequest) {
   if (!uwConfigured()) {
@@ -111,17 +184,21 @@ export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get('symbol') ?? 'SPX';
   const ticker = uwTicker(symbol);
 
-  const results = await Promise.allSettled(
-    ENDPOINTS(ticker).map(async (e) => ({
-      name: e.name,
-      ...describeShape(await uwGet(e.path, e.params ?? {})),
-    }))
-  );
+  const results = await mapWithLimit(ENDPOINTS(ticker), CONCURRENCY, async (e) => ({
+    name: e.name,
+    ...describeShape(await uwGet(e.path, e.params ?? {})),
+  }));
 
   return NextResponse.json({
     ticker,
     note:
-      'Chỉ dò hình dạng, không phải tính năng. ĐỌC `usableForExposure` TRƯỚC: ' +
+      'Chỉ dò hình dạng, không phải tính năng. ĐỌC `usableAsRawChain` TRƯỚC: ' +
+      'true = endpoint trả greek THÔ + OI/khối lượng + mã hợp đồng mang ' +
+      'strike, tức chuyển được sang hình dạng chuỗi Schwab và dùng lại ' +
+      'computeGex()/mmexposure.ts NGUYÊN SI — một đường tính, một đơn vị, ' +
+      'một quy ước dấu. Đó là đường SẠCH nhất. Với mấy dòng ' +
+      '`option-contracts?...` thì đọc `rowCount`: 50 nghĩa là tham số bị bỏ ' +
+      'qua, >50 nghĩa là được tôn trọng. Rồi mới tới `usableForExposure`: ' +
       'true = endpoint đó đủ dựng ba panel Phơi nhiễm MM (theo strike + có ' +
       'gamma + có OI hoặc khối lượng để nhân), tức thay được CBOE cho SPX và ' +
       'bỏ được độ trễ 15 phút. looksPerStrike = có trường strike với nhiều giá ' +
