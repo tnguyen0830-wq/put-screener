@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uwGet, uwConfigured } from '@/lib/unusualwhales';
 import { uwTicker } from '@/lib/uwgex';
+import { describeShape } from '@/lib/uwshape';
 
 /**
  * Dò HÌNH DẠNG thật của các endpoint GEX còn lại bên Unusual Whales.
@@ -17,17 +18,80 @@ import { uwTicker } from '@/lib/uwgex';
  * mà không cần Schwab - `gex-levels` (thứ app đang dùng) chỉ cho 4 mức tổng
  * hợp nên không làm được việc đó.
  *
+ * LẦN ĐO ĐẦU (2026-09-06) TRẢ LỜI KHÔNG — CHO ĐÚNG BA ENDPOINT ĐÃ HỎI, và
+ * đó là chỗ kết luận bị nói quá. `greek-exposure` khoá theo `date`,
+ * `spot-exposures` khoá theo `start_time` (mỗi mốc đúng 1 giá), `gex-levels`
+ * cho 4 mức. Từ ba cái đó đã viết thành "UW không có gamma theo strike" —
+ * một lời khẳng định về CẢ catalogue rút ra từ ba mẫu.
+ *
+ * Bề mặt thứ HAI nói ngược lại: chính trang web UW vẽ tab gamma/delta theo
+ * strike, thời gian thực — chủ app nhìn thấy và hỏi lại. Tức backend của UW
+ * CÓ, và câu chưa ai đo là API trong gói của chủ app có trả ra hay không.
+ * Đúng hình dạng #108: suy từ một bề mặt, bề mặt thứ hai lật ngược.
+ *
+ * Nên vòng đo này thêm các endpoint ỨNG VIÊN theo strike. Tên của chúng là
+ * NHỚ ĐƯỢC từ tài liệu, không phải đo được — và điều đó KHÔNG sao, vì ở một
+ * probe thì chính lời từ chối là phát hiện: 404 nghĩa là tên sai hoặc không
+ * tồn tại, 403 nghĩa là có thật nhưng gói không mở, 200 nghĩa là có và đọc
+ * được hình dạng ngay tại đó. Ba kết luận khác nhau, ba cách xử lý khác
+ * nhau, nên chúng KHÔNG bao giờ được gộp thành một chữ "hỏng".
+ *
  * CỐ TÌNH không trả về nguyên payload: chuỗi quyền chọn có thể hàng nghìn
  * dòng, mà thứ cần biết chỉ là các khoá và kiểu dữ liệu. Khoá API không bao
  * giờ đi ra ngoài - uwGet() giữ nó ở phía máy chủ.
  */
 export const dynamic = 'force-dynamic';
 
-const ENDPOINTS = (t: string) => [
+type Probe = { name: string; path: string; params?: Record<string, string> };
+
+const ENDPOINTS = (t: string): Probe[] => [
   { name: 'greek-exposure', path: `/api/stock/${encodeURIComponent(t)}/greek-exposure` },
   { name: 'spot-exposures', path: `/api/stock/${encodeURIComponent(t)}/spot-exposures` },
   // Cái app đang dùng, để đối chiếu trong cùng một lần đo.
   { name: 'gex-levels', path: `/api/stock/${encodeURIComponent(t)}/gex-levels` },
+
+  /* ỨNG VIÊN THEO STRIKE — tên nhớ được, chưa đo. Xếp theo mức QUYẾT ĐỊNH,
+     không theo khả năng tồn tại: cái đầu tiên trả 200 kèm `looksPerStrike`
+     là cái đủ để thay CBOE cho SPX, và đọc tới đó là dừng được.
+
+     Mỗi cái hỏi một câu khác nhau, nên một cái 404 KHÔNG làm mấy cái kia vô
+     nghĩa — `allSettled` bên dưới giữ chúng độc lập. Chi phí một lượt bấm
+     là đúng số endpoint trong danh sách này (khoảng chục request) trên hạn
+     mức 30.000/ngày, tức không đáng kể; cái đắt là gọi theo TỪNG MÃ trong
+     vòng lặp nền, và đó là thứ #78 đã đốt sạch hạn mức, không phải đây. */
+  {
+    name: 'greek-exposure/strike',
+    path: `/api/stock/${encodeURIComponent(t)}/greek-exposure/strike`,
+  },
+  {
+    name: 'greek-exposure/expiry',
+    path: `/api/stock/${encodeURIComponent(t)}/greek-exposure/expiry`,
+  },
+  {
+    name: 'greek-exposure/strike-expiry',
+    path: `/api/stock/${encodeURIComponent(t)}/greek-exposure/strike-expiry`,
+  },
+  {
+    name: 'spot-exposures/strike',
+    path: `/api/stock/${encodeURIComponent(t)}/spot-exposures/strike`,
+  },
+  { name: 'oi-per-strike', path: `/api/stock/${encodeURIComponent(t)}/oi-per-strike` },
+  { name: 'greeks', path: `/api/stock/${encodeURIComponent(t)}/greeks` },
+  /* Chuỗi quyền chọn thô. Nếu cái này mở thì mọi panel hiện có chạy được
+     NGUYÊN SI trên nó — `mmexposure.ts` và `gex.ts` chỉ cần greek + open
+     interest theo hợp đồng, y như `cboeToChain()` đã làm cho CBOE. `limit`
+     để một chuỗi SPX hàng chục nghìn dòng không nuốt cả câu trả lời; hình
+     dạng đọc được từ vài dòng. */
+  {
+    name: 'option-chains',
+    path: `/api/stock/${encodeURIComponent(t)}/option-chains`,
+    params: { limit: '50' },
+  },
+  {
+    name: 'option-contracts',
+    path: `/api/stock/${encodeURIComponent(t)}/option-contracts`,
+    params: { limit: '50' },
+  },
   /* Tab Tin tức đọc `news/headlines` (newsfeed.ts, `parseUwNews`) theo tên
      trường NHỚ ĐƯỢC từ tài liệu (`headline`, `source`, `created_at`, `url`,
      `is_major`). Bước này in khoá + kiểu thật để sửa `parseUwNews` theo cái
@@ -36,101 +100,6 @@ const ENDPOINTS = (t: string) => [
      lời từ chối là phát hiện. */
   { name: 'news-headlines', path: `/api/news/headlines?limit=5` },
 ];
-
-/** Tên trường hay dùng cho strike.
- *
- *  CỐ TÌNH KHÔNG có 'price' trong này. Bản đầu có, và nó báo nhầm:
- *  `spot-exposures` trả về trường `price` là GIÁ SPOT tại thời điểm đó, không
- *  phải strike - đúng như tên endpoint. Probe khi ấy kêu looksPerStrike=true
- *  cho một endpoint hoàn toàn không theo strike. Một cái nhãn sai còn tệ hơn
- *  không có nhãn, vì nó khiến người đọc tin vào kết luận sai. */
-const STRIKE_HINTS = ['strike'];
-const GAMMA_HINTS = ['gamma', 'call_gamma', 'put_gamma', 'gamma_exposure', 'charm', 'vanna'];
-
-function describe(payload: any) {
-  const topLevelKeys = Object.keys(payload ?? {});
-  // UW bọc trong { data: ... } ở hầu hết endpoint, nhưng không phải tất cả -
-  // chấp nhận cả hai, cùng cách phòng thủ như uwgex.ts.
-  const body = payload?.data ?? payload;
-  const isArray = Array.isArray(body);
-  const rows: any[] = isArray ? body : [];
-  const first = rows[0];
-  const recordKeys = first && typeof first === 'object' ? Object.keys(first) : [];
-
-  const has = (hints: string[]) =>
-    recordKeys.filter((k) => hints.some((h) => k.toLowerCase().includes(h)));
-
-  const strikeKeys = has(STRIKE_HINTS);
-  const distinctStrikes = strikeKeys.length
-    ? new Set(rows.map((r) => r?.[strikeKeys[0]])).size
-    : 0;
-
-  /* Một endpoint có `price` + một trường thời gian có thể là HAI thứ khác
-     hẳn nhau, và chỉ đếm tổng số giá thì không phân biệt được:
-
-       (a) đường cong theo giá TẠI MỘT thời điểm - nhiều `price` cùng chung
-           một mốc thời gian. Vẽ được bản đồ gamma theo mức giá.
-       (b) chuỗi thời gian của giá spot - mỗi mốc thời gian đúng một `price`.
-           Không vẽ được gì theo giá.
-
-     Phân biệt bằng cách nhóm theo mốc thời gian rồi đếm số giá TRONG một
-     nhóm. Đây chính là câu hỏi còn treo sau lần đo đầu với spot-exposures
-     (564 dòng, 11 giá: 51 mốc × 11 giá, hay 564 mốc?). */
-  /* Thứ tự ƯU TIÊN, không phải thứ tự xuất hiện trong bản ghi. `start_time`
-     là mốc GOM NHÓM, còn `time` là dấu thời gian riêng của từng dòng - gom
-     theo `time` thì mỗi nhóm đúng một dòng và phép đo thành vô nghĩa. Bản
-     đầu lấy theo thứ tự khoá trong bản ghi, mà production trả về `time`
-     đứng trước `start_time`, nên rơi đúng vào cái bẫy đó. */
-  const TIME_PREFERENCE = ['start_time', 'date', 'timestamp', 'time'];
-  const timeKeys = TIME_PREFERENCE.filter((p) =>
-    recordKeys.some((k) => k.toLowerCase() === p)
-  ).map((p) => recordKeys.find((k) => k.toLowerCase() === p)!);
-  const priceKeys = recordKeys.filter((k) => k.toLowerCase() === 'price');
-  let curveShape: Record<string, unknown> | null = null;
-  if (timeKeys.length && priceKeys.length && rows.length) {
-    const tk = timeKeys[0];
-    const pk = priceKeys[0];
-    const buckets = new Map<string, Set<unknown>>();
-    for (const r of rows) {
-      const t = String(r?.[tk]);
-      if (!buckets.has(t)) buckets.set(t, new Set());
-      buckets.get(t)!.add(r?.[pk]);
-    }
-    const sizes = [...buckets.values()].map((v) => v.size);
-    curveShape = {
-      groupedBy: tk,
-      timestamps: buckets.size,
-      pricesPerTimestampMax: Math.max(...sizes),
-      pricesPerTimestampMin: Math.min(...sizes),
-      // Đây là câu trả lời: nhiều giá trong CÙNG một mốc thời gian nghĩa là
-      // có một đường cong theo giá, vẽ được.
-      looksLikePriceCurve: Math.max(...sizes) > 1,
-    };
-  }
-
-  return {
-    topLevelKeys,
-    dataIsArray: isArray,
-    rowCount: isArray ? rows.length : null,
-    recordKeys,
-    // Trả lời thẳng câu hỏi duy nhất đáng hỏi. Chỉ tính trường có chữ
-    // "strike" trong tên - xem chú thích ở STRIKE_HINTS về lần báo nhầm.
-    looksPerStrike: strikeKeys.length > 0 && distinctStrikes > 1,
-    strikeKeys,
-    distinctStrikes,
-    /** Chỉ có khi payload vừa có thời gian vừa có `price` - phân biệt đường
-     *  cong theo giá với chuỗi thời gian. null = không áp dụng. */
-    curveShape,
-    gammaKeys: has(GAMMA_HINTS),
-    /** Một bản ghi thật kèm KIỂU của từng trường - chỉ có kiểu mới phân biệt
-     *  "không gửi" với "gửi dưới dạng chuỗi", đúng bài học từ #97. */
-    sampleTypes:
-      first && typeof first === 'object'
-        ? Object.fromEntries(Object.entries(first).map(([k, v]) => [k, typeof v]))
-        : typeof first,
-    sample: JSON.stringify(first ?? body).slice(0, 500),
-  };
-}
 
 export async function GET(req: NextRequest) {
   if (!uwConfigured()) {
@@ -143,16 +112,25 @@ export async function GET(req: NextRequest) {
   const ticker = uwTicker(symbol);
 
   const results = await Promise.allSettled(
-    ENDPOINTS(ticker).map(async (e) => ({ name: e.name, ...describe(await uwGet(e.path)) }))
+    ENDPOINTS(ticker).map(async (e) => ({
+      name: e.name,
+      ...describeShape(await uwGet(e.path, e.params ?? {})),
+    }))
   );
 
   return NextResponse.json({
     ticker,
     note:
-      'Chỉ dò hình dạng, không phải tính năng. looksPerStrike = có gamma theo ' +
-      'từng STRIKE (vẽ được biểu đồ cột). curveShape.looksLikePriceCurve = có ' +
-      'nhiều mức GIÁ trong cùng một mốc thời gian (vẽ được đường cong theo giá, ' +
-      'khác với chỉ là chuỗi thời gian của giá spot).',
+      'Chỉ dò hình dạng, không phải tính năng. ĐỌC `usableForExposure` TRƯỚC: ' +
+      'true = endpoint đó đủ dựng ba panel Phơi nhiễm MM (theo strike + có ' +
+      'gamma + có OI hoặc khối lượng để nhân), tức thay được CBOE cho SPX và ' +
+      'bỏ được độ trễ 15 phút. looksPerStrike = có trường strike với nhiều giá ' +
+      'khác nhau. deltaKeys rỗng chỉ mất panel 3 (delta theo kỳ), không mất ' +
+      'panel 1 và 2. Endpoint ok:false thì đọc `status`: 404 = tên sai hoặc ' +
+      'không tồn tại (tên là NHỚ ĐƯỢC, chưa đo), 403 = có thật nhưng gói chưa ' +
+      'mở, 401 = khoá hỏng. Ba thứ đó ba cách xử lý khác nhau. ' +
+      'curveShape.looksLikePriceCurve = nhiều mức GIÁ trong cùng một mốc thời ' +
+      'gian (đường cong theo giá, khác chuỗi thời gian của giá spot).',
     endpoints: ENDPOINTS(ticker).map((e, i) => {
       const r = results[i];
       if (r.status === 'fulfilled') return { ...r.value, ok: true };
