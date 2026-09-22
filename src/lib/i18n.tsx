@@ -370,6 +370,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Tyler Investment Tool — về trang chính',
     en: 'Tyler Investment Tool — back to home',
   },
+  'brand.back': { vi: '← Về app', en: '← Back to app' },
 
   // ---- settings ----
   'settings.label': {

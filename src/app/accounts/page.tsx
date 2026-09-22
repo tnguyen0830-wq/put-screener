@@ -236,9 +236,13 @@ export default function AccountsPage() {
   return (
     <div className="shell solo">
       <section className="panel">
-        <div className="panel-head">
+        <div className="panel-head solohead">
+          {/* Đường về app. Trong bản đã CÀI không có nút back của trình duyệt,
+              nên chữ "← Về app" phải nhìn thấy được, không chỉ nằm ẩn trong
+              logo. */}
           <a className="brand" href="/" aria-label={t('brand.home')}>
             <Logo height={22} />
+            <span className="brandback">{t('brand.back')}</span>
           </a>
           {t('acct.title')}
         </div>

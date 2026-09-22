@@ -2350,12 +2350,43 @@ html.theme-switching *::after {
 
 /* ---------------- nhận diện thương hiệu ---------------- */
 
+/* KHÔNG để `display: flex` ở đây. Một flex container vẫn là hộp KHỐI, nên khi
+   .brand nằm trong một cha KHÔNG phải flex (chính là `.panel-head` của trang
+   /accounts) nó kéo dài hết chiều ngang dù bên trong chỉ có cái icon 26px —
+   và vì `:focus-visible` vẽ viền quanh hộp đó, lượt cài app đặt focus vào link
+   này in ra một khung xanh RỖNG chạy hết bề ngang, đè lên cả dòng tiêu đề
+   ngay dưới. Đo được: brand 1202px trong một head 1230px, head cao 62px cho
+   một link cao 22px. `inline-flex` co lại vừa nội dung; còn trong `.rail`
+   (vốn đã là flex) thì không đổi gì, vì display ngoài của một flex item bị
+   blockify dù khai kiểu nào. */
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
   color: inherit;
+}
+
+/* Đầu trang của những trang ĐỨNG RIÊNG (/accounts): logo, nút về app và tiêu
+   đề nằm CÙNG MỘT HÀNG. `.panel-head` dùng chung cho mọi panel nên không đổi
+   nó ở mức toàn cục — đây là biến thể có tên. */
+.panel-head.solohead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chữ "← Về app" cạnh logo. App đã cài chạy trong cửa sổ RIÊNG, KHÔNG có nút
+   back của trình duyệt, nên nếu đường về chỉ nằm trong cái logo thì người
+   dùng không có cách nào biết mình bấm được vào đâu — một trang cụt. */
+.brandback {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stamp);
 }
 
 .brandmark {
