@@ -1,11 +1,19 @@
 import { fullChainAdaptive, type ChainWindow } from './schwab';
 import { chainStatusFailed, computeGex, gexDiagnosis, usableContractCount, type GexProfile } from './gex';
 import { fetchCboeChain, isIndexSymbol } from './cboe';
+import { fetchUwChain, uwChainConfigured, uwDiagLine } from './uwchain';
 
 /**
  * Một bậc thang lấy chuỗi quyền chọn cho GEX, dùng chung cho /api/gex và
- * /api/tradebrief: Schwab (mọi cách viết ký hiệu) → CBOE (feed công khai
- * trễ 15 phút). Chỉ khi cả hai cùng không ra chuỗi thì ném GexChainError,
+ * /api/tradebrief: Schwab (mọi cách viết ký hiệu) → Unusual Whales (thời
+ * gian thực, có khoá) → CBOE (feed công khai trễ 15 phút).
+ *
+ * UW đứng GIỮA chứ không phải cuối, và thứ tự đó là cả lập luận: nó thời
+ * gian thực còn CBOE trễ 15 phút, nhưng nó tốn hạn mức còn CBOE miễn phí —
+ * nên nó đứng trên thứ chậm hơn và dưới thứ không mất gì. Nó cũng KHÔNG
+ * BAO GIỜ được gọi tới cho SPY/QQQ/IWM, vì Schwab phục vụ mấy mã đó bình
+ * thường; chỗ nó thật sự có tác dụng là SPX, nơi Schwab trả OI = 0 ở mọi
+ * hợp đồng (#108) và trước đây chỉ còn CBOE. Chỉ khi cả hai cùng không ra chuỗi thì ném GexChainError,
  * mang theo lý do THẬT của từng nguồn - tầng trên (route) quyết định tiếp:
  * mức UW, bản đọc trên đĩa, hay báo lỗi.
  *
@@ -150,16 +158,25 @@ export function schwabErrorDetail(msg: string, attempts?: Attempt[]): string {
   }`.slice(0, 400);
 }
 
-export type ChainSource = 'schwab' | 'cboe';
+export type ChainSource = 'schwab' | 'uw' | 'cboe';
 
 export type GexChainLoad = {
   source: ChainSource;
   chain: any;
   window: ChainWindow;
   profile: GexProfile;
-  /** Chỉ có khi source = 'cboe': vì sao Schwab không dùng được, để màn hình
-   *  nói rõ đây là đường vòng chứ không phải lựa chọn thiết kế. */
+  /** Chỉ có khi source != 'schwab': vì sao Schwab không dùng được, để màn
+   *  hình nói rõ đây là đường vòng chứ không phải lựa chọn thiết kế. */
   schwabDetail?: string;
+  /** Chỉ có khi source = 'cboe': vì sao UW cũng không dùng được. Giữ RIÊNG
+   *  khỏi `schwabDetail` vì hai nguồn hỏng vì hai lý do và sửa khác nhau. */
+  uwDetail?: string;
+  /** Chỉ có khi source = 'uw': dấu thời gian mới nhất trên tape UW trả về,
+   *  để màn hình nói được đây là dữ liệu sống chứ không phải trễ 15 phút. */
+  uwAsOf?: string | null;
+  /** Chỉ có khi source = 'uw': số kỳ/hợp đồng thực sự lấy được. Một chuỗi
+   *  8 kỳ KHÔNG được trông giống một chuỗi cả cửa sổ 60 ngày. */
+  uwDiag?: string;
   /** Chỉ có khi source = 'cboe': giờ CBOE đóng dấu lên feed (trễ 15 phút). */
   cboeAsOf?: string | null;
   /** Chỉ có khi source = 'cboe': tên file CBOE thực sự trả lời ("_SPX"). */
@@ -173,6 +190,7 @@ export class GexChainError extends Error {
     message: string,
     readonly schwabDetail: string,
     readonly cboeDetail: string,
+    readonly uwDetail: string,
     /** Phiên Schwab hết hạn - tầng trên PHẢI trả 401, không được che bằng
      *  nguồn khác (xem /api/gex). CBOE không được thử trong trường hợp này. */
     readonly reauth: boolean,
@@ -204,14 +222,50 @@ export async function loadGexChain(symbol: string): Promise<GexChainLoad> {
        Người dùng cần bấm kết nối lại, không cần một biểu đồ trông vẫn bình
        thường trong khi cả app đã mất Schwab (#101). */
     if (msg.includes('REAUTH_REQUIRED')) {
-      throw new GexChainError('Phiên Schwab hết hạn', detail, 'không thử (hết phiên Schwab)', true);
+      throw new GexChainError(
+        'Phiên Schwab hết hạn',
+        detail,
+        'không thử (hết phiên Schwab)',
+        'không thử (hết phiên Schwab)',
+        true
+      );
     }
     schwabDetail = detail;
   }
 
   /* Schwab không dùng được vì BẤT KỲ lý do gì (văng lỗi, hay trả chuỗi rỗng
-     ruột như SPX): sang CBOE. Cùng một bậc cho cả hai nhánh - đúng bài học
-     #99: hai nhánh mà đi hai đường riêng là sẽ lệch nhau. */
+     ruột như SPX): sang UW, rồi mới tới CBOE. Cùng một bậc cho cả hai nhánh
+     Schwab - đúng bài học #99: hai nhánh mà đi hai đường riêng là sẽ lệch.
+
+     UW tự tắt khi chưa có khoá, y như Telegram/web push/mọi thứ có khoá
+     khác trong repo: không đặt `UW_API_KEY` thì thang đúng bằng thang cũ,
+     không một request nào phát sinh. */
+  let uwDetail = 'chưa cấu hình UW_API_KEY';
+  if (uwChainConfigured()) {
+    try {
+      const u = await fetchUwChain(symbol, { days: 60 });
+      const profile = computeGex(u.chain, symbol);
+      if (profile) {
+        return {
+          source: 'uw',
+          chain: u.chain,
+          /* Cửa sổ nói đúng SỐ KỲ thực sự lấy được, không phải 60 ngày:
+             `fetchUwChain` chặn ở 8 kỳ gần nhất, và một tường GEX tính trên
+             8 kỳ không được trông giống một tường tính trên cả cửa sổ —
+             đúng lý do `fullChainSliced()` của Schwab trả `expirations`. */
+          window: { days: 60, expirations: u.diag.expirationsKept },
+          profile,
+          schwabDetail,
+          uwAsOf: u.asOf,
+          uwDiag: uwDiagLine(u.diag),
+        };
+      }
+      uwDetail = `chuyển được ${u.diag.kept} hợp đồng nhưng không tính được · ${uwDiagLine(u.diag)}`;
+    } catch (e: any) {
+      uwDetail = `${String(e?.message ?? e)}${e?.detail ? ` — ${String(e.detail)}` : ''}`;
+    }
+  }
+
   let cboeDetail: string;
   try {
     const c = await fetchCboeChain(symbol, { days: 60 });
@@ -223,6 +277,7 @@ export async function loadGexChain(symbol: string): Promise<GexChainLoad> {
         window: { days: 60 },
         profile,
         schwabDetail,
+        uwDetail,
         cboeAsOf: c.asOf,
         cboeSymbol: c.cboeSymbol,
       };
@@ -242,6 +297,7 @@ export async function loadGexChain(symbol: string): Promise<GexChainLoad> {
       : 'Không lấy được chuỗi quyền chọn',
     schwabDetail,
     cboeDetail,
+    uwDetail,
     false,
     failedStatus
   );

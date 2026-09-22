@@ -57,9 +57,12 @@ type Profile = {
 
 type Payload = {
   symbol: string;
-  source: 'schwab' | 'cboe';
+  source: 'schwab' | 'uw' | 'cboe';
   schwabDetail?: string;
   cboeAsOf?: string | null;
+  uwAsOf?: string | null;
+  uwDiag?: string;
+  uwDetail?: string;
   spot: number;
   oi: Profile;
   volume: Profile;
@@ -191,7 +194,9 @@ export default function MmExposurePanel() {
           <p className="cap">
             {data.source === 'cboe'
               ? t('mm.srcCboe', { as: data.cboeAsOf ?? '—', why: data.schwabDetail ?? '—' })
-              : t('mm.srcSchwab')}
+              : data.source === 'uw'
+                ? t('mm.srcUw', { as: data.uwAsOf ?? '—', why: data.schwabDetail ?? '—' })
+                : t('mm.srcSchwab')}
             {' · '}
             {t('mm.readAt', hhmm(data.at))}
           </p>

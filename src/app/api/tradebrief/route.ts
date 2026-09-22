@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
       /* Nguồn chuỗi, để panel nói rõ khi kèo dựng từ giá CBOE trễ 15 phút
          chứ không phải giá Schwab - bid/ask có thể đã dịch. */
       chainSource: chainRes.source,
-      chainAsOf: chainRes.cboeAsOf ?? null,
+      chainAsOf: chainRes.cboeAsOf ?? chainRes.uwAsOf ?? null,
     });
   } catch (e: any) {
     if (e instanceof GexChainError) {
@@ -129,7 +129,10 @@ export async function GET(req: NextRequest) {
           ? { error: 'Phiên Schwab hết hạn' }
           : {
               error: e.message,
-              detail: `Schwab: ${e.schwabDetail.slice(0, 300)} · CBOE: ${e.cboeDetail.slice(0, 300)}`,
+              detail:
+                `Schwab: ${e.schwabDetail.slice(0, 300)} · ` +
+                `UW: ${(e.uwDetail ?? '—').slice(0, 300)} · ` +
+                `CBOE: ${e.cboeDetail.slice(0, 300)}`,
             },
         { status: e.reauth ? 401 : e.failedStatus ? 404 : 500 }
       );

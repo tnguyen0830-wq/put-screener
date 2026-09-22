@@ -194,11 +194,18 @@ function shape(
 
 export type ExposureResult = {
   symbol: string;
-  /** Nguồn chuỗi thật sự trả lời: Schwab hay CBOE (trễ 15 phút). */
+  /** Nguồn chuỗi thật sự trả lời: Schwab, UW (thời gian thực) hay CBOE
+   *  (trễ 15 phút). Ba mức tươi khác nhau, nên màn hình phải nói ra cái
+   *  nào — một bảng số trễ 15 phút trông y hệt một bảng sống. */
   source: ChainSource;
-  /** Chỉ khi source = 'cboe'. */
+  /** Chỉ khi source != 'schwab'. */
   schwabDetail?: string;
   cboeAsOf?: string | null;
+  /** Chỉ khi source = 'uw'. */
+  uwAsOf?: string | null;
+  uwDiag?: string;
+  /** Chỉ khi source = 'cboe': vì sao chuỗi UW cũng không dùng được. */
+  uwDetail?: string;
   spot: number;
   /** Gamma theo OI và theo khối lượng — HAI bảng, vì đó là hai câu hỏi
    *  khác nhau (vị thế đang tồn tại vs. giao dịch hôm nay), và panel 2 vẽ
@@ -271,6 +278,9 @@ export async function loadExposure(
     source: load.source,
     schwabDetail: load.schwabDetail,
     cboeAsOf: load.cboeAsOf,
+    uwAsOf: load.uwAsOf,
+    uwDiag: load.uwDiag,
+    uwDetail: load.uwDetail,
     spot: oi.spot,
     oi,
     volume,
