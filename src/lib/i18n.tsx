@@ -62,6 +62,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (d: string) => `Không lấy được chuỗi: ${d}`,
     en: (d: string) => `Could not load the chain: ${d}`,
   },
+  'mm.srcUw': {
+    vi: (v: any) =>
+      `Nguồn: chuỗi Unusual Whales (THỜI GIAN THỰC, giao dịch gần nhất ${v.as}) — app lấy greek thô rồi tự nhân với open interest, không dùng số phơi nhiễm UW tính sẵn, nên cùng đơn vị với mọi mã khác. Đi đường này vì chuỗi Schwab không dùng được: ${v.why}`,
+    en: (v: any) =>
+      `Source: Unusual Whales chain (LIVE, last trade ${v.as}) — the app takes raw greeks and multiplies by open interest itself rather than using UW's pre-computed exposure, so the units match every other symbol. Using it because Schwab's chain is unusable: ${v.why}`,
+  },
   'mm.srcSchwab': { vi: 'Nguồn: chuỗi Schwab (thời gian thực).', en: 'Source: Schwab chain (live).' },
   'mm.srcCboe': {
     vi: (v: { as: string; why: string }) =>
@@ -1052,6 +1058,17 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'gex.zeroGamma': { vi: 'Zero gamma', en: 'Zero gamma' },
   'gex.srcSchwab': { vi: 'App (Schwab)', en: 'App (Schwab)' },
   'gex.srcCboe': { vi: 'App (CBOE)', en: 'App (CBOE)' },
+  'gex.srcUwChain': { vi: 'App (UW)', en: 'App (UW)' },
+  'gex.uwChainSource': {
+    vi: (v: any) =>
+      `Chuỗi quyền chọn ở đây lấy THỜI GIAN THỰC từ Unusual Whales (giao dịch gần nhất: ${v.asOf}), rồi app tự tính bằng đúng công thức như mọi mã khác — app lấy greek THÔ và open interest rồi nhân, không lấy con số phơi nhiễm UW tính sẵn, nên đơn vị và quy ước dấu giống hệt các mã chạy bằng Schwab. ${v.diag}`,
+    en: (v: any) =>
+      `This chain is pulled LIVE from Unusual Whales (last trade: ${v.asOf}) and computed here with the same formula as every other symbol — the app takes raw greeks and open interest and multiplies them itself rather than using UW's own exposure figures, so units and sign convention match the Schwab-backed symbols exactly. ${v.diag}`,
+  },
+  'gex.uwChainFailed': {
+    vi: (d: string) => `Chuỗi thời gian thực của UW cũng không dùng được: ${d}`,
+    en: (d: string) => `UW's real-time chain was unusable too: ${d}`,
+  },
   'gex.cboeSource': {
     vi: (v: any) =>
       `Chuỗi quyền chọn ở đây lấy từ feed công khai trễ 15 phút của CBOE (file ${v.file}, dấu giờ CBOE: ${v.asOf}), rồi app tự tính bằng đúng công thức như mọi mã khác. Không phải chuỗi Schwab: giá và greeks là của CBOE, trễ 15 phút; open interest chỉ đổi mỗi ngày một lần nên các mức tường không bị ảnh hưởng đáng kể.`,

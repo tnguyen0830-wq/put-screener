@@ -33,6 +33,13 @@ export type GexSnapshot = {
   /** Bản đọc qua feed CBOE (lib/cboe.ts) - cùng công thức với `schwab`,
    *  khác nguồn. Tuỳ chọn vì bản ghi cũ trên đĩa không có trường này. */
   cboe?: GexSnapshotLevels | null;
+  /** Bản đọc tính từ chuỗi THỜI GIAN THỰC của UW (lib/uwchain.ts) - lại
+   *  cùng công thức, lại khác nguồn. Ô RIÊNG chứ không nhét vào `uw`: ô
+   *  `uw` là bốn mức `gex-levels` UW TỰ tính trên cơ sở `vol`, còn ô này là
+   *  mức app tự tính trên cơ sở OI từ greek thô. Trộn hai thứ đó lại là
+   *  phá đúng công dụng của file lịch sử - thấy nguồn nào chết khi nào, và
+   *  hai nguồn lệch nhau bao nhiêu. Tuỳ chọn, bản ghi cũ không có. */
+  uwchain?: GexSnapshotLevels | null;
   uw: GexUwLevels | null;
 };
 

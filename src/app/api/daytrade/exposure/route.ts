@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     // GexChainError mang RIÊNG hai lý do (Schwab và CBOE) — giữ nguyên cả
     // hai: một bên là broker, một bên là sàn, và hai cách sửa khác nhau.
     const detail = e?.schwabDetail
-      ? `Schwab: ${e.schwabDetail} · CBOE: ${e.cboeDetail ?? '—'}`
+      ? `Schwab: ${e.schwabDetail} · UW: ${e.uwDetail ?? '—'} · CBOE: ${e.cboeDetail ?? '—'}`
       : msg;
     return NextResponse.json(
       { error: 'FAILED', detail: detail.slice(0, 300) },

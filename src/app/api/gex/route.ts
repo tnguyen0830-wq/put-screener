@@ -54,7 +54,8 @@ export async function GET(req: NextRequest) {
       : undefined;
 
   if (chainRes.status === 'fulfilled') {
-    const { profile, window, source, schwabDetail, cboeAsOf, cboeSymbol } = chainRes.value;
+    const { profile, window, source, schwabDetail, cboeAsOf, cboeSymbol, uwAsOf, uwDiag, uwDetail: chainUwDetail } =
+      chainRes.value;
     const levels = {
       putWall: profile.putWall,
       callWall: profile.callWall,
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
       spot: profile.spot,
       schwab: source === 'schwab' ? levels : null,
       cboe: source === 'cboe' ? levels : null,
+      uwchain: source === 'uw' ? levels : null,
       uw: uwLevels,
     });
 
@@ -77,8 +79,27 @@ export async function GET(req: NextRequest) {
       chainWindow: window,
       uw: uwLevels,
       uwDetail,
+      /* Tên trên dây là 'uwchain', KHÔNG phải 'uw'. `GexLevelsResponse`
+         đã chiếm chữ 'uw' cho đường LÙI bốn-mức (`gex-levels`), và
+         `isUwLevels()` bên GexChart phân biệt đúng bằng chữ đó — dùng lại
+         'uw' ở đây là biểu đồ đọc một chuỗi ĐẦY ĐỦ thành bốn con số và vẽ
+         nhầm màn hình. Hai hình dạng khác nhau không được chung một nhãn. */
+      ...(source === 'uw'
+        ? {
+            source: 'uwchain',
+            uwAsOf: uwAsOf ?? null,
+            uwDiag,
+            schwabDetail: clip(schwabDetail ?? ''),
+          }
+        : {}),
       ...(source === 'cboe'
-        ? { source: 'cboe', cboeAsOf: cboeAsOf ?? null, cboeSymbol, schwabDetail: clip(schwabDetail ?? '') }
+        ? {
+            source: 'cboe',
+            cboeAsOf: cboeAsOf ?? null,
+            cboeSymbol,
+            schwabDetail: clip(schwabDetail ?? ''),
+            uwChainDetail: clip(chainUwDetail ?? ''),
+          }
         : {}),
     });
   }

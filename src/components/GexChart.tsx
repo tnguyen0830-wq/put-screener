@@ -22,11 +22,24 @@ type SchwabGex = GexProfile & {
   uw?: GexUwLevels | null;
   uwDetail?: string;
   /** 'cboe' khi chuỗi lấy từ feed công khai trễ 15 phút của CBOE thay vì
-   *  Schwab (lib/cboe.ts) - cùng công thức, khác nguồn. Vắng mặt = Schwab. */
-  source?: 'cboe';
+   *  Schwab (lib/cboe.ts) - cùng công thức, khác nguồn. 'uwchain' khi lấy
+   *  từ chuỗi THỜI GIAN THỰC của Unusual Whales (lib/uwchain.ts). Vắng mặt
+   *  = Schwab.
+   *
+   *  'uwchain' chứ không phải 'uw': chữ 'uw' đã thuộc về `GexLevelsResponse`
+   *  (đường lùi bốn mức), và `isUwLevels()` ngay bên dưới phân biệt bằng
+   *  đúng chữ đó — hai hình dạng khác nhau mà chung một nhãn thì biểu đồ vẽ
+   *  nhầm màn hình. */
+  source?: 'cboe' | 'uwchain';
   cboeAsOf?: string | null;
   cboeSymbol?: string;
-  /** Chỉ khi source = 'cboe': vì sao Schwab không dùng được. */
+  /** Chỉ khi source = 'uwchain': dấu thời gian mới nhất trên tape UW, và
+   *  một dòng đếm kỳ/hợp đồng thực sự lấy được. */
+  uwAsOf?: string | null;
+  uwDiag?: string;
+  /** Chỉ khi source = 'cboe': vì sao chuỗi UW cũng không dùng được. */
+  uwChainDetail?: string;
+  /** Chỉ khi source != Schwab: vì sao Schwab không dùng được. */
   schwabDetail?: string;
 };
 
@@ -38,8 +51,11 @@ type GexResponse = SchwabGex | GexLevelsResponse | GexCacheResponse;
  *  bậc "đĩa" của riêng nó. */
 const lastGood = new Map<string, { data: GexResponse; at: number }>();
 
+/* Đòi CẢ `levels` chứ không chỉ nhãn nguồn. Nhãn một mình từng là đủ, cho
+   tới khi chuỗi UW xuất hiện và suýt dùng lại chữ 'uw' — phép kiểm theo
+   HÌNH DẠNG thì một lần đặt nhãn trùng cũng không vẽ nhầm được màn hình. */
 const isUwLevels = (d: GexResponse): d is GexLevelsResponse =>
-  (d as GexLevelsResponse).source === 'uw';
+  (d as GexLevelsResponse).source === 'uw' && 'levels' in d;
 
 const isCached = (d: GexResponse): d is GexCacheResponse =>
   (d as GexCacheResponse).source === 'cache';
@@ -712,12 +728,25 @@ export default function GexChart({
           mọi thứ khác. Cùng công thức nên biểu đồ trông y hệt - và đó chính
           là lý do phải nói: trễ 15 phút, greeks của CBOE, và đây là đường
           vòng vì Schwab trả chuỗi rỗng ruột cho mã này. */}
+      {data.source === 'uwchain' && (
+        <>
+          <p className="cap">
+            {t('gex.uwChainSource', { asOf: data.uwAsOf ?? '—', diag: data.uwDiag ?? '' })}
+          </p>
+          {data.schwabDetail && <p className="cap">{t('gex.cboeWhy', data.schwabDetail)}</p>}
+        </>
+      )}
       {data.source === 'cboe' && (
         <>
           <p className="cap">
             {t('gex.cboeSource', { asOf: data.cboeAsOf ?? '—', file: data.cboeSymbol ?? '' })}
           </p>
           {data.schwabDetail && <p className="cap">{t('gex.cboeWhy', data.schwabDetail)}</p>}
+          {/* Tới được CBOE nghĩa là chuỗi UW cũng đã hỏng — nói ra, vì đó
+              là thứ giải thích vì sao màn hình trễ 15 phút thay vì sống. */}
+          {data.uwChainDetail && (
+            <p className="cap">{t('gex.uwChainFailed', data.uwChainDetail)}</p>
+          )}
         </>
       )}
 
@@ -725,7 +754,13 @@ export default function GexChart({
         schwab={data}
         uw={data.uw ?? null}
         uwDetail={data.uwDetail}
-        leftLabel={data.source === 'cboe' ? t('gex.srcCboe') : undefined}
+        leftLabel={
+          data.source === 'cboe'
+            ? t('gex.srcCboe')
+            : data.source === 'uwchain'
+              ? t('gex.srcUwChain')
+              : undefined
+        }
         t={t}
       />
 

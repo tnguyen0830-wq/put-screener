@@ -61,10 +61,16 @@ export function gexFacts(g: any, gexError?: string | null): string[] {
   }
 
   // Schwab or CBOE: full profile with per-strike data.
+  /* Nguồn phải nói ĐÚNG độ tươi, vì mô hình sẽ diễn giải khác hẳn giữa một
+     chuỗi sống và một chuỗi trễ 15 phút — và nói "Schwab, live" cho một
+     chuỗi CBOE là đưa cho nó một tiền đề sai. */
   const src =
     g.source === 'cboe'
       ? `CBOE public feed, 15-min delayed${g.cboeAsOf ? `, CBOE timestamp ${g.cboeAsOf}` : ''}`
-      : 'Schwab option chain, live';
+      : g.source === 'uwchain'
+        ? `Unusual Whales option chain, live${g.uwAsOf ? `, last trade ${g.uwAsOf}` : ''}` +
+          `${g.uwDiag ? ` (${g.uwDiag})` : ''}`
+        : 'Schwab option chain, live';
   const spot = typeof g.spot === 'number' ? g.spot : null;
   const rel = (level: unknown) =>
     typeof level === 'number' && spot
