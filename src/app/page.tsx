@@ -24,6 +24,7 @@ import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
 import DaytradePanel from '@/components/DaytradePanel';
 import MmExposurePanel from '@/components/MmExposurePanel';
+import LiveFlowPanel from '@/components/LiveFlowPanel';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import { TABS, type Tab } from '@/lib/tabs';
@@ -430,6 +431,12 @@ export default function Page() {
           >
             {t('tab.mmexposure')}
           </button>
+          <button
+            className={tab === 'liveflow' ? 'on' : undefined}
+            onClick={() => setTab('liveflow')}
+          >
+            {t('tab.liveflow')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -530,6 +537,10 @@ export default function Page() {
       ) : tab === 'mmexposure' ? (
         <div className="shell solo">
           <MmExposurePanel />
+        </div>
+      ) : tab === 'liveflow' ? (
+        <div className="shell solo">
+          <LiveFlowPanel />
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">

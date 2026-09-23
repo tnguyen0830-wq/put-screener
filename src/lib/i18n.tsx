@@ -41,6 +41,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   /* Nhãn tab giữ nguyên tiếng Anh ở cả hai ngôn ngữ, đúng luật #189. */
   'tab.daytrade': { vi: 'Daytrade', en: 'Daytrade' },
   'tab.mmexposure': { vi: 'MM Exposure', en: 'MM Exposure' },
+  'tab.liveflow': { vi: 'Live Flow', en: 'Live Flow' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
 
   /* ---- Tab Daytrade (lib/daytrade.ts, lib/zerodte.ts) ---- */
@@ -2902,6 +2903,75 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
 
   /* ---- Options Flow (Unusual Whales) ---- */
+  'lf.notConfigured': {
+    vi: 'Chưa có UW_API_KEY nên Live Flow tắt — tab này đọc luồng alert quyền chọn của Unusual Whales.',
+    en: 'No UW_API_KEY, so Live Flow is off — this tab reads the Unusual Whales options alert feed.',
+  },
+  'lf.intro': {
+    vi: 'Lệnh quyền chọn đáng chú ý toàn thị trường từ Unusual Whales, mới nhất ở trên, tự làm mới vài giây một lần. Đây là ALERT UW đã lọc sẵn (một dòng có thể gộp nhiều lệnh khớp), không phải băng từng lệnh khớp như màn Live Flow của UW — thứ đó cần luồng WebSocket, chưa đo trên tài khoản này.',
+    en: 'Notable options orders across the whole market from Unusual Whales, newest first, refreshing every few seconds. These are UW-filtered ALERTS (one row may bundle several fills), not the per-fill tape of UW’s own Live Flow screen — that needs the WebSocket feed, unmeasured on this account.',
+  },
+  'lf.live': { vi: 'Live', en: 'Live' },
+  'lf.pause': { vi: 'Tạm dừng', en: 'Pause' },
+  'lf.paused': { vi: 'Đã tạm dừng', en: 'Paused' },
+  'lf.closedShort': { vi: 'Sàn đóng', en: 'Market closed' },
+  'lf.closed': {
+    vi: 'Sàn đang đóng — đang hiện alert của phiên gần nhất, làm mới 10 phút một lần.',
+    en: 'Market is closed — showing alerts from the latest session, refreshed every 10 minutes.',
+  },
+  'lf.tickerPh': { vi: 'Lọc mã, ví dụ SPY, META', en: 'Filter tickers, e.g. SPY, META' },
+  'lf.side': { vi: 'Phía', en: 'Side' },
+  'lf.sideOn': { vi: 'Chỉ giữ các phía đang sáng.', en: 'Keeping only the lit sides.' },
+  'lf.sideOff': { vi: 'Chưa bấm nút nào = hiện mọi phía.', en: 'Nothing pressed = every side shown.' },
+  'lf.type': { vi: 'Loại', en: 'Type' },
+  'lf.typeOn': { vi: 'Chỉ giữ loại đang sáng.', en: 'Keeping only the lit type.' },
+  'lf.typeOff': { vi: 'Chưa bấm = cả call lẫn put.', en: 'Nothing pressed = calls and puts.' },
+  'lf.minPrem': { vi: 'Premium tối thiểu', en: 'Minimum premium' },
+  'lf.minAll': { vi: 'Tất cả', en: 'All' },
+  'lf.side.ask': { vi: 'Ask', en: 'Ask' },
+  'lf.side.bid': { vi: 'Bid', en: 'Bid' },
+  'lf.side.mid': { vi: 'Mid', en: 'Mid' },
+  'lf.side.mixed': { vi: 'Lẫn', en: 'Mixed' },
+  'lf.side.unknown': { vi: 'Không rõ', en: 'Unknown' },
+  'lf.caveat': {
+    vi: 'Phía ASK không có nghĩa là lạc quan, BID không có nghĩa là bi quan: một lệnh call khớp ở ask có thể là người ta đóng vị thế bán call. Phía chỉ nói giá khớp nằm gần bên nào của spread.',
+    en: 'ASK does not mean bullish and BID does not mean bearish: a call filled at the ask can be someone closing a short call. Side only says which edge of the spread the fill sat near.',
+  },
+  'lf.sidePremium': {
+    vi: 'Phía ở đây app SUY từ premium phía ask/bid của alert (≥ 60% một bên mới gọi tên bên đó, còn lại là "Lẫn") — UW không ghi phía cho từng alert.',
+    en: 'Side here is DERIVED by the app from the alert’s ask/bid-side premium (≥ 60% on one side to name it, otherwise "Mixed") — UW does not label a side per alert.',
+  },
+  'lf.noSide': {
+    vi: 'Bản ghi UW không mang trường phía nào app đọc được, nên cột Phía là "?". Khoá thật của bản ghi:',
+    en: 'The UW records carry no side field this app can read, so the Side column shows "?". Real record keys:',
+  },
+  'lf.unparsed': {
+    vi: (n: number) => `${n} bản ghi bị bỏ vì thiếu id hoặc thời điểm. Khoá thật:`,
+    en: (n: number) => `${n} records dropped for lacking an id or a timestamp. Real keys:`,
+  },
+  'lf.pageFull': {
+    vi: (n: number) => `Lượt vừa rồi về đúng ${n} alert (trần mỗi lượt) — giữa hai lượt có thể đã có alert cũ hơn không kịp lấy.`,
+    en: (n: number) => `The last fetch returned exactly ${n} alerts (the per-fetch cap) — older alerts between two fetches may have been missed.`,
+  },
+  'lf.fetchErr': { vi: (e: string) => `Không tải được: ${e}`, en: (e: string) => `Could not load: ${e}` },
+  'lf.uwErr': { vi: (e: string) => `Unusual Whales từ chối: ${e}`, en: (e: string) => `Unusual Whales refused: ${e}` },
+  'lf.keptOld': { vi: 'Đang giữ bảng của lượt trước, thử lại sau 30 giây.', en: 'Keeping the previous table, retrying in 30 seconds.' },
+  'lf.count': {
+    vi: (v: any) => `Đang hiện ${v.shown}/${v.total} dòng`,
+    en: (v: any) => `Showing ${v.shown}/${v.total} rows`,
+  },
+  'lf.empty': { vi: 'Chưa có alert nào.', en: 'No alerts yet.' },
+  'lf.emptyErr': { vi: 'Chưa có dòng nào vì lượt gọi UW hỏng — xem lỗi ở trên.', en: 'No rows because the UW call failed — see the error above.' },
+  'lf.emptyFiltered': { vi: 'Có dữ liệu, nhưng bộ lọc đang loại hết.', en: 'There is data, but the filters remove all of it.' },
+  'lf.outside': { vi: 'Giá khớp nằm NGOÀI spread bid-ask.', en: 'The fill sits OUTSIDE the bid-ask spread.' },
+  'lf.col.time': { vi: 'Giờ (ET)', en: 'Time (ET)' },
+  'lf.col.ticker': { vi: 'Mã', en: 'Ticker' },
+  'lf.col.side': { vi: 'Phía', en: 'Side' },
+  'lf.col.expiry': { vi: 'Đáo hạn', en: 'Expiry' },
+  'lf.col.spot': { vi: 'Giá CP', en: 'Stock' },
+  'lf.col.fill': { vi: 'Giá khớp', en: 'Fill' },
+  'lf.col.fillSpread': { vi: 'Khớp trong spread', en: 'Fill vs spread' },
+  'lf.col.flags': { vi: 'Đặc điểm', en: 'Flags' },
   'of.title': { vi: 'Options Flow', en: 'Options Flow' },
   'of.intro': {
     vi: 'Lệnh quyền chọn khối lượng lớn/bất thường mà Unusual Whales tự lọc thành đáng chú ý (sweep, lệnh sàn, lặp lại nhiều lần) - không phải mọi lệnh quyền chọn thô. Tín hiệu ngắn hạn, chỉ giữ lại 14 ngày gần nhất vì một lệnh bất thường từ tuần trước không còn liên quan tới quyết định hôm nay.',

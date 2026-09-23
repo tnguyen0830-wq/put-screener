@@ -4635,3 +4635,132 @@ body {
 .mmwin {
   margin-left: 4px;
 }
+
+/* ── Live Flow ────────────────────────────────────────────────────────────
+   Phía dùng --stamp (ask) / --warn (bid), CỐ Ý KHÔNG dùng --credit/--risk:
+   phía nói giá khớp nằm gần mép nào của spread, không nói lạc quan hay bi
+   quan — tô xanh/đỏ là mời đúng cách đọc sai mà chú giải cảnh báo. Call/put
+   là PHÂN LOẠI nên dùng lại --gexcall/--gexput như Options Flow. Chỉ dùng
+   biến sẵn có, nên không đụng bẫy ba khối theme. */
+.panel-head.lfhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lfstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+.lfdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+}
+.lfstatus.on { color: var(--credit); }
+.lfstatus.on .lfdot {
+  background: var(--credit);
+  animation: lfpulse 1.6s ease-in-out infinite;
+}
+@keyframes lfpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.lftools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0;
+}
+.segmented.lfplay {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  width: auto;
+}
+.lfticker {
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 320px;
+  /* Cùng kiểu ô nhập mã của Daytrade / MM Exposure (`.dtadd input`), để hai
+     ô làm cùng một việc trông như một. */
+  font: 600 13px/1 var(--data);
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+}
+.lfticker:focus {
+  border-color: var(--stamp);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stamp) 18%, transparent);
+  outline: none;
+}
+/* Mười sáu cột số liền nhau: không có đệm ngang thì tiêu đề dính thành một
+   chuỗi ("Mã Phía Strike"), đúng lỗi bảng so tường của #216. */
+.pftable.lftable th,
+.pftable.lftable td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.lfkeys code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.pftable.lftable td { font-variant-numeric: tabular-nums; }
+.lftable .lftime { white-space: nowrap; }
+.lftable .lfday { color: var(--muted); }
+.lftable .lftk { font-weight: 700; color: var(--ticker); }
+.lftable .lfside { font-weight: 700; }
+.lfside-ask { color: var(--stamp); }
+.lfside-bid { color: var(--warn); }
+.lfside-mid { color: var(--label); }
+.lfside-mixed,
+.lfside-unknown { color: var(--muted); }
+.lftype-call { color: var(--gexcall); }
+.lftype-put { color: var(--gexput); }
+.lftype-other { color: var(--muted); }
+.lftable .lfprem { font-weight: 700; }
+.lftable .lfflags {
+  color: var(--muted);
+  font-size: 12px;
+}
+.lfspread {
+  position: relative;
+  display: inline-block;
+  width: 84px;
+  height: 10px;
+  vertical-align: middle;
+}
+.lfspread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 2px;
+  background: var(--rule);
+}
+.lfspread i {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 10px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+.lfspread.out i { background: var(--risk); }
+.lftable tr.lfnew td { animation: lfflash 2.4s ease-out; }
+@keyframes lfflash {
+  0% { background: var(--stamp-tint); }
+  100% { background: transparent; }
+}
