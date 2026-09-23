@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { readJsonOrText } from '@/lib/fetchjson';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 /* Cả hai file đều THUẦN (không `node:fs`), nên một client component
    import thẳng được — và phải import thay vì chép, vì bản chép thứ hai
@@ -187,7 +188,9 @@ export default function DaytradePanel() {
           `/api/daytrade?symbols=${encodeURIComponent(syms.join(','))}&or=${or}`,
           { cache: 'no-store' }
         );
-        const j = await r.json();
+        const body = await readJsonOrText(r);
+        if (!body.ok) { setErr(t('dt.failed', body.summary)); return; }
+        const j = body.json;
         if (!r.ok) {
           /* Phiên Schwab hết hạn cần bấm kết nối lại — câu khác hẳn "thử
              lại", nên khoá i18n khác. */
@@ -226,7 +229,9 @@ export default function DaytradePanel() {
       setZerr(null);
       try {
         const r = await fetch(`/api/daytrade/zerodte?symbol=${encodeURIComponent(s)}`, { cache: 'no-store' });
-        const j = await r.json();
+        const body = await readJsonOrText(r);
+        if (!body.ok) { setZerr(t('dt.failed', body.summary)); return; }
+        const j = body.json;
         if (!r.ok) {
           setZerr(j?.error === 'REAUTH_REQUIRED' ? t('dt.reauth') : t('dt.failed', j?.detail ?? r.status));
           return;

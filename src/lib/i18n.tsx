@@ -42,12 +42,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
 
   /* ---- Tab Daytrade (lib/daytrade.ts, lib/zerodte.ts) ---- */
-  'dt.title': { vi: 'Giao dịch trong ngày', en: 'Intraday trading' },
+  'dt.title': { vi: 'Intraday trading', en: 'Intraday trading' },
   'dt.subStocks': { vi: 'Cổ phiếu', en: 'Stocks' },
   'dt.subZero': { vi: '0DTE', en: '0DTE' },
 
   // ---- Tab MM Exposure: phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales) ----
-  'mm.title': { vi: 'Phơi nhiễm nhà tạo lập', en: 'Market maker exposure' },
+  'mm.title': { vi: 'Market maker exposure', en: 'Market maker exposure' },
   'mm.intro': {
     vi: 'Ba biểu đồ theo bố cục Unusual Whales, nhưng mọi con số do app TỰ TÍNH từ chuỗi quyền chọn của chính tài khoản — gamma và delta không phải dữ liệu độc quyền, chúng là số học trên greek và open interest mà Schwab (hoặc CBOE) đã trả. Một lượt gọi lấy đủ cả ba.',
     en: 'Three charts laid out like Unusual Whales, but every number is computed HERE from the account\u2019s own option chain — gamma and delta are not proprietary data, they are arithmetic on the greeks and open interest the chain already returns. One request feeds all three.',
@@ -81,7 +81,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chuỗi không có strike nào dựng được bảng — đọc khối chẩn đoán bên dưới.',
     en: 'The chain yielded no usable strikes — read the diagnosis block below.',
   },
-  'mm.p1Title': { vi: (s: string) => `1 · Phơi nhiễm nhà tạo lập — ${s}`, en: (s: string) => `1 · Market maker exposure — ${s}` },
+  'mm.p1Title': { vi: (s: string) => `1 · Market maker exposure — ${s}`, en: (s: string) => `1 · Market maker exposure — ${s}` },
   'mm.window': { vi: (p: string) => `±${p}%`, en: (p: string) => `±${p}%` },
   'mm.p1Note': {
     vi: (pct: string) =>
@@ -99,7 +99,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (why: string) =>
       `No candles for this symbol, so the panel draws the gamma half only. The real reason: ${why}. The bars are still correct — they come from the option chain, not from price history.`,
   },
-  'mm.p2Title': { vi: '2 · Gamma theo strike — hai cơ sở', en: '2 · Gamma by strike — two bases' },
+  'mm.p2Title': { vi: '2 · Gamma by strike — two bases', en: '2 · Gamma by strike — two bases' },
   'mm.p2Note': {
     vi: 'Cùng một phép tính trên hai cơ sở khác nhau: OPEN INTEREST là vị thế đang tồn tại, KHỐI LƯỢNG là giao dịch của riêng hôm nay. Hai cột chênh nhau nhiều nghĩa là dòng tiền hôm nay đang đi ngược vị thế cũ. Một hợp đồng có OI mà hôm nay chưa ai giao dịch đóng góp 0 vào cột khối lượng — nó KHÔNG bị loại khỏi bảng.',
     en: 'One calculation on two different bases: OPEN INTEREST is positions that already exist, VOLUME is only today\u2019s trading. A large gap between the two bars means today\u2019s flow is running against the standing position. A contract with open interest but no trades today contributes 0 to the volume bar — it is NOT dropped from the table.',
@@ -108,7 +108,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'mm.basisOi': { vi: 'Theo open interest', en: 'By open interest' },
   'mm.basisVolume': { vi: 'Theo khối lượng hôm nay', en: 'By today\u2019s volume' },
   'mm.spot': { vi: (s: string) => `Giá ${s}`, en: (s: string) => `Spot ${s}` },
-  'mm.p3Title': { vi: '3 · Delta theo strike và kỳ đáo hạn', en: '3 · Delta by strike and expiration' },
+  'mm.p3Title': { vi: '3 · Delta by strike and expiration', en: '3 · Delta by strike and expiration' },
   'mm.p3Note': {
     vi: 'Delta tính trên OPEN INTEREST, KHÔNG quy ước theo phía nhà tạo lập: put mang dấu âm sẵn nên nằm bên trái, call bên phải, và cột ròng là tổng hai bên. Đổi dấu theo quy ước dealer sẽ lật NGƯỢC biểu đồ mà trông vẫn hoàn toàn bình thường.',
     en: 'Delta on OPEN INTEREST, NOT dealer-signed: puts already carry a negative delta so they sit on the left, calls on the right, and the net bar is their sum. Applying the dealer convention would flip the chart while it still looked perfectly normal.',
@@ -201,7 +201,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `needs ≥3 baseline sessions (only ${n})`,
   },
   'dt.chartFor': {
-    vi: (v: { s: string; d: string }) => `${v.s} — phiên ${v.d}`,
+    vi: (v: { s: string; d: string }) => `${v.s} — session ${v.d}`,
     en: (v: { s: string; d: string }) => `${v.s} — session ${v.d}`,
   },
   'dt.chartEmpty': { vi: 'Chưa có nến nào để vẽ.', en: 'No bars to draw yet.' },
@@ -349,7 +349,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'dt.diagAttempts': { vi: (s: string) => `Đã thử: ${s}`, en: (s: string) => `Attempted: ${s}` },
 
   /* ---- Tab Learn: chỉ NHÃN GIAO DIỆN; nội dung bài ở lib/learn/* ---- */
-  'learn.title': { vi: 'Học đọc thị trường', en: 'Learn to read the market' },
+  'learn.title': { vi: 'Learn to read the market', en: 'Learn to read the market' },
   'learn.mode.lessons': { vi: 'Bài học', en: 'Lessons' },
   'learn.mode.reference': { vi: 'Tra cứu nhanh', en: 'Quick reference' },
   'learn.ref.intro': {
@@ -382,9 +382,9 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'learn.sec.gex': { vi: 'GEX & bề rộng TT', en: 'GEX & internals' },
   'learn.sec.flow': { vi: 'Flow · Dark pool · Insider', en: 'Flow · Dark pool · Insiders' },
   'learn.sec.putselling': { vi: 'Bán put có bảo đảm', en: 'Cash-secured puts' },
-  'learn.traps': { vi: 'Bẫy thường gặp', en: 'Common traps' },
+  'learn.traps': { vi: 'Common traps', en: 'Common traps' },
   'learn.seeIn': { vi: 'Xem thật:', en: 'See it live:' },
-  'learn.quiz.title': { vi: 'Ôn tập', en: 'Quiz' },
+  'learn.quiz.title': { vi: 'Quiz', en: 'Quiz' },
   'learn.quiz.grade': { vi: 'Chấm điểm', en: 'Grade' },
   'learn.quiz.retry': { vi: 'Làm lại', en: 'Try again' },
   'learn.quiz.answerAll': { vi: 'Trả lời đủ các câu rồi bấm Chấm điểm.', en: 'Answer every question, then press Grade.' },
@@ -407,7 +407,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Điểm lưu theo tài khoản, phía server — mở ở máy khác vẫn thấy. Chỉ giữ điểm cao nhất và số lần làm, không lưu câu trả lời.',
     en: 'Scores are stored per account on the server, so another device sees them too. Only the best score and the attempt count are kept, never the answers.',
   },
-  'learn.ask.title': { vi: 'Hỏi Claude về bài này', en: 'Ask Claude about this lesson' },
+  'learn.ask.title': { vi: 'Ask Claude about this lesson', en: 'Ask Claude about this lesson' },
   'learn.ask.hint': {
     vi: 'Claude chỉ thấy ĐÚNG bài này, không thấy giá hay dữ liệu sống — hỏi về khái niệm, không hỏi nên mua gì. Mỗi câu hỏi là một lượt gọi API trả tiền.',
     en: 'Claude sees ONLY this lesson, no prices or live data — ask about the concept, not what to buy. Each question is one paid API call.',
@@ -472,7 +472,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pat.nearR': { vi: 'Kháng cự', en: 'Resistance' },
   'pat.symbolPh': { vi: 'Mã bất kỳ, ví dụ AAPL', en: 'Any symbol, e.g. AAPL' },
   'pat.open': { vi: 'Mở biểu đồ', en: 'Open chart' },
-  'pat.chartTitle': { vi: (s: string) => `Nến ngày ${s}`, en: (s: string) => `${s} daily candles` },
+  'pat.chartTitle': { vi: (s: string) => `${s} daily candles`, en: (s: string) => `${s} daily candles` },
   'pat.chart.loading': { vi: 'Đang tải nến…', en: 'Loading candles…' },
   'pat.chart.noHistory': { vi: (s: string) => `Schwab không có lịch sử nến cho ${s}.`, en: (s: string) => `Schwab has no candle history for ${s}.` },
   'pat.chart.badSymbol': { vi: 'Mã không hợp lệ.', en: 'Invalid symbol.' },
@@ -521,7 +521,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pat.name.bear-flag': { vi: 'Cờ giảm', en: 'Bear flag' },
   'pat.name.breakout': { vi: 'Phá kháng cự', en: 'Breakout' },
   'pat.name.breakdown': { vi: 'Thủng hỗ trợ', en: 'Breakdown' },
-  'pat.read.title': { vi: 'Đọc mẫu hình này', en: 'Read these patterns' },
+  'pat.read.title': { vi: 'Read these patterns', en: 'Read these patterns' },
   'pat.read.run': { vi: 'Hỏi Claude', en: 'Ask Claude' },
   'pat.read.idle': {
     vi: 'Claude chỉ nhận danh sách mẫu và mức giá app đã tính ở trên — không nhận nến, không có tin tức — và chỉ diễn giải, không khuyến nghị. Mỗi lần bấm là một lượt gọi API trả tiền.',
@@ -675,7 +675,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Not affiliated with, endorsed by, or operated by Charles Schwab & Co., Inc. This page never asks for your Schwab credentials — Schwab sign-in happens on schwab.com.',
   },
   /* ---- Quản lý tài khoản (/accounts, chỉ chủ app) ---- */
-  'reset.title': { vi: 'Đặt lại mật khẩu bằng mã', en: 'Reset your password with a code' },
+  'reset.title': { vi: 'Reset your password with a code', en: 'Reset your password with a code' },
   'reset.intro': {
     vi: 'Xin chủ app một mã đặt lại (họ bấm “Tạo mã đặt lại” trong Quản lý tài khoản). Mã sống 30 phút và chỉ dùng được một lần.',
     en: 'Ask the app owner for a reset code (they press "Create reset code" in Manage accounts). A code lasts 30 minutes and works once.',
@@ -715,13 +715,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (s: number) => `Thử sai quá nhiều lần. Chờ ${Math.ceil(s / 60)} phút rồi thử lại.`,
     en: (s: number) => `Too many attempts. Wait ${Math.ceil(s / 60)} minutes and try again.`,
   },
-  'acct.title': { vi: 'Tài khoản gia đình', en: 'Family accounts' },
+  'acct.title': { vi: 'Family accounts', en: 'Family accounts' },
   'acct.open': { vi: 'Quản lý tài khoản', en: 'Manage accounts' },
   'acct.intro': {
     vi: 'Mỗi người nhà một tên đăng nhập và mật khẩu riêng. Họ dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade và có watchlist riêng — nhưng không thấy My Portfolio, P/L đã chốt, cảnh báo, và không kết nối Schwab được. Mật khẩu lưu dưới dạng đã băm, không ai đọc lại được, kể cả bạn.',
     en: 'Each family member gets their own username and password. They can use Sell Put Screener, Analyze, Heatmap and Insider Trade, and keep their own watchlist — but not My Portfolio, realized P/L or alerts, and they cannot connect Schwab. Passwords are stored hashed; nobody can read them back, including you.',
   },
-  'acct.listTitle': { vi: 'Đang có', en: 'Existing accounts' },
+  'acct.listTitle': { vi: 'Existing accounts', en: 'Existing accounts' },
   'acct.loading': { vi: 'Đang tải…', en: 'Loading…' },
   'acct.empty': {
     vi: 'Chưa có tài khoản nào cho người nhà. Thêm ở dưới.',
@@ -738,7 +738,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'acct.deleteBtn': { vi: 'Xoá', en: 'Delete' },
   'acct.codeBtn': { vi: 'Tạo mã đặt lại', en: 'Create reset code' },
   'acct.codeTitle': {
-    vi: (name: string) => `Mã đặt lại cho “${name}”`,
+    vi: (name: string) => `Reset code for "${name}"`,
     en: (name: string) => `Reset code for "${name}"`,
   },
   'acct.codeShown': {
@@ -766,17 +766,17 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (name: string) => `Cancelled the reset code for "${name}".`,
   },
   /* ---- Hoạt động của người nhà (#193) ---- */
-  'acct.actTitle': { vi: 'Hoạt động', en: 'Activity' },
+  'acct.actTitle': { vi: 'Activity', en: 'Activity' },
   'acct.actIntro': {
     vi: 'Ai đang mở app, và đã dùng những gì. Chỉ bạn đọc được trang này. Nhật ký ghi ở máy chủ khi việc thật sự xảy ra — không phải do trình duyệt tự khai — và giữ 14 ngày.',
     en: 'Who is in the app right now, and what they have used. Only you can read this page. The log is written on the server when the work actually happens — not self-reported by the browser — and kept for 14 days.',
   },
-  'acct.actOnline': { vi: 'Đang mở app', en: 'In the app now' },
+  'acct.actOnline': { vi: 'In the app now', en: 'In the app now' },
   'acct.actNobody': {
     vi: 'Không ai gửi nhịp báo trong 5 phút qua. Cửa sổ để ở nền cũng tính là đã rời đi — app chỉ báo khi tab đang hiện.',
     en: 'Nobody has checked in for 5 minutes. A window left in the background counts as away — the app only reports while its tab is visible.',
   },
-  'acct.actRecent': { vi: 'Đã dùng gần đây', en: 'Recently used' },
+  'acct.actRecent': { vi: 'Recently used', en: 'Recently used' },
   'acct.actEmpty': {
     vi: 'Chưa ghi được hoạt động nào. Nhật ký bắt đầu từ lần deploy này — việc làm trước đó không có ở đây.',
     en: 'No activity recorded yet. The log starts at this deploy — anything done before it is not here.',
@@ -837,13 +837,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   'acct.resetTitle': {
-    vi: (n: string) => `Đặt mật khẩu mới cho ${n}`,
+    vi: (n: string) => `Set a new password for ${n}`,
     en: (n: string) => `Set a new password for ${n}`,
   },
   'acct.newPassword': { vi: 'Mật khẩu mới (ít nhất 8 ký tự)', en: 'New password (8 characters minimum)' },
   'acct.save': { vi: 'Lưu', en: 'Save' },
   'acct.cancel': { vi: 'Huỷ', en: 'Cancel' },
-  'acct.addTitle': { vi: 'Thêm người', en: 'Add someone' },
+  'acct.addTitle': { vi: 'Add someone', en: 'Add someone' },
   'acct.name': { vi: 'Tên đăng nhập', en: 'Username' },
   'acct.namePlaceholder': { vi: 'chữ thường, ví dụ: vo, con', en: 'lowercase, e.g. wife, son' },
   'acct.password': { vi: 'Mật khẩu (ít nhất 8 ký tự)', en: 'Password (8 characters minimum)' },
@@ -904,7 +904,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // which is language-neutral and tells the truth when a fallback was used.
 
   // ---- filter panel ----
-  'filters.head': { vi: 'Tiêu chí lọc', en: 'Filters' },
+  'filters.head': { vi: 'Filters', en: 'Filters' },
   'filters.scope': { vi: 'Phạm vi quét', en: 'Scan universe' },
   'filters.sp500': { vi: 'Cả S&P 500', en: 'All of S&P 500' },
   'filters.watchlist': { vi: 'Watchlist', en: 'Watchlist' },
@@ -1052,7 +1052,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Adjust the filters on the left, then hit Scan. Results appear ticker by ticker.',
   },
   'res.count': {
-    vi: (n: number) => `${n} cơ hội`,
+    vi: (n: number) => `${n} opportunities`,
     en: (n: number) => `${n} opportunities`,
   },
 
@@ -1241,7 +1241,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   /* ---- AI Trade Briefing (trong khung GEX) ---- */
-  'tb.title': { vi: 'Phân tích giao dịch AI', en: 'AI Trade Briefing' },
+  'tb.title': { vi: 'AI Trade Briefing', en: 'AI Trade Briefing' },
   'tb.run': { vi: 'Phân tích AI', en: 'Run AI analysis' },
   'tb.rerun': { vi: 'Phân tích lại', en: 'Run again' },
   'tb.running': { vi: 'Đang tính toán…', en: 'Computing…' },
@@ -1258,8 +1258,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tb.regime': { vi: 'Chế độ GEX', en: 'GEX regime' },
   'tb.regimePositive': { vi: 'DƯƠNG — dealer hãm biến động', en: 'POSITIVE — dealers dampen moves' },
   'tb.regimeNegative': { vi: 'ÂM — dealer khuếch đại biến động', en: 'NEGATIVE — dealers amplify moves' },
-  'tb.horizonShort': { vi: 'Ngắn hạn', en: 'Short term' },
-  'tb.horizonMedium': { vi: 'Trung hạn', en: 'Medium term' },
+  'tb.horizonShort': { vi: 'Short term', en: 'Short term' },
+  'tb.horizonMedium': { vi: 'Medium term', en: 'Medium term' },
   'tb.nextExp': {
     vi: (v: any) => `Đáo hạn: ${v.exp}, còn ${v.dte} ngày`,
     en: (v: any) => `Expiration: ${v.exp}, ${v.dte} DTE`,
@@ -1280,7 +1280,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
   /* ---- SPX Market Maker Exposure (tab Heatmap) ---- */
   'gexmm.title': {
-    vi: (sym: string) => `Gamma nhà tạo lập thị trường — ${sym}`,
+    vi: (sym: string) => `Market Maker Exposure — ${sym}`,
     en: (sym: string) => `Market Maker Exposure — ${sym}`,
   },
   /* Câu này mô tả cả CÁI THANG, nên nó phải đổi khi thang đổi. Bản cũ nói
@@ -1326,7 +1326,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No earnings dates exist for this symbol, so the gate could not judge it — which is NOT the same as "checked, and no earnings in the window". The earnings calendar is only built for watchlist symbols.',
   },
   'dd.gates': { vi: 'Hard gates', en: 'Hard gates' },
-  'dd.scoreHead': { vi: 'Điểm số chi tiết', en: 'Score breakdown' },
+  'dd.scoreHead': { vi: 'Score breakdown', en: 'Score breakdown' },
   'dd.scoreYield': { vi: 'Lợi suất quy năm', en: 'Annualized yield' },
   'dd.scoreCushion': { vi: 'Đệm giá', en: 'Cushion' },
   'dd.scoreRichness': { vi: 'IV/HV', en: 'IV/HV' },
@@ -1342,19 +1342,19 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (v: any) =>
       `If assigned, you buy 100 ${v.symbol} at an effective cost of ${v.be} — ${v.pct}% below the current price.`,
   },
-  'dd.chart': { vi: 'Biểu đồ', en: 'Chart' },
+  'dd.chart': { vi: 'Chart', en: 'Chart' },
   'dd.chartNote': {
     vi: (v: any) =>
       `Kẻ tay mức ${v.strike} (strike) và ${v.be} (break-even) lên chart để xem giá đã từng thủng vùng đó chưa.`,
     en: (v: any) =>
       `Draw ${v.strike} (strike) and ${v.be} (break-even) on the chart by hand to see whether price has cut through that zone before.`,
   },
-  'dd.technicals': { vi: 'Đánh giá kỹ thuật', en: 'Technical rating' },
+  'dd.technicals': { vi: 'Technical rating', en: 'Technical rating' },
   'dd.gexNote': {
     vi: 'Tính tại chỗ từ chuỗi quyền chọn Schwab: gamma × open interest cộng dồn theo từng strike, cửa sổ 60 ngày. Put wall là strike có gamma put lớn nhất — nơi dealer phải mua vào để hedge, nên thường hành xử như hỗ trợ. Đây là mô hình dựa trên giả định dealer long call / short put, không phải vị thế thật của họ.',
     en: 'Computed here from the Schwab option chain: gamma × open interest summed per strike over a 60-day window. The put wall is the strike with the largest put gamma — where dealers must buy to hedge, so it often behaves like support. This is a model built on the assumption that dealers are long calls and short puts, not their actual positioning.',
   },
-  'dd.external': { vi: 'Đối chiếu ngoài', en: 'Cross-check elsewhere' },
+  'dd.external': { vi: 'Cross-check elsewhere', en: 'Cross-check elsewhere' },
   'dd.fullChart': { vi: 'Mở chart đầy đủ ↗', en: 'Open the full chart ↗' },
 
   // ---- heatmap ----
@@ -1363,7 +1363,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.range1m': { vi: '1 tháng', en: '1 month' },
   'hm.loading': { vi: 'Đang tải bản đồ…', en: 'Loading the map…' },
   'hm.loadFailed': { vi: 'Không tải được bản đồ', en: 'Could not load the map' },
-  'hm.title': { vi: 'Bản đồ nhiệt', en: 'Heatmap' },
+  'hm.title': { vi: 'Heatmap', en: 'Heatmap' },
   /* Sub-tab labels: English in both languages, same rule as `tab.*` above. */
   'hm.subMap': { vi: 'Heatmap', en: 'Heatmap' },
   'hm.subFearGreed': { vi: 'Fear & Greed', en: 'Fear & Greed' },
@@ -1371,7 +1371,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.subGex': { vi: 'GEX', en: 'GEX' },
   'hm.subInternals': { vi: 'Internals', en: 'Internals' },
   'hm.head': {
-    vi: (v: any) => `Bản đồ S&P 500 · ${v.count} mã · ${v.source}`,
+    vi: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
     en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
   },
   'hm.areaIsCap': { vi: 'Diện tích ô = vốn hoá', en: 'Tile area = market cap' },
@@ -1421,7 +1421,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No sold puts or held shares found in your Schwab account.',
   },
 
-  'pf.cashHead': { vi: 'Tiền mặt', en: 'Cash' },
+  'pf.cashHead': { vi: 'Cash', en: 'Cash' },
   'pf.cash': { vi: 'Tiền mặt', en: 'Cash balance' },
   'pf.buyingPower': { vi: 'Sức mua', en: 'Buying power' },
   'pf.accountValue': { vi: 'Tổng giá trị TK', en: 'Account value' },
@@ -1506,7 +1506,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Bán 1 put là cam kết mua 100 cổ phiếu tại strike. Bốn giới hạn dưới đây trả lời cùng một câu hỏi: nếu bị assign, số tiền phải bỏ ra chiếm bao nhiêu phần trăm tài khoản. Theo mã (5%) - một mã sập không được phép làm hỏng tài khoản. Theo ngành (20%) - cả ngành cùng rớt là chuyện có thật. Tổng cash-secured (50%) - giữ lại một nửa để còn xoay xở. Cluster (30%) - đây là cái tinh tế nhất: bán put trên 10 mã công nghệ tương quan 0.9 với nhau thực chất là MỘT lệnh lớn, không phải mười lệnh nhỏ, và ba giới hạn trên không nhìn ra điều đó. Xanh là trong giới hạn, đỏ là đã vượt.',
     en: 'Selling one put commits you to buying 100 shares at the strike. All four limits below answer the same question: if assigned, what share of the account does that cost? Per symbol (5%) - one blow-up must not wreck the account. Per sector (20%) - whole sectors do fall together. Total cash-secured (50%) - keep half in reserve. Cluster (30%) - the subtle one: ten puts on tech names correlated 0.9 are really ONE large position, not ten small ones, and the first three limits cannot see that. Green is within limits, red is over.',
   },
-  'pf.sizingHead': { vi: 'Quản lý quy mô vị thế', en: 'Position sizing' },
+  'pf.sizingHead': { vi: 'Position sizing', en: 'Position sizing' },
   'pf.sizingFailed': {
     vi: 'Chưa tính được cluster exposure. Nguyên văn lỗi:',
     en: 'Could not compute cluster exposure. The raw error:',
@@ -1539,7 +1539,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- cảnh báo đẩy ----
-  'al.head': { vi: 'Thông báo về điện thoại', en: 'Phone alerts' },
+  'al.head': { vi: 'Phone alerts', en: 'Phone alerts' },
   'al.on': { vi: 'Đang bật', en: 'On' },
   'al.off': { vi: 'Chưa cấu hình', en: 'Not configured' },
   'al.notSubscribed': { vi: 'Chưa đăng ký trên máy này', en: 'Not subscribed on this device' },
@@ -1663,12 +1663,12 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Checks every 15 minutes during market hours. Each alert per symbol is sent at most once a day, so the inbox never floods. Daily P/L is deliberately NOT alerted - something that pings constantly is something you learn to ignore. On iPhone, browser push only works after "Add to Home Screen"; Telegram needs no such step.',
   },
 
-  'pf.calls': { vi: 'Call đã bán', en: 'Calls sold' },
+  'pf.calls': { vi: 'Calls sold', en: 'Calls sold' },
   'pf.callsNote': {
     vi: 'Ngược hẳn với put đã bán: put sợ giá RƠI xuống dưới strike (phải mua cổ phiếu), call sợ giá VỌT lên trên strike (bị gọi mất cổ phiếu ở giá strike). Nên cột "Cách strike" ở đây đo khoảng còn được tăng, không phải khoảng còn được giảm. Covered = cổ phiếu bạn đang giữ đủ bảo chứng, xấu nhất là bán mất ở giá strike. Naked = không đủ cổ phiếu, lỗ về lý thuyết không có giới hạn. Credit của call ĐƯỢC cộng vào "Credit đã nhận", nhưng cố ý KHÔNG cộng vào "Tiền thế chấp" - covered call khoá cổ phiếu chứ không khoá tiền, mà giá trị cổ phiếu đã nằm sẵn ở ô riêng rồi.',
     en: 'The mirror image of a sold put: a put fears price FALLING below the strike (you must buy), a call fears price RISING above it (your shares get called away at the strike). So "To strike" here measures the room left to rise, not to fall. Covered = your shares fully back the contracts, worst case is selling them at the strike. Naked = they do not, and the theoretical loss is unbounded. Call credit IS counted in "Credit received" but deliberately NOT in "Cash secured" - a covered call ties up shares, not cash, and those shares are already counted in their own tile.',
   },
-  'pf.longPuts': { vi: 'Put đã mua', en: 'Puts bought' },
+  'pf.longPuts': { vi: 'Puts bought', en: 'Puts bought' },
   'pf.longPutsNote': {
     vi: 'Đây là bảo hiểm, không phải nguồn thu: bạn đã TRẢ tiền chứ không nhận. Nên lời/lỗ tính ngược với put đã bán - giá trị bây giờ trừ đi số đã bỏ ra. Vào trong tiền ở đây là chuyện TỐT (bảo hiểm đang có giá trị thật), nên không tô đỏ. Cột "Cách strike" cho biết giá còn phải rơi bao nhiêu nữa thì bảo hiểm mới bắt đầu ăn tiền.',
     en: 'This is insurance, not income: you PAID for it rather than received. So P/L is the reverse of a sold put - what it is worth now minus what you paid. Being in the money here is GOOD (the insurance has real value), so it is not marked red. "To strike" shows how much further price must fall before the protection starts paying.',
@@ -1677,8 +1677,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pf.naked': { vi: ' · KHÔNG có cổ phiếu bảo chứng', en: ' · NOT covered by shares' },
   'pf.colToStrike': { vi: 'Cách strike', en: 'To strike' },
   'pf.colPaid': { vi: 'Đã trả', en: 'Paid' },
-  'pf.puts': { vi: 'Put đã bán', en: 'Puts sold' },
-  'pf.shares': { vi: 'Cổ phiếu đang giữ', en: 'Shares held' },
+  'pf.puts': { vi: 'Puts sold', en: 'Puts sold' },
+  'pf.shares': { vi: 'Shares held', en: 'Shares held' },
 
   'pf.colSymbol': { vi: 'Mã', en: 'Symbol' },
   'pf.colStrike': { vi: 'Strike', en: 'Strike' },
@@ -1845,10 +1845,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (n: number) => `phân vị P/E: còn thiếu ${n} lần đọc`,
     en: (n: number) => `P/E pctile: ${n} more readings needed`,
   },
-  'lt.gates': { vi: 'Cổng cứng', en: 'Hard gates' },
+  'lt.gates': { vi: 'Hard gates', en: 'Hard gates' },
   'lt.gateUnknown': { vi: 'chưa có dữ liệu', en: 'no data' },
-  'lt.scoreHead': { vi: 'Điểm số chi tiết', en: 'Score breakdown' },
-  'lt.supportHead': { vi: 'Vùng hỗ trợ', en: 'Support zone' },
+  'lt.scoreHead': { vi: 'Score breakdown', en: 'Score breakdown' },
+  'lt.supportHead': { vi: 'Support zone', en: 'Support zone' },
   'lt.zoneDetail': {
     vi: (v: any) => `Tâm vùng ${v.price} (dải ${v.low}–${v.high}). Đã chạm ${v.touches} lần, lần đầu ${v.first}, gần nhất ${v.last}.`,
     en: (v: any) => `Zone centre ${v.price} (band ${v.low}–${v.high}). Touched ${v.touches} times, first ${v.first}, most recently ${v.last}.`,
@@ -1867,7 +1867,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (n: number) => `Tìm được ${n} vùng hỗ trợ trong 3 năm (mỗi vùng phải có ít nhất 2 lần chạm; một đáy đơn độc không được tính là vùng).`,
     en: (n: number) => `${n} support zones found over 3 years (each needs at least 2 touches; a single low is never counted as a zone).`,
   },
-  'lt.faHead': { vi: 'Cơ bản (Finviz)', en: 'Fundamentals (Finviz)' },
+  'lt.faHead': { vi: 'Fundamentals (Finviz)', en: 'Fundamentals (Finviz)' },
   'lt.target': { vi: 'Giá mục tiêu', en: 'Analyst target' },
   'lt.targetNote': {
     vi: 'Giá mục tiêu được HIỆN nhưng cố ý KHÔNG dùng làm cổng lọc: nó gần như luôn nằm trên giá hiện tại, nên lấy nó làm cổng là giao quyền lọc cho sự lạc quan nghề nghiệp của người khác. Nó chỉ góp một phần vào điểm số.',
@@ -1877,7 +1877,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (k: string) => `Finviz không trả số cho những ô này: ${k}. Cổng liên quan hiện dấu “?” chứ không phải ✓ — có thể là công ty thật sự không có chỉ số đó, cũng có thể Finviz đổi giao diện và bộ cào cần sửa.`,
     en: (k: string) => `Finviz returned no value for: ${k}. The affected gates show “?” rather than ✓ — either the company genuinely has no such metric, or Finviz changed its layout and the scraper needs fixing.`,
   },
-  'lt.peHead': { vi: 'Định giá so với chính mã này', en: 'Valuation vs its own history' },
+  'lt.peHead': { vi: 'Valuation vs its own history', en: 'Valuation vs its own history' },
   'lt.peDetail': {
     vi: (v: any) => `P/E hiện tại nằm ở phân vị ${v.pct} trong ${v.readings} lần đọc P/E của chính mã này. Trung vị ${v.median}; hiện lệch ${v.vs} so với trung vị đó.`,
     en: (v: any) => `Current P/E sits at the ${v.pct}th percentile of ${v.readings} readings of this stock’s own P/E. Median ${v.median}; now ${v.vs} versus that median.`,
@@ -1897,7 +1897,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (v: string) => `shares ${v}/yr`,
   },
   'lt.secNone': { vi: 'SEC: không có', en: 'SEC: none' },
-  'lt.secHead': { vi: 'Tài chính nhiều năm (SEC 10-K)', en: 'Multi-year financials (SEC 10-K)' },
+  'lt.secHead': { vi: 'Multi-year financials (SEC 10-K)', en: 'Multi-year financials (SEC 10-K)' },
   'lt.secLead': {
     vi: (v: any) => `Bóc từ XBRL của ${v.years} năm 10-K trên SEC EDGAR. Năm tài chính gần nhất kết thúc ${v.fy}, nộp ${v.filed}. Thẻ doanh thu: ${v.tag}.`,
     en: (v: any) => `Parsed from XBRL of ${v.years} fiscal years of 10-K filings on SEC EDGAR. Latest fiscal year ended ${v.fy}, filed ${v.filed}. Revenue tag: ${v.tag}.`,
@@ -1940,7 +1940,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'EPS tăng nhưng số cổ phiếu cũng tăng — phần tăng EPS đang bị pha loãng, đọc con số EPS với sự dè dặt.',
     en: 'EPS is growing but so is the share count — per-share growth is being diluted; read the EPS figure with caution.',
   },
-  'lt.whyHead': { vi: 'Tại sao rớt?', en: 'Why did it fall?' },
+  'lt.whyHead': { vi: 'Why did it fall?', en: 'Why did it fall?' },
   'lt.whyBtn': { vi: 'Kiểm tin tức và hỏi Claude', en: 'Check the news and ask Claude' },
   'lt.whyBusy': { vi: 'Đang đọc…', en: 'Reading…' },
   'lt.whyNote': {
@@ -1979,7 +1979,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- sector rotation (RRG) ----
-  'rrg.title': { vi: 'Luân chuyển dòng tiền (RRG)', en: 'Sector rotation (RRG)' },
+  'rrg.title': { vi: 'Sector rotation (RRG)', en: 'Sector rotation (RRG)' },
   'rrg.loading': { vi: 'Đang tính vòng xoay ngành…', en: 'Computing the rotation…' },
   'rrg.loadFailed': {
     vi: 'Chưa dựng được biểu đồ luân chuyển. Các phần khác vẫn chạy.',
@@ -2050,7 +2050,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'rrg.fullscreen': { vi: 'Toàn màn hình', en: 'Fullscreen' },
   'rrg.exitFullscreen': { vi: 'Thoát toàn màn hình', en: 'Exit fullscreen' },
 
-  'rrg.aiTitle': { vi: 'Phân tích AI về RRG', en: 'AI analysis of the RRG' },
+  'rrg.aiTitle': { vi: 'AI analysis of the RRG', en: 'AI analysis of the RRG' },
   'rrg.aiRun': { vi: 'Phân tích AI', en: 'Run AI analysis' },
   'rrg.aiRerun': { vi: 'Phân tích lại', en: 'Run again' },
   'rrg.aiNote': {
@@ -2063,7 +2063,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- market internals (tab Heatmap → Bề rộng TT) ----
-  'int.title': { vi: 'Bề rộng thị trường', en: 'Market internals' },
+  'int.title': { vi: 'Market internals', en: 'Market internals' },
   'int.loading': { vi: 'Đang tải…', en: 'Loading…' },
   'int.loadFailed': { vi: 'Không tải được market internals.', en: 'Could not load market internals.' },
   'int.note': {
@@ -2134,7 +2134,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'an.high52': { vi: (v: string) => `Đỉnh 52T ${v}`, en: (v: string) => `52w high ${v}` },
   'an.ofRange': { vi: (v: string) => `${v} biên độ`, en: (v: string) => `${v} of range` },
   // ---- company profile ----
-  'an.company': { vi: 'Thông tin công ty', en: 'Company profile' },
+  'an.company': { vi: 'Company profile', en: 'Company profile' },
   'an.ceo': { vi: 'CEO', en: 'CEO' },
   'an.employees': { vi: 'Nhân viên', en: 'Employees' },
   'an.ipo': { vi: 'Ngày IPO', en: 'IPO date' },
@@ -2186,7 +2186,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Translation failed this time. Reopen this symbol to try again.',
   },
 
-  'an.technical': { vi: 'Kỹ thuật', en: 'Technicals' },
+  'an.technical': { vi: 'Technicals', en: 'Technicals' },
   'an.aboveSignal': { vi: 'trên tín hiệu', en: 'above signal' },
   'an.belowSignal': { vi: 'dưới tín hiệu', en: 'below signal' },
   'an.smaStreak': {
@@ -2194,7 +2194,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (v: any) => `${v.pct} · ${v.n} sessions ${v.side}`,
   },
   'an.volRatio': { vi: (v: string) => `tỷ lệ ${v}`, en: (v: string) => `ratio ${v}` },
-  'an.options': { vi: 'Quyền chọn', en: 'Options' },
+  'an.options': { vi: 'Options', en: 'Options' },
   'an.refIv': { vi: 'IV tham chiếu', en: 'Reference IV' },
   'an.optRich': { vi: 'quyền chọn đắt', en: 'option is rich' },
   'an.optFair': { vi: 'gần biến động thực', en: 'close to realized vol' },
@@ -2203,7 +2203,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'IV lấy từ hợp đồng put có delta gần −0.30 nhất trong cửa sổ 20–60 ngày, cùng vùng delta mà screener nhắm tới, nên so sánh được với cột IV/HV ở bảng kết quả.',
     en: 'IV comes from the put closest to −0.30 delta inside a 20–60 day window — the same delta zone the screener targets, so it lines up with the IV/HV column in the results table.',
   },
-  'an.fundamental': { vi: 'Cơ bản', en: 'Fundamentals' },
+  'an.fundamental': { vi: 'Fundamentals', en: 'Fundamentals' },
   'an.marketCap': { vi: 'Vốn hoá', en: 'Market cap' },
   'an.dividend': { vi: 'Cổ tức', en: 'Dividend' },
   'an.perYear': { vi: (v: string) => `${v}/năm`, en: (v: string) => `${v}/year` },
@@ -2229,7 +2229,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Ngày earnings kế tiếp là HỢP của hai nguồn: data/earnings.json (dựng bằng tay cho mã trong watchlist, làm mới hằng tuần qua GitHub Actions) và lịch tastytrade (phủ mọi mã, nhưng chỉ ngày kế tiếp). Dòng trên in ngày sớm nhất còn ở phía trước và KHÔNG nói ngày đó công ty đã xác nhận hay mới chỉ là ước tính — nhãn "ngày ước tính" chỉ có ở phần Hard gates bên tab Screener. Dấu — nghĩa là không nguồn nào có ngày ở phía trước, và nó gộp chung "chưa biết gì về mã này" với "đã kiểm, mã này không có earnings".',
     en: 'The next-earnings date is the UNION of two sources: data/earnings.json (hand-built for watchlist symbols, refreshed weekly by a GitHub Action) and tastytrade\'s calendar (covers every symbol, but only the next date). The row above prints the earliest date still ahead and does NOT say whether the company confirmed it or it is an estimate — that "estimated date" tag only appears under Hard gates on the Screener tab. A — means neither source has a future date, and it collapses "nothing is known about this symbol" together with "checked, this symbol has no earnings".',
   },
-  'an.finviz': { vi: 'Giới phân tích & vị thế (Finviz)', en: 'Analysts & positioning (Finviz)' },
+  'an.finviz': { vi: 'Analysts & positioning (Finviz)', en: 'Analysts & positioning (Finviz)' },
   'an.targetPrice': { vi: 'Giá mục tiêu', en: 'Target price' },
   'an.vsCurrent': {
     vi: (v: string) => `${v} so với giá hiện tại`,
@@ -2254,7 +2254,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Đọc từ trang quote của Finviz, chỉ khi bạn bấm phân tích một mã. Đây là bóc HTML chứ không phải API có hợp đồng ổn định — Finviz đổi giao diện thì phần này trống, các phần khác vẫn chạy.',
     en: 'Scraped from the Finviz quote page, only when you analyze a ticker. This reads HTML rather than a stable API, so if Finviz changes its layout this section goes blank while everything else keeps working.',
   },
-  'an.news': { vi: 'Tin tức', en: 'News' },
+  'an.news': { vi: 'News', en: 'News' },
   'an.mentionsN': {
     vi: (n: number) => `nhắc ${n} mã`,
     en: (n: number) => `mentions ${n} tickers`,
@@ -2278,7 +2278,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Đồng hồ của TradingView tổng hợp nhiều chỉ báo theo công thức riêng của họ. Dùng để đối chiếu chéo với các số tự tính ở trên, không phải tín hiệu vào lệnh.',
     en: "TradingView's gauge blends many indicators by their own formula. Use it to cross-check the numbers computed above, not as an entry signal.",
   },
-  'an.gamma': { vi: 'Gamma theo strike', en: 'Gamma by strike' },
+  'an.gamma': { vi: 'Gamma by strike', en: 'Gamma by strike' },
   'an.gammaNote': {
     vi: 'Put wall thường hành xử như hỗ trợ vì dealer phải mua vào để hedge quanh đó. Đây là mô hình suy từ open interest, không phải sổ vị thế thật của dealer.',
     en: 'The put wall often behaves like support because dealers must buy to hedge around it. This is inferred from open interest, not a dealer\u2019s actual book.',
@@ -2342,7 +2342,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- AI read ----
-  'ai.title': { vi: 'Claude đọc toàn bộ chỉ số', en: 'Claude reads all the indicators' },
+  'ai.title': { vi: 'Claude reads all the indicators', en: 'Claude reads all the indicators' },
   'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },
   'ai.rerun': { vi: 'Phân tích lại', en: 'Run again' },
   'ai.running': { vi: 'Đang đọc…', en: 'Reading…' },
@@ -2376,13 +2376,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
 
   // ---- Tab Tin tức ----
-  'nw.title': { vi: 'Tin tức: thị trường & chính trị-kinh tế', en: 'News: markets & political economy' },
+  'nw.title': { vi: 'News: markets & political economy', en: 'News: markets & political economy' },
   'nw.intro': {
     vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước — tự dịch sang tiếng Việt khi app ở chế độ này (chuyển sang tiếng Anh để xem nguyên văn của báo). Bấm "Tóm tắt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt cùng ngôn ngữ — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc.',
     en: 'Headlines from the last 48 hours, newest first — auto-translated to Vietnamese when the app is in that language (switch to English to see the outlet\'s own wording). Press "Summarise" to have Claude read both columns in ONE call and write a brief in the same language — from headlines only, no article bodies. Each line opens the original article.',
   },
-  'nw.colMarket': { vi: 'Thị trường', en: 'Markets' },
-  'nw.colPolitics': { vi: 'Chính trị - kinh tế', en: 'Politics & economy' },
+  'nw.colMarket': { vi: 'Markets', en: 'Markets' },
+  'nw.colPolitics': { vi: 'Politics & economy', en: 'Politics & economy' },
   'nw.loading': { vi: 'Đang tải…', en: 'Loading…' },
   'nw.refresh': { vi: 'Làm mới', en: 'Refresh' },
   'nw.refreshing': { vi: 'Đang tải…', en: 'Refreshing…' },
@@ -2567,7 +2567,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'phase.quotes': { vi: 'Đang lấy báo giá…', en: 'Fetching quotes…' },
 
   /* ---- Người nội bộ (Form 4) ---- */
-  'ins.title': { vi: 'Người nội bộ đang mua', en: 'Insider buying' },
+  'ins.title': { vi: 'Insider buying', en: 'Insider buying' },
   /* Sub-tab labels: English in both languages, same rule as `tab.*` above. */
   'ins.subForm4': { vi: 'Insiders', en: 'Insiders' },
   'ins.subCongress': { vi: 'Congress', en: 'Congress' },
@@ -2615,7 +2615,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Tab này chỉ hỏi SEC về mã trong watchlist và mã đang thật sự giữ ở Schwab - khác hẳn bảng trống vì "đã hỏi, sạch thật". Thêm mã vào watchlist ở tab Sell Put Screener, hoặc bấm Đồng bộ lại nếu vừa kết nối Schwab.',
     en: 'This tab only asks SEC about watchlist symbols and what you actually hold at Schwab - not the same as an empty table because "asked, genuinely clean". Add symbols to your watchlist on the Sell Put Screener tab, or reconnect Schwab if you just did and press sync again.',
   },
-  'ins.unavailableHead': { vi: 'Những mã chưa có dữ liệu', en: 'Symbols with no data yet' },
+  'ins.unavailableHead': { vi: 'Symbols with no data yet', en: 'Symbols with no data yet' },
   'ins.unavail.noFiler': {
     vi: 'Mã này không có ai nộp Form 4 ở SEC — thường là ETF hoặc quỹ.',
     en: 'Nobody files Form 4 for this symbol — usually an ETF or a fund.',
@@ -2674,7 +2674,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
 
   /* ---- Giao dịch Quốc hội (Unusual Whales) ---- */
-  'cg.title': { vi: 'Giao dịch Quốc hội', en: 'Congress Trading' },
+  'cg.title': { vi: 'Congress Trading', en: 'Congress Trading' },
   'cg.intro': {
     vi: 'Nghị sĩ và thành viên gia đình họ bắt buộc phải khai báo với Quốc hội trong 30-45 ngày mỗi khi mua bán cổ phiếu (Đạo luật STOCK Act). Số tiền chỉ được khai theo KHOẢNG (ví dụ "$1,000,001 - $5,000,000"), không phải số chính xác - đây là quy định của luật, không phải app này thiếu dữ liệu. Nguồn dữ liệu: Unusual Whales, tính năng trả phí - xem cảnh báo bên dưới nếu chưa cấu hình.',
     en: 'Members of Congress and their family must disclose stock trades within 30-45 days (the STOCK Act). Amounts are only disclosed as RANGES (e.g. "$1,000,001 - $5,000,000"), never exact figures - that is the law, not a data gap in this app. Data source: Unusual Whales, a paid feature - see the note below if not configured.',
@@ -2840,7 +2840,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
 
 
   /* ---- Options Flow (Unusual Whales) ---- */
-  'of.title': { vi: 'Lệnh quyền chọn bất thường', en: 'Options Flow' },
+  'of.title': { vi: 'Options Flow', en: 'Options Flow' },
   'of.intro': {
     vi: 'Lệnh quyền chọn khối lượng lớn/bất thường mà Unusual Whales tự lọc thành đáng chú ý (sweep, lệnh sàn, lặp lại nhiều lần) - không phải mọi lệnh quyền chọn thô. Tín hiệu ngắn hạn, chỉ giữ lại 14 ngày gần nhất vì một lệnh bất thường từ tuần trước không còn liên quan tới quyết định hôm nay.',
     en: 'Large/unusual option orders that Unusual Whales itself already flags as notable (sweeps, floor trades, repeated hits) - not every raw option trade. A short-lived signal, kept for 14 days only since a notable order from last week has nothing to say about today.',
