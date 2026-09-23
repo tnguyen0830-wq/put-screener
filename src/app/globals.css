@@ -4764,3 +4764,23 @@ body {
   0% { background: var(--stamp-tint); }
   100% { background: transparent; }
 }
+.segmented.lfsrc {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  width: auto;
+  max-width: 100%;
+  margin-bottom: 8px;
+}
+.lfdiag { margin: 6px 0; }
+.lfdiag summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.lfframe {
+  font: 12px/1.4 var(--data);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  margin: 4px 0;
+  padding: 6px 8px;
+  background: var(--rule-soft);
+  border-radius: var(--r-sm);
+  max-width: 100%;
+}
