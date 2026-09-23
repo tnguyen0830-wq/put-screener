@@ -24,8 +24,9 @@ import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
 import PatternsPanel from '@/components/PatternsPanel';
 import DaytradePanel from '@/components/DaytradePanel';
+import MmExposurePanel from '@/components/MmExposurePanel';
 import { useLang } from '@/lib/i18n';
-import { readRememberedOneOf, remember } from '@/lib/remember';
+import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import { TABS, type Tab } from '@/lib/tabs';
 import Logo from '@/components/Logo';
 import ColorLegend from '@/components/ColorLegend';
@@ -94,7 +95,14 @@ export default function Page() {
     const savedTab = readRememberedOneOf<Tab>('tab', TABS);
     const savedHm = readRememberedOneOf<HeatmapSub>('heatmapSub', HEATMAP_SUBS);
     const savedIn = readRememberedOneOf<InsiderSub>('insiderSub', INSIDER_SUBS);
-    if (savedTab) setTab(savedTab);
+    /* Phơi nhiễm MM từng là tab con thứ ba của Daytrade; giờ là tab chính
+       riêng. Người đã để nó mở lần trước (`tab=daytrade` + `dtmode=mmexposure`)
+       mở lại phải về đúng chỗ đó, không phải rơi về nửa Cổ phiếu — bộ nhớ
+       cũ vẫn nằm trong trình duyệt họ. */
+    if (savedTab === 'daytrade' && readRemembered('dtmode') === 'mmexposure') {
+      setTab('mmexposure');
+      remember('dtmode', 'stocks');
+    } else if (savedTab) setTab(savedTab);
     if (savedHm) setHeatmapSub(savedHm);
     if (savedIn) setInsiderSub(savedIn);
     setRestored(true);
@@ -415,6 +423,12 @@ export default function Page() {
           >
             {t('tab.daytrade')}
           </button>
+          <button
+            className={tab === 'mmexposure' ? 'on' : undefined}
+            onClick={() => setTab('mmexposure')}
+          >
+            {t('tab.mmexposure')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -521,6 +535,10 @@ export default function Page() {
       ) : tab === 'daytrade' ? (
         <div className="shell solo">
           <DaytradePanel />
+        </div>
+      ) : tab === 'mmexposure' ? (
+        <div className="shell solo">
+          <MmExposurePanel />
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">

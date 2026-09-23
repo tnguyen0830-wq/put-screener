@@ -16,6 +16,8 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
 | **Learn** | Đọc nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider và cách app chấm bán put — bài song ngữ có hình vẽ, câu ôn tập, nút hỏi Claude |
 | **Patterns** | Mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu lên, nút hỏi Claude đọc mẫu |
+| **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
+| **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales, app tự tính từ chuỗi quyền chọn |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -982,7 +984,8 @@ sống hay chết, và biết vì sao; chuỗi rỗng vẫn được TRẢ VỀ 
 vì ném lỗi, vì chẩn đoán mới là thứ cần đọc. Không có OI thì màn hình chỉ
 thẳng sang SPY/QQQ (ETF, đo được là chạy bình thường).
 
-**Phơi nhiễm nhà tạo lập** (tab con thứ ba) — ba biểu đồ theo bố cục
+**Phơi nhiễm nhà tạo lập** — giờ là **tab chính riêng `MM Exposure`**, đứng
+ngay sau Daytrade (trước đây là tab con thứ ba của Daytrade). Ba biểu đồ theo bố cục
 Unusual Whales, nhưng **mọi con số app tự tính từ chuỗi quyền chọn của
 chính tài khoản**, không mua của ai: gamma và delta không phải dữ liệu độc
 quyền, chúng là số học trên greek và open interest mà `/chains` đã trả.
