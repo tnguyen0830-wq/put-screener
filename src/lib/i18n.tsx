@@ -38,15 +38,16 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tab.patterns': { vi: 'Patterns', en: 'Patterns' },
   /* Nhãn tab giữ nguyên tiếng Anh ở cả hai ngôn ngữ, đúng luật #189. */
   'tab.daytrade': { vi: 'Daytrade', en: 'Daytrade' },
+  'tab.mmexposure': { vi: 'MM Exposure', en: 'MM Exposure' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
 
   /* ---- Tab Daytrade (lib/daytrade.ts, lib/zerodte.ts) ---- */
   'dt.title': { vi: 'Giao dịch trong ngày', en: 'Intraday trading' },
   'dt.subStocks': { vi: 'Cổ phiếu', en: 'Stocks' },
   'dt.subZero': { vi: '0DTE', en: '0DTE' },
-  'dt.subExposure': { vi: 'Phơi nhiễm MM', en: 'MM exposure' },
 
-  // ---- Daytrade: phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales) ----
+  // ---- Tab MM Exposure: phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales) ----
+  'mm.title': { vi: 'Phơi nhiễm nhà tạo lập', en: 'Market maker exposure' },
   'mm.intro': {
     vi: 'Ba biểu đồ theo bố cục Unusual Whales, nhưng mọi con số do app TỰ TÍNH từ chuỗi quyền chọn của chính tài khoản — gamma và delta không phải dữ liệu độc quyền, chúng là số học trên greek và open interest mà Schwab (hoặc CBOE) đã trả. Một lượt gọi lấy đủ cả ba.',
     en: 'Three charts laid out like Unusual Whales, but every number is computed HERE from the account\u2019s own option chain — gamma and delta are not proprietary data, they are arithmetic on the greeks and open interest the chain already returns. One request feeds all three.',

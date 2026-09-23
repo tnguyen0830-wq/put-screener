@@ -8,7 +8,9 @@ import { ExposureLadder, SpotGammaChart, DeltaByStrike } from './MmExposureChart
 import type { IntraBar } from '@/lib/daytrade';
 
 /**
- * Tab con thứ BA của Daytrade: phơi nhiễm của nhà tạo lập, ba panel theo
+ * Tab chính MM Exposure (từng là tab con thứ ba của Daytrade — chủ app
+ * không tìm thấy nó ở tầng đó, nên đưa ra ngoài): phơi nhiễm của nhà tạo
+ * lập, ba panel theo
  * đúng bố cục chủ app gửi ảnh (Unusual Whales) — nhưng mọi con số ở đây do
  * app TỰ TÍNH từ chuỗi quyền chọn của chính tài khoản, không phải lấy của
  * UW. Đó cũng là lý do nó làm được: gamma và delta không phải dữ liệu độc
@@ -159,7 +161,9 @@ export default function MmExposurePanel() {
     });
 
   return (
-    <>
+    <section className="panel">
+      <div className="panel-head">{t('mm.title')}</div>
+      <div className="panel-body">
       <p className="cap">{t('mm.intro')}</p>
 
       <div className="dtcontrols">
@@ -262,6 +266,7 @@ export default function MmExposurePanel() {
           <p className="cap">{t('mm.caveat')}</p>
         </>
       )}
-    </>
+      </div>
+    </section>
   );
 }
