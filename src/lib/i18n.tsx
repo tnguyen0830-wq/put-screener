@@ -35,6 +35,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
   'tab.insider': { vi: 'Insider Trade', en: 'Insider Trade' },
   'tab.learn': { vi: 'Learn', en: 'Learn' },
+  // Không còn nút tab nào dùng (#217 — Patterns nằm trong Learn), nhưng GIỮ:
+  // màn Hoạt động in `tab.<tên>` cho bản ghi cũ còn ghi 'patterns'.
   'tab.patterns': { vi: 'Patterns', en: 'Patterns' },
   /* Nhãn tab giữ nguyên tiếng Anh ở cả hai ngôn ngữ, đúng luật #189. */
   'tab.daytrade': { vi: 'Daytrade', en: 'Daytrade' },
@@ -411,9 +413,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'learn.title': { vi: 'Learn to read the market', en: 'Learn to read the market' },
   'learn.mode.lessons': { vi: 'Bài học', en: 'Lessons' },
   'learn.mode.reference': { vi: 'Tra cứu nhanh', en: 'Quick reference' },
+  'learn.mode.patterns': { vi: 'Patterns', en: 'Patterns' },
   'learn.ref.intro': {
-    vi: 'Mọi kiểu nến và mẫu hình trên một trang để xem lại sau khi học: hình, một câu nó là gì, khi nào được coi là XÁC NHẬN (đúng luật máy dò ở tab Patterns), và bẫy hay gặp. Bấm tên bài để đọc kỹ.',
-    en: 'Every candle type and pattern on one page for review after the lessons: the figure, one sentence on what it is, when it counts as CONFIRMED (the same rule the Patterns tab’s detector uses), and the common trap. Click the lesson name to read in depth.',
+    vi: 'Mọi kiểu nến và mẫu hình trên một trang để xem lại sau khi học: hình, một câu nó là gì, khi nào được coi là XÁC NHẬN (đúng luật máy dò ở mục Patterns), và bẫy hay gặp. Bấm tên bài để đọc kỹ.',
+    en: 'Every candle type and pattern on one page for review after the lessons: the figure, one sentence on what it is, when it counts as CONFIRMED (the same rule the Patterns detector uses), and the common trap. Click the lesson name to read in depth.',
   },
   'learn.ref.search': { vi: 'Tìm theo tên…', en: 'Search by name…' },
   'learn.ref.group.all': { vi: 'Tất cả', en: 'All' },
@@ -427,7 +430,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'learn.ref.confirm': { vi: 'Xác nhận khi', en: 'Confirmed when' },
   'learn.ref.trap': { vi: 'Coi chừng', en: 'Watch out' },
   'learn.ref.lesson': { vi: 'Bài học', en: 'Lesson' },
-  'learn.ref.detected': { vi: 'App tự dò ở tab Patterns', en: 'Auto-detected in the Patterns tab' },
+  'learn.ref.detected': { vi: 'App tự dò ở mục Patterns', en: 'Auto-detected in Patterns' },
   'learn.ref.notDetected': { vi: 'App chưa tự dò kiểu này', en: 'Not auto-detected by the app' },
   'learn.ref.count': { vi: (v: any) => `${v.n} mục`, en: (v: any) => `${v.n} entries` },
   'learn.ref.empty': { vi: 'Không có mục nào khớp.', en: 'No entry matches.' },
@@ -587,7 +590,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Claude receives only the pattern list and levels computed above — no candles, no news — and only interprets, never recommends. Each press is one paid API call.',
   },
   'pat.read.caveat': { vi: 'Diễn giải các mẫu app đã dò, không phải khuyến nghị đầu tư.', en: 'An interpretation of what the app detected, not investment advice.' },
-  'pat.learnLink': { vi: 'Học cách đọc các mẫu này ở tab Learn', en: 'Learn how to read these patterns in the Learn tab' },
+  'pat.learnLink': { vi: 'Học cách đọc các mẫu này (Bài học → Nến & mẫu hình)', en: 'Learn how to read these patterns (Lessons → Candles & patterns)' },
 
   /* ---- Chú thích cho từng mã trên thanh giá cuộn đầu trang ---- */
   'tape.spx': { vi: 'Chỉ số S&P 500', en: 'S&P 500 Index' },

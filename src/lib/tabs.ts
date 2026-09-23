@@ -23,7 +23,6 @@ export const TABS = [
   'heatmap',
   'insider',
   'learn',
-  'patterns',
   'daytrade',
   'mmexposure',
   'portfolio',

@@ -14,8 +14,7 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
 | **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
 | **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
-| **Learn** | Đọc nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider và cách app chấm bán put — bài song ngữ có hình vẽ, câu ôn tập, nút hỏi Claude |
-| **Patterns** | Mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu lên, nút hỏi Claude đọc mẫu |
+| **Learn** | Ba chế độ: **Bài học** (nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider, cách app chấm bán put — song ngữ, có hình, ôn tập, hỏi Claude), **Tra cứu nhanh**, và **Patterns** (mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu, nút hỏi Claude đọc mẫu) |
 | **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
 | **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
 
@@ -887,7 +886,10 @@ Nhãn tab "Learn" giữ tiếng Anh ở cả hai ngôn ngữ, cùng luật với
 
 ## Patterns — mẫu hình nến và mẫu hình giá, dò trên nến ngày Schwab
 
-Tab thứ chín. Quét **watchlist** hoặc **cả rổ S&P 500**, liệt kê mã nào đang
+**Nằm trong tab Learn, chế độ thứ ba** (Bài học / Tra cứu nhanh / Patterns).
+Nó từng là tab chính riêng; giờ đọc bài về cây búa xong là bấm "Xem thật"
+sang thẳng máy dò ngay trong cùng tab. Ai lần trước để mở tab Patterns cũ
+thì lần mở sau vào thẳng Learn → Patterns. Quét **watchlist** hoặc **cả rổ S&P 500**, liệt kê mã nào đang
 có mẫu, bấm một dòng (hoặc gõ mã bất kỳ) để mở **biểu đồ nến ngày** có vẽ mẫu
 lên, và một nút để Claude **diễn giải** đúng những mẫu app đã dò.
 
