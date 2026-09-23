@@ -2992,8 +2992,16 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (n: number) => `${n} records dropped for lacking an id or a timestamp. Real keys:`,
   },
   'lf.pageFull': {
-    vi: (n: number) => `Lượt vừa rồi về đúng ${n} alert (trần mỗi lượt) — giữa hai lượt có thể đã có alert cũ hơn không kịp lấy.`,
-    en: (n: number) => `The last fetch returned exactly ${n} alerts (the per-fetch cap) — older alerts between two fetches may have been missed.`,
+    vi: (v: any) => `Lượt vừa rồi lật ${v.pages} trang (${v.n} alert) mà vẫn chưa nối liền với lượt trước — luồng đang quá dày, có thể sót alert. Lọc theo mã để lấy đủ.`,
+    en: (v: any) => `The last fetch paged ${v.pages} times (${v.n} alerts) and still did not reach the previous one — the feed is very dense and alerts may be missed. Filter by ticker to get them all.`,
+  },
+  'lf.serverFilter': {
+    vi: (s: string) => `Đang hỏi Unusual Whales riêng cho: ${s} — tức đủ alert của mã đó, không phải những dòng lọt vào luồng toàn thị trường.`,
+    en: (s: string) => `Asking Unusual Whales for ${s} only — i.e. every alert for it, not just those that made it into the whole-market feed.`,
+  },
+  'lf.rejected': {
+    vi: (s: string) => `Bỏ qua, không phải mã hợp lệ (hoặc quá 10 mã): ${s}`,
+    en: (s: string) => `Ignored, not a valid ticker (or more than 10): ${s}`,
   },
   'lf.fetchErr': { vi: (e: string) => `Không tải được: ${e}`, en: (e: string) => `Could not load: ${e}` },
   'lf.uwErr': { vi: (e: string) => `Unusual Whales từ chối: ${e}`, en: (e: string) => `Unusual Whales refused: ${e}` },

@@ -45,6 +45,9 @@ type AlertsPayload =
       pageFull: boolean;
       sampleKeys: string[];
       lastBatch: number;
+      lastPages?: number;
+      tickers?: string[];
+      rejected?: string[];
       unparsed: number;
       ttlMs: number;
     };
@@ -127,9 +130,19 @@ export default function LiveFlowPanel() {
     if (m) setMinPrem(Number(m));
   }, []);
 
-  const load = useCallback(async (which: Src) => {
+  /* Mã gửi lên server ở chế độ Alert — chờ 1 giây sau lần gõ cuối, để gõ
+     dở "Q", "QQ" không thành một request UW cho mã không tồn tại. Bảng vẫn
+     lọc NGAY phía trình duyệt trên những dòng đã có trong lúc chờ. */
+  const [serverTickers, setServerTickers] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setServerTickers(ticker.trim()), 1000);
+    return () => clearTimeout(id);
+  }, [ticker]);
+
+  const load = useCallback(async (which: Src, tks: string) => {
     try {
-      const r = await fetch(`/api/liveflow?src=${which}`, { cache: 'no-store' });
+      const q = which === 'alerts' && tks ? `&tickers=${encodeURIComponent(tks)}` : '';
+      const r = await fetch(`/api/liveflow?src=${which}${q}`, { cache: 'no-store' });
       const body = await readJsonOrText(r);
       if (!body.ok) {
         setErr(body.summary);
@@ -159,15 +172,15 @@ export default function LiveFlowPanel() {
     // Đổi nguồn là một bảng khác: không tô dòng nào là "mới" ở lượt đầu.
     seen.current = null;
     setFresh(new Set());
-    load(src);
-  }, [load, src]);
+    load(src, serverTickers);
+  }, [load, src, serverTickers]);
 
   useEffect(() => {
     if (paused) return;
     // Chỉ hỏi khi tab trình duyệt đang HIỆN — cửa sổ bỏ quên trong nền không
     // cần luồng sống, và quay lại là hỏi ngay.
     const tick = () => {
-      if (document.visibilityState === 'visible') load(src);
+      if (document.visibilityState === 'visible') load(src, serverTickers);
     };
     const id = setInterval(tick, POLL_MS[src]);
     document.addEventListener('visibilitychange', tick);
@@ -175,7 +188,7 @@ export default function LiveFlowPanel() {
       clearInterval(id);
       document.removeEventListener('visibilitychange', tick);
     };
-  }, [paused, load, src]);
+  }, [paused, load, src, serverTickers]);
 
   const data = src === 'trades' ? trades : alerts;
   const rows: LiveRow[] = data && data.configured ? data.rows : [];
@@ -312,7 +325,9 @@ export default function LiveFlowPanel() {
             {al.rows.length ? ` ${t('lf.keptOld')}` : ''}
           </p>
         )}
-        {al && al.pageFull && al.marketOpen && <p className="hint">{t('lf.pageFull', al.lastBatch)}</p>}
+        {al && al.tickers && al.tickers.length > 0 && <p className="hint">{t('lf.serverFilter', al.tickers.join(', '))}</p>}
+        {al && al.rejected && al.rejected.length > 0 && <p className="hint hint-warn">{t('lf.rejected', al.rejected.join(', '))}</p>}
+        {al && al.pageFull && <p className="hint hint-warn">{t('lf.pageFull', { n: al.lastBatch, pages: al.lastPages ?? 1 })}</p>}
         {allUnknown && (
           <p className="cap warnline lfkeys">
             {t('lf.noSide')} <code>{(al ? al.sampleKeys : ws?.sampleKeys ?? []).join(', ')}</code>

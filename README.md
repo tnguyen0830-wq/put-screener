@@ -942,7 +942,10 @@ các bài nến ở đó có nút nhảy thẳng sang tab này.
   đều là nhớ được, và WebSocket có thể là gói riêng của UW. Nếu không chạy,
   màn hình in mã đóng + lý do UW trả về, và khối "Chẩn đoán" in nguyên văn
   (đã che khoá) các khung đầu tiên UW gửi.
-- **Alert (REST)** — thứ bên dưới:
+- **Alert (REST)** — thứ bên dưới. Gõ mã vào ô lọc thì app hỏi Unusual Whales
+  riêng cho mã đó (đủ alert của mã, không phải những dòng lọt vào luồng toàn
+  thị trường); không lọc thì mỗi lượt lật trang cho tới khi nối liền với lượt
+  trước, và nói ra nếu luồng dày tới mức vẫn có thể sót.
 
 Dựng theo màn Live Flow của Unusual Whales: bảng mới nhất ở trên, mỗi dòng
 một alert quyền chọn (giờ ET, mã, phía, strike, call/put, đáo hạn, DTE, giá
