@@ -32,7 +32,7 @@ export type RefEntry = {
   trap: L;
   /** Bài học nói kỹ (id trong LESSONS). */
   lesson: string;
-  /** Id máy dò ở tab Patterns; thiếu = app chưa tự dò kiểu này. */
+  /** Id máy dò ở mục Patterns; thiếu = app chưa tự dò kiểu này. */
   patternId?: string;
 };
 
@@ -58,7 +58,7 @@ export const REFERENCE: RefEntry[] = [
     id: 'hammer', group: 'candle', figure: 'hammer', side: 'bull',
     name: { vi: 'Búa', en: 'Hammer' },
     gist: { vi: 'Sau đợt GIẢM: râu dưới ≥ 2× thân, râu trên nhỏ, thân ở phần trên. Phe bán ép xuống rồi bị đẩy lại.', en: 'After a DECLINE: lower wick ≥ 2× body, small upper wick, body near the top. Sellers pushed down and were pushed back.' },
-    confirm: { vi: 'Nến sau đóng CAO HƠN đóng cửa của cây búa (✓ ở tab Patterns).', en: 'The next candle closes ABOVE the hammer’s close (✓ in the Patterns tab).' },
+    confirm: { vi: 'Nến sau đóng CAO HƠN đóng cửa của cây búa (✓ ở mục Patterns).', en: 'The next candle closes ABOVE the hammer’s close (✓ in Patterns).' },
     trap: { vi: 'Cùng hình sau đợt TĂNG là người treo cổ — tín hiệu ngược. Không có đợt giảm trước thì không phải búa.', en: 'The same shape after a RISE is a hanging man — the opposite signal. No prior decline, no hammer.' },
     lesson: 'hammer', patternId: 'hammer',
   },

@@ -7,6 +7,10 @@ import type { LessonResult } from '@/lib/learnstore';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import AskLesson from './AskLesson';
 import LearnFigure from './LearnFigure';
+import PatternsPanel from './PatternsPanel';
+
+const LEARN_MODES = ['lessons', 'reference', 'patterns'] as const;
+type LearnMode = (typeof LEARN_MODES)[number];
 
 /**
  * Tab Learn — bài học song ngữ về nến/mẫu hình, GEX & bề rộng, flow/dark
@@ -58,11 +62,27 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
   /* Hai chế độ: đọc BÀI (một lần) và TRA CỨU (xem lại). Chủ app đặt hàng
      cái thứ hai đúng bằng lời này: "có những kiểu nến và pattern để coi lại
      khi học hết rồi". */
-  const [mode, setMode] = useState<'lessons' | 'reference'>('lessons');
+  /* Chế độ thứ ba, Patterns (#217): máy dò mẫu hình trên nến THẬT. Nó từng
+     là một tab chính riêng; chủ app muốn nó nằm trong Learn — đọc bài về
+     cây búa xong là bấm sang xem app đang dò được cây búa nào ngay tại chỗ,
+     không phải đi ra thanh tab trên cùng. */
+  const [mode, setMode] = useState<LearnMode>('lessons');
+  const pickMode = (m: LearnMode) => {
+    setMode(m);
+    remember('learnMode', m);
+  };
+  /* Mọi lối "sang Patterns" (thẻ tra cứu, nút "Xem thật" của sáu bài nến)
+     giờ đổi chế độ NGAY TẠI ĐÂY thay vì gọi lên trang: tab chính 'patterns'
+     không còn tồn tại, gọi lên sẽ bị `page.tsx` bỏ qua lặng lẽ — một nút
+     bấm không ra gì. */
+  const open = (tab: string, sub?: string) => {
+    if (tab === 'patterns') pickMode('patterns');
+    else onOpen(tab, sub);
+  };
 
   /* Đọc bộ nhớ SAU hydration (#110): render đầu phải giống server. */
   useEffect(() => {
-    const m = readRememberedOneOf<'lessons' | 'reference'>('learnMode', ['lessons', 'reference'] as const);
+    const m = readRememberedOneOf<LearnMode>('learnMode', LEARN_MODES);
     if (m) setMode(m);
     const s = readRememberedOneOf<SectionId>('learnSection', SECTION_IDS);
     const l = readRemembered('learnLesson');
@@ -126,16 +146,27 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
       </div>
       <div className="panel-body">
         <div className="segmented hmranges learnmode" role="tablist">
-          {(['lessons', 'reference'] as const).map((m) => (
+          {LEARN_MODES.map((m) => (
             <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'on' : undefined}
-              onClick={() => { setMode(m); remember('learnMode', m); }}>
+              onClick={() => pickMode(m)}>
               {t(`learn.mode.${m}`)}
             </button>
           ))}
         </div>
 
-        {mode === 'reference' ? (
-          <ReferenceView onLesson={(id) => { choose(id); setMode('lessons'); remember('learnMode', 'lessons'); }} onOpen={onOpen} />
+        {mode === 'patterns' ? (
+          <PatternsPanel
+            onOpen={(to, sub) => {
+              // "Học cách đọc các mẫu này" — giờ là chế độ Bài học, mở đúng
+              // phần nến, chứ không còn là một tab khác.
+              if (to === 'learn') {
+                chooseSection('candles');
+                pickMode('lessons');
+              } else open(to, sub);
+            }}
+          />
+        ) : mode === 'reference' ? (
+          <ReferenceView onLesson={(id) => { choose(id); pickMode('lessons'); }} onOpen={open} />
         ) : (
         <>
         <p className="cap">{t('learn.intro')}</p>
@@ -177,7 +208,7 @@ export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: str
             key={lesson.id}
             lesson={lesson}
             result={progress[lesson.id]}
-            onOpen={onOpen}
+            onOpen={open}
             onSaved={(r) => setProgress((p) => ({ ...p, [lesson.id]: r }))}
           />
         </div>

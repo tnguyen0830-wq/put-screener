@@ -22,7 +22,6 @@ import InstallApp from '@/components/InstallApp';
 import LongTermPanel from '@/components/LongTermPanel';
 import NewsPanel from '@/components/NewsPanel';
 import LearnPanel from '@/components/LearnPanel';
-import PatternsPanel from '@/components/PatternsPanel';
 import DaytradePanel from '@/components/DaytradePanel';
 import MmExposurePanel from '@/components/MmExposurePanel';
 import { useLang } from '@/lib/i18n';
@@ -99,7 +98,15 @@ export default function Page() {
        riêng. Người đã để nó mở lần trước (`tab=daytrade` + `dtmode=mmexposure`)
        mở lại phải về đúng chỗ đó, không phải rơi về nửa Cổ phiếu — bộ nhớ
        cũ vẫn nằm trong trình duyệt họ. */
-    if (savedTab === 'daytrade' && readRemembered('dtmode') === 'mmexposure') {
+    /* Patterns cũng đi chiều ngược lại (#217): từ tab chính vào thành chế độ
+       thứ ba của Learn. 'patterns' đã rời TABS nên `readRememberedOneOf`
+       trả null cho nó — đọc giá trị THÔ để người để mở Patterns lần trước
+       mở lại đúng chỗ đó, thay vì rơi về tab mặc định. */
+    if (readRemembered('tab') === 'patterns') {
+      setTab('learn');
+      remember('learnMode', 'patterns');
+      remember('tab', 'learn');
+    } else if (savedTab === 'daytrade' && readRemembered('dtmode') === 'mmexposure') {
       setTab('mmexposure');
       remember('dtmode', 'stocks');
     } else if (savedTab) setTab(savedTab);
@@ -412,12 +419,6 @@ export default function Page() {
             {t('tab.learn')}
           </button>
           <button
-            className={tab === 'patterns' ? 'on' : undefined}
-            onClick={() => setTab('patterns')}
-          >
-            {t('tab.patterns')}
-          </button>
-          <button
             className={tab === 'daytrade' ? 'on' : undefined}
             onClick={() => setTab('daytrade')}
           >
@@ -515,16 +516,6 @@ export default function Page() {
               app, không phải một cuốn sách rời. `sub` chỉ áp cho hai tab có
               tab con; tên tab/sub đã được `validateLessons()` kiểm ở test. */}
           <LearnPanel
-            onOpen={(to, sub) => {
-              if (sub && to === 'heatmap' && (HEATMAP_SUBS as readonly string[]).includes(sub)) setHeatmapSub(sub as HeatmapSub);
-              if (sub && to === 'insider' && (INSIDER_SUBS as readonly string[]).includes(sub)) setInsiderSub(sub as InsiderSub);
-              if ((TABS as readonly string[]).includes(to)) setTab(to as Tab);
-            }}
-          />
-        </div>
-      ) : tab === 'patterns' ? (
-        <div className="shell solo">
-          <PatternsPanel
             onOpen={(to, sub) => {
               if (sub && to === 'heatmap' && (HEATMAP_SUBS as readonly string[]).includes(sub)) setHeatmapSub(sub as HeatmapSub);
               if (sub && to === 'insider' && (INSIDER_SUBS as readonly string[]).includes(sub)) setInsiderSub(sub as InsiderSub);
