@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const src = req.nextUrl.searchParams.get('src') === 'alerts' ? 'alerts' : 'trades';
   const headers = { 'Cache-Control': 'no-store' };
   if (src === 'alerts') {
-    return NextResponse.json({ src, ...(await loadLiveFlow()) }, { headers });
+    return NextResponse.json({ src, ...(await loadLiveFlow(req.nextUrl.searchParams.get('tickers'))) }, { headers });
   }
   if (!uwConfigured()) return NextResponse.json({ src, configured: false }, { headers });
   const snap = wsSnapshot();

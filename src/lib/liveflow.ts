@@ -13,7 +13,11 @@
  *    luồng WebSocket, một gói riêng chưa ai đo trên tài khoản này. Màn hình
  *    in câu này ra, không để người đọc tưởng đây là băng lệnh đầy đủ.
  *
- * 2. **Tên trường phía mua/bán là NHỚ ĐƯỢC, chưa đo.** `optionflow.ts` chỉ
+ * 2. **Tên trường phía mua/bán: ĐO ĐƯỢC ở production 2026-09-23** (ảnh chụp
+ *    của chủ app: 100 alert ra ASK 65 · BID 35, không dòng nào "?", và bid /
+ *    ask / giá khớp / KL / OI / sweep / quy tắc đều có). Đoạn dưới giữ lại vì
+ *    nó giải thích vì sao phép đọc vẫn dung thứ.
+ *    Lúc viết thì tên trường phía mua/bán là NHỚ ĐƯỢC, chưa đo. `optionflow.ts` chỉ
  *    lưu một phần bản ghi, và chưa ai in trọn khoá của nó. Nên phía được đọc
  *    DUNG THỨ theo thứ tự (a) một trường phía tường minh nếu có, (b) chia
  *    premium phía ask/bid nếu có, (c) không có gì thì `unknown` — và màn
