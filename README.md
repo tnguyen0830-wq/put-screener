@@ -17,7 +17,7 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Learn** | Ba chế độ: **Bài học** (nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider, cách app chấm bán put — song ngữ, có hình, ôn tập, hỏi Claude), **Tra cứu nhanh**, và **Patterns** (mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu, nút hỏi Claude đọc mẫu) |
 | **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
 | **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
-| **Live Flow** | Lệnh quyền chọn đáng chú ý toàn thị trường (Unusual Whales), mới nhất ở trên, tự làm mới vài giây một lần — lọc theo mã, phía, call/put, premium |
+| **Live Flow** | Từng lệnh khớp quyền chọn toàn thị trường qua WebSocket của Unusual Whales (như màn Live Flow của UW), hoặc alert REST đã lọc — lọc theo mã, phía, call/put, premium |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -930,6 +930,19 @@ chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằ
 các bài nến ở đó có nút nhảy thẳng sang tab này.
 
 ## Live Flow — luồng lệnh quyền chọn đáng chú ý
+
+**Hai nguồn, chọn bằng nút đầu tab** (nhớ cho lần sau):
+
+- **Từng lệnh (WebSocket)** — mặc định. Server giữ MỘT kết nối WebSocket tới
+  Unusual Whales (kênh `option_trades`) cho mọi người xem, mở khi có người mở
+  tab và đóng sau 90 giây không ai xem. Phía ASK/BID/MID của từng lệnh là giá
+  khớp so với NBBO lúc khớp (nhãn phía UW gửi kèm thắng nếu có). Chỉ giữ lệnh
+  premium ≥ $25K — luồng toàn thị trường quá dày để giữ hết; số bị bỏ nằm trong
+  "Chẩn đoán WebSocket". **Chưa đo**: URL, cách tham gia kênh và tên trường
+  đều là nhớ được, và WebSocket có thể là gói riêng của UW. Nếu không chạy,
+  màn hình in mã đóng + lý do UW trả về, và khối "Chẩn đoán" in nguyên văn
+  (đã che khoá) các khung đầu tiên UW gửi.
+- **Alert (REST)** — thứ bên dưới:
 
 Dựng theo màn Live Flow của Unusual Whales: bảng mới nhất ở trên, mỗi dòng
 một alert quyền chọn (giờ ET, mã, phía, strike, call/put, đáo hạn, DTE, giá

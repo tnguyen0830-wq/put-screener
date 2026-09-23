@@ -24,16 +24,27 @@
  * thể là người ta đóng vị thế bán. Chú giải trên màn hình nói điều đó, cùng
  * tư thế `of.keyCaveat`.
  *
- * File này không import gì, để biên dịch và `require()` đứng riêng được
- * trong test (luật của `internals-pure.ts`).
+ * Từ #219 file này đọc thêm TỪNG LỆNH KHỚP từ luồng WebSocket của UW
+ * (`parseTrade`, xem `liveflowws.ts`). Với một lệnh đơn lẻ thì phía KHÔNG
+ * phải suy từ premium gộp: nó là phép so giá khớp với NBBO lúc khớp — đúng
+ * cách UW tự ghi ASK/BID/MID — nên đó là nguồn `nbbo`, còn nhãn UW gửi kèm
+ * (`tags`) thắng nếu có.
+ *
+ * Chỉ import `parseOsi` (từ `cboe.ts`, module thuần không import gì) — vẫn
+ * biên dịch và `require()` đứng riêng được trong test.
  */
+import { parseOsi } from './cboe';
 
 export type FlowSide = 'ask' | 'bid' | 'mid' | 'mixed' | 'unknown';
 /** Phía được suy từ đâu — hiện ra để "phía" suy từ premium không trông y
  *  hệt "phía" UW tự ghi. */
-export type SideSource = 'field' | 'premium' | 'none';
+export type SideSource = 'field' | 'premium' | 'tags' | 'nbbo' | 'none';
 
 export type LiveRow = {
+  /** `alert` = bản ghi flow-alerts (REST, đã lọc, có thể gộp nhiều lệnh);
+   *  `trade` = MỘT lệnh khớp từ WebSocket. Hai thứ khác bản chất nên không
+   *  bao giờ trộn trong một bảng. */
+  kind: 'alert' | 'trade';
   id: string;
   /** ISO, nguyên văn UW. */
   at: string;
@@ -181,6 +192,7 @@ export function parseLiveRow(raw: any): LiveRow | null {
   const { side, source } = sideOf(raw);
 
   return {
+    kind: 'alert',
     id: String(id),
     at: atIso,
     ticker: String(first(raw, ['ticker', 'underlying_symbol', 'ticker_symbol']) ?? '').toUpperCase(),
@@ -256,4 +268,153 @@ export function sideCounts(rows: LiveRow[]): Record<FlowSide, number> {
   const c: Record<FlowSide, number> = { ask: 0, bid: 0, mid: 0, mixed: 0, unknown: 0 };
   for (const r of rows) c[r.side]++;
   return c;
+}
+
+// ── Từng lệnh khớp (WebSocket) ─────────────────────────────────────────────
+
+/** Thời điểm: UW có thể gửi mili-giây epoch (số hoặc chuỗi số) hoặc ISO.
+ *  Số nhỏ hơn 1e12 là GIÂY epoch — nhân 1000, không thì mọi lệnh rơi về 1970
+ *  và DTE thành con số vô lý. */
+export function toIso(v: unknown): string | null {
+  if (typeof v === 'number' || (typeof v === 'string' && /^\d+(\.\d+)?$/.test(v.trim()))) {
+    let n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    if (n < 1e12) n *= 1000;
+    return new Date(n).toISOString();
+  }
+  if (typeof v === 'string' && Number.isFinite(Date.parse(v))) return new Date(Date.parse(v)).toISOString();
+  return null;
+}
+
+/** Phía từ nhãn UW gửi kèm (`tags`), nếu có. */
+function sideFromTags(tags: unknown): FlowSide | null {
+  const list = Array.isArray(tags)
+    ? tags.map((x) => String(x).toLowerCase())
+    : typeof tags === 'string'
+      ? tags.toLowerCase().split(/[\s,]+/)
+      : [];
+  if (list.includes('ask_side') || list.includes('ask')) return 'ask';
+  if (list.includes('bid_side') || list.includes('bid')) return 'bid';
+  if (list.includes('mid_side') || list.includes('mid')) return 'mid';
+  if (list.includes('no_side')) return 'unknown';
+  return null;
+}
+
+/** Phía của MỘT lệnh: giá khớp so với NBBO lúc khớp. Chạm/vượt ask = ask,
+ *  chạm/dưới bid = bid, nằm giữa = mid. Thiếu số thì KHÔNG đoán. */
+export function sideFromNbbo(price: number | null, bid: number | null, ask: number | null): FlowSide | null {
+  if (price === null || bid === null || ask === null || !(ask >= bid)) return null;
+  if (price >= ask) return 'ask';
+  if (price <= bid) return 'bid';
+  return 'mid';
+}
+
+/** Một thông điệp lệnh khớp → một dòng. `null` khi thiếu thời điểm hoặc
+ *  thiếu cả id lẫn mã hợp đồng — không có thì không gộp trùng được. */
+export function parseTrade(raw: any): LiveRow | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const atIso = toIso(first(raw, ['executed_at', 'created_at', 'timestamp', 'time', 't']));
+  if (!atIso) return null;
+  const optSym = first(raw, ['option_symbol', 'option_chain', 'symbol']);
+  const osi = parseOsi(optSym);
+  const idRaw = first(raw, ['id', 'trade_id', 'tracking_id']);
+  if (idRaw === undefined && !osi) return null;
+
+  const price = num(first(raw, ['price', 'fill_price']));
+  const size = num(first(raw, ['size', 'volume_size', 'qty']));
+  const bid = num(first(raw, ['nbbo_bid', 'bid', 'ewma_nbbo_bid']));
+  const ask = num(first(raw, ['nbbo_ask', 'ask', 'ewma_nbbo_ask']));
+  const { pos, outside } = fillPosition(price, bid, ask);
+
+  let side: FlowSide = 'unknown';
+  let source: SideSource = 'none';
+  const tagged = sideFromTags(raw.tags);
+  const explicit = normSide(first(raw, ['side', 'trade_side', 'aggressor_side']));
+  const fromNbbo = sideFromNbbo(price, bid, ask);
+  if (tagged) {
+    side = tagged;
+    source = 'tags';
+  } else if (explicit) {
+    side = explicit;
+    source = 'field';
+  } else if (fromNbbo) {
+    side = fromNbbo;
+    source = 'nbbo';
+  }
+
+  const expiryRaw = first(raw, ['expiry', 'expiration']);
+  const expiry =
+    typeof expiryRaw === 'string' ? expiryRaw.slice(0, 10) : osi ? osi.expiration : null;
+  const typeRaw = first(raw, ['option_type', 'type']);
+  const type =
+    typeRaw !== undefined ? typeOf(typeRaw) : osi ? (osi.right === 'C' ? 'call' : 'put') : 'other';
+  // Premium của MỘT lệnh là giá × size × 100 theo định nghĩa hợp đồng chuẩn;
+  // chỉ tự tính khi UW không gửi, và không bao giờ khi thiếu một vế.
+  const premium =
+    num(first(raw, ['premium', 'total_premium'])) ??
+    (price !== null && size !== null ? price * size * 100 : null);
+  const tags = Array.isArray(raw.tags) ? raw.tags.map(String) : [];
+
+  return {
+    kind: 'trade',
+    id: String(idRaw ?? `${optSym}:${atIso}:${price}:${size}`),
+    at: atIso,
+    ticker: String(
+      first(raw, ['underlying_symbol', 'ticker', 'underlying']) ?? osi?.root ?? ''
+    ).toUpperCase(),
+    type,
+    strike: num(raw.strike) ?? osi?.strike ?? null,
+    expiry,
+    dte: dteOf(expiry, atIso),
+    spot: num(first(raw, ['underlying_price', 'stock_price'])),
+    bid,
+    ask,
+    price,
+    fillPos: pos,
+    outside,
+    side,
+    sideSource: source,
+    size,
+    premium,
+    volume: num(raw.volume),
+    openInterest: num(raw.open_interest),
+    rule: null,
+    sweep: tags.some((x: string) => /sweep/i.test(x)) || !!raw.is_sweep,
+    floor: tags.some((x: string) => /floor/i.test(x)) || !!raw.is_floor,
+    multileg: tags.some((x: string) => /multi/i.test(x)) || !!raw.is_multi_leg,
+    tradeCount: 1,
+  };
+}
+
+/** Bóc một khung WebSocket. UW được NHỚ là gửi `[kênh, nội dung]`; đọc dung
+ *  thứ cả dạng object `{channel, data}` lẫn nội dung trần. Khung không phải
+ *  JSON trả `null` — người gọi đếm nó chứ không ném. */
+export function unwrapFrame(text: string): { channel: string | null; payload: any } | null {
+  let j: any;
+  try {
+    j = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (Array.isArray(j) && j.length === 2 && typeof j[0] === 'string') return { channel: j[0], payload: j[1] };
+  if (j && typeof j === 'object' && !Array.isArray(j)) {
+    const ch = typeof j.channel === 'string' ? j.channel : null;
+    if ('data' in j) return { channel: ch, payload: j.data };
+    return { channel: ch, payload: j };
+  }
+  return { channel: null, payload: j };
+}
+
+/** Một nội dung có thể là một lệnh hoặc một mảng lệnh. */
+export function tradesIn(payload: any): any[] {
+  if (Array.isArray(payload)) return payload.filter((x) => x && typeof x === 'object');
+  if (payload && typeof payload === 'object') return [payload];
+  return [];
+}
+
+/** Che khoá API trong mọi chuỗi đi ra ngoài (URL WebSocket mang `token=`). */
+export function redactKey(s: string, key: string | undefined): string {
+  let out = s.replace(/(token=)[^&\s"']+/gi, '$1***');
+  if (key && key.length >= 4) out = out.split(key).join('***');
+  return out;
 }
