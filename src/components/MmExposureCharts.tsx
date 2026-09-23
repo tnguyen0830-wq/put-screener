@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import type { IntraBar } from '@/lib/daytrade';
-import type { StrikeExposure } from '@/lib/mmexposure';
+import type { ExposureBar } from '@/lib/mmexposure';
 
 /**
  * Ba biểu đồ của phần "Phơi nhiễm nhà tạo lập", vẽ bằng SVG trong code —
@@ -57,12 +57,16 @@ export function ExposureLadder({
   spot,
   symbol,
   candlesError,
+  hideCandleNote = false,
 }: {
   bars: IntraBar[];
-  strikes: StrikeExposure[];
+  strikes: ExposureBar[];
   spot: number;
   symbol: string;
   candlesError: string | null;
+  /** Biểu đồ UW đặt ngay dưới biểu đồ app dùng CÙNG nến Schwab; lý do thiếu
+   *  nến đã in một lần dưới biểu đồ app, in lại là nhân đôi một cảnh báo. */
+  hideCandleNote?: boolean;
 }) {
   const { t, lang } = useLang();
   const [hover, setHover] = useState<number | null>(null);
@@ -182,7 +186,7 @@ export function ExposureLadder({
           })}
         </p>
       )}
-      {!bars.length && (
+      {!bars.length && !hideCandleNote && (
         <p className="hint hint-warn">{t('mm.noCandles', candlesError ?? '—')}</p>
       )}
     </div>
@@ -205,8 +209,8 @@ export function SpotGammaChart({
   volume,
   spot,
 }: {
-  oi: StrikeExposure[];
-  volume: StrikeExposure[];
+  oi: ExposureBar[];
+  volume: ExposureBar[];
   spot: number;
 }) {
   const { t, lang } = useLang();
@@ -324,7 +328,7 @@ const D_PAD_T = 10;
 const D_PAD_B = 28;
 const D_ROW = 16;
 
-export function DeltaByStrike({ strikes }: { strikes: StrikeExposure[] }) {
+export function DeltaByStrike({ strikes }: { strikes: ExposureBar[] }) {
   const { t, lang } = useLang();
   const [hover, setHover] = useState<number | null>(null);
 
