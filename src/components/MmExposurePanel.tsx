@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { readJsonOrText } from '@/lib/fetchjson';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import { window as windowStrikes, type StrikeExposure } from '@/lib/mmexposure';
 import { ExposureLadder, SpotGammaChart, DeltaByStrike } from './MmExposureCharts';
@@ -100,7 +101,13 @@ export default function MmExposurePanel() {
         const q = new URLSearchParams({ symbol: sym });
         if (expiration) q.set('exp', expiration);
         const r = await fetch(`/api/daytrade/exposure?${q}`);
-        const j = await r.json();
+        const body = await readJsonOrText(r);
+        if (!body.ok) {
+          // Không phải JSON: in mã HTTP + tiêu đề trang thật (lib/fetchjson.ts).
+          setError(t('mm.failed', body.summary));
+          return;
+        }
+        const j = body.json;
         if (!r.ok) {
           /* Ba lý do hỏng, ba câu khác nhau, vì ba cách sửa khác nhau: hết
              phiên thì bấm kết nối lại, mã sai thì sửa mã, còn lại in NGUYÊN
