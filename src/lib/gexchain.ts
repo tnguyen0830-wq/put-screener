@@ -1,4 +1,4 @@
-import { fullChainAdaptive, type ChainWindow } from './schwab';
+import { fullChainAdaptive, fullChainSliced, type ChainWindow } from './schwab';
 import { chainStatusFailed, computeGex, gexDiagnosis, usableContractCount, type GexProfile } from './gex';
 import { fetchCboeChain, isIndexSymbol } from './cboe';
 import { fetchUwChain, uwChainConfigured, uwDiagLine } from './uwchain';
@@ -57,6 +57,89 @@ export function indexSymbolCandidates(symbol: string): string[] {
 
 export type Attempt = { symbol: string; error: string };
 
+/* ------------------------------------------------------------------ *
+ * Chuỗi rỗng ruột: hỏi lại TỪNG KỲ MỘT
+ * ------------------------------------------------------------------ */
+
+/**
+ * ĐO ĐƯỢC 2026-09-23, và nó lật lại một nửa của #108.
+ *
+ * Ảnh chụp production tab GEX với `$SPX`: Schwab trả **32 kỳ · 3732 hợp
+ * đồng · OI=0 ở TẤT CẢ** — đúng lỗi #108. Nhưng ảnh chụp bảng 0DTE của
+ * CÙNG một mã, chụp trước đó vài giờ, hiện **open interest THẬT** (call
+ * 430/1117/2412…, put 1391/2509/2710…) và KHÔNG có dòng nguồn UW, tức
+ * chính Schwab đã phục vụ nó.
+ *
+ * Khác biệt DUY NHẤT giữa hai lượt gọi là HÌNH DẠNG REQUEST: bảng 0DTE hỏi
+ * `fullChain(sym, hôm_nay, hôm_nay, { strikeCount: 40 })` — MỘT kỳ đáo hạn
+ * — còn GEX hỏi cả cửa sổ 60 ngày. Nên lỗi không phải "tài khoản không có
+ * dữ liệu chỉ số" và cũng không phải "API chỉ số luôn rỗng": **nó dính vào
+ * request NHIỀU KỲ, còn request một-kỳ thì mang OI thật.**
+ *
+ * `fullChainSliced()` đã viết sẵn từ #96 để xin từng kỳ một — nhưng nó chỉ
+ * chạy khi Schwab trả 502 `TooBigBody`, mà SPX bây giờ trả 200. Nên nấc
+ * thang đó tồn tại và không bao giờ được gọi tới ở đúng ca cần nó. Một
+ * chuỗi rỗng ruột giờ cũng kích hoạt nó, y như một lỗi kích thước: với
+ * người dùng thì "Schwab từ chối" và "Schwab trả thứ vô dụng" là một
+ * chuyện, đúng bài học #99.
+ *
+ * Chi phí là lý do có cache: một lượt ghép là 1 lượt thăm dò + tối đa 12
+ * kỳ = 13 request. Tab Phơi nhiễm MM tự làm mới mỗi 60 giây, nên không
+ * cache là 13 request/phút liên tục cho MỘT tab đang mở — cùng hình dạng
+ * #78. 120 giây là con số của `fetchUwChain` và cùng lý do: GEX = gamma ×
+ * open interest, mà OI chỉ đổi MỘT LẦN mỗi ngày.
+ */
+const SLICE_TTL_MS = 120_000;
+/** Kỳ gần nhất chứa gần hết gamma, và mỗi kỳ là một request. Xem
+ *  `fullChainSliced()` để biết vì sao có trần. */
+const SLICE_EXPIRIES = 12;
+const SLICE_STRIKES = 120;
+
+/* Cache theo TIẾN TRÌNH, và mỗi route là một bundle riêng nên mỗi route có
+   ô riêng (#193) — ở đây điều đó KHÔNG sao, vì đây là cache chứ không phải
+   kho: đọc trượt chỉ tốn thêm một lượt lấy, không mất dữ liệu của ai. */
+const sliceCache = new Map<string, { at: number; value: { chain: any; window: ChainWindow } }>();
+
+/**
+ * Hỏi lại từng kỳ một sau khi chuỗi rộng về rỗng ruột.
+ *
+ * KHÔNG BAO GIỜ ném (trừ hết phiên): một phép thử thêm mà làm chết cả
+ * đường đi là tệ hơn không thử — nếu nó không cứu được thì thang vẫn phải
+ * chảy xuống UW rồi CBOE như cũ. Lý do thật được đẩy vào `attempts` để
+ * khối chẩn đoán nói ra, chứ không nuốt im.
+ */
+async function slicedRetry(
+  symbol: string,
+  attempts: Attempt[]
+): Promise<{ chain: any; window: ChainWindow } | null> {
+  const hit = sliceCache.get(symbol);
+  if (hit && Date.now() - hit.at < SLICE_TTL_MS) return hit.value;
+  try {
+    const out = await fullChainSliced(symbol, {
+      strikeCount: SLICE_STRIKES,
+      maxRequests: SLICE_EXPIRIES,
+    });
+    /* Ghép xong vẫn phải KIỂM: nếu từng kỳ cũng rỗng ruột thì lỗi #108
+       rộng hơn ta tưởng, và trả một chuỗi rỗng ra ngoài sẽ chặn mất nấc UW
+       bên dưới. Nói ra con số thật rồi đi tiếp. */
+    if (usableContractCount(out.chain) > 0) {
+      sliceCache.set(symbol, { at: Date.now(), value: out });
+      return out;
+    }
+    attempts.push({
+      symbol,
+      error: `Schwab 200: hỏi từng kỳ một (${out.window.expirations} kỳ) cũng không có hợp đồng nào còn open interest`,
+    });
+  } catch (e: any) {
+    const msg = String(e?.message ?? e);
+    /* Hết phiên phải nổi lên tận `loadGexChain` để trả 401 — UW và CBOE
+       không bao giờ được che mất một phiên Schwab đã chết (#101). */
+    if (msg.includes('REAUTH_REQUIRED')) throw e;
+    attempts.push({ symbol, error: `hỏi từng kỳ một: ${msg}` });
+  }
+  return null;
+}
+
 export async function fetchSchwabChainWithFallback(
   symbol: string
 ): Promise<{ chain: any; window: ChainWindow; attempts: Attempt[] }> {
@@ -66,6 +149,10 @@ export async function fetchSchwabChainWithFallback(
      cho dữ liệu thật thì vẫn trả cái này ra, để phần chẩn đoán nói được
      Schwab thực sự gửi gì thay vì chỉ báo "không cách viết nào chạy". */
   let empty: { chain: any; window: ChainWindow } | null = null;
+  /* Ký hiệu nào đã cho chuỗi rỗng ruột — chính nó là ký hiệu đem đi hỏi
+     lại từng kỳ. Ba cách viết hành xử giống hệt nhau (#108 đã đo), nên thử
+     ghép cho CẢ BA là nhân ba chi phí mà không thêm được thông tin gì. */
+  let emptySymbol: string | null = null;
   for (const candidate of candidates) {
     try {
       const { chain, window } = await fullChainAdaptive(candidate);
@@ -77,7 +164,10 @@ export async function fetchSchwabChainWithFallback(
          chuỗi không dùng được cũng đáng thử cách viết tiếp theo y như một
          lỗi 400. */
       if (usableContractCount(chain) > 0) return { chain, window, attempts };
-      if (!empty) empty = { chain, window };
+      if (!empty) {
+        empty = { chain, window };
+        emptySymbol = candidate;
+      }
       attempts.push({
         symbol: candidate,
         error: 'Schwab 200: chuỗi không có hợp đồng nào còn open interest',
@@ -91,6 +181,19 @@ export async function fetchSchwabChainWithFallback(
       if (!/ 400:/.test(msg)) throw e;
     }
   }
+  /* Chuỗi rộng về rỗng ruột: hỏi lại TỪNG KỲ MỘT trước khi bỏ cuộc — xem
+     khối chú thích của `slicedRetry`. Đây là nấc đáng thử nhất trong cả
+     thang, vì nó giữ được Schwab THỜI GIAN THỰC thay vì rơi xuống CBOE
+     trễ 15 phút, và không tốn một đơn vị hạn mức UW nào. */
+  /* CHỈ cho mã chỉ số. Lỗi rỗng ruột đã đo được là dính `assetMainType=
+     INDEX` (#108), còn SPY/QQQ/IWM thì Schwab phục vụ bình thường — nên
+     với cổ phiếu, một chuỗi rỗng ruột là chuyện KHÁC và 13 request thêm
+     chỉ là 13 request thêm. */
+  if (emptySymbol && isIndexSymbol(emptySymbol)) {
+    const sliced = await slicedRetry(emptySymbol, attempts);
+    if (sliced) return { ...sliced, attempts };
+  }
+
   // Có chuỗi rỗng ruột thì trả nó ra chứ không ném lỗi: nhánh !profile sẽ
   // chạy gexDiagnosis() trên chính chuỗi đó và in ra con số thật (bao nhiêu
   // kỳ, bao nhiêu hợp đồng, bị loại vì gì) - thông tin đó mất hẳn nếu ném.

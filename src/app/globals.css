@@ -2235,6 +2235,15 @@ table.results tbody tr.clickable {
 .hmranges {
   margin: 4px 0 12px;
   width: max-content;
+  /* `width: max-content` co theo NỘI DUNG, không theo khung nhìn — nên từ
+     khi tab Heatmap có năm tab con (#177), hàng nút rộng 379px trong một
+     khung nhìn 400px và đẩy CẢ TRANG cuộn ngang 3px. Đo được y hệt trên
+     `origin/main` nên đây là lỗi CÓ TỪ TRƯỚC, không phải của PR này; nó
+     lộ ra vì phép đo "trang không được cuộn ngang" của PR này chạy đúng
+     trên màn hình đó. Cuộn trong hộp của chính nó, đúng cách `nav.tabs`
+     đã làm — hàng nút giữ nguyên, trang đứng yên. */
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Bảng nâng/hạ bậc của giới phân tích trong tab phân tích mã. */

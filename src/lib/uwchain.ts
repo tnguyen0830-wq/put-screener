@@ -40,15 +40,17 @@ import { mapWithLimit } from './maplimit';
  * lượt gọi. Hình dạng bản ghi thì ĐÃ đo — hai vòng probe production
  * 2026-09-22, SPX và SPY — nên tên trường ở đây là đo được, không phải nhớ
  * được. Thứ chưa đo là PHÂN TRANG, và đó cũng là thứ nguy hiểm nhất, nên
- * `fetchUwChain` tự đo nó lúc chạy và TỪ CHỐI thay vì trả một chuỗi thiếu
- * — xem `PAGE_SIZE_ASKED`.
+ * `fetchUwChain` tự đo nó lúc chạy — xem `PAGE_PARAM`. Production
+ * 2026-09-23 trả lời: chuỗi CÓ bị cắt trang (8/8 kỳ đầy trang), nên giờ
+ * nó lật trang thật; thứ còn chưa đo là tên tham số `page`, và điều đó
+ * được KIỂM lúc chạy chứ không tin, rồi TỪ CHỐI nếu không lấy đủ.
  */
 
 /** Hỏi bao nhiêu hợp đồng mỗi trang. Probe đo được `limit=50` trả đúng 50;
- *  `limit=500` thì CHƯA đo. Nếu tham số bị bỏ qua, một kỳ SPX vài trăm hợp
- *  đồng sẽ chỉ về 50 cái ĐẦU TIÊN theo thứ tự nào đó của UW — không phải
- *  50 strike gần giá. Một chuỗi như thế cho ra tường GEX SAI mà trông y hệt
- *  tường đúng, nên nó bị TỪ CHỐI chứ không được dùng: xem `truncated`. */
+ *  `limit=500` thì CHƯA đo, và giờ KHÔNG CÒN QUAN TRỌNG: phép dừng của
+ *  `fetchExpiryPages()` so với trang LỚN NHẤT đã thấy chứ không với con số
+ *  này, nên UW chặn ở đâu cũng lật trang đúng. Con số vẫn để cao để bớt
+ *  số lượt gọi khi `limit` thật sự được tôn trọng. */
 const PAGE_SIZE_ASKED = 500;
 
 /** Số kỳ đáo hạn lấy về, gần nhất trước. Cùng con số và cùng lý do với
@@ -64,9 +66,45 @@ const MAX_EXPIRIES = 8;
 const CONCURRENCY = 2;
 
 /**
+ * PHÂN TRANG — phép đo còn thiếu của #210, và production vừa trả lời: BỊ
+ * CẮT. Ảnh chụp tab GEX 2026-09-23 với `$SPX`: *"UW cắt trang: 8/8 kỳ (UW
+ * có 33)"* — tức CẢ TÁM kỳ đều đầy trang, nên cả chuỗi bị từ chối và màn
+ * hình rơi xuống CBOE trễ 15 phút. Hỏi một trang rồi bỏ cuộc là không đủ.
+ *
+ * Tên tham số `page` là NHỚ ĐƯỢC chứ chưa đo, nên nó được **đo lúc chạy**
+ * thay vì tin: trang kế tiếp phải mang hợp đồng MỚI (so theo
+ * `option_symbol`). Nếu nó trả lại đúng bộ cũ thì tham số bị bỏ qua, và đó
+ * là một kết luận khác hẳn "hết hàng" — nó bị gọi tên riêng (`page-ignored`)
+ * và chuỗi vẫn bị từ chối, vì lặp lại trang đầu mãi mãi cũng không lấy
+ * được phần còn thiếu.
+ *
+ * ĐIỀU KIỆN DỪNG không phải "trang nhỏ hơn số đã hỏi" — đó chính là cái bẫy
+ * `limit` bị bỏ qua: nếu UW chặn ở 50 thì trang đầu trả 50 < 500 và phép
+ * kiểm ngây thơ sẽ kết luận "xong" rồi dựng tường GEX trên 50 hợp đồng.
+ * Dừng khi trang RỖNG, hoặc nhỏ hơn trang LỚN NHẤT đã thấy — đúng với cả
+ * hai trường hợp, không cần biết trước UW chặn ở đâu.
+ */
+const PAGE_PARAM = 'page';
+/** Trần trang cho MỘT kỳ. Ở mức chặn 50 thì đây là ~600 hợp đồng, dư cho
+ *  một kỳ SPX; vượt qua nghĩa là có gì đó không như hiểu biết hiện tại, và
+ *  câu trả lời đúng là TỪ CHỐI kèm lý do chứ không đi tiếp mãi. */
+const MAX_PAGES = 12;
+/**
+ * Trần request cho CẢ một lượt lấy chuỗi, spot tính luôn vào.
+ *
+ * Đây là thứ giữ cho phân trang không biến thành #78 lần hai: nếu UW chặn
+ * `limit` ở 50 thì 8 kỳ × 11 trang = 88 request MỖI LƯỢT, và panel tự làm
+ * mới mỗi 60 giây. Trần cứng ở 24 nghĩa là chi phí tệ nhất biết trước
+ * được; hết trần thì các kỳ còn lại bị ghi là cụt và cả chuỗi bị từ chối
+ * kèm lý do thật — chứ không phải lặng lẽ dựng tường trên nửa chuỗi.
+ */
+const MAX_REQUESTS = 24;
+
+/**
  * Cache theo mã. ĐÂY LÀ PHẦN GIỮ CHI PHÍ XUỐNG, không phải tối ưu hoá cho
  * vui: panel Phơi nhiễm MM tự làm mới mỗi 60 giây, mà một lượt lấy chuỗi là
- * 1 + MAX_EXPIRIES = 9 request. Không cache thì một tab để mở cả ngày là
+ * 1 + MAX_EXPIRIES trang đầu, và nhiều hơn khi phải lật trang (trần cứng
+ * `MAX_REQUESTS`). Không cache thì một tab để mở cả ngày là
  * ~12.960 request, tức gần nửa hạn mức ngày cho MỘT màn hình — đúng hình
  * dạng đã đốt sạch hạn mức ở #78.
  *
@@ -145,10 +183,12 @@ export type UwDiag = {
   droppedBadSymbol: number;
   droppedNoGreeks: number;
   /** Số hợp đồng lớn nhất một trang trả về. Bằng 50 trong khi đã hỏi 500
-   *  nghĩa là `limit` bị bỏ qua — chính là phép đo còn thiếu. */
+   *  nghĩa là UW chặn `limit` ở 50 — đáng biết, nhưng không còn làm hỏng
+   *  phép lật trang (xem `fetchExpiryPages`). */
   maxPage: number;
-  /** Kỳ nào nghi bị cắt trang (trang đầy đúng bằng số đã hỏi, hoặc bằng 50
-   *  trong khi hỏi nhiều hơn). Có phần tử nào ở đây là chuỗi KHÔNG dùng. */
+  /** Kỳ nào KHÔNG lật hết được, kèm LÝ DO (`page-ignored` / `page-cap` /
+   *  `budget`) — ba lý do, ba cách sửa. Có phần tử nào ở đây là chuỗi
+   *  KHÔNG dùng. */
   truncated: string[];
   /** Khoá thật của một bản ghi, để lần chạy đầu tự nói ra chỗ lệch. */
   recordKeys: string[];
@@ -331,6 +371,75 @@ export function uwChainConfigured(): boolean {
  * tường đúng, nên nó bị ném kèm lý do thật và thang rơi xuống CBOE. Chính
  * dòng chẩn đoán đó là phép đo còn thiếu về `limit`.
  */
+/** Vì sao một kỳ không lấy đủ. Ba lý do, ba cách sửa khác nhau — gộp
+ *  chúng thành một chữ "cụt" là đúng thứ repo này cấm. */
+export type PageStop = 'done' | 'page-ignored' | 'page-cap' | 'budget';
+
+export type ExpiryPages = {
+  exp: string;
+  rows: any[];
+  /** Số lượt gọi đã dùng cho kỳ này. */
+  requests: number;
+  /** Trang lớn nhất thấy được — bằng 50 trong khi hỏi 500 nghĩa là `limit`
+   *  bị bỏ qua, và phép dừng bên dưới vẫn đúng vì nó so với con số NÀY. */
+  pageSize: number;
+  stop: PageStop;
+};
+
+/**
+ * Lấy trọn MỘT kỳ đáo hạn, lật trang cho tới khi hết.
+ *
+ * Tách ra và nhận `get` làm tham số để test được không cần mạng — cùng lý
+ * do `uwToChain()` là hàm thuần. `budget` là ô DÙNG CHUNG giữa các worker
+ * nên trần là trần thật, không phải trần mỗi kỳ.
+ */
+export async function fetchExpiryPages(
+  exp: string,
+  get: (page: number) => Promise<any[]>,
+  budget: { left: number }
+): Promise<ExpiryPages> {
+  const rows: any[] = [];
+  const seen = new Set<string>();
+  let requests = 0;
+  let pageSize = 0;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    if (budget.left <= 0) return { exp, rows, requests, pageSize, stop: 'budget' };
+    budget.left--;
+    requests++;
+    const got = await get(page);
+    pageSize = Math.max(pageSize, got.length);
+
+    let fresh = 0;
+    for (const r of got) {
+      const id = typeof r?.option_symbol === 'string' ? r.option_symbol : null;
+      /* Bản ghi không có ký hiệu thì KHÔNG bị coi là trùng: `uwToChain()`
+         sẽ tự loại nó và đếm riêng. Coi nó là trùng ở đây sẽ khiến một
+         trang toàn bản ghi lạ đọc thành "trang bị bỏ qua", tức chẩn đoán
+         chỉ sai chỗ. */
+      if (id !== null) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      rows.push(r);
+      fresh++;
+    }
+
+    /* Trang rỗng = hết hàng, kể cả ở trang đầu. */
+    if (got.length === 0) return { exp, rows, requests, pageSize, stop: 'done' };
+    /* Trang thứ hai trở đi mà KHÔNG có hợp đồng nào mới: `page` bị bỏ qua.
+       Khác hẳn "hết hàng" — ở đây phần còn thiếu là không lấy được. */
+    if (page > 0 && fresh === 0) {
+      return { exp, rows, requests, pageSize, stop: 'page-ignored' };
+    }
+    /* Nhỏ hơn trang lớn nhất đã thấy = trang cuối. CỐ Ý không so với
+       `PAGE_SIZE_ASKED`: nếu UW chặn ở 50 thì mọi trang đầy đều là 50 và
+       phép so kia sẽ dừng ngay ở trang đầu. */
+    if (got.length < pageSize) return { exp, rows, requests, pageSize, stop: 'done' };
+  }
+  return { exp, rows, requests, pageSize, stop: 'page-cap' };
+}
+
 export async function fetchUwChain(
   symbol: string,
   opts: { days?: number; today?: string } = {}
@@ -361,14 +470,27 @@ export async function fetchUwChain(
   type Job = { kind: 'spot' } | { kind: 'exp'; exp: string };
   const jobs: Job[] = [{ kind: 'spot' }, ...asked.map((exp) => ({ kind: 'exp' as const, exp }))];
 
+  /* Ô ngân sách DÙNG CHUNG cho cả lượt (spot tính luôn), nên hai worker
+     không thể cộng dồn thành gấp đôi trần. */
+  const budget = { left: MAX_REQUESTS };
+
   const settled = await mapWithLimit(jobs, CONCURRENCY, async (job) => {
-    if (job.kind === 'spot') return { kind: 'spot' as const, spot: await uwSpot(ticker) };
-    const res: any = await uwGet(
-      `/api/stock/${encodeURIComponent(ticker)}/option-contracts`,
-      { limit: PAGE_SIZE_ASKED, expiry: job.exp }
+    if (job.kind === 'spot') {
+      budget.left--;
+      return { kind: 'spot' as const, spot: await uwSpot(ticker) };
+    }
+    const page = await fetchExpiryPages(
+      job.exp,
+      async (p) => {
+        const res: any = await uwGet(
+          `/api/stock/${encodeURIComponent(ticker)}/option-contracts`,
+          { limit: PAGE_SIZE_ASKED, expiry: job.exp, [PAGE_PARAM]: p }
+        );
+        return Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      },
+      budget
     );
-    const rows: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-    return { kind: 'exp' as const, exp: job.exp, rows };
+    return { kind: 'exp' as const, ...page };
   });
 
   /* Spot hỏng KHÔNG làm hỏng chuỗi: `computeGex()` sẽ tự từ chối vì thiếu
@@ -392,15 +514,12 @@ export async function fetchUwChain(
       continue;
     }
     if (p.value.kind !== 'exp') continue;
-    const n = p.value.rows.length;
-    maxPage = Math.max(maxPage, n);
-    /* Hai dấu hiệu cụt, và chúng KHÁC nhau. Trang đầy đúng bằng số đã hỏi
-       nghĩa là có thể còn nữa. Trang đúng 50 trong khi hỏi 500 nghĩa là
-       `limit` bị bỏ qua hẳn — nguy hiểm hơn, vì nó im lặng. */
-    if (n >= PAGE_SIZE_ASKED || (n === 50 && PAGE_SIZE_ASKED > 50)) {
-      truncated.push(p.value.exp);
-    }
-    if (n > 0) expKept.add(p.value.exp);
+    maxPage = Math.max(maxPage, p.value.pageSize);
+    /* `stop` đã là KẾT LUẬN, không phải một con số phải đoán lại ở đây:
+       `done` nghĩa là đã lật tới trang cuối, mọi giá trị khác nghĩa là kỳ
+       này còn thiếu hợp đồng và không có cách nào biết thiếu cái gì. */
+    if (p.value.stop !== 'done') truncated.push(`${p.value.exp}:${p.value.stop}`);
+    if (p.value.rows.length > 0) expKept.add(p.value.exp);
     rows.push(...p.value.rows);
   }
 
