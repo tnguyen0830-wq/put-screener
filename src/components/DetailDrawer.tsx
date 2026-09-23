@@ -242,7 +242,7 @@ export default function DetailDrawer({
             }}
           />
 
-          <h3 className="dsec">Gamma theo strike</h3>
+          <h3 className="dsec">{t('an.gamma')}</h3>
           <GexChart symbol={row.symbol} strike={row.strike} />
           <p className="cap">
             {t('dd.gexNote')}
