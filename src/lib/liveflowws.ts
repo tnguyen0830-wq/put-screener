@@ -48,6 +48,12 @@ export const IDLE_MS = 90_000;
  *  mà bấm lại liên tục chỉ gõ cửa vô ích. */
 const BACKOFF = [5_000, 15_000, 60_000, 300_000];
 const MAX_CONTROL_FRAMES = 5;
+/** Bắt tay WebSocket quá chừng này chưa xong thì coi là hỏng. Không có hạn
+ *  chờ thì một máy chủ không trả lời làm màn hình nói "Đang nối…" MÃI MÃI —
+ *  đúng lỗi chủ app gặp ở production 2026-09-23 (#221). */
+export const CONNECT_TIMEOUT_MS = 15_000;
+/** Phép hỏi HTTP thường tới địa chỉ socket, nhiều nhất một lần mỗi 10 phút. */
+const HTTP_PROBE_EVERY_MS = 10 * 60_000;
 const FRAME_CLIP = 300;
 
 export type WsState = 'idle' | 'connecting' | 'open' | 'closed' | 'unsupported' | 'no-key';
@@ -71,6 +77,11 @@ type Diag = {
   lastError: string | null;
   attempts: number;
   nextRetryAt: number | null;
+  /** Hỏi thẳng địa chỉ socket bằng HTTP thường khi bắt tay hỏng. Lỗi
+   *  WebSocket của Node chỉ nói chung chung ("non-101 status code"), còn câu
+   *  trả lời HTTP mang MÃ và LỜI thật của UW: 401 khoá sai, 403 gói chưa mở,
+   *  404 sai địa chỉ, 426 địa chỉ đúng nhưng chỉ nhận WebSocket. */
+  httpProbe: { at: number; status: number | null; contentType: string | null; body: string | null; error: string | null } | null;
 };
 
 const fresh = (): Diag => ({
@@ -92,6 +103,7 @@ const fresh = (): Diag => ({
   lastError: null,
   attempts: 0,
   nextRetryAt: null,
+  httpProbe: null,
 });
 
 let diag: Diag = fresh();
@@ -102,6 +114,40 @@ let lastDemand = 0;
 let sawTrade = false;
 let timer: any = null;
 let retryTimer: any = null;
+let connectTimer: any = null;
+let probing = false;
+
+async function httpProbe(now: number) {
+  const k = key();
+  if (!k || probing) return;
+  if (diag.httpProbe && now - diag.httpProbe.at < HTTP_PROBE_EVERY_MS) return;
+  probing = true;
+  try {
+    const r = await fetch(`https://api.unusualwhales.com/socket?token=${encodeURIComponent(k)}`, {
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10_000),
+    });
+    const text = await r.text().catch(() => '');
+    diag.httpProbe = {
+      at: now,
+      status: r.status,
+      contentType: r.headers.get('content-type'),
+      body: text ? clip(text.replace(/\s+/g, ' ').trim()) : null,
+      error: null,
+    };
+  } catch (e: any) {
+    diag.httpProbe = {
+      at: now,
+      status: null,
+      contentType: null,
+      body: null,
+      error: clip(String(e?.cause?.code ?? e?.name ?? '') + ' ' + String(e?.cause?.message ?? e?.message ?? e)).trim(),
+    };
+  } finally {
+    probing = false;
+  }
+}
 
 const key = () => process.env.UW_API_KEY;
 const clip = (s: string) => redactKey(s.length > FRAME_CLIP ? `${s.slice(0, FRAME_CLIP)}…` : s, key());
@@ -199,8 +245,24 @@ function connect(now: number) {
     return;
   }
   socket = ws;
+  clearTimeout(connectTimer);
+  connectTimer = setTimeout(() => {
+    if (socket !== ws || diag.state !== 'connecting') return;
+    socket = null;
+    diag.state = 'closed';
+    diag.lastError = `không nối được sau ${CONNECT_TIMEOUT_MS / 1000} giây — máy chủ không trả lời bắt tay WebSocket`;
+    try {
+      ws.close();
+    } catch {
+      /* bỏ qua */
+    }
+    void httpProbe(Date.now());
+    if (Date.now() - lastDemand < IDLE_MS) scheduleRetry(Date.now());
+  }, CONNECT_TIMEOUT_MS);
+  connectTimer?.unref?.();
   ws.onopen = () => {
     if (socket !== ws) return;
+    clearTimeout(connectTimer);
     diag.state = 'open';
     diag.connectedAt = Date.now();
     diag.lastError = null;
@@ -226,8 +288,11 @@ function connect(now: number) {
   };
   ws.onclose = (ev: any) => {
     if (socket !== ws) return;
+    clearTimeout(connectTimer);
+    const neverOpened = diag.state === 'connecting';
     socket = null;
     flush();
+    if (neverOpened) void httpProbe(Date.now());
     diag.state = 'closed';
     diag.closeCode = typeof ev?.code === 'number' ? ev.code : null;
     diag.closeReason = ev?.reason ? clip(String(ev.reason)) : null;
@@ -289,6 +354,9 @@ export function _resetWs() {
   socket = null;
   clearTimeout(retryTimer);
   retryTimer = null;
+  clearTimeout(connectTimer);
+  connectTimer = null;
+  probing = false;
   clearInterval(timer);
   timer = null;
   diag = fresh();

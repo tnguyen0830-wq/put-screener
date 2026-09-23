@@ -26,6 +26,7 @@ type WsDiag = {
   lastError: string | null;
   attempts: number;
   nextRetryAt: number | null;
+  httpProbe?: { at: number; status: number | null; contentType: string | null; body: string | null; error: string | null } | null;
 };
 
 type TradesPayload =
@@ -445,7 +446,20 @@ function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: ()
   const retryIn = ws.nextRetryAt && ws.nextRetryAt > now ? Math.round((ws.nextRetryAt - now) / 1000) : null;
   return (
     <>
-      {ws.state === 'connecting' && <p className="cap">{t('lf.ws.connecting')}</p>}
+      {ws.state === 'connecting' && (
+        <p className="cap">
+          {t('lf.ws.connecting')}
+          {ws.since ? ` ${t('lf.ws.elapsed', Math.max(0, Math.round((now - ws.since) / 1000)))}` : ''}
+        </p>
+      )}
+      {ws.httpProbe && (
+        <p className="cap warnline lfkeys">
+          {ws.httpProbe.status !== null
+            ? t('lf.ws.http', { status: ws.httpProbe.status, meaning: t(httpMeaningKey(ws.httpProbe.status)) })
+            : t('lf.ws.httpErr', ws.httpProbe.error ?? '—')}
+          {ws.httpProbe.body ? <code> {ws.httpProbe.body}</code> : null}
+        </p>
+      )}
       {broken && (
         <p className="cap warnline">
           {t('lf.ws.closed', {
@@ -467,7 +481,9 @@ function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: ()
           {t('lf.unparsed', ws.unparsed)} <code>{ws.sampleKeys.join(', ') || '—'}</code>
         </p>
       )}
-      <details className="lfdiag">
+      {/* Tự mở khi luồng chưa chạy: lúc đó khối này là thứ duy nhất đáng đọc,
+          bắt bấm thêm một lần là bắt chờ vô ích. */}
+      <details className="lfdiag" open={ws.state !== 'open' || ws.kept === 0}>
         <summary>{t('lf.ws.diag')}</summary>
         <p className="hint">
           {t('lf.ws.counts', {
@@ -497,4 +513,17 @@ function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: ()
       </details>
     </>
   );
+}
+
+/** Mã HTTP → khoá câu giải thích. Không đoán ngoài bảng: mã lạ in "chưa rõ". */
+function httpMeaningKey(status: number): string {
+  if (status === 401) return 'lf.ws.h401';
+  if (status === 403) return 'lf.ws.h403';
+  if (status === 404) return 'lf.ws.h404';
+  if (status === 426 || status === 400) return 'lf.ws.h426';
+  if (status === 429) return 'lf.ws.h429';
+  if (status >= 500) return 'lf.ws.h5xx';
+  if (status >= 300 && status < 400) return 'lf.ws.h3xx';
+  if (status === 200) return 'lf.ws.h200';
+  return 'lf.ws.hOther';
 }
