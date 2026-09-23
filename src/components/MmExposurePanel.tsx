@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readJsonOrText } from '@/lib/fetchjson';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
-import { window as windowStrikes, type StrikeExposure } from '@/lib/mmexposure';
+import {
+  window as windowStrikes,
+  keyLevels,
+  withinRange,
+  type ExposureBar,
+  type KeyLevels,
+  type StrikeExposure,
+} from '@/lib/mmexposure';
+import type { UwDeltaSide, UwGammaSide } from '@/lib/uwexposure';
 import { ExposureLadder, SpotGammaChart, DeltaByStrike } from './MmExposureCharts';
 import type { IntraBar } from '@/lib/daytrade';
 
@@ -78,6 +86,33 @@ type Payload = {
   at: number;
 };
 
+/** Hình dạng của `/api/daytrade/exposure/uw` — số UW TỰ TÍNH, đặt song song
+ *  với số app tự tính. Mỗi nửa hỏng độc lập (xem `uwexposureload.ts`). */
+type UwHalf<T> = { ok: true; value: T; at: number } | { ok: false; error: string; at: number };
+type UwPayload =
+  | { configured: false; at: number }
+  | {
+      configured: true;
+      ticker: string;
+      gamma: UwHalf<UwGammaSide>;
+      delta: UwHalf<UwDeltaSide> | null;
+      at: number;
+    };
+
+/** Tên nguồn chuỗi của APP — nhãn tiếng Anh ở cả hai ngôn ngữ, cùng luật
+ *  tiêu đề #215. "UW chain" khác hẳn cột Unusual Whales bên cạnh: đó là
+ *  chuỗi THÔ của UW mà app tự nhân, còn cột kia là số UW đã tính sẵn. */
+const SRC_NAME: Record<Payload['source'], string> = {
+  schwab: 'Schwab chain',
+  uw: 'UW raw chain',
+  cboe: 'CBOE chain (15-min delay)',
+};
+
+function LevelCell({ v, other }: { v: number | null; other: number | null }) {
+  if (v === null) return <td>—</td>;
+  return <td className={other !== null && other === v ? 'good' : undefined}>{v}</td>;
+}
+
 export default function MmExposurePanel() {
   const { t, lang } = useLang();
   const [symbol, setSymbol] = useState('$SPX');
@@ -87,6 +122,8 @@ export default function MmExposurePanel() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uw, setUw] = useState<UwPayload | null>(null);
+  const [uwErr, setUwErr] = useState<string | null>(null);
 
   useEffect(() => {
     setSymbol(readRemembered('mmsymbol') || '$SPX');
@@ -139,6 +176,41 @@ export default function MmExposurePanel() {
     return () => clearInterval(id);
   }, [symbol, exp, load]);
 
+  /* Số UW đi SAU route chính, không song song: chuỗi UW trong thang GEX có
+     thể đang giữ hai suất trong trần 3 request đồng thời của cả tài khoản
+     (#209). Route UW cache 120 giây, nên làm mới mỗi 60 giây không nhân đôi
+     chi phí. */
+  const dataKey = data ? `${data.symbol}|${data.expiration ?? ''}|${data.at}` : '';
+  useEffect(() => {
+    if (!data) return;
+    let dead = false;
+    (async () => {
+      try {
+        const q = new URLSearchParams({ symbol: data.symbol });
+        if (data.expiration) q.set('exp', data.expiration);
+        const r = await fetch(`/api/daytrade/exposure/uw?${q}`);
+        const body = await readJsonOrText(r);
+        if (dead) return;
+        if (!body.ok) {
+          setUwErr(body.summary);
+          return;
+        }
+        if (!r.ok) {
+          setUwErr(String(body.json?.detail ?? body.json?.error ?? r.status));
+          return;
+        }
+        setUw(body.json as UwPayload);
+        setUwErr(null);
+      } catch (e: any) {
+        if (!dead) setUwErr(String(e?.message ?? e));
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataKey]);
+
   const pick = (s: string) => {
     const up = s.trim().toUpperCase();
     if (!up) return;
@@ -146,6 +218,8 @@ export default function MmExposurePanel() {
     // Kỳ đáo hạn của mã cũ gần như chắc chắn không có trong chuỗi mã mới;
     // giữ lại là để bảng delta rỗng trông như "kỳ này không có hợp đồng".
     setExp(null);
+    // Số UW của mã cũ không được nằm lại dưới tên mã mới.
+    setUw(null);
     remember('mmsymbol', up);
   };
 
@@ -161,11 +235,65 @@ export default function MmExposurePanel() {
     };
   }, [data, pct]);
 
+  const uwGamma = uw && uw.configured && uw.gamma.ok ? uw.gamma.value : null;
+  const uwDelta = uw && uw.configured && uw.delta && uw.delta.ok ? uw.delta.value : null;
+  const uwSpot = uwGamma?.price ?? data?.spot ?? 0;
+
+  const uwWindowed = useMemo(() => {
+    if (!uwGamma) return null;
+    const width = Number(pct);
+    return {
+      oi: windowStrikes(uwGamma.oi, uwSpot, width),
+      volume: windowStrikes(uwGamma.volume, uwSpot, width),
+    };
+  }, [uwGamma, uwSpot, pct]);
+
+  const uwDeltaWindowed = useMemo(
+    () => (uwDelta && data ? windowStrikes(uwDelta.strikes, data.spot, Number(pct)) : []),
+    [uwDelta, data, pct]
+  );
+
+  /* So mức trên CÙNG một dải: UW chỉ trả ~50 strike quanh giá còn chuỗi của
+     app trải hết, nên tường của app được tính lại trong đúng dải UW có. */
+  const cmp = useMemo(() => {
+    if (!data || !uwGamma) return null;
+    const range = (rows: ExposureBar[]) =>
+      rows.length ? { lo: rows[0].strike, hi: rows[rows.length - 1].strike } : null;
+    const rOi = range(uwGamma.oi);
+    const rVol = range(uwGamma.volume);
+    if (!rOi && !rVol) return null;
+    const side = (appRows: StrikeExposure[], uwRows: ExposureBar[], r: { lo: number; hi: number } | null) =>
+      r ? { app: keyLevels(withinRange(appRows, r.lo, r.hi)), uw: keyLevels(uwRows) } : null;
+    return {
+      range: rOi ?? rVol!,
+      oi: side(data.oi.strikes, uwGamma.oi, rOi),
+      volume: side(data.volume.strikes, uwGamma.volume, rVol),
+    };
+  }, [data, uwGamma]);
+
   const hhmm = (ms: number) =>
     new Date(ms).toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  /** Dòng trạng thái cho một khối UW khi KHÔNG có biểu đồ để vẽ — bốn lý do,
+   *  bốn câu: chưa cấu hình / đang lấy / request hỏng (nguyên văn UW) / nửa
+   *  này hỏng. Một khối trống im lặng đọc thành "UW không có gì". */
+  const uwNote = (half: UwHalf<unknown> | null | undefined) => {
+    if (uwErr) return <p className="hint hint-warn">{t('mm.uwFailed', uwErr)}</p>;
+    if (!uw) return <p className="cap">{t('mm.uwLoading')}</p>;
+    if (!uw.configured) return <p className="cap">{t('mm.uwOff')}</p>;
+    if (!half) return <p className="cap">{t('mm.noExpRows')}</p>;
+    if (!half.ok) return <p className="hint hint-warn">{t('mm.uwFailed', half.error)}</p>;
+    return null;
+  };
+
+  const levelRows: Array<[keyof KeyLevels, string]> = [
+    ['callWall', t('mm.cmpCall')],
+    ['putWall', t('mm.cmpPut')],
+    ['absGamma', t('mm.cmpAbs')],
+  ];
 
   return (
     <section className="panel">
@@ -214,13 +342,84 @@ export default function MmExposurePanel() {
 
           <h3 className="dtsub">{t('mm.p1Title', data.symbol)}</h3>
           <p className="cap">{t('mm.p1Note', pct)}</p>
+          <p className="cap">{t('mm.uwScale')}</p>
+          <h4 className="mmsrc">App · {SRC_NAME[data.source]}</h4>
           <ExposureLadder bars={data.bars} strikes={windowed?.oi ?? []} spot={data.spot}
                           symbol={data.symbol} candlesError={data.candlesError} />
+          <h4 className="mmsrc">Unusual Whales</h4>
+          {uwGamma && uwWindowed ? (
+            <>
+              <p className="cap">
+                {t('mm.uwAt', uwGamma.time ?? '—')}
+                {' · '}
+                {t('mm.uwRange', {
+                  n: uwGamma.oi.length,
+                  lo: uwGamma.oi[0]?.strike ?? '—',
+                  hi: uwGamma.oi[uwGamma.oi.length - 1]?.strike ?? '—',
+                })}
+              </p>
+              {uwGamma.putGammaPositive > 0 && (
+                <p className="hint hint-warn">{t('mm.uwPutSign', uwGamma.putGammaPositive)}</p>
+              )}
+              {(uwGamma.droppedOi > 0 || uwGamma.droppedVolume > 0) && (
+                <p className="cap">{t('mm.uwDropped', { oi: uwGamma.droppedOi, vol: uwGamma.droppedVolume })}</p>
+              )}
+              <ExposureLadder bars={data.bars} strikes={uwWindowed.oi} spot={uwSpot}
+                              symbol={data.symbol} candlesError={data.candlesError}
+                              hideCandleNote />
+            </>
+          ) : (
+            uwNote(uw && uw.configured ? uw.gamma : null)
+          )}
 
           <h3 className="dtsub">{t('mm.p2Title')}</h3>
           <p className="cap">{t('mm.p2Note')}</p>
-          <SpotGammaChart oi={windowed?.oi ?? []} volume={windowed?.volume ?? []}
-                          spot={data.spot} />
+          <div className="mmpair">
+            <div>
+              <h4 className="mmsrc">App · {SRC_NAME[data.source]}</h4>
+              <SpotGammaChart oi={windowed?.oi ?? []} volume={windowed?.volume ?? []}
+                              spot={data.spot} />
+            </div>
+            <div>
+              <h4 className="mmsrc">Unusual Whales</h4>
+              {uwWindowed ? (
+                <SpotGammaChart oi={uwWindowed.oi} volume={uwWindowed.volume} spot={uwSpot} />
+              ) : (
+                uwNote(uw && uw.configured ? uw.gamma : null)
+              )}
+            </div>
+          </div>
+
+          {cmp && (
+            <>
+              <h4 className="mmsrc">App vs Unusual Whales — key strikes</h4>
+              <p className="cap">{t('mm.cmpNote', { lo: cmp.range.lo, hi: cmp.range.hi })}</p>
+              <div className="tablewrap">
+                <table className="pftable mmcmp">
+                  <thead>
+                    <tr>
+                      <th>{t('mm.cmpLevel')}</th>
+                      <th>App · OI</th>
+                      <th>UW · OI</th>
+                      <th>{t('mm.cmpAppVol')}</th>
+                      <th>{t('mm.cmpUwVol')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {levelRows.map(([k, label]) => (
+                      <tr key={k}>
+                        <td>{label}</td>
+                        <LevelCell v={cmp.oi?.app[k] ?? null} other={cmp.oi?.uw[k] ?? null} />
+                        <LevelCell v={cmp.oi?.uw[k] ?? null} other={cmp.oi?.app[k] ?? null} />
+                        <LevelCell v={cmp.volume?.app[k] ?? null} other={cmp.volume?.uw[k] ?? null} />
+                        <LevelCell v={cmp.volume?.uw[k] ?? null} other={cmp.volume?.app[k] ?? null} />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <h3 className="dtsub">{t('mm.p3Title')}</h3>
           <p className="cap">{t('mm.p3Note')}</p>
@@ -233,11 +432,37 @@ export default function MmExposurePanel() {
               </button>
             ))}
           </div>
-          {windowed && windowed.delta.length > 0 ? (
-            <DeltaByStrike strikes={windowed.delta} />
-          ) : (
-            <p className="cap">{t('mm.noExpRows')}</p>
-          )}
+          <div className="mmpair">
+            <div>
+              <h4 className="mmsrc">App · {SRC_NAME[data.source]}</h4>
+              {windowed && windowed.delta.length > 0 ? (
+                <DeltaByStrike strikes={windowed.delta} />
+              ) : (
+                <p className="cap">{t('mm.noExpRows')}</p>
+              )}
+            </div>
+            <div>
+              <h4 className="mmsrc">Unusual Whales</h4>
+              {uwDelta ? (
+                uwDelta.strikes.length > 0 ? (
+                  <>
+                    {uwDelta.putDeltaPositive > 0 && (
+                      <p className="hint hint-warn">{t('mm.uwPutDeltaSign', uwDelta.putDeltaPositive)}</p>
+                    )}
+                    <DeltaByStrike strikes={uwDeltaWindowed} />
+                  </>
+                ) : uwDelta.returned.length > 0 ? (
+                  <p className="hint hint-warn">
+                    {t('mm.uwExpMismatch', { asked: uwDelta.asked, got: uwDelta.returned.join(', ') })}
+                  </p>
+                ) : (
+                  <p className="cap">{t('mm.uwExpEmpty', uwDelta.asked)}</p>
+                )
+              ) : (
+                uwNote(uw && uw.configured ? uw.delta : null)
+              )}
+            </div>
+          </div>
 
           {/* Khối chẩn đoán: đúng idiom probe của repo, áp vào giao diện.
               Ba con số tách RIÊNG vì ba nguyên nhân cần ba cách xử lý —

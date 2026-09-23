@@ -17,7 +17,7 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Learn** | Đọc nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider và cách app chấm bán put — bài song ngữ có hình vẽ, câu ôn tập, nút hỏi Claude |
 | **Patterns** | Mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu lên, nút hỏi Claude đọc mẫu |
 | **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
-| **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales, app tự tính từ chuỗi quyền chọn |
+| **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`

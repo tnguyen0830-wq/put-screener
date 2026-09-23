@@ -49,8 +49,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // ---- Tab MM Exposure: phơi nhiễm nhà tạo lập (ba panel kiểu Unusual Whales) ----
   'mm.title': { vi: 'Market maker exposure', en: 'Market maker exposure' },
   'mm.intro': {
-    vi: 'Ba biểu đồ theo bố cục Unusual Whales, nhưng mọi con số do app TỰ TÍNH từ chuỗi quyền chọn của chính tài khoản — gamma và delta không phải dữ liệu độc quyền, chúng là số học trên greek và open interest mà Schwab (hoặc CBOE) đã trả. Một lượt gọi lấy đủ cả ba.',
-    en: 'Three charts laid out like Unusual Whales, but every number is computed HERE from the account\u2019s own option chain — gamma and delta are not proprietary data, they are arithmetic on the greeks and open interest the chain already returns. One request feeds all three.',
+    vi: 'Ba panel theo bố cục Unusual Whales, mỗi panel có HAI nguồn đặt cạnh nhau: "App" là số app TỰ TÍNH từ chuỗi quyền chọn (gamma và delta là số học trên greek và open interest mà chuỗi đã trả), còn "Unusual Whales" là số do chính UW tính sẵn. Hai bên độc lập — một bên hỏng không kéo mất bên kia.',
+    en: 'Three panels laid out like Unusual Whales, each with TWO sources side by side: "App" is computed HERE from the option chain (gamma and delta are arithmetic on the greeks and open interest the chain returns), while "Unusual Whales" is UW\u2019s own pre-computed numbers. The two are independent — one failing never takes the other down.',
   },
   'mm.symPlaceholder': { vi: 'Mã…', en: 'Ticker…' },
   'mm.go': { vi: 'Xem', en: 'Go' },
@@ -154,6 +154,65 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'KHÔNG hợp đồng nào có open interest. Đây đúng là lỗi API Schwab cho chỉ số đã ghi ở #108 — thử SPY hoặc QQQ để đối chiếu; nếu nguồn ở trên ghi CBOE thì con số vẫn dùng được.',
     en: 'NO contract carries open interest. This is the Schwab index API defect recorded in #108 — try SPY or QQQ to compare; if the source line above says CBOE, the numbers are still usable.',
   },
+  'mm.uwScale': {
+    vi: 'Mỗi biểu đồ có THANG RIÊNG. Số UW do UW tự tính theo cách của họ (đã áp dấu nhà tạo lập cho put; cơ sở và cách nhân có thể khác app), nên hãy so HÌNH DẠNG và VỊ TRÍ strike — đừng so thẳng độ cao cột giữa hai biểu đồ.',
+    en: 'Each chart has its OWN scale. UW\u2019s numbers are computed UW\u2019s way (dealer sign already applied to puts; basis and multiplier may differ from the app), so compare SHAPE and STRIKE LOCATION — not bar heights across the two charts.',
+  },
+  'mm.uwAt': {
+    vi: (tm: string) => `Số UW tự tính · bản tính lúc ${tm}`,
+    en: (tm: string) => `UW\u2019s own numbers · computed at ${tm}`,
+  },
+  'mm.uwRange': {
+    vi: (v: { n: number; lo: number | string; hi: number | string }) =>
+      `UW trả ${v.n} strike quanh giá (${v.lo}–${v.hi}); biểu đồ UW chỉ phủ dải đó.`,
+    en: (v: { n: number; lo: number | string; hi: number | string }) =>
+      `UW returns ${v.n} strikes around spot (${v.lo}–${v.hi}); the UW chart covers only that range.`,
+  },
+  'mm.uwLoading': { vi: 'Đang lấy số của UW…', en: 'Fetching UW\u2019s numbers…' },
+  'mm.uwOff': {
+    vi: 'Chưa đặt UW_API_KEY nên không có số UW để so — số của app vẫn đầy đủ.',
+    en: 'UW_API_KEY is not set, so there are no UW numbers to compare — the app\u2019s own numbers are complete.',
+  },
+  'mm.uwFailed': {
+    vi: (e: string) => `UW không trả được số cho panel này: ${e}`,
+    en: (e: string) => `UW could not provide numbers for this panel: ${e}`,
+  },
+  'mm.uwPutSign': {
+    vi: (n: number) => `Cảnh báo: UW trả put gamma DƯƠNG ở ${n} strike — khác quy ước đo được ngày 22/09 (put âm). Đọc biểu đồ UW thận trọng.`,
+    en: (n: number) => `Warning: UW returned POSITIVE put gamma at ${n} strikes — unlike the convention measured on 09-22 (puts negative). Read the UW chart with care.`,
+  },
+  'mm.uwPutDeltaSign': {
+    vi: (n: number) => `Cảnh báo: UW trả put delta DƯƠNG ở ${n} strike — put mang delta âm, nên đây là một quy ước khác. Đọc biểu đồ UW thận trọng.`,
+    en: (n: number) => `Warning: UW returned POSITIVE put delta at ${n} strikes — puts carry negative delta, so this is a different convention. Read the UW chart with care.`,
+  },
+  'mm.uwDropped': {
+    vi: (v: { oi: number; vol: number }) =>
+      `Bỏ ${v.oi} strike khỏi cơ sở OI và ${v.vol} khỏi cơ sở khối lượng vì UW thiếu một phía (call hoặc put) — không điền 0.`,
+    en: (v: { oi: number; vol: number }) =>
+      `Dropped ${v.oi} strikes from the OI basis and ${v.vol} from the volume basis because UW lacked one side (call or put) — not filled with 0.`,
+  },
+  'mm.uwExpMismatch': {
+    vi: (v: { asked: string; got: string }) =>
+      `UW trả kỳ ${v.got} chứ không phải kỳ đang chọn ${v.asked} — có thể tham số chọn kỳ bị bỏ qua. Không vẽ, để khỏi đặt hai kỳ khác nhau cạnh nhau.`,
+    en: (v: { asked: string; got: string }) =>
+      `UW returned expiry ${v.got}, not the selected ${v.asked} — the expiry parameter may be ignored. Not drawn, so two different expiries are never shown side by side.`,
+  },
+  'mm.uwExpEmpty': {
+    vi: (e: string) => `UW không trả hàng nào cho kỳ ${e}.`,
+    en: (e: string) => `UW returned no rows for expiry ${e}.`,
+  },
+  'mm.cmpNote': {
+    vi: (v: { lo: number; hi: number }) =>
+      `So trên CÙNG dải strike UW trả về (${v.lo}–${v.hi}); tường tính trên gamma RÒNG giống tab GEX. Ô xanh = hai nguồn chỉ cùng một strike.`,
+    en: (v: { lo: number; hi: number }) =>
+      `Compared over the SAME strike range UW returns (${v.lo}–${v.hi}); walls use NET gamma like the GEX tab. Green cell = both sources point at the same strike.`,
+  },
+  'mm.cmpLevel': { vi: 'Mức', en: 'Level' },
+  'mm.cmpCall': { vi: 'Tường call (gamma ròng dương lớn nhất)', en: 'Call wall (largest positive net gamma)' },
+  'mm.cmpPut': { vi: 'Tường put (gamma ròng âm lớn nhất)', en: 'Put wall (largest negative net gamma)' },
+  'mm.cmpAbs': { vi: 'Gamma tuyệt đối lớn nhất', en: 'Largest absolute gamma' },
+  'mm.cmpAppVol': { vi: 'App · KL', en: 'App · Vol' },
+  'mm.cmpUwVol': { vi: 'UW · KL', en: 'UW · Vol' },
   'mm.caveat': {
     vi: 'Quy ước dealer (long call, short put) là một MÔ HÌNH, không phải vị thế quan sát được — cùng giả định mà mọi biểu đồ GEX công khai dùng. Gamma tính bằng đô-la delta cho một bước dịch 1%, đúng cùng công thức với tab GEX bên Heatmap.',
     en: 'The dealer convention (long calls, short puts) is a MODEL, not observed positioning — the same assumption every public GEX chart makes. Gamma is in dollars of delta per 1% move, the exact formula the Heatmap GEX tab uses.',

@@ -65,6 +65,18 @@ export type StrikeExposure = {
   putVolume: number;
 };
 
+/**
+ * Phần mà ba biểu đồ THẬT SỰ đọc. Hẹp hơn `StrikeExposure` có chủ ý: số của
+ * Unusual Whales (so song song từ #216) không mang OI hay khối lượng theo
+ * từng hợp đồng, và ép nó vào `StrikeExposure` là phải điền số 0 vào mấy
+ * trường đó — một số 0 trông y hệt số thật. Kiểu hẹp để cả hai nguồn đi qua
+ * CÙNG component mà không phải bịa gì.
+ */
+export type ExposureBar = Pick<
+  StrikeExposure,
+  'strike' | 'callGamma' | 'putGamma' | 'netGamma' | 'callDelta' | 'putDelta' | 'netDelta'
+>;
+
 export type ExposureDiagnosis = {
   contracts: number;
   used: number;
@@ -296,12 +308,12 @@ export function buildExposure(
  * có dữ liệu" chứ không phải "không có strike nào gần giá". Nên khi cửa sổ
  * phần trăm không đủ hàng thì lấy bù bằng những strike GẦN GIÁ NHẤT.
  */
-export function window(
-  strikes: StrikeExposure[],
+export function window<T extends { strike: number }>(
+  strikes: T[],
   spot: number,
   pct: number,
   minRows = 10
-): StrikeExposure[] {
+): T[] {
   if (!strikes.length) return [];
   const lo = spot * (1 - pct / 100);
   const hi = spot * (1 + pct / 100);
@@ -316,7 +328,7 @@ export function window(
 /** Strike có |gamma ròng| lớn nhất trong danh sách đã cắt — dùng để vẽ nhãn.
  *  Trả null khi mọi strike đều đúng 0 (chuỗi rỗng ruột), chứ không trả strike
  *  đầu tiên: một nhãn trỏ vào con số 0 trông y hệt một nhãn thật. */
-export function peakGamma(strikes: StrikeExposure[]): number | null {
+export function peakGamma(strikes: Array<{ strike: number; netGamma: number }>): number | null {
   let best: number | null = null;
   let max = 0;
   for (const s of strikes) {
@@ -327,4 +339,50 @@ export function peakGamma(strikes: StrikeExposure[]): number | null {
     }
   }
   return best;
+}
+
+/**
+ * Ba mức strike để SO hai nguồn (app vs Unusual Whales) trên cùng một dải.
+ *
+ * Định nghĩa y hệt `computeGex()` từ #94 — trên gamma RÒNG theo strike, không
+ * phải cực đại một phía — để bảng so không dựng một nghĩa thứ hai cho chữ
+ * "tường": tường call = gamma ròng DƯƠNG lớn nhất, tường put = gamma ròng ÂM
+ * lớn nhất, abs gamma = |call| + |put| lớn nhất. Không có strike ròng dương
+ * thì KHÔNG có tường call (null, màn hình in `—`), chứ không nhặt strike ít âm
+ * nhất: đó là vẽ một mức kháng cự không tồn tại.
+ */
+export type KeyLevels = { callWall: number | null; putWall: number | null; absGamma: number | null };
+
+export function keyLevels(
+  rows: Array<{ strike: number; callGamma: number; putGamma: number; netGamma: number }>
+): KeyLevels {
+  let callWall: number | null = null;
+  let putWall: number | null = null;
+  let absGamma: number | null = null;
+  let hi = 0;
+  let lo = 0;
+  let abs = 0;
+  for (const r of rows) {
+    if (r.netGamma > hi) {
+      hi = r.netGamma;
+      callWall = r.strike;
+    }
+    if (r.netGamma < lo) {
+      lo = r.netGamma;
+      putWall = r.strike;
+    }
+    const a = Math.abs(r.callGamma) + Math.abs(r.putGamma);
+    if (a > abs) {
+      abs = a;
+      absGamma = r.strike;
+    }
+  }
+  return { callWall, putWall, absGamma };
+}
+
+/** Chỉ giữ strike nằm trong [lo, hi] — để hai nguồn được so trên CÙNG một
+ *  dải. UW trả khoảng 50 strike quanh giá còn chuỗi của app trải hết; so
+ *  tường của cả chuỗi với tường của 50 strike là so hai câu hỏi khác nhau. */
+export function withinRange<T extends { strike: number }>(rows: T[], lo: number, hi: number): T[] {
+  return rows.filter((r) => r.strike >= lo && r.strike <= hi);
 }
