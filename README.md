@@ -17,6 +17,7 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 | **Learn** | Ba chế độ: **Bài học** (nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider, cách app chấm bán put — song ngữ, có hình, ôn tập, hỏi Claude), **Tra cứu nhanh**, và **Patterns** (mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu, nút hỏi Claude đọc mẫu) |
 | **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
 | **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
+| **Live Flow** | Lệnh quyền chọn đáng chú ý toàn thị trường (Unusual Whales), mới nhất ở trên, tự làm mới vài giây một lần — lọc theo mã, phía, call/put, premium |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -927,6 +928,33 @@ Ba điều cố ý:
 Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có), kèm câu "ảnh
 chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
 các bài nến ở đó có nút nhảy thẳng sang tab này.
+
+## Live Flow — luồng lệnh quyền chọn đáng chú ý
+
+Dựng theo màn Live Flow của Unusual Whales: bảng mới nhất ở trên, mỗi dòng
+một alert quyền chọn (giờ ET, mã, phía, strike, call/put, đáo hạn, DTE, giá
+cổ phiếu, bid-ask, giá khớp, vị trí khớp trong spread, size, premium,
+khối lượng, OI, sweep/floor/multi-leg + tên quy tắc UW). Dòng mới loé sáng
+một nhịp. Nút **Live / Tạm dừng**, ô lọc mã (nhiều mã cách nhau dấu phẩy),
+nút phía (Ask/Bid/Mid/Lẫn/Không rõ), Calls/Puts và premium tối thiểu — bộ lọc
+được nhớ lại lần sau.
+
+Nói thẳng hai giới hạn:
+
+- **Đây là ALERT của UW, không phải băng từng lệnh khớp.** Nguồn là
+  `flow-alerts` (endpoint tab Options Flow đã dùng thật từ lâu), đã được UW lọc
+  thành "đáng chú ý", và một alert có thể gộp nhiều lệnh. Màn Live Flow của UW
+  in từng lệnh — thứ đó cần luồng WebSocket, chưa đo trên tài khoản này.
+- **Phía do app suy từ premium phía ask/bid** (≥ 60% một bên mới gọi tên bên
+  đó, còn lại là "Lẫn"), trừ khi bản ghi mang sẵn trường phía. Tên các trường
+  đó là nhớ được chứ chưa đo — nếu không bóc được, cột Phía hiện "?" và màn
+  hình in nguyên khoá thật của bản ghi UW. Phía ASK không có nghĩa là lạc quan.
+
+Chi phí: mọi người xem đọc CHUNG một bộ đệm phía server, làm mới nhiều nhất
+10 giây một lần trong phiên (~2.340 request/ngày, dưới hẳn trần 30.000) và 10
+phút một lần khi sàn đóng; một request mỗi lượt, không song song (trần 3
+request đồng thời của cả tài khoản). UW từ chối thì giữ bảng cũ, in nguyên văn
+lỗi và thử lại sau 30 giây. Không có `UW_API_KEY` thì tab nói ra và không gọi gì.
 
 ## Daytrade — giao dịch trong ngày, bằng Schwab
 

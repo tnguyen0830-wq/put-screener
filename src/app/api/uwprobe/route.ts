@@ -150,6 +150,12 @@ const ENDPOINTS = (t: string): Probe[] => [
      dạng. Endpoint không có trong gói thì UW tự nói bằng 403/404 — chính
      lời từ chối là phát hiện. */
   { name: 'news-headlines', path: `/api/news/headlines?limit=5` },
+  /* Live Flow (#218) đọc `flow-alerts` KHÔNG lọc mã và suy phía từ premium
+     ask/bid — tên mấy trường đó là NHỚ ĐƯỢC. Hai dòng này in khoá thật:
+     `flow-alerts` là thứ tab đang đọc, `flow-recent` là ứng viên cho từng
+     lệnh khớp theo mã (gần màn Live Flow của UW hơn) — chưa đo. */
+  { name: 'flow-alerts', path: `/api/option-trades/flow-alerts`, params: { limit: '5' } },
+  { name: 'flow-recent', path: `/api/stock/${encodeURIComponent(t)}/flow-recent` },
 ];
 
 /** UW cho TỐI ĐA 3 request CÙNG LÚC trên gói này — đo được, nguyên văn lời
