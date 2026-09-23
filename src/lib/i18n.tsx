@@ -1196,11 +1196,17 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (v: any) =>
       `Computed over just the next ${v.days} days of expirations and ${v.strikes} strikes each side of spot - Schwab refuses the full chain for this symbol because the response is too large (a symbol expiring almost daily runs to tens of thousands of contracts). The walls are the largest WITHIN that window, not across the whole chain.`,
   },
+  /* Câu cũ nói "Schwab từ chối trả nhiều kỳ trong một lượt" — đúng với ca
+     502 TooBigBody của #96, nhưng SAI với ca thật đang chạy: Schwab TRẢ cả
+     cửa sổ, chỉ là rỗng ruột (OI = 0 ở mọi hợp đồng, #108). Hai nguyên nhân,
+     một cách chữa; câu chữ phải phủ cả hai chứ không hứa một điều đã hết
+     đúng (bẫy #136). Và nửa quan trọng nhất là dòng cuối: đây là dữ liệu
+     Schwab THỜI GIAN THỰC, không phải feed trễ 15 phút. */
   'gex.sliced': {
     vi: (v: any) =>
-      `Ghép từ ${v.expirations} kỳ đáo hạn GẦN NHẤT, mỗi kỳ ${v.strikes} strike quanh giá - Schwab từ chối trả nhiều kỳ trong một lượt cho mã này, nên app xin từng kỳ một rồi ghép lại. Các mức tường là lớn nhất TRONG ${v.expirations} kỳ đó, không phải của toàn bộ chuỗi; các kỳ xa hơn không được tính.`,
+      `Ghép từ ${v.expirations} kỳ đáo hạn GẦN NHẤT, mỗi kỳ ${v.strikes} strike quanh giá — hỏi cả cửa sổ 60 ngày trong một lượt thì Schwab trả về chuỗi KHÔNG có open interest (lỗi API chỉ số #108), còn hỏi từng kỳ một thì có, nên app xin lẻ rồi ghép lại. Số liệu vẫn là Schwab THỜI GIAN THỰC. Các mức tường là lớn nhất TRONG ${v.expirations} kỳ đó, không phải của toàn bộ chuỗi; các kỳ xa hơn không được tính.`,
     en: (v: any) =>
-      `Stitched from the ${v.expirations} NEAREST expirations, ${v.strikes} strikes each around spot - Schwab refuses to return several expirations at once for this symbol, so the app requests them one at a time and merges. The walls are the largest WITHIN those ${v.expirations} expirations; anything further out is not counted.`,
+      `Stitched from the ${v.expirations} NEAREST expirations, ${v.strikes} strikes each around spot — asked for the whole 60-day window at once Schwab returns a chain with no open interest (the #108 index API defect), asked one expiration at a time it does, so the app requests them singly and merges. This is still LIVE Schwab data. The walls are the largest WITHIN those ${v.expirations} expirations; anything further out is not counted.`,
   },
   'gex.gammaMagnet': { vi: 'Gamma magnet', en: 'Gamma magnet' },
   'gex.nearbyFlips': { vi: 'Các mốc lật gần', en: 'Nearby flips' },
@@ -1276,9 +1282,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (sym: string) => `Gamma nhà tạo lập thị trường — ${sym}`,
     en: (sym: string) => `Market Maker Exposure — ${sym}`,
   },
+  /* Câu này mô tả cả CÁI THANG, nên nó phải đổi khi thang đổi. Bản cũ nói
+     chỉ số thì "lấy chuỗi từ CBOE" — đúng cho tới khi biết rằng Schwab hỏi
+     TỪNG KỲ MỘT vẫn trả open interest thật (xem `slicedRetry` trong
+     gexchain.ts): giờ CBOE là nấc CUỐI chứ không phải nấc của chỉ số. */
   'gexmm.note': {
-    vi: 'Tự tính từ chuỗi quyền chọn Schwab của chính bạn (giống biểu đồ GEX ở tab Phân tích). Mã nào Schwab không trả dữ liệu (SPX và các chỉ số) thì lấy chuỗi từ feed công khai trễ 15 phút của CBOE và màn hình nói rõ. Tự làm mới mỗi 10 phút.',
-    en: "Self-computed from your own Schwab option chain (same method as the Analyze tab's GEX chart). Where Schwab returns no data (SPX and other indices) the chain comes from CBOE's public 15-minute-delayed feed instead, and the screen says so. Auto-refreshes every 10 minutes.",
+    vi: 'Tự tính từ chuỗi quyền chọn Schwab của chính bạn (giống biểu đồ GEX ở tab Phân tích). Với chỉ số như SPX, hỏi cả cửa sổ một lượt thì Schwab trả chuỗi không có open interest, nên app hỏi từng kỳ đáo hạn một — vẫn là dữ liệu Schwab thời gian thực. Chỉ khi cách đó cũng hỏng mới rơi xuống Unusual Whales rồi feed CBOE trễ 15 phút, và màn hình luôn nói đang dùng nguồn nào. Tự làm mới mỗi 10 phút.',
+    en: "Self-computed from your own Schwab option chain (same method as the Analyze tab's GEX chart). For an index such as SPX, asking for the whole window at once returns a chain with no open interest, so the app asks one expiration at a time — still live Schwab data. Only if that fails too does it fall to Unusual Whales and then CBOE's 15-minute-delayed feed, and the screen always says which source it used. Auto-refreshes every 10 minutes.",
   },
   'gexmm.customPlaceholder': { vi: 'Mã khác…', en: 'Other ticker…' },
   'gexmm.go': { vi: 'Xem', en: 'Go' },
