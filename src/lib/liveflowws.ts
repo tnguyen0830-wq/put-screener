@@ -6,6 +6,7 @@ import {
   unwrapFrame,
   type LiveRow,
 } from './liveflow';
+import { RawWebSocket, type Handshake } from './wsraw';
 
 /**
  * Luồng TỪNG LỆNH KHỚP của Unusual Whales qua WebSocket — nửa "như màn UW"
@@ -33,6 +34,13 @@ import {
  * `IDLE_MS` không ai hỏi: luồng toàn thị trường là hàng chục nghìn lệnh mỗi
  * phút, giữ nó suốt đêm cho không ai xem là đốt CPU của Render vô ích.
  *
+ * MÁY KHÁCH là `RawWebSocket` (`wsraw.ts`), không phải `globalThis.WebSocket`
+ * của Node — ĐO ĐƯỢC ở production 2026-09-23: ba lần nối đều hỏng, 0 khung,
+ * và máy khách có sẵn chỉ nói "non-101" chứ không nói UW trả gì. Máy khách tự
+ * viết giữ lại mã + header + thân của câu trả lời bắt tay (`diag.handshake`),
+ * tức chính lời UW nói với ĐÚNG yêu cầu nâng cấp — thứ phép GET thường của
+ * #221 không trả lời được (nó ra `400` thân trống vì thiếu `Upgrade`).
+ *
  * Chỉ giữ lệnh có premium ≥ `MIN_PREMIUM` (ảnh màn UW chủ app gửi không có
  * dòng nào dưới $25K): không có sàn này thì bộ đệm 1.500 dòng chỉ phủ vài
  * giây của luồng toàn thị trường. Số lệnh bị bỏ vì dưới sàn được ĐẾM, không
@@ -52,8 +60,6 @@ const MAX_CONTROL_FRAMES = 5;
  *  chờ thì một máy chủ không trả lời làm màn hình nói "Đang nối…" MÃI MÃI —
  *  đúng lỗi chủ app gặp ở production 2026-09-23 (#221). */
 export const CONNECT_TIMEOUT_MS = 15_000;
-/** Phép hỏi HTTP thường tới địa chỉ socket, nhiều nhất một lần mỗi 10 phút. */
-const HTTP_PROBE_EVERY_MS = 10 * 60_000;
 const FRAME_CLIP = 300;
 
 export type WsState = 'idle' | 'connecting' | 'open' | 'closed' | 'unsupported' | 'no-key';
@@ -77,11 +83,10 @@ type Diag = {
   lastError: string | null;
   attempts: number;
   nextRetryAt: number | null;
-  /** Hỏi thẳng địa chỉ socket bằng HTTP thường khi bắt tay hỏng. Lỗi
-   *  WebSocket của Node chỉ nói chung chung ("non-101 status code"), còn câu
-   *  trả lời HTTP mang MÃ và LỜI thật của UW: 401 khoá sai, 403 gói chưa mở,
-   *  404 sai địa chỉ, 426 địa chỉ đúng nhưng chỉ nhận WebSocket. */
-  httpProbe: { at: number; status: number | null; contentType: string | null; body: string | null; error: string | null } | null;
+  /** Câu trả lời của UW cho yêu cầu nâng cấp WebSocket ở lần nối gần nhất —
+   *  mã (101 = nhận), vài header, và thân nguyên văn khi bị từ chối (đã che
+   *  khoá). 401 khoá sai, 403 gói chưa mở, 404 sai địa chỉ… */
+  handshake: (Handshake & { at: number }) | null;
 };
 
 const fresh = (): Diag => ({
@@ -103,7 +108,7 @@ const fresh = (): Diag => ({
   lastError: null,
   attempts: 0,
   nextRetryAt: null,
-  httpProbe: null,
+  handshake: null,
 });
 
 let diag: Diag = fresh();
@@ -115,42 +120,29 @@ let sawTrade = false;
 let timer: any = null;
 let retryTimer: any = null;
 let connectTimer: any = null;
-let probing = false;
 
-async function httpProbe(now: number) {
-  const k = key();
-  if (!k || probing) return;
-  if (diag.httpProbe && now - diag.httpProbe.at < HTTP_PROBE_EVERY_MS) return;
-  probing = true;
-  try {
-    const r = await fetch(`https://api.unusualwhales.com/socket?token=${encodeURIComponent(k)}`, {
-      cache: 'no-store',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(10_000),
-    });
-    const text = await r.text().catch(() => '');
-    diag.httpProbe = {
-      at: now,
-      status: r.status,
-      contentType: r.headers.get('content-type'),
-      body: text ? clip(text.replace(/\s+/g, ' ').trim()) : null,
-      error: null,
-    };
-  } catch (e: any) {
-    diag.httpProbe = {
-      at: now,
-      status: null,
-      contentType: null,
-      body: null,
-      error: clip(String(e?.cause?.code ?? e?.name ?? '') + ' ' + String(e?.cause?.message ?? e?.message ?? e)).trim(),
-    };
-  } finally {
-    probing = false;
-  }
+/** Máy khách dùng để nối. Test thay bằng một lớp giả. */
+let openSocket: (url: string) => any = (url) => new RawWebSocket(url);
+export function _setOpener(fn: ((url: string) => any) | null) {
+  openSocket = fn ?? ((url) => new RawWebSocket(url));
 }
 
 const key = () => process.env.UW_API_KEY;
 const clip = (s: string) => redactKey(s.length > FRAME_CLIP ? `${s.slice(0, FRAME_CLIP)}…` : s, key());
+
+function recordHandshake(ws: any) {
+  const h: Handshake | null | undefined = ws?.handshake;
+  if (!h) return;
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(h.headers ?? {})) headers[k] = clip(String(v));
+  diag.handshake = {
+    at: Date.now(),
+    status: h.status,
+    statusText: clip(h.statusText ?? ''),
+    headers,
+    body: h.body ? clip(h.body) : null,
+  };
+}
 
 function flush() {
   if (pending.length) {
@@ -224,12 +216,6 @@ function connect(now: number) {
     diag.state = 'no-key';
     return;
   }
-  const WS: any = (globalThis as any).WebSocket;
-  if (typeof WS !== 'function') {
-    diag.state = 'unsupported';
-    diag.lastError = 'môi trường Node này không có WebSocket toàn cục (cần Node 22+)';
-    return;
-  }
   diag.state = 'connecting';
   diag.since = now;
   diag.attempts++;
@@ -237,7 +223,7 @@ function connect(now: number) {
   diag.closeReason = null;
   let ws: any;
   try {
-    ws = new WS(`${URL_BASE}?token=${encodeURIComponent(k)}`);
+    ws = openSocket(`${URL_BASE}?token=${encodeURIComponent(k)}`);
   } catch (e: any) {
     diag.state = 'closed';
     diag.lastError = clip(`không mở được WebSocket: ${String(e?.message ?? e)}`);
@@ -256,7 +242,7 @@ function connect(now: number) {
     } catch {
       /* bỏ qua */
     }
-    void httpProbe(Date.now());
+    recordHandshake(ws);
     if (Date.now() - lastDemand < IDLE_MS) scheduleRetry(Date.now());
   }, CONNECT_TIMEOUT_MS);
   connectTimer?.unref?.();
@@ -266,6 +252,7 @@ function connect(now: number) {
     diag.state = 'open';
     diag.connectedAt = Date.now();
     diag.lastError = null;
+    recordHandshake(ws);
     try {
       ws.send(JSON.stringify({ channel: CHANNEL, msg_type: 'join' }));
     } catch (e: any) {
@@ -292,7 +279,7 @@ function connect(now: number) {
     const neverOpened = diag.state === 'connecting';
     socket = null;
     flush();
-    if (neverOpened) void httpProbe(Date.now());
+    if (neverOpened) recordHandshake(ws);
     diag.state = 'closed';
     diag.closeCode = typeof ev?.code === 'number' ? ev.code : null;
     diag.closeReason = ev?.reason ? clip(String(ev.reason)) : null;
@@ -332,7 +319,7 @@ export function wsSnapshot(now = Date.now()): WsSnapshot {
   ensureTimer();
   if (!key()) {
     diag.state = 'no-key';
-  } else if (!socket && !retryTimer && diag.state !== 'unsupported') {
+  } else if (!socket && !retryTimer) {
     connect(now);
   }
   flush();
@@ -356,7 +343,6 @@ export function _resetWs() {
   retryTimer = null;
   clearTimeout(connectTimer);
   connectTimer = null;
-  probing = false;
   clearInterval(timer);
   timer = null;
   diag = fresh();

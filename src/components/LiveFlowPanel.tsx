@@ -26,7 +26,7 @@ type WsDiag = {
   lastError: string | null;
   attempts: number;
   nextRetryAt: number | null;
-  httpProbe?: { at: number; status: number | null; contentType: string | null; body: string | null; error: string | null } | null;
+  handshake?: { at: number; status: number; statusText: string; headers: Record<string, string>; body: string | null } | null;
 };
 
 type TradesPayload =
@@ -452,13 +452,38 @@ function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: ()
           {ws.since ? ` ${t('lf.ws.elapsed', Math.max(0, Math.round((now - ws.since) / 1000)))}` : ''}
         </p>
       )}
-      {ws.httpProbe && (
-        <p className="cap warnline lfkeys">
-          {ws.httpProbe.status !== null
-            ? t('lf.ws.http', { status: ws.httpProbe.status, meaning: t(httpMeaningKey(ws.httpProbe.status)) })
-            : t('lf.ws.httpErr', ws.httpProbe.error ?? '—')}
-          {ws.httpProbe.body ? <code> {ws.httpProbe.body}</code> : null}
-        </p>
+      {ws.state === 'connecting' && ws.attempts > 1 && ws.lastError && (
+        <p className="cap warnline lfkeys">{t('lf.ws.prev', ws.lastError)}</p>
+      )}
+      {ws.handshake && (
+        <div className={`cap lfkeys${ws.handshake.status === 101 ? '' : ' warnline'}`}>
+          <p>
+            {t('lf.ws.http', {
+              status: ws.handshake.status,
+              text: ws.handshake.statusText,
+              meaning: t(httpMeaningKey(ws.handshake.status)),
+            })}
+          </p>
+          {ws.handshake.status !== 101 &&
+            (ws.handshake.body ? (
+              <>
+                <p>{t('lf.ws.body')}</p>
+                <pre className="lfframe">{ws.handshake.body}</pre>
+              </>
+            ) : (
+              <p>{t('lf.ws.noBody')}</p>
+            ))}
+          {Object.keys(ws.handshake.headers).length > 0 && (
+            <p>
+              {t('lf.ws.headers')}{' '}
+              <code>
+                {Object.entries(ws.handshake.headers)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(' · ')}
+              </code>
+            </p>
+          )}
+        </div>
       )}
       {broken && (
         <p className="cap warnline">
@@ -520,7 +545,9 @@ function httpMeaningKey(status: number): string {
   if (status === 401) return 'lf.ws.h401';
   if (status === 403) return 'lf.ws.h403';
   if (status === 404) return 'lf.ws.h404';
-  if (status === 426 || status === 400) return 'lf.ws.h426';
+  if (status === 101) return 'lf.ws.h101';
+  if (status === 400) return 'lf.ws.h400';
+  if (status === 426) return 'lf.ws.h426';
   if (status === 429) return 'lf.ws.h429';
   if (status >= 500) return 'lf.ws.h5xx';
   if (status >= 300 && status < 400) return 'lf.ws.h3xx';
