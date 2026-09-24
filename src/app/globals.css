@@ -4784,3 +4784,7 @@ body {
   border-radius: var(--r-sm);
   max-width: 100%;
 }
+/* UW từ chối WebSocket vì gói (#223): hai nút đứng cạnh câu giải thích,
+   xuống dòng được ở 400px thay vì đẩy trang cuộn ngang. */
+.lfrefused p { margin: 4px 0; }
+.lfrefused .rrgfullbtn { margin: 4px 6px 0 0; flex: 0 1 auto; white-space: normal; }

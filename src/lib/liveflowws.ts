@@ -62,7 +62,17 @@ const MAX_CONTROL_FRAMES = 5;
 export const CONNECT_TIMEOUT_MS = 15_000;
 const FRAME_CLIP = 300;
 
-export type WsState = 'idle' | 'connecting' | 'open' | 'closed' | 'unsupported' | 'no-key';
+export type WsState = 'idle' | 'connecting' | 'open' | 'closed' | 'refused' | 'unsupported' | 'no-key';
+
+/** UW từ chối bắt tay bằng 401/403 là câu trả lời về KHOÁ hoặc GÓI, không
+ *  phải trục trặc mạng. ĐO ĐƯỢC ở production 2026-09-23: `401 Unauthorized` +
+ *  "Your token does not have the websocket scope. To connect to the websocket
+ *  you need to upgrade your api subscription." Thử lại mỗi 5 phút cho tới
+ *  khi có người mua gói là gõ cửa vô ích — và màn hình đếm ngược "thử lại sau
+ *  0 giây" mãi mãi trông như sắp chạy. Nên dừng hẳn, chỉ hỏi lại sau 6 giờ
+ *  (phòng khi chủ app đã nâng gói) hoặc khi có người bấm "Thử lại". */
+const REFUSED_STATUSES = new Set([401, 403]);
+export const REFUSED_RETRY_MS = 6 * 60 * 60_000;
 
 type Diag = {
   state: WsState;
@@ -87,6 +97,8 @@ type Diag = {
    *  mã (101 = nhận), vài header, và thân nguyên văn khi bị từ chối (đã che
    *  khoá). 401 khoá sai, 403 gói chưa mở, 404 sai địa chỉ… */
   handshake: (Handshake & { at: number }) | null;
+  /** Đặt khi UW từ chối bằng 401/403: không tự thử lại trước mốc này. */
+  refusedUntil: number | null;
 };
 
 const fresh = (): Diag => ({
@@ -109,6 +121,7 @@ const fresh = (): Diag => ({
   attempts: 0,
   nextRetryAt: null,
   handshake: null,
+  refusedUntil: null,
 });
 
 let diag: Diag = fresh();
@@ -283,6 +296,13 @@ function connect(now: number) {
     diag.state = 'closed';
     diag.closeCode = typeof ev?.code === 'number' ? ev.code : null;
     diag.closeReason = ev?.reason ? clip(String(ev.reason)) : null;
+    const status = neverOpened ? diag.handshake?.status : undefined;
+    if (status !== undefined && REFUSED_STATUSES.has(status)) {
+      diag.state = 'refused';
+      diag.refusedUntil = Date.now() + REFUSED_RETRY_MS;
+      diag.nextRetryAt = null;
+      return;
+    }
     // Đóng vì hết người xem là chủ ý, không phải lỗi — không thử lại.
     if (Date.now() - lastDemand < IDLE_MS) scheduleRetry(Date.now());
   };
@@ -320,10 +340,28 @@ export function wsSnapshot(now = Date.now()): WsSnapshot {
   if (!key()) {
     diag.state = 'no-key';
   } else if (!socket && !retryTimer) {
-    connect(now);
+    if (diag.state !== 'refused' || (diag.refusedUntil !== null && now >= diag.refusedUntil)) connect(now);
   }
   flush();
   return { rows, minPremium: MIN_PREMIUM, diag: { ...diag, firstFrames: [...diag.firstFrames] } };
+}
+
+/** Nhìn trạng thái mà KHÔNG mở kết nối — cho chế độ Alert, để màn hình nói
+ *  được vì sao chế độ Từng lệnh không dùng được mà không tốn một lượt bắt tay. */
+export function wsRefusal(): { status: number; body: string | null; at: number } | null {
+  if (diag.state !== 'refused' || !diag.handshake) return null;
+  return { status: diag.handshake.status, body: diag.handshake.body, at: diag.handshake.at };
+}
+
+/** Người xem bấm "Thử lại": bỏ lời từ chối cũ và nối ngay (một lượt bắt tay). */
+export function wsRetryNow(now = Date.now()) {
+  if (diag.state !== 'refused') return;
+  diag.refusedUntil = null;
+  diag.state = 'closed';
+  clearTimeout(retryTimer);
+  retryTimer = null;
+  lastDemand = now;
+  if (!socket) connect(now);
 }
 
 /** Chỉ cho test: đưa một khung vào như thể UW vừa gửi. */
