@@ -933,16 +933,20 @@ các bài nến ở đó có nút nhảy thẳng sang tab này.
 
 **Hai nguồn, chọn bằng nút đầu tab** (nhớ cho lần sau):
 
-- **Từng lệnh (WebSocket)** — mặc định. Server giữ MỘT kết nối WebSocket tới
+- **Alert (REST)** — mặc định. Xem phần dưới.
+- **Từng lệnh (WebSocket)** — **ĐO ĐƯỢC 2026-09-23: gói API Unusual Whales
+  hiện tại KHÔNG có luồng này.** UW trả `401` kèm lời *"Your token does not
+  have the websocket scope. To connect to the websocket you need to upgrade
+  your api subscription."* — tức là chuyện mua gói, không phải lỗi app. Bị
+  từ chối kiểu đó (401/403) thì app thôi thử lại liên tục, chỉ tự hỏi lại
+  sau 6 giờ (phòng khi gói đã nâng) hoặc khi bấm "Thử lại ngay"; chế độ Alert
+  in một dòng nói vì sao. Khi có gói: server giữ MỘT kết nối WebSocket tới
   Unusual Whales (kênh `option_trades`) cho mọi người xem, mở khi có người mở
-  tab và đóng sau 90 giây không ai xem. Phía ASK/BID/MID của từng lệnh là giá
-  khớp so với NBBO lúc khớp (nhãn phía UW gửi kèm thắng nếu có). Chỉ giữ lệnh
-  premium ≥ $25K — luồng toàn thị trường quá dày để giữ hết; số bị bỏ nằm trong
-  "Chẩn đoán WebSocket". **Chưa đo**: URL, cách tham gia kênh và tên trường
-  đều là nhớ được, và WebSocket có thể là gói riêng của UW. Nếu không chạy,
-  màn hình in mã đóng + lý do UW trả về, và khối "Chẩn đoán" in nguyên văn
-  (đã che khoá) các khung đầu tiên UW gửi.
-- **Alert (REST)** — thứ bên dưới. Gõ mã vào ô lọc thì app hỏi Unusual Whales
+  tab và đóng sau 90 giây không ai xem; phía ASK/BID/MID của từng lệnh là giá
+  khớp so với NBBO lúc khớp; chỉ giữ lệnh premium ≥ $25K. Hình dạng khung và
+  tên trường của một lệnh vẫn CHƯA đo (chưa nối được lần nào) — khối
+  "Chẩn đoán" in nguyên văn (đã che khoá) các khung đầu tiên UW gửi.
+- Với **Alert**: gõ mã vào ô lọc thì app hỏi Unusual Whales
   riêng cho mã đó (đủ alert của mã, không phải những dòng lọt vào luồng toàn
   thị trường); không lọc thì mỗi lượt lật trang cho tới khi nối liền với lượt
   trước, và nói ra nếu luồng dày tới mức vẫn có thể sót.
@@ -960,7 +964,7 @@ Nói thẳng hai giới hạn:
 - **Đây là ALERT của UW, không phải băng từng lệnh khớp.** Nguồn là
   `flow-alerts` (endpoint tab Options Flow đã dùng thật từ lâu), đã được UW lọc
   thành "đáng chú ý", và một alert có thể gộp nhiều lệnh. Màn Live Flow của UW
-  in từng lệnh — thứ đó cần luồng WebSocket, chưa đo trên tài khoản này.
+  in từng lệnh — thứ đó cần luồng WebSocket, mà gói API hiện tại không có (đo 2026-09-23).
 - **Phía do app suy từ premium phía ask/bid** (≥ 60% một bên mới gọi tên bên
   đó, còn lại là "Lẫn"), trừ khi bản ghi mang sẵn trường phía. Tên các trường
   đó là nhớ được chứ chưa đo — nếu không bóc được, cột Phía hiện "?" và màn

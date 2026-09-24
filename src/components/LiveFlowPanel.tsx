@@ -8,7 +8,7 @@ import { filterRows, sideCounts, type FlowSide, type LiveRow } from '@/lib/livef
 import ChipRow from './ChipRow';
 
 type WsDiag = {
-  state: 'idle' | 'connecting' | 'open' | 'closed' | 'unsupported' | 'no-key';
+  state: 'idle' | 'connecting' | 'open' | 'closed' | 'refused' | 'unsupported' | 'no-key';
   since: number | null;
   connectedAt: number | null;
   lastMessageAt: number | null;
@@ -27,7 +27,10 @@ type WsDiag = {
   attempts: number;
   nextRetryAt: number | null;
   handshake?: { at: number; status: number; statusText: string; headers: Record<string, string>; body: string | null } | null;
+  refusedUntil?: number | null;
 };
+
+type WsRefusal = { status: number; body: string | null; at: number };
 
 type TradesPayload =
   | { src: 'trades'; configured: false }
@@ -51,6 +54,9 @@ type AlertsPayload =
       rejected?: string[];
       unparsed: number;
       ttlMs: number;
+      /** Lời từ chối WebSocket gần nhất, nếu có — để chế độ Alert nói được vì
+       *  sao chế độ Từng lệnh không dùng được. */
+      wsRefused?: WsRefusal | null;
     };
 
 type Src = 'trades' | 'alerts';
@@ -108,7 +114,9 @@ function parseList<T extends string>(raw: string | null, allowed: readonly T[]):
 
 export default function LiveFlowPanel() {
   const { t } = useLang();
-  const [src, setSrc] = useState<Src>('trades');
+  // Alert là mặc định từ #223: đo được ở production là gói UW hiện tại KHÔNG
+  // có WebSocket, nên mặc định Từng lệnh là mở tab ra một bảng trống.
+  const [src, setSrc] = useState<Src>('alerts');
   const [alerts, setAlerts] = useState<AlertsPayload | null>(null);
   const [trades, setTrades] = useState<TradesPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -139,6 +147,18 @@ export default function LiveFlowPanel() {
     const id = setTimeout(() => setServerTickers(ticker.trim()), 1000);
     return () => clearTimeout(id);
   }, [ticker]);
+
+  const [retrying, setRetrying] = useState(false);
+  const retryWs = useCallback(async () => {
+    setRetrying(true);
+    try {
+      const r = await fetch('/api/liveflow?src=trades&retry=1', { cache: 'no-store' });
+      const p = await readJsonOrText(r);
+      if (p.ok) setTrades(p.json as TradesPayload);
+    } finally {
+      setRetrying(false);
+    }
+  }, []);
 
   const load = useCallback(async (which: Src, tks: string) => {
     try {
@@ -241,7 +261,7 @@ export default function LiveFlowPanel() {
       </div>
       <div className="panel-body">
         <div className="segmented lfsrc">
-          {(['trades', 'alerts'] as const).map((k) => (
+          {(['alerts', 'trades'] as const).map((k) => (
             <button
               key={k}
               className={src === k ? 'on' : undefined}
@@ -318,7 +338,23 @@ export default function LiveFlowPanel() {
 
         <p className="hint hint-warn">{t('lf.caveat')}</p>
         {al && !al.marketOpen && <p className="cap warnline">{t('lf.closed')}</p>}
-        {ws && <WsStatus ws={ws} now={tr!.now} onAlerts={() => { setSrc('alerts'); remember('lfSrc', 'alerts'); }} />}
+        {ws && (
+          <WsStatus
+            ws={ws}
+            now={tr!.now}
+            retrying={retrying}
+            onRetry={retryWs}
+            onAlerts={() => {
+              setSrc('alerts');
+              remember('lfSrc', 'alerts');
+            }}
+          />
+        )}
+        {al && al.wsRefused && (
+          <p className="hint lfkeys lfplan">
+            {t(planLacksWs(al.wsRefused.body) ? 'lf.ws.planNote' : 'lf.ws.refusedNote', al.wsRefused.status)}
+          </p>
+        )}
         {err && <p className="cap warnline">{t('lf.fetchErr', err)}</p>}
         {al && al.error && (
           <p className="cap warnline">
@@ -439,10 +475,30 @@ export default function LiveFlowPanel() {
 
 /** Trạng thái luồng WebSocket, nói ra đúng một trong các tình huống — không
  *  bao giờ để "chưa nối", "UW từ chối" và "đang chờ lệnh" trông như nhau. */
-function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: () => void }) {
+/** UW nói rõ trong thân câu trả lời khi thiếu là do GÓI ("websocket scope",
+ *  "upgrade your api subscription") — ĐO ĐƯỢC 2026-09-23. Chỉ đọc chữ để chọn
+ *  câu giải thích; không khớp thì nói chung "khoá hoặc gói", không đoán. */
+function planLacksWs(body: string | null | undefined): boolean {
+  return !!body && /scope|subscription|upgrade|plan/i.test(body);
+}
+
+function WsStatus({
+  ws,
+  now,
+  retrying,
+  onRetry,
+  onAlerts,
+}: {
+  ws: WsDiag;
+  now: number;
+  retrying: boolean;
+  onRetry: () => void;
+  onAlerts: () => void;
+}) {
   const { t } = useLang();
   const quiet = ws.state === 'open' && ws.kept === 0 && ws.connectedAt !== null && now - ws.connectedAt > QUIET_MS;
   const broken = ws.state === 'closed' || ws.state === 'unsupported';
+  const refused = ws.state === 'refused';
   const retryIn = ws.nextRetryAt && ws.nextRetryAt > now ? Math.round((ws.nextRetryAt - now) / 1000) : null;
   return (
     <>
@@ -485,13 +541,31 @@ function WsStatus({ ws, now, onAlerts }: { ws: WsDiag; now: number; onAlerts: ()
           )}
         </div>
       )}
+      {refused && (
+        <div className="cap warnline lfrefused">
+          <p>
+            <strong>
+              {t(planLacksWs(ws.handshake?.body) ? 'lf.ws.refusedPlan' : 'lf.ws.refusedKey', ws.handshake?.status ?? '—')}
+            </strong>
+          </p>
+          <p>
+            {ws.refusedUntil ? t('lf.ws.refusedNext', nyTime(new Date(ws.refusedUntil).toISOString())) : ''}{' '}
+            <button className="rrgfullbtn" onClick={onAlerts}>
+              {t('lf.ws.useAlertsNow')} →
+            </button>{' '}
+            <button className="rrgfullbtn" onClick={onRetry} disabled={retrying}>
+              {retrying ? t('lf.ws.retryingBtn') : t('lf.ws.retryBtn')}
+            </button>
+          </p>
+        </div>
+      )}
       {broken && (
         <p className="cap warnline">
           {t('lf.ws.closed', {
             code: ws.closeCode ?? '—',
             reason: ws.closeReason || ws.lastError || t('lf.ws.noReason'),
           })}
-          {retryIn !== null ? ` ${t('lf.ws.retry', retryIn)}` : ''}{' '}
+          {` ${retryIn !== null && retryIn > 0 ? t('lf.ws.retry', retryIn) : t('lf.ws.retrySoon')}`}{' '}
           <button className="rrgfullbtn" onClick={onAlerts}>{t('lf.ws.useAlerts')} →</button>
         </p>
       )}
