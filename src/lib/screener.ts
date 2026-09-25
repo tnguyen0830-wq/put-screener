@@ -146,7 +146,7 @@ export async function ivRank(symbol: string, iv: number): Promise<number | null>
 let earningsCache: { mtimeMs: number; data: Record<string, string[]> } | null =
   null;
 
-async function loadEarningsFile(): Promise<Record<string, string[]>> {
+export async function loadManualEarnings(): Promise<Record<string, string[]>> {
   const file = path.resolve('./data/earnings.json');
   try {
     const { mtimeMs } = await fs.stat(file);
@@ -184,7 +184,7 @@ async function loadEarningsFile(): Promise<Record<string, string[]>> {
  */
 export async function loadEarnings(): Promise<Record<string, string[]>> {
   const [manual, tt] = await Promise.all([
-    loadEarningsFile(),
+    loadManualEarnings(),
     loadTtEarnings().catch(() => ({}) as Record<string, string[]>),
   ]);
   if (!Object.keys(tt).length) return manual;

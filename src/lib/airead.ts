@@ -152,7 +152,19 @@ export function facts(a: any, gex?: any, gexError?: string | null): string {
     'FUNDAMENTAL',
     `P/E ${n(f.peRatio)}, EPS ${n(f.eps)}, market cap ${f.marketCap ? Math.round(f.marketCap / 1e9) + 'B' : 'n/a'}`,
     `Dividend ${n(f.divAmount)} (yield ${n(f.divYield)}%), ex-date ${f.divExDate ?? 'n/a'}`,
-    `Earnings: last ${f.lastEarnings ?? 'n/a'}, next ${f.nextEarnings ?? 'unknown'}`,
+    `Earnings: last ${f.lastEarnings ?? 'n/a'}, next ${f.nextEarnings ?? 'unknown'}${
+      f.nextEarnings && f.nextEarningsSource
+        ? ` (source ${f.nextEarningsSource}${
+            f.nextEarningsSource === 'finviz'
+              ? ', year inferred by the app'
+              : f.nextEarningsEstimated === true
+              ? ', estimated date'
+              : f.nextEarningsEstimated === false
+              ? ', confirmed by the company'
+              : ''
+          })`
+        : ''
+    }`,
     `Average volume: 10-day ${f.avgVolume10d ?? 'n/a'}, 1-year ${f.avgVolume1y ?? 'n/a'}`,
   ].join('\n');
 }

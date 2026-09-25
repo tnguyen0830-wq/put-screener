@@ -1,5 +1,8 @@
 'use client';
 
+import EarningsStatus from './EarningsStatus';
+import type { EarningsInfo } from '@/lib/earningsdate';
+import type { TtEarningsStatus } from '@/lib/ttearnings';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
@@ -62,7 +65,11 @@ type Analysis = {
     avgVolume1y: number | null;
     lastEarnings: string | null;
     nextEarnings: string | null;
+    nextEarningsSource?: 'tastytrade' | 'file' | 'finviz' | null;
+    nextEarningsEstimated?: boolean | null;
   };
+  /** Nguồn + trạng thái ngày earnings (lib/earningsdate.ts). */
+  earnings?: (EarningsInfo & { sync: TtEarningsStatus | null }) | null;
   news: {
     title: string;
     publisher: string;
@@ -560,11 +567,14 @@ export default function AnalysisPanel({
               <Row label={tr('an.exDate')} value={f.divExDate ?? '—'} />
               <Row label={tr('an.avgVol10')} value={big(f.avgVolume10d)} note={f.avgVolume1y ? tr('an.avgVol1y', big(f.avgVolume1y)) : ''} />
               <Row label={tr('an.lastEarnings')} value={f.lastEarnings ?? '—'} />
-              <Row label={tr('an.nextEarnings')} value={f.nextEarnings ?? '—'} tone={f.nextEarnings ? 'warn' : undefined} />
+              <Row
+                label={tr('an.nextEarnings')}
+                value={f.nextEarnings ?? '—'}
+                tone={f.nextEarnings ? 'warn' : undefined}
+                note={f.nextEarnings && f.nextEarningsSource ? tr(`er.short.${f.nextEarningsSource}`) : ''}
+              />
             </dl>
-            <p className="cap">
-              {tr('an.earningsNote')}
-            </p>
+            <EarningsStatus info={data.earnings} />
 
             {data.finviz && (
               <>

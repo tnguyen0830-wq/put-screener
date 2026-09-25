@@ -32,7 +32,28 @@ import { ttConfigured, ttGet, TtError } from './tastytrade';
  * hết trong `parseIvRank()`, không lặp lại ở nơi gọi.
  */
 
-const STORE = path.resolve(process.env.TT_EARNINGS_PATH || './.cache/ttearnings.json');
+/**
+ * Kho nằm cạnh `SCAN_PATH` (tức /var/data ở production), KHÔNG ở `.cache/`.
+ *
+ * Bản đầu (#135) để ở `.cache/` với lập luận "mất được, dựng lại được, ~6
+ * request". Lập luận đó đúng về chi phí và SAI về thời gian: `.cache` bị xoá
+ * ở MỖI lần deploy (có ngày năm lần), và lượt đồng bộ lại chỉ chạy khi vòng
+ * lặp nền đã khởi động VÀ đã chờ đủ 15 phút - nên phần lớn thời gian cả tab
+ * Analyze, Screener lẫn My Portfolio đều không có ngày earnings nào từ
+ * tastytrade. Chủ app: *"Tại sao analysis hay các tab đều không có ngày ER"*.
+ *
+ * Suy từ THƯ MỤC của `SCAN_PATH` chứ không thêm biến môi trường - đúng lối
+ * `lt-store.ts` né bẫy `USERS_PATH` (Render không tự thêm biến vào service
+ * đã tạo, và dữ liệu lặng lẽ rơi vào thư mục build). `TT_EARNINGS_PATH` vẫn
+ * thắng nếu có đặt.
+ */
+function storePath(): string {
+  if (process.env.TT_EARNINGS_PATH) return path.resolve(process.env.TT_EARNINGS_PATH);
+  const base = process.env.SCAN_PATH || './.cache/last-scan.json';
+  return path.resolve(path.join(path.dirname(base), 'ttearnings.json'));
+}
+/** Chỗ cũ. Chỉ đọc khi chỗ mới chưa có gì (máy dev đã đồng bộ từ trước). */
+const LEGACY_STORE = path.resolve('./.cache/ttearnings.json');
 
 /**
  * Bao nhiêu mã một lượt gọi.
@@ -73,6 +94,10 @@ type Stored = {
    *  nào để có IV rank, chỉ đọc thêm một trường từ đúng bản ghi đã có. */
   ivRanks: Record<string, TtIvRankRecord>;
   lastSyncAt: number | null;
+  /** Lượt đồng bộ gần nhất, lưu TRÊN ĐĨA chứ không chỉ trong RAM: mỗi route
+   *  của Next là một bundle riêng với bản sao module riêng (#193), nên biến
+   *  `lastRun` của vòng lặp nền không bao giờ tới được route Analyze. */
+  lastRun?: TtEarningsRun | null;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -128,21 +153,65 @@ export function parseIvRank(rec: any): number | null {
   return Number.isFinite(n) ? n * 100 : null;
 }
 
-async function read(): Promise<Stored> {
+async function readFile(file: string): Promise<Stored | null> {
   try {
-    const j = JSON.parse(await fs.readFile(STORE, 'utf8'));
+    const j = JSON.parse(await fs.readFile(file, 'utf8'));
     // `ivRanks` không có trong file cũ (trước khi trường này tồn tại) - đọc
     // dung thứ, mặc định rỗng, chứ không coi file cũ là hỏng.
-    if (j && typeof j === 'object' && j.records) return { ivRanks: {}, ...j };
+    if (j && typeof j === 'object' && j.records) return { ivRanks: {}, lastSyncAt: null, ...j };
   } catch {
-    /* chưa đồng bộ lần nào */
+    /* chưa có file */
+  }
+  return null;
+}
+
+async function read(): Promise<Stored> {
+  const file = storePath();
+  const cur = await readFile(file);
+  if (cur) return cur;
+  if (file !== LEGACY_STORE) {
+    const old = await readFile(LEGACY_STORE);
+    if (old) return old;
   }
   return { records: {}, ivRanks: {}, lastSyncAt: null };
 }
 
+/**
+ * Ghi kiểu GỘP chứ không đè cả file.
+ *
+ * Hai nơi ghi vào cùng kho: lượt đồng bộ cả rổ (vòng lặp nền, đọc lúc đầu
+ * và ghi lúc cuối - có thể cách nhau vài phút) và lượt hỏi MỘT mã từ tab
+ * Analyze. Ghi đè thẳng thì lượt đồng bộ dài sẽ xoá mất bản ghi Analyze vừa
+ * lấy giữa chừng. Nên đọc lại đĩa ngay trước khi ghi, và mỗi mã giữ bản ghi
+ * MỚI HƠN (`fetchedAt`). Không bao giờ xoá bản ghi nào.
+ *
+ * Ghi tạm rồi đổi tên: sập giữa chừng không để lại JSON cụt ở chỗ cả ba tab
+ * đọc.
+ */
 async function write(s: Stored): Promise<void> {
-  await fs.mkdir(path.dirname(STORE), { recursive: true });
-  await fs.writeFile(STORE, JSON.stringify(s));
+  const file = storePath();
+  const disk = (await readFile(file)) ?? { records: {}, ivRanks: {}, lastSyncAt: null };
+  const out: Stored = {
+    records: mergeNewer(disk.records, s.records),
+    ivRanks: mergeNewer(disk.ivRanks, s.ivRanks),
+    lastSyncAt: Math.max(disk.lastSyncAt ?? 0, s.lastSyncAt ?? 0) || null,
+    lastRun: s.lastRun !== undefined ? s.lastRun : disk.lastRun ?? null,
+  };
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(out));
+  await fs.rename(tmp, file);
+}
+
+export function mergeNewer<T extends { fetchedAt: number }>(
+  a: Record<string, T>,
+  b: Record<string, T>
+): Record<string, T> {
+  const out: Record<string, T> = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    if (!out[k] || v.fetchedAt >= out[k].fetchedAt) out[k] = v;
+  }
+  return out;
 }
 
 /**
@@ -213,6 +282,7 @@ export async function syncTtEarnings(symbols: string[]): Promise<TtEarningsRun> 
   }
   if (!ttConfigured()) {
     lastRun = { at: Date.now(), asked: 0, returned: 0, missing: [], undecided: [], saved: 0, batches: 0, skipped: 'not-configured', error: null };
+    await write({ records: {}, ivRanks: {}, lastSyncAt: null, lastRun }).catch(() => {});
     return lastRun;
   }
 
@@ -272,10 +342,12 @@ export async function syncTtEarnings(symbols: string[]): Promise<TtEarningsRun> 
     }
 
     store.lastSyncAt = at;
-    await write(store);
     lastRun = { at, asked: want.length, returned, missing, undecided, saved, batches, skipped: null, error };
+    store.lastRun = lastRun;
+    await write(store);
   } catch (e: any) {
     lastRun = { at, asked: 0, returned, missing, undecided, saved, batches, skipped: null, error: String(e?.message ?? e) };
+    await write({ records: {}, ivRanks: {}, lastSyncAt: null, lastRun }).catch(() => {});
   } finally {
     inFlight = false;
   }
@@ -283,5 +355,73 @@ export async function syncTtEarnings(symbols: string[]): Promise<TtEarningsRun> 
   return lastRun!;
 }
 
+/** Trạng thái kho cho màn hình - đọc TỪ ĐĨA (xem `Stored.lastRun`). */
+export type TtEarningsStatus = {
+  configured: boolean;
+  symbols: number;
+  lastSyncAt: number | null;
+  lastRun: TtEarningsRun | null;
+};
+
+export async function ttEarningsStatus(): Promise<TtEarningsStatus> {
+  const s = await read();
+  return {
+    configured: ttConfigured(),
+    symbols: Object.keys(s.records).length,
+    lastSyncAt: s.lastSyncAt,
+    lastRun: s.lastRun ?? null,
+  };
+}
+
+export type TtEarningsLookup = {
+  configured: boolean;
+  /** Bản ghi có kết luận (có ngày, hoặc "không có earnings"); null = chưa biết. */
+  record: TtEarningsRecord | null;
+  /** true khi lượt này thật sự ra mạng (bản ghi cũ hơn 24 giờ hoặc chưa có). */
+  asked: boolean;
+  /** tastytrade trả lời mã này nhưng chưa có ngày - vẫn là CHƯA BIẾT. */
+  undecided: boolean;
+  /** Mã hỏi mà tastytrade không trả bản ghi nào. */
+  missing: boolean;
+  error: string | null;
+};
+
+/**
+ * Ngày earnings của ĐÚNG MỘT mã, cho tab Analyze.
+ *
+ * Lượt đồng bộ nền chỉ phủ mã được theo dõi (S&P 500 + watchlist + mã đang
+ * giữ), nên mở Analyze một mã ngoài danh sách đó thì kho không bao giờ có
+ * ngày. Hàm này hỏi riêng mã đó: MỘT request, và kết quả vào CHUNG kho (hạn
+ * 24 giờ như lượt nền), nên bấm lại cả ngày không tốn thêm gì và Screener /
+ * My Portfolio cũng được hưởng.
+ */
+export async function ttEarningsFor(symbol: string, now = Date.now()): Promise<TtEarningsLookup> {
+  const sym = symbol.trim().toUpperCase();
+  const store = await read();
+  const have = store.records[sym];
+  const base = { configured: ttConfigured(), asked: false, undecided: false, missing: false, error: null };
+  if (have && now - have.fetchedAt < TTL_MS) return { ...base, record: have };
+  if (!base.configured) return { ...base, record: have ?? null };
+
+  try {
+    const { data } = await ttGet<any>('/market-metrics', { symbols: sym });
+    const body = data?.data ?? data;
+    const items: any[] = Array.isArray(body?.items) ? body.items : Array.isArray(body) ? body : [];
+    const rec = items.find((r) => String(r?.symbol ?? '').toUpperCase() === sym);
+    if (!rec) return { ...base, asked: true, missing: true, record: have ?? null };
+    const parsed = parseEarnings(rec, now);
+    const patch: Stored = { records: {}, ivRanks: { [sym]: { value: parseIvRank(rec), fetchedAt: now } }, lastSyncAt: null };
+    if (parsed) patch.records[sym] = parsed;
+    await write(patch).catch(() => {});
+    return { ...base, asked: true, undecided: !parsed, record: parsed ?? have ?? null };
+  } catch (e: any) {
+    const error =
+      e instanceof TtError && e.status
+        ? `tastytrade trả mã ${e.status}${e.body ? ` — ${String(e.body).slice(0, 150)}` : ''}`
+        : String(e?.message ?? e);
+    return { ...base, asked: true, error, record: have ?? null };
+  }
+}
+
 /** Chỉ dùng cho kiểm thử. */
-export const __store = STORE;
+export const __store = () => storePath();
