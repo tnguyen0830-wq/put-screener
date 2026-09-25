@@ -42,6 +42,13 @@ export default function OutlookMap({ o }: { o: Outlook }) {
           {l.touches !== undefined && (
             <span className="olsub">{t('ol.touches', [l.touches, l.lastTouch ?? '—'])}</span>
           )}
+          {l.premium !== undefined && (
+            <span className="olsub">
+              {' · '}
+              {l.premium >= 1e6 ? `$${(l.premium / 1e6).toFixed(2)}M` : `$${Math.round(l.premium / 1e3)}K`}
+              {l.lean ? ` · ${t(`uw.lean.${l.lean}`)}` : ''}
+            </span>
+          )}
           {l.confluence > 0 && <span className="olconf">{t('ol.confluence', l.confluence)}</span>}
         </td>
         <td className="num">{sp(l.dist)}</td>
@@ -99,6 +106,9 @@ export default function OutlookMap({ o }: { o: Outlook }) {
       {o.missing.includes('gex') && <p className="cap">{t('ol.missGex')}</p>}
       {o.gexSource === 'cache' && <p className="hint hint-warn">{t('ol.gexStale')}</p>}
       {o.missing.includes('zones') && <p className="cap">{t('ol.missZones')}</p>}
+      {o.missing.includes('uw-off') && <p className="cap">{t('ol.missUwOff')}</p>}
+      {o.missing.includes('uw-flow') && <p className="cap">{t('ol.missUwFlow')}</p>}
+      {o.missing.includes('uw-darkpool') && <p className="cap">{t('ol.missUwDp')}</p>}
     </div>
   );
 }

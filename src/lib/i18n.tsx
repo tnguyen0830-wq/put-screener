@@ -2485,6 +2485,84 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'ol.kind.zeroGamma': { vi: 'GEX zero gamma', en: 'GEX zero gamma' },
   'ol.kind.absGamma': { vi: 'GEX abs gamma', en: 'GEX abs gamma' },
   'ol.kind.target': { vi: 'Mục tiêu phân tích viên (Finviz)', en: 'Analyst target (Finviz)' },
+  'ol.kind.flowStrike': { vi: 'Strike luồng quyền chọn (UW)', en: 'Options-flow strike (UW)' },
+  'ol.kind.darkpool': { vi: 'Mức giá dark pool (UW)', en: 'Dark-pool level (UW)' },
+  'ol.missUwOff': {
+    vi: 'Không có mức Unusual Whales: server chưa cấu hình UW_API_KEY.',
+    en: 'No Unusual Whales levels: UW_API_KEY is not configured on the server.',
+  },
+  'ol.missUwFlow': {
+    vi: 'Không có strike luồng quyền chọn: lượt hỏi Unusual Whales bị lỗi (xem khối Unusual Whales ở trên).',
+    en: 'No options-flow strikes: the Unusual Whales request failed (see the Unusual Whales block above).',
+  },
+  'ol.missUwDp': {
+    vi: 'Không có mức dark pool: lượt hỏi Unusual Whales bị lỗi (xem khối Unusual Whales ở trên).',
+    en: 'No dark-pool levels: the Unusual Whales request failed (see the Unusual Whales block above).',
+  },
+  'uw.loading': { vi: 'Đang tải dữ liệu Unusual Whales cho mã này…', en: 'Loading Unusual Whales data for this symbol…' },
+  'uw.off': {
+    vi: 'Không có dữ liệu Unusual Whales: server chưa cấu hình UW_API_KEY, nên Claude chỉ đọc chỉ báo và GEX.',
+    en: 'No Unusual Whales data: UW_API_KEY is not configured, so Claude reads only indicators and GEX.',
+  },
+  'uw.hFlow': { vi: (n: number) => `${n} alert quyền chọn`, en: (n: number) => `${n} options alerts` },
+  'uw.hFlowErr': { vi: 'luồng quyền chọn lỗi', en: 'options flow failed' },
+  'uw.hDp': { vi: (n: number) => `${n} lệnh dark pool`, en: (n: number) => `${n} dark-pool prints` },
+  'uw.hDpErr': { vi: 'dark pool lỗi', en: 'dark pool failed' },
+  'uw.hCg': { vi: (n: number) => `${n} giao dịch nghị sĩ`, en: (n: number) => `${n} Congress trades` },
+  'uw.hCgErr': { vi: 'Quốc hội lỗi', en: 'Congress failed' },
+  'uw.flowTitle': { vi: (n: number) => `Options flow · ${n} ngày`, en: (n: number) => `Options flow · ${n} days` },
+  'uw.dpTitle': { vi: 'Dark pool · lệnh ≥ $1M · 14 ngày', en: 'Dark pool · prints ≥ $1M · 14 days' },
+  'uw.cgTitle': { vi: 'Congress · 90 ngày', en: 'Congress · 90 days' },
+  'uw.err': { vi: (e: string) => `Không lấy được: ${e}`, en: (e: string) => `Could not load: ${e}` },
+  'uw.flowPrem': {
+    vi: ([c, p]: string[]) => `Premium call ${c} · premium put ${p}.`,
+    en: ([c, p]: string[]) => `Call premium ${c} · put premium ${p}.`,
+  },
+  'uw.flowSides': {
+    vi: ([ca, cb, pa, pb]: string[]) => `Call khớp ở ask ${ca} / ở bid ${cb} · put khớp ở ask ${pa} / ở bid ${pb}.`,
+    en: ([ca, cb, pa, pb]: string[]) => `Calls filled at ask ${ca} / at bid ${cb} · puts at ask ${pa} / at bid ${pb}.`,
+  },
+  'uw.flowFlags': {
+    vi: ([s, n, m]: number[]) => `${s} sweep · ${n} alert có KL > OI (gần như chắc là vị thế mới) · ${m} lệnh nhiều chân.`,
+    en: ([s, n, m]: number[]) => `${s} sweeps · ${n} alerts with volume > OI (almost certainly new positions) · ${m} multi-leg.`,
+  },
+  'uw.flowStrikes': { vi: 'Strike nhiều premium nhất:', en: 'Strikes with the most premium:' },
+  'uw.flowNone': {
+    vi: (n: number) => `Không có alert nào trong ${n} ngày — UW đã trả lời, đây là số 0 thật.`,
+    en: (n: number) => `No alerts in ${n} days — UW answered; this is a real zero.`,
+  },
+  'uw.unparsed': {
+    vi: ([n, k]: [number, string]) => `${n} bản ghi không bóc được, bị loại. Khoá thật: ${k || '—'}`,
+    en: ([n, k]: [number, string]) => `${n} records could not be parsed and were dropped. Real keys: ${k || '—'}`,
+  },
+  'uw.lean.call': { vi: 'nghiêng call', en: 'mostly calls' },
+  'uw.lean.put': { vi: 'nghiêng put', en: 'mostly puts' },
+  'uw.lean.mixed': { vi: 'call/put lẫn', en: 'mixed calls/puts' },
+  'uw.dpSum': {
+    vi: ([n, p]: [number, string]) => `${n} lệnh, tổng ${p}.`,
+    en: ([n, p]: [number, string]) => `${n} prints, total ${p}.`,
+  },
+  'uw.dpSide': {
+    vi: ([b, s, u]: [string, string, number]) => `Ước lượng theo giá khớp so với NBBO: mua ${b} cp · bán ${s} cp · ${u} lệnh không xếp được phía.`,
+    en: ([b, s, u]: [string, string, number]) => `Estimated from fill vs NBBO: buy ${b} sh · sell ${s} sh · ${u} prints unsided.`,
+  },
+  'uw.dpLevels': { vi: 'Mức giá nhiều tiền nhất:', en: 'Price levels with the most money:' },
+  'uw.dpNone': {
+    vi: 'Không có lệnh ≥ $1M trong 14 ngày — UW đã trả lời, đây là số 0 thật.',
+    en: 'No prints ≥ $1M in 14 days — UW answered; this is a real zero.',
+  },
+  'uw.cgSum': {
+    vi: ([n, m, b, s, d, l]: any[]) => `${n} giao dịch của ${m} nghị sĩ: ${b} mua · ${s} bán · gần nhất ${d} · công bố trễ trung vị ${l} ngày.`,
+    en: ([n, m, b, s, d, l]: any[]) => `${n} trades by ${m} member(s): ${b} buys · ${s} sells · last ${d} · median disclosure lag ${l} days.`,
+  },
+  'uw.cgNone': {
+    vi: 'Không có giao dịch nào trong kho. Kho chỉ đồng bộ mã thuộc S&P 500, watchlist và danh mục — với mã khác, đây là "không theo dõi", không phải "không ai giao dịch".',
+    en: 'None on record. The store only covers S&P 500, watchlist and portfolio symbols — for other symbols this means "not tracked", not "nobody traded".',
+  },
+  'uw.caveat': {
+    vi: 'Khớp ở ask KHÔNG có nghĩa là lạc quan (một call khớp ở ask có thể là người ta đóng vị thế bán call); phía dark pool chỉ là ước lượng; giao dịch nghị sĩ công bố trễ hàng tuần tới hàng tháng.',
+    en: 'A fill at the ask is NOT proof of bullishness (a call at the ask can close a short call); dark-pool side is only an estimate; Congress trades are disclosed weeks to months late.',
+  },
   'ol.probNote': {
     vi: 'Hai cột xác suất là thứ giá quyền chọn HÀM Ý (mô hình log-chuẩn, trung hoà rủi ro), không phải xác suất các chỉ báo kỹ thuật ủng hộ. "Chạm" ≈ 2 × "đóng vượt" (nguyên lý phản xạ, xấp xỉ).',
     en: 'The two probability columns are what option prices IMPLY (lognormal, risk-neutral), not the odds the technical indicators favour. "Touch" ≈ 2 × "close beyond" (reflection principle, approximate).',

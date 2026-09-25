@@ -181,7 +181,11 @@ stale, or levels-only.
 4. Where the technical picture and the gamma picture agree or contradict \
 each other - for example a downtrend with a put wall far below spot, or an \
 overbought RSI right under the call wall.
-5. The clearest risks in this data, including any earnings date that falls \
+5. What the Unusual Whales section adds: where options-flow premium and \
+dark-pool money concentrated, and any Congress trades. Say whether it agrees \
+with the technical and gamma picture or cuts against it. If the section is \
+missing, not configured or partly failed, say which part and move on.
+6. The clearest risks in this data, including any earnings date that falls \
 inside a typical 25-50 day option.
 
 Rules you must follow:
@@ -192,7 +196,11 @@ conflicting picture is the useful finding, not a problem to smooth over.
 Describe what the indicators show and let the reader decide.
 - If a number is missing (n/a), say what its absence prevents you concluding \
 rather than working around it silently.
+- Options flow shows where premium traded, not who is bullish: a call \
+filled at the ask can be someone closing a short call. Dark-pool side is an \
+estimate from the fill price, and Congress trades are disclosed weeks to \
+months late. Never present any of them as proof of direction.
 - GEX is a model built on open interest, not observed dealer positioning; \
 treat walls as zones where hedging flow concentrates, not as guarantees.
-- Around 400 words. No preamble - start with the first section.
+- Around 450 words. No preamble - start with the first section.
 - Plain text only. No markdown: no asterisks, no hash marks, no bullet characters. Put each section's label on its own line - it is rendered as-is, so any syntax you type shows up literally as punctuation.`;

@@ -26,6 +26,7 @@
  */
 
 import type { SupportZone } from './support';
+import { summarizeDarkpool, summarizeFlow, type UwContext } from './uwsummary';
 
 /** Hai tầm nhìn: một tuần (một nhịp) và một tháng (gần một kỳ put 30 ngày). */
 export const HORIZONS = [7, 30] as const;
@@ -66,7 +67,11 @@ export type LevelKind =
   | 'callWall'
   | 'zeroGamma'
   | 'absGamma'
-  | 'target';
+  | 'target'
+  /** Strike có nhiều premium quyền chọn nhất 7 ngày qua (Unusual Whales). */
+  | 'flowStrike'
+  /** Mức giá dark pool có nhiều tiền khớp nhất 14 ngày qua (Unusual Whales). */
+  | 'darkpool';
 
 export type Level = {
   kind: LevelKind;
@@ -77,6 +82,10 @@ export type Level = {
   /** Chỉ có ở vùng đáy/đỉnh xoay. */
   touches?: number;
   lastTouch?: string;
+  /** Chỉ có ở hai loại mức UW: tổng tiền ở mức đó. */
+  premium?: number;
+  /** Chỉ có ở `flowStrike`: premium nghiêng về call, put hay lẫn. */
+  lean?: 'call' | 'put' | 'mixed';
   /** Xác suất ĐÓNG CỬA vượt qua mức này sau PROB_DAYS ngày (log-chuẩn). */
   pEnd: number | null;
   /** Xác suất CHẠM mức trong PROB_DAYS ngày ≈ 2 × pEnd (nguyên lý phản xạ). */
@@ -191,7 +200,13 @@ export function gexLevels(g: any): {
  * cộng payload `/api/gex`. `today` truyền vào được để test không phụ thuộc
  * đồng hồ.
  */
-export function buildOutlook(a: any, gex: any, today = new Date().toISOString().slice(0, 10)): Outlook {
+export function buildOutlook(
+  a: any,
+  gex: any,
+  today = new Date().toISOString().slice(0, 10),
+  uw: UwContext | null = null,
+  now = Date.now()
+): Outlook {
   const missing: string[] = [];
   const spot = pos(a?.price?.spot);
   const iv = pos(a?.options?.iv);
@@ -207,7 +222,14 @@ export function buildOutlook(a: any, gex: any, today = new Date().toISOString().
 
   const bands = spot && vol ? HORIZONS.map((d) => band(spot, vol, d)) : [];
 
-  const raw: { kind: LevelKind; price: number | null; touches?: number; lastTouch?: string }[] = [];
+  const raw: {
+    kind: LevelKind;
+    price: number | null;
+    touches?: number;
+    lastTouch?: string;
+    premium?: number;
+    lean?: 'call' | 'put' | 'mixed';
+  }[] = [];
 
   /* Vùng xoay: gộp cả hai nguồn gốc rồi chọn theo VỊ TRÍ so với giá — vài
      vùng gần nhất mỗi phía. `kind` vẫn giữ nguồn gốc, vì một vùng đáy đã
@@ -247,6 +269,24 @@ export function buildOutlook(a: any, gex: any, today = new Date().toISOString().
   if (!target) missing.push('target');
   raw.push({ kind: 'target', price: target });
 
+  /* Mức từ Unusual Whales: nơi tiền quyền chọn và tiền dark pool đổ vào
+     nhiều nhất. Không có UW (chưa cấu hình / hỏng một nửa) thì không thêm
+     gì, và `missing` nói rõ nửa nào — bản đồ vẫn dùng được. */
+  if (uw?.configured) {
+    if (uw.flow && !uw.flow.error) {
+      for (const k of summarizeFlow(uw.flow.data, now).strikes) {
+        raw.push({ kind: 'flowStrike', price: pos(k.strike), premium: k.premium, lean: k.lean });
+      }
+    } else missing.push('uw-flow');
+    if (uw.darkpool && !uw.darkpool.error) {
+      for (const l of summarizeDarkpool(uw.darkpool.data).levels) {
+        raw.push({ kind: 'darkpool', price: pos(l.price), premium: l.premium });
+      }
+    } else missing.push('uw-darkpool');
+  } else {
+    missing.push(uw ? 'uw-off' : 'uw');
+  }
+
   const levels: Level[] = [];
   if (spot) {
     for (const r of raw) {
@@ -260,6 +300,8 @@ export function buildOutlook(a: any, gex: any, today = new Date().toISOString().
         dist,
         side: r.price > spot ? 'above' : 'below',
         ...(r.touches !== undefined ? { touches: r.touches, lastTouch: r.lastTouch } : {}),
+        ...(r.premium !== undefined ? { premium: r.premium } : {}),
+        ...(r.lean !== undefined ? { lean: r.lean } : {}),
         pEnd,
         pTouch: probTouch(pEnd),
         confluence: 0,
@@ -310,6 +352,8 @@ const KIND_EN: Record<LevelKind, string> = {
   zeroGamma: 'GEX zero gamma',
   absGamma: 'GEX abs-gamma strike',
   target: 'analyst mean target (Finviz)',
+  flowStrike: 'Unusual Whales options-flow strike (most alert premium, last 7 days)',
+  darkpool: 'Unusual Whales dark-pool price level (most $1M+ print money, last 14 days)',
 };
 
 const f2 = (x: number) => x.toFixed(2);
@@ -355,8 +399,12 @@ export function outlookFacts(o: Outlook): string {
     }
     const zone = l.touches !== undefined ? `, ${l.touches} touches, last ${l.lastTouch ?? 'n/a'}` : '';
     const conf = l.confluence ? `, confluence with ${l.confluence} other level(s) within 1%` : '';
+    const uwx =
+      l.premium !== undefined
+        ? `, $${(l.premium / 1e6).toFixed(2)}M${l.lean ? ` mostly ${l.lean === 'mixed' ? 'mixed calls/puts' : l.lean + 's'}` : ''}`
+        : '';
     out.push(
-      `  ${f2(l.price)}  ${KIND_EN[l.kind]}${zone}  (${sp(l.dist)} from spot; close beyond ${pc(l.pEnd)}, touch ${pc(l.pTouch)}${conf})`
+      `  ${f2(l.price)}  ${KIND_EN[l.kind]}${zone}${uwx}  (${sp(l.dist)} from spot; close beyond ${pc(l.pEnd)}, touch ${pc(l.pTouch)}${conf})`
     );
   }
   if (!spotShown) out.push(`  ---- spot ${f2(o.spot)} ----`);
@@ -368,6 +416,10 @@ export function outlookFacts(o: Outlook): string {
   else if (o.gexSource === 'cboe') miss.push('GEX walls from a 15-min delayed CBOE chain');
   if (o.missing.includes('zones')) miss.push('no swing zones (not sent)');
   if (o.missing.includes('target')) miss.push('no analyst target (Finviz unavailable)');
+  if (o.missing.includes('uw-off')) miss.push('no Unusual Whales levels (not configured on this server)');
+  if (o.missing.includes('uw')) miss.push('no Unusual Whales levels (not loaded)');
+  if (o.missing.includes('uw-flow')) miss.push('no options-flow strikes (Unusual Whales flow request failed)');
+  if (o.missing.includes('uw-darkpool')) miss.push('no dark-pool levels (Unusual Whales dark-pool request failed)');
   if (miss.length) out.push('', `Gaps in the map: ${miss.join('; ')}.`);
   return out.join('\n');
 }
@@ -422,6 +474,10 @@ your lean into a probability of your own.
 Never state that the price WILL reach a level.
 - The analyst target is an opinion that usually sits above price by \
 construction; do not treat it as a level price is drawn to.
+- Unusual Whales flow strikes and dark-pool levels show where money \
+concentrated, not which way it bets: a strike heavy in call premium can be \
+calls being sold, and dark-pool side is only an estimate. Use them as levels \
+and as context, read against the UNUSUAL WHALES section of the table.
 - Levels that sit within 1% of each other are a confluence zone and matter \
 more than a single line; say so when you use one.
 - Do not give a buy, sell or hold recommendation.
