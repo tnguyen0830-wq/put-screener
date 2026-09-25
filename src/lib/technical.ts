@@ -29,12 +29,53 @@ import {
   streakAbove,
   type Candle,
 } from './indicators';
+import { pivotLows, supportZones, type SupportZone } from './support';
+import { pivotHighs } from './patterns';
 
 const addDays = (n: number) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
   return d.toISOString().slice(0, 10);
 };
+
+/**
+ * Vùng hỗ trợ / kháng cự cho tab Analyze, tính từ CHÍNH những cây nến ngày
+ * vừa tải cho chỉ báo — không tốn thêm request nào.
+ *
+ * Dùng lại nguyên máy dò của tab Đầu tư dài hạn (`pivotLows` +
+ * `supportZones`) và ảnh gương của nó bên Patterns (`pivotHighs`), không viết
+ * phép gom thứ hai: ba tab phải nói cùng một vùng cho cùng một mã. Cửa sổ ở
+ * đây là 2 năm (đúng lượng nến Analyze đã tải), Long-term là 3 năm, nên một
+ * vùng rất cũ có thể có bên kia mà không có bên này — khác CỬA SỔ chứ không
+ * khác phép tính.
+ *
+ * Vùng từ đáy và vùng từ đỉnh được giữ RIÊNG theo nguồn gốc, không theo vị
+ * trí so với giá: một vùng đáy đã bị thủng giờ nằm TRÊN giá, và người đọc
+ * cần biết nó từng là hỗ trợ (`lib/outlook.ts` mới là chỗ xếp theo vị trí).
+ */
+export type PriceZones = {
+  fromLows: SupportZone[];
+  fromHighs: SupportZone[];
+  bars: number;
+};
+
+export function priceZones(candles: Candle[]): PriceZones {
+  const cs = candles
+    .filter((c) => [c.high, c.low, c.close].every((v) => typeof v === 'number' && Number.isFinite(v)))
+    .map((c) => ({
+      t: c.datetime,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume ?? null,
+    }));
+  return {
+    fromLows: supportZones(pivotLows(cs)),
+    fromHighs: supportZones(pivotHighs(cs)),
+    bars: cs.length,
+  };
+}
 
 export type TechnicalSnapshot = {
   symbol: string;
@@ -94,6 +135,8 @@ export type TechnicalSnapshot = {
     avgVolume1y: number | null;
     lastEarnings: string | null;
   };
+  /** Vùng giá tính từ đáy/đỉnh xoay — xem `priceZones`. */
+  zones: PriceZones;
   meta: {
     bars: number;
     firstBar: string;
@@ -219,6 +262,8 @@ export async function technicalSnapshot(symbol: string): Promise<TechnicalSnapsh
       avgVolume1y: row.fundamental?.avg1YearVolume ?? null,
       lastEarnings: row.fundamental?.lastEarningsDate?.slice(0, 10) ?? null,
     },
+
+    zones: priceZones(candles),
 
     meta: {
       bars: candles.length,

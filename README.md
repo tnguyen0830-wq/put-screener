@@ -455,6 +455,27 @@ gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi). Claude chỉ �
 thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual Whales — một mục vắng mặt
 rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent API.
 
+**Kịch bản giá** là chế độ thứ hai của cùng khung đó, trả lời câu *"cổ phiếu
+sẽ về đâu"* theo cách trung thực duy nhất có thể: không ai biết giá sẽ về đâu,
+nhưng hai thứ thì TÍNH được. Một là **biên dao động thị trường quyền chọn đang
+định giá** — từ IV của chính chuỗi Schwab, app in khoảng 1σ (~68%) và 2σ
+(~95%) cho 7 và 30 ngày. Hai là **bản đồ mức giá**: vùng đáy/đỉnh xoay (cùng máy
+dò của Long-term và Patterns, tính từ nến đã tải, không tốn request mới), SMA,
+Bollinger, đỉnh/đáy 52 tuần, tường GEX và giá mục tiêu phân tích viên — mỗi mức
+kèm khoảng cách tới giá và **xác suất thị trường quyền chọn hàm ý** giá đóng cửa
+vượt qua / chạm mức đó trong 30 ngày. Những mức nằm trong 1% của nhau được đánh
+dấu **hội tụ**. Bảng này hiện ngay, miễn phí.
+
+Bấm nút thì Claude đọc các chỉ báo, nói đang **nghiêng** về phía nào (và mạnh
+tới đâu, kể cả "trung tính"), rồi viết ba kịch bản — chính / tăng / giảm — mỗi
+kịch bản có điều kiện kích hoạt (đóng cửa trên/dưới một mức), vùng tiếp theo, và
+mức mà nếu thủng thì nhận định sai. **Mọi mức giá Claude viết phải chép từ
+bảng**: nó không được tự nghĩ ra giá mục tiêu, vì một con số tự nghĩ trông y hệt
+một con số tính được. Hai cột xác suất là thứ giá quyền chọn hàm ý (mô hình
+log-chuẩn), không phải xác suất chỉ báo kỹ thuật ủng hộ — màn hình nói rõ điều
+đó. Earnings rơi vào 30 ngày tới thì có dòng cảnh báo, vì cú nhảy earnings không
+theo phân phối chuẩn. Đây là kịch bản có điều kiện, không phải dự báo.
+
 **Hồ sơ công ty tự dịch sang tiếng Việt.** Lĩnh vực, ngành, quốc gia (Finviz)
 và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
 trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude

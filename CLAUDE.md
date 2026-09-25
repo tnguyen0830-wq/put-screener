@@ -3294,6 +3294,48 @@ One reading of **every** indicator on the Analyze page — technical, implied vo
 
 Two things fixed on the way, both silent before: the prompt read `macd.histogram` while the analyze route emits `macd.hist`, so the histogram was always `n/a`; and Bollinger %B, bid/ask/volume, sector/industry and dividend amount were computed but never sent. Keep the field list in `facts()` in step with the `Analysis` type in `AnalysisPanel.tsx` — there is no type linking them.
 
+#### Price scenarios (`src/lib/outlook.ts`, `OutlookMap.tsx`, `mode: 'outlook'` on `/api/ai`)
+
+The owner asked *"tôi muốn claude phân tích stock sẽ về đâu được không?"* — and
+the read prompt above forbids predicting a price, correctly. The honest answer
+to "where will it go" has two computable halves, and `outlook.ts` keeps them in
+code: the **range the option market is pricing** (IV from the Schwab chain →
+lognormal 1σ/2σ bands at 7 and 30 days, falling back to HV20 only with a
+warning that it is past movement, not pricing) and a **level map** (swing-low
+and swing-high zones, SMA20/50/200, Bollinger bands, 52-week high/low, GEX
+walls from any `/api/gex` shape, Finviz's analyst target), each with distance
+and the option market's **risk-neutral** probability of closing beyond it
+(`N(±d2)`) and of touching it (≈ 2× by the reflection principle, capped at 1).
+Claude only writes the lean and three conditional scenarios, and **every price
+it writes must be copied from the map** — the repo's rule that Claude
+interprets numbers and never produces them (#138's rejected LLM moat score).
+
+Load-bearing details:
+
+- **The map is built twice from one function.** `OutlookMap` renders it in the
+  browser for free; the route rebuilds it from the same two payloads with the
+  same `buildOutlook()` rather than accepting a client-computed map, so the
+  prompt cannot hold a number the screen does not show.
+- **Zones come from `priceZones()` in `technical.ts`**, i.e. `pivotLows` +
+  `supportZones` (Long-term) and `pivotHighs` (Patterns) over the 2 years of
+  daily bars Analyze already fetched — zero extra requests, and three tabs
+  name the same zones. The window differs (Long-term reads 3 years), the
+  arithmetic does not. They are selected by **position** (3 nearest above and
+  below spot) but keep their **origin** in `kind`, because a broken support
+  now above price is a different story from an old high.
+- **Probabilities are labelled as what they are**, in the prompt and on
+  screen: option-implied, not the odds the indicators favour. The prompt
+  forbids Claude from turning its own lean into a probability. Values under
+  1% print `<1%`, never `0%` — a far level is unlikely, not impossible.
+- **Earnings inside 30 days is flagged**, because a gap is not lognormal and
+  the bands understate it; `nextEarnings` in the past is ignored.
+- The language anchor is written in the target language at **both ends** of
+  the system prompt (#148).
+- A narrow-screen bug caught only by measuring: at 400px the confluence badge
+  (`nowrap`) and one-line headers pushed both probability columns — the most
+  useful part — out of the scroll box. Below 560px headers and the badge wrap;
+  a Playwright assertion pins `table.scrollWidth <= wrap.clientWidth`.
+
 ### Company profile translation (`src/lib/profiletranslate.ts`, `/api/ai/profile-translate`)
 
 `sector`/`industry`/`country` come from Finviz's quote page, `description` from FMP — both English-only sources. Every other label on the page goes through `i18n.tsx`, so with the UI in Vietnamese these four fields were the one spot still reading English (reported by the owner: "phần thông tin công ty lúc tiếng việt phần thông tin vẫn là tiếng anh").

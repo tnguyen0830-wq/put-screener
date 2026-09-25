@@ -1,7 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
+import { buildOutlook } from '@/lib/outlook';
+import { readRememberedOneOf, remember } from '@/lib/remember';
+import OutlookMap from './OutlookMap';
+
+const MODES = ['read', 'outlook'] as const;
+type Mode = (typeof MODES)[number];
 
 /**
  * Claude's read of the indicators below it, on demand.
@@ -32,6 +38,29 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
   const [errKey, setErrKey] = useState('ai.failed');
   const abort = useRef<AbortController | null>(null);
 
+  /* Hai chế độ: "đọc chỉ số" (bản gốc) và "kịch bản giá" (lib/outlook.ts).
+     Nhớ lựa chọn như mọi nút chọn khác của app; đọc sau hydrate (#110). */
+  const [mode, setMode] = useState<Mode>('read');
+  useEffect(() => {
+    const m = readRememberedOneOf('aiMode', MODES);
+    if (m) setMode(m);
+  }, []);
+  const pick = (m: Mode) => {
+    if (m === mode) return;
+    abort.current?.abort();
+    setText('');
+    setState('idle');
+    setMode(m);
+    remember('aiMode', m);
+  };
+
+  /* Bản đồ tính ngay trên trình duyệt từ đúng payload đang hiện — miễn phí.
+     Route dựng lại nó bằng CÙNG hàm, nên màn hình và prompt không lệch. */
+  const outlook = useMemo(
+    () => (mode === 'outlook' ? buildOutlook(analysis, gex ?? null) : null),
+    [mode, analysis, gex]
+  );
+
   const run = async () => {
     abort.current?.abort();
     const ctrl = new AbortController();
@@ -60,7 +89,7 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, gex: gexData, gexError, lang }),
+        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode }),
         signal: ctrl.signal,
       });
 
@@ -116,19 +145,37 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
           {state === 'running'
             ? t('ai.running')
             : state === 'idle'
-              ? t('ai.run')
+              ? t(mode === 'outlook' ? 'ol.run' : 'ai.run')
               : t('ai.rerun')}
         </button>
       </div>
 
-      {state === 'idle' && !text && <p className="cap">{t('ai.idle')}</p>}
+      <div className="chiprow aimodes" role="group">
+        {MODES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={mode === m ? 'on' : ''}
+            aria-pressed={mode === m}
+            onClick={() => pick(m)}
+          >
+            {t(m === 'outlook' ? 'ai.mode.outlook' : 'ai.mode.read')}
+          </button>
+        ))}
+      </div>
+
+      {state === 'idle' && !text && (
+        <p className="cap">{t(mode === 'outlook' ? 'ol.idle' : 'ai.idle')}</p>
+      )}
+
+      {mode === 'outlook' && outlook && <OutlookMap o={outlook} />}
 
       {text && <div className="aitext">{text}</div>}
 
       {state === 'error' && <p className="hint hint-warn">{t(errKey)}</p>}
 
       {(state === 'done' || state === 'running') && text && (
-        <p className="cap">{t('ai.caveat')}</p>
+        <p className="cap">{t(mode === 'outlook' ? 'ol.caveat' : 'ai.caveat')}</p>
       )}
     </section>
   );

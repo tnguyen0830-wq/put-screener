@@ -55,6 +55,9 @@ export async function GET(req: NextRequest) {
       // FMP và Finviz. null nghĩa là cả hai nguồn đều không nói gì.
       profile: mergeProfile(fmpProfile, finviz?.profile ?? null),
 
+      /* Vùng hỗ trợ/kháng cự cho phần "Kịch bản giá" (lib/outlook.ts). */
+      zones: snap.zones,
+
       meta: snap.meta,
     });
   } catch (e: any) {

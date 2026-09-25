@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { facts, system } from '@/lib/airead';
+import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
 import { logActivity } from '@/lib/activity';
 import { currentUser } from '@/lib/users';
 
@@ -50,22 +51,36 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Missing analysis' }, { status: 400 });
   }
 
-  await logActivity(currentUser(req), 'ai', String(analysis.symbol));
+  /* Hai chế độ trên cùng một route: "đọc chỉ số" (bản gốc) và "kịch bản
+     giá" (lib/outlook.ts). Bản đồ mức giá được dựng LẠI ở đây từ đúng hai
+     payload client gửi, bằng CÙNG hàm màn hình dùng - không nhận bản đồ
+     client tự tính, để prompt không thể chứa một con số màn hình không có. */
+  const mode = body?.mode === 'outlook' ? 'outlook' : 'read';
+  const lang = body?.lang === 'en' ? 'en' : 'vi';
+  const gex = body?.gex ?? null;
+  const gexError =
+    typeof body?.gexError === 'string' ? body.gexError.slice(0, 300) : null;
 
+  await logActivity(
+    currentUser(req),
+    'ai',
+    mode === 'outlook' ? `${analysis.symbol} · kịch bản` : String(analysis.symbol)
+  );
+
+  const table = facts(analysis, gex, gexError);
   const client = new Anthropic();
   const params = {
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: system(body?.lang === 'en' ? 'en' : 'vi'),
+    system: mode === 'outlook' ? outlookSystem(lang) : system(lang),
     thinking: { type: 'adaptive' as const },
     messages: [
       {
         role: 'user' as const,
-        content: facts(
-          analysis,
-          body?.gex ?? null,
-          typeof body?.gexError === 'string' ? body.gexError.slice(0, 300) : null
-        ),
+        content:
+          mode === 'outlook'
+            ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex))}`
+            : table,
       },
     ],
   };
