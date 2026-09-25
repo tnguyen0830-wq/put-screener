@@ -4870,3 +4870,9 @@ body {
   .sftrend .sftable th, .sftrend .sftable td { padding: 4px 4px; }
   .sftrend .sftable td:first-child { min-width: 0; overflow-wrap: anywhere; }
 }
+
+/* Nguồn + trạng thái ngày earnings ở tab Analyze (EarningsStatus.tsx).
+   Câu lỗi mang nguyên văn lời tastytrade - có thể là một "từ" JSON dài
+   không khoảng trắng, nên phải xuống dòng được (bẫy .ttserr #195). */
+.erstatus { margin: 4px 0 8px; }
+.erstatus p { margin: 2px 0; min-width: 0; overflow-wrap: anywhere; }

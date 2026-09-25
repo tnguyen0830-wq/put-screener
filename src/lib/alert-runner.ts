@@ -199,6 +199,14 @@ async function syncEarningsCalendar() {
 /** Khởi động vòng lặp đúng một lần cho cả tiến trình. */
 export function startAlertLoop() {
   if (timer) return;
+  /* Lịch earnings chạy NGAY một lượt, không chờ tick đầu 15 phút sau. Sau
+     mỗi deploy vòng lặp khởi động lại từ đầu, và chờ 15 phút nghĩa là cả
+     khoảng đó Screener / My Portfolio / Analyze không có ngày nào từ
+     tastytrade (chủ app: "các tab đều không có ngày ER"). Rẻ: mã đã hỏi
+     trong 24 giờ bị bỏ qua, và kho giờ nằm trên /var/data nên sau deploy
+     phần lớn mã vẫn còn hạn. Chỉ lịch earnings - các nguồn khác giữ nguyên
+     nhịp cũ vì chúng tốn hạn mức (#78). */
+  void syncEarningsCalendar().catch(() => {});
   timer = setInterval(() => {
     tick++;
     // 1 trong 4 tick (~60 phút) mới hỏi tin báo chí - xem chú thích

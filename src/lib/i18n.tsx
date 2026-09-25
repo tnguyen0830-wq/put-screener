@@ -2275,22 +2275,76 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'an.avgVol1y': { vi: (v: string) => `1 năm ${v}`, en: (v: string) => `1 year ${v}` },
   'an.lastEarnings': { vi: 'Earnings gần nhất', en: 'Last earnings' },
   'an.nextEarnings': { vi: 'Earnings kế tiếp', en: 'Next earnings' },
-  /* Câu này từng nói SAI hai chuyện, và chuyện thứ hai nặng hơn.
-     (1) Sau #135 nguồn không còn là một file: `loadEarnings()` HỢP
-         `data/earnings.json` với lịch tastytrade.
-     (2) Nó hứa "phân biệt rõ ngày đã công bố với ngày ước tính" - nhưng
-         sự phân biệt đó nằm trong `_comment` của file (văn xuôi cho
-         người đọc) và trong cờ `estimated` của tastytrade, còn DÒNG TRÊN
-         MÀN HÌNH chỉ in một ngày trơ, không mang nhãn nào. Hứa một sự
-         chắc chắn mà màn hình không hề thể hiện là đúng thứ degradation
-         idiom của repo này cấm - nên câu mới nói thẳng rằng nhãn đó chỉ
-         có ở Hard gates bên tab Screener.
-     Dấu — cũng được nói rõ là GỘP "chưa biết gì" với "đã kiểm, không có",
-     vì `nextEarnings` là `find(d => d >= today) ?? null`: mã vắng mặt, mã
-     mang mảng rỗng (ETF) và mã chỉ còn ngày trong quá khứ đều ra null. */
-  'an.earningsNote': {
-    vi: 'Ngày earnings kế tiếp là HỢP của hai nguồn: data/earnings.json (dựng bằng tay cho mã trong watchlist, làm mới hằng tuần qua GitHub Actions) và lịch tastytrade (phủ mọi mã, nhưng chỉ ngày kế tiếp). Dòng trên in ngày sớm nhất còn ở phía trước và KHÔNG nói ngày đó công ty đã xác nhận hay mới chỉ là ước tính — nhãn "ngày ước tính" chỉ có ở phần Hard gates bên tab Screener. Dấu — nghĩa là không nguồn nào có ngày ở phía trước, và nó gộp chung "chưa biết gì về mã này" với "đã kiểm, mã này không có earnings".',
-    en: 'The next-earnings date is the UNION of two sources: data/earnings.json (hand-built for watchlist symbols, refreshed weekly by a GitHub Action) and tastytrade\'s calendar (covers every symbol, but only the next date). The row above prints the earliest date still ahead and does NOT say whether the company confirmed it or it is an estimate — that "estimated date" tag only appears under Hard gates on the Screener tab. A — means neither source has a future date, and it collapses "nothing is known about this symbol" together with "checked, this symbol has no earnings".',
+  'er.short.tastytrade': { vi: '· tastytrade', en: '· tastytrade' },
+  'er.short.file': { vi: '· lịch tay', en: '· hand-built file' },
+  'er.short.finviz': { vi: '· Finviz, năm suy ra', en: '· Finviz, year inferred' },
+  'er.noInfo': {
+    vi: 'Server không trả thông tin nguồn earnings (bản app cũ?) — tải lại trang.',
+    en: 'The server sent no earnings source info (older build?) — reload the page.',
+  },
+  'er.srcTtConf': { vi: 'Nguồn: tastytrade · công ty ĐÃ XÁC NHẬN ngày này.', en: 'Source: tastytrade · the company has CONFIRMED this date.' },
+  'er.srcTtEst': {
+    vi: 'Nguồn: tastytrade · ngày ƯỚC TÍNH, công ty chưa công bố — có thể lệch vài ngày.',
+    en: 'Source: tastytrade · an ESTIMATED date, not yet announced by the company — it may move by a few days.',
+  },
+  'er.srcFile': {
+    vi: 'Nguồn: lịch tay data/earnings.json (Yahoo/Nasdaq, làm mới hằng tuần) — không nói ngày này đã xác nhận hay ước tính.',
+    en: 'Source: the hand-built data/earnings.json (Yahoo/Nasdaq, refreshed weekly) — it does not say whether the date is confirmed or estimated.',
+  },
+  'er.srcFinviz': {
+    vi: (raw: string) => `Nguồn: Finviz ("${raw}") — chỉ dùng khi tastytrade và lịch tay đều không có. Finviz không in năm, năm do app suy ra; kiểm lại trước khi dựa vào.`,
+    en: (raw: string) => `Source: Finviz ("${raw}") — used only when neither tastytrade nor the hand-built file has a date. Finviz prints no year; the app inferred it, so double-check before relying on it.`,
+  },
+  'er.amc': { vi: 'Báo cáo SAU giờ đóng cửa (AMC).', en: 'Reports AFTER the close (AMC).' },
+  'er.bmo': { vi: 'Báo cáo TRƯỚC giờ mở cửa (BMO).', en: 'Reports BEFORE the open (BMO).' },
+  'er.none': {
+    vi: 'tastytrade: mã này KHÔNG có earnings (ETF hoặc quỹ) — dấu — ở trên là câu trả lời thật, không phải thiếu dữ liệu.',
+    en: 'tastytrade: this symbol has NO earnings (an ETF or fund) — the — above is a real answer, not missing data.',
+  },
+  'er.past': {
+    vi: (d: string) => `Chưa nguồn nào có lịch kỳ TỚI. Lần báo cáo gần nhất đã biết: ${d}. Lý do thiếu:`,
+    en: (d: string) => `No source has the NEXT date yet. Last known report: ${d}. Why it is missing:`,
+  },
+  'er.unknown': { vi: 'Không nguồn nào có ngày earnings cho mã này. Lý do:', en: 'No source has an earnings date for this symbol. Why:' },
+  'er.r.tt-off': {
+    vi: '· tastytrade chưa cấu hình trên server (TT_CLIENT_SECRET + TT_REFRESH_TOKEN) — đây là nguồn phủ rộng nhất.',
+    en: '· tastytrade is not configured on the server (TT_CLIENT_SECRET + TT_REFRESH_TOKEN) — it is the widest source.',
+  },
+  'er.r.tt-error': { vi: (e: string) => `· tastytrade lỗi: ${e}`, en: (e: string) => `· tastytrade failed: ${e}` },
+  'er.r.tt-missing': { vi: '· tastytrade không trả bản ghi nào cho mã này.', en: '· tastytrade returned no record for this symbol.' },
+  'er.r.tt-undecided': {
+    vi: '· tastytrade biết mã này có báo cáo nhưng chưa có ngày.',
+    en: '· tastytrade knows this symbol reports but has no date yet.',
+  },
+  'er.r.not-in-file': {
+    vi: '· không có trong lịch tay (lịch này chỉ phủ watchlist lúc chạy script).',
+    en: '· not in the hand-built file (it only covers the watchlist when the script ran).',
+  },
+  'er.r.no-finviz': {
+    vi: '· Finviz không có ô Earnings, hoặc Finviz không tải được lần này.',
+    en: '· Finviz has no Earnings cell, or Finviz failed to load this time.',
+  },
+  'er.r.finviz-unparsed': {
+    vi: (raw: string) => `· Finviz ghi "${raw}" — app không đọc được thành ngày.`,
+    en: (raw: string) => `· Finviz says "${raw}" — the app could not read it as a date.`,
+  },
+  'er.syncOff': {
+    vi: 'Lịch tastytrade dùng cho Screener và My Portfolio: chưa cấu hình, nên hai tab đó chỉ có lịch tay.',
+    en: 'tastytrade calendar used by the Screener and My Portfolio: not configured, so those tabs only have the hand-built file.',
+  },
+  'er.syncNever': {
+    vi: (n: number) => `Lịch tastytrade dùng cho Screener và My Portfolio: chưa có lượt đồng bộ nào được ghi lại (kho đang có ${n} mã). Lượt đầu chạy ngay khi vòng lặp nền khởi động.`,
+    en: (n: number) => `tastytrade calendar used by the Screener and My Portfolio: no sync recorded yet (${n} symbols stored). The first run starts as soon as the background loop does.`,
+  },
+  'er.syncErr': {
+    vi: ([at, e]: [string, string]) => `Lịch tastytrade dùng cho Screener và My Portfolio: lượt đồng bộ gần nhất (${at} New York) LỖI — ${e}`,
+    en: ([at, e]: [string, string]) => `tastytrade calendar used by the Screener and My Portfolio: the last sync (${at} New York) FAILED — ${e}`,
+  },
+  'er.syncOk': {
+    vi: ([n, at, asked, ret, miss]: [number, string, number, number, number]) =>
+      `Lịch tastytrade dùng cho Screener và My Portfolio: ${n} mã trong kho, đồng bộ lúc ${at} New York (hỏi ${asked}, về ${ret}, thiếu ${miss}; mã đã hỏi trong 24 giờ không hỏi lại).`,
+    en: ([n, at, asked, ret, miss]: [number, string, number, number, number]) =>
+      `tastytrade calendar used by the Screener and My Portfolio: ${n} symbols stored, synced ${at} New York (asked ${asked}, returned ${ret}, missing ${miss}; symbols asked within 24 hours are not re-asked).`,
   },
   'an.finviz': { vi: 'Analysts & positioning (Finviz)', en: 'Analysts & positioning (Finviz)' },
   'an.targetPrice': { vi: 'Giá mục tiêu', en: 'Target price' },

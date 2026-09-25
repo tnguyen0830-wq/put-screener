@@ -143,6 +143,21 @@ hướng sai nguy hiểm. Cần mạng, phải chạy tay, không tự động.
 > những mã bị hụt dữ liệu, thay vì để trống: một ô trống rất dễ đọc nhầm thành
 > "không có gì sắp tới".
 
+**Ngày earnings giờ lấy từ ba nguồn, và màn hình nói nguồn nào.** Theo thứ tự
+tin cậy: **lịch tastytrade** (`/market-metrics`, có cờ "ước tính / đã xác
+nhận", phủ S&P 500 + watchlist mọi người + mã đang giữ), **lịch tay**
+`data/earnings.json` ở trên, và — chỉ ở tab Analyze, chỉ khi hai nguồn kia
+không có — **ô "Earnings" của Finviz** (dạng "Oct 29 AMC", không có năm nên
+app tự suy năm và ghi rõ là suy ra; một ngày Finviz đã qua được hiện là "lần
+gần nhất", không bao giờ là "kỳ tới"). Kho tastytrade nằm cạnh `SCAN_PATH`
+(tức `/var/data`), nên deploy không còn xoá nó; lượt đồng bộ chạy **ngay** khi
+vòng lặp nền khởi động thay vì chờ 15 phút; và mở Analyze một mã chưa có trong
+kho thì app hỏi tastytrade riêng mã đó (một request, lưu 24 giờ, dùng chung cho
+Screener và My Portfolio). Dưới dòng "Earnings kế tiếp" có một đoạn nói nguồn,
+giờ báo cáo (trước/sau phiên), hoặc — khi không có ngày — vì sao: tastytrade
+chưa cấu hình, tastytrade lỗi (in nguyên văn), mã là ETF (không có earnings),
+hay chỉ biết lần đã qua; cộng tình trạng lượt đồng bộ gần nhất.
+
 **Delta là delta của Schwab.** Chuỗi quyền chọn trả greeks tính theo mô hình
 của Schwab, có thể lệch nhẹ so với thinkorswim hay broker khác. Dùng nó để
 xếp hạng tương đối, đừng coi là con số tuyệt đối.
