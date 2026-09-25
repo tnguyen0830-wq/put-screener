@@ -222,6 +222,233 @@ export function summarizeFlow(rows: LiveRow[], now = Date.now()): FlowSummary {
   return s;
 }
 
+/* ---------- diễn biến flow qua các ngày ---------- */
+
+/**
+ * Chủ app: *"Claude trong tab analysis có coi và kết luận flow đang diễn
+ * biến ra sao không?"* — Claude đã THẤY bảng theo ngày, nhưng tự so từng
+ * ngày là để Claude làm số học, mà luật repo là code tính, Claude diễn
+ * giải. Nên xu hướng được tính ở đây, cho cả màn hình lẫn prompt.
+ *
+ * Ba cái bẫy, mỗi cái sẽ sinh ra một "xu hướng" không có thật:
+ *  - NGÀY DỞ DANG. Cửa sổ 7 ngày bắt đầu giữa một phiên (now − 7 ngày), và
+ *    hôm nay còn đang giao dịch thì tổng hôm nay là tổng MỘT PHẦN. So nửa
+ *    sau (có hôm nay dở) với nửa trước là "flow đang nguội" giả. Nên chỉ
+ *    ngày có TRỌN phiên 09:30–16:00 New York nằm trong cửa sổ mới vào phép
+ *    so; ngày dở được in riêng, không bị giấu.
+ *  - NGÀY KHÔNG CÓ ALERT. Một ngày thứ Hai–Sáu không có alert là số 0 THẬT
+ *    (mã ít giao dịch) chứ không phải thiếu dữ liệu, nên nó vẫn vào phép so;
+ *    ngày lễ thì app không biết — màn hình nói ra.
+ *  - QUÁ ÍT DỮ LIỆU. Hai alert một bên không phải xu hướng. Dưới ngưỡng thì
+ *    trả `reason`, KHÔNG trả nhãn — một nhãn "đang tăng" dựng trên 2 alert
+ *    trông y hệt nhãn dựng trên 200.
+ */
+
+/** Nửa sau ≥ 1,5× nửa trước (premium mỗi ngày) mới gọi là "tăng"; ≤ 1/1,5
+ *  là "giảm". Dưới đó là dao động thường ngày của flow. */
+export const TREND_RATIO = 1.5;
+/** Tỉ trọng (call, kỳ ngắn, vị thế mới) phải dịch ≥ 15 điểm % mới gọi là
+ *  dịch chuyển. */
+export const TREND_SHIFT = 0.15;
+/** Mỗi nửa cần ít nhất chừng này alert call/put. */
+export const TREND_MIN_ALERTS = 3;
+/** Một ngày ≥ 3× trung vị các ngày trọn phiên còn lại là ngày đột biến. */
+export const SPIKE_RATIO = 3;
+
+export type TrendDay = { day: string; call: number; put: number; alerts: number; premium: number };
+export type TrendHalf = {
+  days: string[];
+  alerts: number;
+  premium: number;
+  perDay: number;
+  /** call / (call + put) theo premium. */
+  callShare: number | null;
+  /** Premium kỳ 0–7 ngày / premium có DTE biết được. */
+  shortShare: number | null;
+  /** Số alert KL > OI / số alert. */
+  newShare: number | null;
+  /** Call khớp ở ask / call khớp ở ask+bid; put tương tự. Không có nhãn —
+   *  ask ≠ lạc quan, nên chỉ đưa số. */
+  callAskShare: number | null;
+  putAskShare: number | null;
+};
+export type Shift<A extends string, B extends string> = A | B | 'steady' | null;
+export type FlowTrend = {
+  /** Ngày thứ Hai–Sáu có trọn phiên trong cửa sổ, cũ trước, kể cả ngày 0 alert. */
+  days: TrendDay[];
+  /** Ngày dở dang: có alert trong tổng nhưng không vào phép so. */
+  excluded: (TrendDay & { reason: 'partial-start' | 'in-session' | 'weekend' })[];
+  early: TrendHalf | null;
+  late: TrendHalf | null;
+  /** Số ngày lẻ thì ngày giữa đứng ngoài hai nửa. */
+  middle: string | null;
+  reason: null | 'too-few-days' | 'too-few-alerts';
+  verdict: null | {
+    intensity: 'rising' | 'falling' | 'steady';
+    mix: Shift<'toward-calls', 'toward-puts'>;
+    tenor: Shift<'shorter', 'longer'>;
+    newPos: Shift<'more', 'fewer'>;
+  };
+  /** Ngày trọn phiên nhiều premium nhất, và gấp mấy lần trung vị các ngày
+   *  còn lại (null khi trung vị là 0 hoặc chỉ có một ngày). */
+  peak: { day: string; premium: number; ratio: number | null; spike: boolean } | null;
+};
+
+function nyClock(t: number): { date: string; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(t));
+  const g = (k: string) => parts.find((p) => p.type === k)?.value ?? '00';
+  return { date: `${g('year')}-${g('month')}-${g('day')}`, minutes: Number(g('hour')) * 60 + Number(g('minute')) };
+}
+
+const OPEN_MIN = 9 * 60 + 30;
+const CLOSE_MIN = 16 * 60;
+
+function addDay(d: string): string {
+  const t = new Date(`${d}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + 1);
+  return t.toISOString().slice(0, 10);
+}
+const weekday = (d: string) => {
+  const w = new Date(`${d}T12:00:00Z`).getUTCDay();
+  return w >= 1 && w <= 5;
+};
+const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
+
+function half(rows: LiveRow[], days: string[]): TrendHalf {
+  const h: TrendHalf = {
+    days, alerts: 0, premium: 0, perDay: 0, callShare: null, shortShare: null, newShare: null, callAskShare: null, putAskShare: null,
+  };
+  let call = 0, put = 0, shortP = 0, knownDte = 0, fresh = 0, cAsk = 0, cBid = 0, pAsk = 0, pBid = 0;
+  for (const r of rows) {
+    if (r.type !== 'call' && r.type !== 'put') continue;
+    const p = fin(r.premium) ? r.premium : 0;
+    h.alerts++;
+    if (r.type === 'call') call += p;
+    else put += p;
+    const b = dteBucket(r.dte);
+    if (b !== '?') {
+      knownDte += p;
+      if (b === '0-7') shortP += p;
+    }
+    if (fin(r.volume) && fin(r.openInterest) && r.volume > r.openInterest) fresh++;
+    if (r.type === 'call' && r.side === 'ask') cAsk += p;
+    if (r.type === 'call' && r.side === 'bid') cBid += p;
+    if (r.type === 'put' && r.side === 'ask') pAsk += p;
+    if (r.type === 'put' && r.side === 'bid') pBid += p;
+  }
+  h.premium = call + put;
+  h.perDay = days.length ? h.premium / days.length : 0;
+  h.callShare = ratio(call, call + put);
+  h.shortShare = ratio(shortP, knownDte);
+  h.newShare = ratio(fresh, h.alerts);
+  h.callAskShare = ratio(cAsk, cAsk + cBid);
+  h.putAskShare = ratio(pAsk, pAsk + pBid);
+  return h;
+}
+
+function shift<A extends string, B extends string>(a: number | null, b: number | null, up: A, down: B): Shift<A, B> {
+  if (a === null || b === null) return null;
+  if (b - a >= TREND_SHIFT) return up;
+  if (a - b >= TREND_SHIFT) return down;
+  return 'steady';
+}
+
+export function flowTrend(rows: LiveRow[], now = Date.now()): FlowTrend {
+  if (!Array.isArray(rows)) rows = [];
+  const cutoff = now - FLOW_DAYS * 86_400_000;
+  const recent = rows.filter((r) => {
+    if (!r || typeof r !== 'object') return false;
+    const t = Date.parse(r.at);
+    return Number.isFinite(t) && t >= cutoff && t <= now && (r.type === 'call' || r.type === 'put');
+  });
+  const start = nyClock(cutoff);
+  const end = nyClock(now);
+  const byDay = new Map<string, LiveRow[]>();
+  for (const r of recent) {
+    const d = nyClock(Date.parse(r.at)).date;
+    const list = byDay.get(d) ?? [];
+    list.push(r);
+    byDay.set(d, list);
+  }
+  const tally = (d: string): TrendDay => {
+    const list = byDay.get(d) ?? [];
+    let call = 0, put = 0;
+    for (const r of list) {
+      const p = fin(r.premium) ? r.premium : 0;
+      if (r.type === 'call') call += p;
+      else put += p;
+    }
+    return { day: d, call, put, alerts: list.length, premium: call + put };
+  };
+
+  const out: FlowTrend = { days: [], excluded: [], early: null, late: null, middle: null, reason: null, verdict: null, peak: null };
+  for (let d = start.date; d <= end.date; d = addDay(d)) {
+    const startCut = d === start.date && start.minutes > OPEN_MIN;
+    const endCut = d === end.date && end.minutes < CLOSE_MIN;
+    if (startCut || endCut) {
+      const t = tally(d);
+      if (t.alerts) out.excluded.push({ ...t, reason: startCut ? 'partial-start' : 'in-session' });
+      continue;
+    }
+    if (!weekday(d)) {
+      /* Alert cuối tuần (hiếm) không vào phép so — thêm một "ngày" vào một
+         nửa là kéo lệch premium mỗi ngày — nhưng cũng không mất im lặng. */
+      const t = tally(d);
+      if (t.alerts) out.excluded.push({ ...t, reason: 'weekend' });
+      continue;
+    }
+    out.days.push(tally(d));
+  }
+
+  const full = out.days;
+  if (full.length) {
+    const top = full.reduce((a, b) => (b.premium > a.premium ? b : a));
+    const others = full.filter((x) => x !== top).map((x) => x.premium).sort((a, b) => a - b);
+    const med = others.length
+      ? others.length % 2
+        ? others[(others.length - 1) / 2]
+        : (others[others.length / 2 - 1] + others[others.length / 2]) / 2
+      : null;
+    const r = med !== null && med > 0 ? top.premium / med : null;
+    out.peak = top.premium > 0 ? { day: top.day, premium: top.premium, ratio: r, spike: r !== null && r >= SPIKE_RATIO } : null;
+  }
+
+  if (full.length < 2) {
+    out.reason = 'too-few-days';
+    return out;
+  }
+  const n = Math.floor(full.length / 2);
+  const earlyDays = full.slice(0, n).map((x) => x.day);
+  const lateDays = full.slice(full.length - n).map((x) => x.day);
+  out.middle = full.length % 2 ? full[n].day : null;
+  const pick = (ds: string[]) => ds.flatMap((d) => byDay.get(d) ?? []);
+  out.early = half(pick(earlyDays), earlyDays);
+  out.late = half(pick(lateDays), lateDays);
+  if (out.early.alerts < TREND_MIN_ALERTS || out.late.alerts < TREND_MIN_ALERTS) {
+    out.reason = 'too-few-alerts';
+    return out;
+  }
+  const e = out.early.perDay;
+  const l = out.late.perDay;
+  const intensity: 'rising' | 'falling' | 'steady' =
+    e <= 0 ? (l > 0 ? 'rising' : 'steady') : l / e >= TREND_RATIO ? 'rising' : l / e <= 1 / TREND_RATIO ? 'falling' : 'steady';
+  out.verdict = {
+    intensity,
+    mix: shift(out.early.callShare, out.late.callShare, 'toward-calls', 'toward-puts'),
+    tenor: shift(out.early.shortShare, out.late.shortShare, 'shorter', 'longer'),
+    newPos: shift(out.early.newShare, out.late.newShare, 'more', 'fewer'),
+  };
+  return out;
+}
+
 export function summarizeDarkpool(prints: DarkpoolPrint[]): DarkpoolSummary {
   if (!Array.isArray(prints)) prints = [];
   const ok = prints.filter((p) => p && typeof p === 'object').filter((p) => fin(p.price) && (p.price as number) > 0);
@@ -278,6 +505,45 @@ const money = (x: number) =>
   x >= 1e9 ? `$${(x / 1e9).toFixed(2)}B` : x >= 1e6 ? `$${(x / 1e6).toFixed(2)}M` : `$${Math.round(x / 1e3)}K`;
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : 'n/a');
 
+const pct = (x: number | null) => (x === null ? 'n/a' : `${Math.round(x * 100)}%`);
+
+/** Phần "diễn biến" của prompt — nhãn do code đặt, Claude chỉ đọc. */
+export function trendFacts(tr: FlowTrend): string[] {
+  const out = ['  Trend across the week (computed in code; complete New York sessions only, Mon-Fri, holidays not detected):'];
+  if (tr.days.length) {
+    out.push(`    Complete sessions: ${tr.days.map((d) => `${d.day} ${money(d.premium)} (${d.alerts} alerts)`).join('; ')}.`);
+  }
+  for (const x of tr.excluded) {
+    const why = x.reason === 'in-session' ? 'today, session not finished' : x.reason === 'weekend' ? 'weekend' : 'only part of the session is inside the 7-day window';
+    out.push(`    Not compared: ${x.day} ${money(x.premium)} (${x.alerts} alerts) - ${why}.`);
+  }
+  if (tr.peak) {
+    out.push(
+      `    Busiest complete session: ${tr.peak.day} ${money(tr.peak.premium)}${tr.peak.ratio !== null ? `, ${tr.peak.ratio.toFixed(1)}x the median of the other sessions${tr.peak.spike ? ' (a spike)' : ''}` : ''}.`
+    );
+  }
+  if (tr.reason === 'too-few-days') {
+    out.push('    NO TREND: fewer than two complete sessions in the window. Do not describe a trend.');
+    return out;
+  }
+  const e = tr.early as TrendHalf;
+  const l = tr.late as TrendHalf;
+  const line = (name: string, h: TrendHalf) =>
+    `    ${name} (${h.days.join(', ')}): ${h.alerts} alerts, ${money(h.perDay)} premium per session, call share ${pct(h.callShare)}, 0-7 day expiry share ${pct(h.shortShare)}, new-position share ${pct(h.newShare)}, calls filled at ask ${pct(h.callAskShare)}, puts filled at ask ${pct(h.putAskShare)}.`;
+  out.push(line('Earlier half', e), line('Later half', l));
+  if (tr.middle) out.push(`    ${tr.middle} is the middle session and sits in neither half.`);
+  if (tr.reason === 'too-few-alerts' || !tr.verdict) {
+    out.push(`    NO TREND LABEL: a half has fewer than ${TREND_MIN_ALERTS} alerts, too few to call a direction. Say the flow is too thin to read a trend.`);
+    return out;
+  }
+  const v = tr.verdict;
+  const lbl = (x: string | null) => (x === null ? 'not measurable' : x.replace(/-/g, ' '));
+  out.push(
+    `    Labels (thresholds: premium ${TREND_RATIO}x per session, shares ${Math.round(TREND_SHIFT * 100)} points): activity ${v.intensity}; call/put mix ${lbl(v.mix)}; expiry ${lbl(v.tenor)}; new positions ${lbl(v.newPos)}.`
+  );
+  return out;
+}
+
 export function uwFacts(ctx: UwContext | null | undefined, now = Date.now()): string {
   const out = ['UNUSUAL WHALES (third-party flow data, read the caveats)'];
   if (!ctx) {
@@ -309,6 +575,7 @@ export function uwFacts(ctx: UwContext | null | undefined, now = Date.now()): st
         `  Largest strikes by premium: ${f.strikes.map((k) => `${k.strike} (${money(k.premium)}, ${k.lean})`).join(', ') || 'n/a'}.`,
         `  By day (New York, oldest first): ${f.byDay.map((d) => `${d.day} call ${money(d.call)} / put ${money(d.put)}`).join('; ') || 'n/a'}.`,
         `  By days to expiry: ${f.byDte.map((b) => `${b.bucket}d call ${money(b.call)} / put ${money(b.put)}`).join('; ') || 'n/a'}.`,
+        ...trendFacts(flowTrend(flow.data, now)),
         `  Largest alerts (top ${TOP_ALERTS} by premium):`
       );
       for (const r of f.top) {

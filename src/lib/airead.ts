@@ -182,9 +182,15 @@ stale, or levels-only.
 each other - for example a downtrend with a put wall far below spot, or an \
 overbought RSI right under the call wall.
 5. What the Unusual Whales section adds: where options-flow premium and \
-dark-pool money concentrated, and any Congress trades. Say whether it agrees \
-with the technical and gamma picture or cuts against it. If the section is \
-missing, not configured or partly failed, say which part and move on.
+dark-pool money concentrated, and any Congress trades. Then how the flow \
+has been evolving across the week, read ONLY from the "Trend across the \
+week" lines: whether activity is rising, falling or steady, whether the mix \
+is moving toward calls or puts, toward shorter or longer expiries, and \
+whether new positions are building; name a spike session if one is flagged. \
+If those lines say there is no trend, say the flow is too thin to read one \
+and do not describe one yourself. Say whether all of it agrees with the \
+technical and gamma picture or cuts against it. If the section is missing, \
+not configured or partly failed, say which part and move on.
 6. The clearest risks in this data, including any earnings date that falls \
 inside a typical 25-50 day option.
 
@@ -199,7 +205,9 @@ rather than working around it silently.
 - Options flow shows where premium traded, not who is bullish: a call \
 filled at the ask can be someone closing a short call. Dark-pool side is an \
 estimate from the fill price, and Congress trades are disclosed weeks to \
-months late. Never present any of them as proof of direction.
+months late. Never present any of them as proof of direction. \
+A shift in the flow over the week is a change in where premium is \
+traded, not a forecast: never turn it into a price call.
 - GEX is a model built on open interest, not observed dealer positioning; \
 treat walls as zones where hedging flow concentrates, not as guarantees.
 - Around 450 words. No preamble - start with the first section.

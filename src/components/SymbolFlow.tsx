@@ -2,7 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
-import { summarizeFlow, FLOW_DAYS, type UwContext } from '@/lib/uwsummary';
+import {
+  summarizeFlow,
+  flowTrend,
+  FLOW_DAYS,
+  TREND_MIN_ALERTS,
+  TREND_RATIO,
+  TREND_SHIFT,
+  type FlowTrend,
+  type TrendHalf,
+  type UwContext,
+} from '@/lib/uwsummary';
 import FlowTable, { money } from './FlowTable';
 
 /** Vẽ nhiều nhất chừng này dòng — 600 dòng một lúc làm trang điện thoại ì,
@@ -22,6 +32,7 @@ export default function SymbolFlow({ uw, loading }: { uw: UwContext | null; load
   const { t } = useLang();
   const [sort, setSort] = useState<'time' | 'premium'>('time');
   const f = useMemo(() => (uw && uw.configured && !uw.flow.error ? summarizeFlow(uw.flow.data) : null), [uw]);
+  const tr = useMemo(() => (uw && uw.configured && !uw.flow.error ? flowTrend(uw.flow.data) : null), [uw]);
 
   const rows = useMemo(() => {
     if (!uw || !f) return [];
@@ -129,6 +140,7 @@ export default function SymbolFlow({ uw, loading }: { uw: UwContext | null; load
       <p className="cap">
         <i className="sfkey sfkey-call" /> Call · <i className="sfkey sfkey-put" /> Put · {t('sf.scale')}
       </p>
+      {tr && <TrendBlock tr={tr} />}
 
       <div className="chiprow" role="group">
         {(['time', 'premium'] as const).map((k) => (
@@ -141,5 +153,79 @@ export default function SymbolFlow({ uw, loading }: { uw: UwContext | null; load
       {rows.length > RENDER_CAP && <p className="cap">{t('sf.more', [RENDER_CAP, rows.length])}</p>}
       <p className="cap">{t('uw.caveat')}</p>
     </section>
+  );
+}
+
+const pct = (x: number | null) => (x === null ? '—' : `${Math.round(x * 100)}%`);
+
+/**
+ * Flow đang diễn biến ra sao — cùng `flowTrend()` Claude đọc, nên con số
+ * trên màn hình và con số trong câu trả lời là MỘT. Nhãn không tô xanh/đỏ:
+ * "dịch về call" không phải tin tốt, cũng như ask ≠ lạc quan (#218).
+ */
+function TrendBlock({ tr }: { tr: FlowTrend }) {
+  const { t } = useLang();
+  const e = tr.early;
+  const l = tr.late;
+  const v = tr.verdict;
+  const label = (x: string | null | undefined) =>
+    x === undefined ? null : <td className={`sfv${x === null ? ' sfv-none' : ''}`}>{t(`sf.trend.v.${x ?? 'none'}`)}</td>;
+  const span = (h: TrendHalf) => (h.days.length > 1 ? `${h.days[0].slice(5)}–${h.days[h.days.length - 1].slice(5)}` : h.days[0]?.slice(5) ?? '');
+  const rows: [string, (h: TrendHalf) => string, string | null | undefined][] = [
+    ['sf.trend.perDay', (h) => money(h.perDay), v?.intensity],
+    ['sf.trend.callShare', (h) => pct(h.callShare), v?.mix],
+    ['sf.trend.shortShare', (h) => pct(h.shortShare), v?.tenor],
+    ['sf.trend.newShare', (h) => pct(h.newShare), v?.newPos],
+    ['sf.trend.callAsk', (h) => pct(h.callAskShare), undefined],
+    ['sf.trend.putAsk', (h) => pct(h.putAskShare), undefined],
+  ];
+  return (
+    <div className="sftrend">
+      <h4>{t('sf.trend.title')}</h4>
+      <p className="cap">{t('sf.trend.lead')}</p>
+      {tr.reason === 'too-few-days' && <p className="hint hint-warn">{t('sf.trend.fewDays')}</p>}
+      {e && l && (
+        <table className="sftable">
+          <thead>
+            <tr>
+              <th>{t('sf.trend.metric')}</th>
+              <th className="num">
+                {t('sf.trend.early')}
+                <span className="sfdates">{span(e)}</span>
+              </th>
+              <th className="num">
+                {t('sf.trend.late')}
+                <span className="sfdates">{span(l)}</span>
+              </th>
+              {v && <th>{t('sf.trend.label')}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([k, get, lab]) => (
+              <tr key={k}>
+                <td>{t(k)}</td>
+                <td className="num">{get(e)}</td>
+                <td className="num">{get(l)}</td>
+                {v && (label(lab) ?? <td />)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {tr.reason === 'too-few-alerts' && <p className="hint hint-warn">{t('sf.trend.fewAlerts', TREND_MIN_ALERTS)}</p>}
+      {tr.middle && <p className="cap">{t('sf.trend.middle', tr.middle)}</p>}
+      {tr.peak && (
+        <p className="cap">
+          {t('sf.trend.peak', [tr.peak.day, money(tr.peak.premium), tr.peak.ratio !== null ? tr.peak.ratio.toFixed(1) : null])}
+          {tr.peak.spike && <span className="sfspike"> · {t('sf.trend.spike')}</span>}
+        </p>
+      )}
+      {tr.excluded.map((x) => (
+        <p key={x.day} className="cap">
+          {t('sf.trend.excluded', [x.day, money(x.premium), t(`sf.trend.why.${x.reason}`)])}
+        </p>
+      ))}
+      <p className="cap">{t('sf.trend.note', [TREND_RATIO, Math.round(TREND_SHIFT * 100)])}</p>
+    </div>
   );
 }
