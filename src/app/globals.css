@@ -4788,3 +4788,47 @@ body {
    xuống dòng được ở 400px thay vì đẩy trang cuộn ngang. */
 .lfrefused p { margin: 4px 0; }
 .lfrefused .rrgfullbtn { margin: 4px 6px 0 0; flex: 0 1 auto; white-space: normal; }
+
+/* ---------- Analyze: kịch bản giá (lib/outlook.ts) ---------- */
+.aimodes { margin-top: 10px; }
+.olmap { margin-top: 10px; }
+.olbands { margin: 6px 0 8px; padding-left: 18px; font-size: 13px; line-height: 1.7; }
+.olsub { color: var(--muted); font-size: 12px; }
+.olconf {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  background: var(--stamp-tint);
+  color: var(--stamp);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.oltable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.oltable th, .oltable td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--rule-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.oltable th { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
+.oltable td.num { font-family: var(--data); text-align: right; white-space: nowrap; }
+.oltable tr.olspot > td {
+  border-top: 2px solid var(--stamp);
+  border-bottom: 2px solid var(--stamp);
+  color: var(--stamp);
+  font: 700 12px/1.6 var(--data);
+  text-align: center;
+}
+.oltable th.num { text-align: right; }
+/* Màn hẹp: hai cột xác suất là phần đáng đọc nhất, nên chúng phải nằm
+   trong khung — tiêu đề được xuống dòng, đệm và cỡ chữ thu lại, phần chú
+   thích số lần chạm xuống dòng riêng thay vì kéo rộng cột "Mức". Đo ra ở
+   400px: bản đầu đẩy cả hai cột xác suất ra ngoài màn hình. */
+@media (max-width: 560px) {
+  .oltable { font-size: 12px; }
+  .oltable th { white-space: normal; font-size: 11px; }
+  .oltable th, .oltable td { padding: 4px 4px; }
+  .oltable .olsub { display: block; font-size: 11px; }
+  .oltable .olconf { margin-left: 0; white-space: normal; }
+}
