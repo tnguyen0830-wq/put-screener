@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
+import SymbolFlow from './SymbolFlow';
+import type { UwContext } from '@/lib/uwsummary';
 import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl } from '@/lib/links';
@@ -262,6 +264,13 @@ export default function AnalysisPanel({
      phần "Claude đọc chỉ số" cùng với kỹ thuật/cơ bản - chủ app muốn Claude
      đọc TẤT CẢ chỉ số một lượt, không tách kỹ thuật một nơi, GEX một nơi. */
   const [gex, setGex] = useState<any>(null);
+  /* Dữ liệu Unusual Whales của mã đang mở (`/api/analyze/uw`) — tải MỘT lần
+     ở đây cho cả khối Claude (AiRead) lẫn khối Options Flow, gọi SAU
+     /api/analyze để một UW chậm hay đang 429 không kéo cả trang theo. */
+  const [uw, setUw] = useState<UwContext | null>(null);
+  const [uwLoading, setUwLoading] = useState(false);
+  const [uwPromise, setUwPromise] = useState<Promise<UwContext | null> | null>(null);
+  const uwSym = useRef<string | null>(null);
   /* Bản dịch tiếng Việt của sector/industry/country/description - nguồn
      gốc (Finviz/FMP) chỉ có tiếng Anh, đây là chỗ duy nhất trên trang còn
      tiếng Anh khi UI ở chế độ tiếng Việt. null = chưa dịch xong hoặc dịch
@@ -277,6 +286,28 @@ export default function AnalysisPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { lang } = useLang();
+
+  useEffect(() => {
+    const sym = data?.symbol ?? null;
+    if (sym === uwSym.current) return;
+    uwSym.current = sym;
+    setUw(null);
+    setUwPromise(null);
+    if (!sym) {
+      setUwLoading(false);
+      return;
+    }
+    setUwLoading(true);
+    const pr = fetch(`/api/analyze/uw?symbol=${encodeURIComponent(sym)}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as UwContext) : null))
+      .catch(() => null);
+    setUwPromise(pr);
+    pr.then((v) => {
+      if (uwSym.current !== sym) return;
+      setUw(v);
+      setUwLoading(false);
+    });
+  }, [data?.symbol]);
 
   const load = useCallback(async (symbol: string) => {
     const s = symbol.trim().toUpperCase();
@@ -470,7 +501,9 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} gex={gex} />
+            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} />
+
+            <SymbolFlow uw={uw} loading={uwLoading} />
 
             <h3 className="dsec">{tr('an.technical')}</h3>
             <dl className="stats">

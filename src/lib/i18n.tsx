@@ -2499,6 +2499,36 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Không có mức dark pool: lượt hỏi Unusual Whales bị lỗi (xem khối Unusual Whales ở trên).',
     en: 'No dark-pool levels: the Unusual Whales request failed (see the Unusual Whales block above).',
   },
+  'sf.title': { vi: (n: number) => `Options Flow · ${n} days`, en: (n: number) => `Options Flow · ${n} days` },
+  'sf.off': {
+    vi: 'Không có options flow: server chưa cấu hình UW_API_KEY.',
+    en: 'No options flow: UW_API_KEY is not configured on the server.',
+  },
+  'sf.lead': {
+    vi: ([n, c, p]: [number, string, string]) => `${n} alert Unusual Whales (alert đã lọc, không phải từng lệnh) · premium call ${c} · premium put ${p}.`,
+    en: ([n, c, p]: [number, string, string]) => `${n} Unusual Whales alerts (filtered alerts, not every trade) · call premium ${c} · put premium ${p}.`,
+  },
+  'sf.pages': { vi: (n: number) => `(${n} trang)`, en: (n: number) => `(${n} pages)` },
+  'sf.capped': {
+    vi: (n: number) => `Dừng ở trần 3 trang trước khi phủ đủ ${n} ngày — những ngày cũ nhất có thể thiếu.`,
+    en: (n: number) => `Stopped at the 3-page limit before covering all ${n} days — the oldest days may be missing.`,
+  },
+  'sf.other': {
+    vi: (m: string) => `${m} premium không xếp được phía (lẫn ask/bid, khớp giữa, hoặc loại lạ).`,
+    en: (m: string) => `${m} premium with no clear side (mixed, mid, or an unknown type).`,
+  },
+  'sf.day': { vi: 'Ngày', en: 'Day' },
+  'sf.dte': { vi: 'Kỳ hạn', en: 'To expiry' },
+  'sf.scale': {
+    vi: 'bề rộng thanh = tổng premium, cùng một thang cho mọi hàng.',
+    en: 'bar width = total premium, one scale for every row.',
+  },
+  'sf.sortTime': { vi: 'Mới nhất', en: 'Newest' },
+  'sf.sortPrem': { vi: 'Premium lớn nhất', en: 'Largest premium' },
+  'sf.more': {
+    vi: ([k, n]: [number, number]) => `Đang vẽ ${k} / ${n} dòng.`,
+    en: ([k, n]: [number, number]) => `Showing ${k} of ${n} rows.`,
+  },
   'uw.loading': { vi: 'Đang tải dữ liệu Unusual Whales cho mã này…', en: 'Loading Unusual Whales data for this symbol…' },
   'uw.off': {
     vi: 'Không có dữ liệu Unusual Whales: server chưa cấu hình UW_API_KEY, nên Claude chỉ đọc chỉ báo và GEX.',

@@ -489,6 +489,14 @@ Mỗi phần hỏng độc lập và in nguyên văn lời UW. Khớp ở ask **
 lạc quan, phía dark pool chỉ là ước lượng, và giao dịch nghị sĩ công bố trễ —
 màn hình và prompt đều nói vậy.
 
+Ngay dưới phần Claude là khối **Options Flow** của mã đang mở, dùng đúng dữ
+liệu đó (không tốn thêm request): premium call/put và khớp ask/bid, bảng theo
+**ngày** và theo **kỳ hạn** (0–7, 8–30, 31–90, trên 90 ngày) với thanh cùng một
+thang, rồi bảng từng alert giống tab Live Flow (xếp mới nhất hoặc premium lớn
+nhất). Mã sôi động như SPY, TSLA có thể vượt 200 alert trong vài giờ, nên app
+lật trang lùi tới khi đủ 7 ngày, tối đa 3 trang; dừng ở trần mà chưa đủ thì
+nói ra. Claude cũng đọc cả hai bảng theo ngày/kỳ hạn và 12 alert lớn nhất.
+
 **Hồ sơ công ty tự dịch sang tiếng Việt.** Lĩnh vực, ngành, quốc gia (Finviz)
 và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
 trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude
