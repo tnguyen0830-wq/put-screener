@@ -31,7 +31,22 @@ type Mode = (typeof MODES)[number];
  * route tells Claude explicitly when GEX is missing and why, so a silent gap
  * would read as "no gamma structure worth mentioning".
  */
-export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) {
+export default function AiRead({
+  analysis,
+  gex,
+  uw = null,
+  uwLoading = false,
+  uwPromise = null,
+}: {
+  analysis: any;
+  gex?: any;
+  /** Dữ liệu Unusual Whales của mã, do AnalysisPanel tải MỘT lần cho cả khối
+   *  này lẫn khối Options Flow (`/api/analyze/uw`). */
+  uw?: UwContext | null;
+  uwLoading?: boolean;
+  /** Lượt tải đang chạy — nút phân tích đợi nó thay vì gửi thiếu. */
+  uwPromise?: Promise<UwContext | null> | null;
+}) {
   const { t, lang } = useLang();
   const [text, setText] = useState('');
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'error'>(
@@ -55,32 +70,6 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
     setMode(m);
     remember('aiMode', m);
   };
-
-  /* Dữ liệu Unusual Whales của mã đang mở — hai request UW mỗi mã, cache
-     10 phút phía server. Tải ngay khi mã đổi để khối tóm tắt và bản đồ có
-     số trước khi ai bấm; nút phân tích đợi lượt tải này thay vì gửi thiếu. */
-  const [uw, setUw] = useState<UwContext | null>(null);
-  const [uwLoading, setUwLoading] = useState(false);
-  const uwPromise = useRef<Promise<UwContext | null> | null>(null);
-  const sym = analysis?.symbol as string | undefined;
-  useEffect(() => {
-    setUw(null);
-    if (!sym) return;
-    let live = true;
-    setUwLoading(true);
-    const pr = fetch(`/api/analyze/uw?symbol=${encodeURIComponent(sym)}`)
-      .then(async (r) => (r.ok ? ((await r.json()) as UwContext) : null))
-      .catch(() => null);
-    uwPromise.current = pr;
-    pr.then((v) => {
-      if (!live) return;
-      setUw(v);
-      setUwLoading(false);
-    });
-    return () => {
-      live = false;
-    };
-  }, [sym]);
 
   /* Bản đồ tính ngay trên trình duyệt từ đúng payload đang hiện — miễn phí.
      Route dựng lại nó bằng CÙNG hàm, nên màn hình và prompt không lệch. */
@@ -117,7 +106,7 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
         }
       }
 
-      const uwData = uw ?? (uwPromise.current ? await uwPromise.current : null);
+      const uwData = uw ?? (uwPromise ? await uwPromise : null);
 
       const res = await fetch('/api/ai', {
         method: 'POST',

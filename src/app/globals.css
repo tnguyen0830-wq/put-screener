@@ -4841,3 +4841,19 @@ body {
 /* Lời UW nguyên văn là một "từ" dài không khoảng trắng — phải xuống dòng
    được, không thì nửa câu nằm ngoài màn hình (bài học `.ttserr` #195). */
 .uwctx .uwerr { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Analyze: Options Flow của một mã (SymbolFlow.tsx) ---------- */
+.symflow { margin: 18px 0 4px; }
+.sfbar { margin: 6px 0 10px; }
+.sfbar .ofbar { height: 12px; }
+.sfgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; }
+.sftable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sftable th, .sftable td { padding: 4px 6px; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+.sftable th { color: var(--muted); font-weight: 600; font-size: 11.5px; }
+.sftable td.num, .sftable th.num { text-align: right; font-family: var(--data); white-space: nowrap; }
+.sftable .sfbarcol { width: 38%; }
+.sfkey { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+.sfkey-call { background: var(--gexcall); }
+.sfkey-put { background: var(--gexput); }
+.symflow .chiprow { margin: 10px 0 6px; }
+.symflow .uwerr { min-width: 0; overflow-wrap: anywhere; }

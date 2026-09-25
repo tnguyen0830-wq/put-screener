@@ -43,7 +43,14 @@ export type UwContext = {
   configured: boolean;
   symbol: string;
   fetchedAt: string;
-  flow: UwHalf<LiveRow[]> & { unparsed: number; sampleKeys: string[] };
+  flow: UwHalf<LiveRow[]> & {
+    unparsed: number;
+    sampleKeys: string[];
+    /** Số trang đã hỏi, và true khi dừng ở trần trang mà CHƯA phủ đủ
+     *  FLOW_DAYS ngày — ngày cũ nhất có thể thiếu, nói ra thay vì im. */
+    pages?: number;
+    capped?: boolean;
+  };
   darkpool: UwHalf<DarkpoolPrint[]>;
   congress: UwHalf<SymbolCongressTrades | null>;
 };
@@ -56,6 +63,15 @@ export type FlowStrike = {
   lean: 'call' | 'put' | 'mixed';
   alerts: number;
 };
+
+/** Premium một ngày New York. */
+export type FlowDay = { day: string; call: number; put: number; alerts: number };
+/** Nhóm kỳ hạn: tuần này / tháng này / quý / xa hơn. Premium dồn vào kỳ
+ *  RẤT GẦN là đặt cược ngắn (hoặc phòng hộ sự kiện); dồn vào kỳ xa là vị
+ *  thế dài hơi — hai chuyện đọc khác hẳn nhau. */
+export type DteBucket = '0-7' | '8-30' | '31-90' | '90+' | '?';
+export const DTE_BUCKETS: DteBucket[] = ['0-7', '8-30', '31-90', '90+', '?'];
+export type FlowDte = { bucket: DteBucket; call: number; put: number; alerts: number };
 
 export type FlowSummary = {
   alerts: number;
@@ -74,9 +90,34 @@ export type FlowSummary = {
   multileg: number;
   top: LiveRow[];
   strikes: FlowStrike[];
+  /** Theo ngày New York, cũ trước. */
+  byDay: FlowDay[];
+  byDte: FlowDte[];
   from: string | null;
   to: string | null;
 };
+
+/** Số alert lớn nhất đưa cho Claude (màn hình in đủ bảng). */
+export const TOP_ALERTS = 12;
+
+function nyDate(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '?';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(t));
+}
+
+export function dteBucket(dte: number | null): DteBucket {
+  if (dte === null || !Number.isFinite(dte)) return '?';
+  if (dte <= 7) return '0-7';
+  if (dte <= 30) return '8-30';
+  if (dte <= 90) return '31-90';
+  return '90+';
+}
 
 export type DpLevel = { price: number; premium: number; prints: number; size: number };
 
@@ -117,9 +158,13 @@ export function summarizeFlow(rows: LiveRow[], now = Date.now()): FlowSummary {
     multileg: 0,
     top: [],
     strikes: [],
+    byDay: [],
+    byDte: [],
     from: null,
     to: null,
   };
+  const days = new Map<string, FlowDay>();
+  const dtes = new Map<DteBucket, FlowDte>();
   const byStrike = new Map<number, FlowStrike>();
   for (const r of recent) {
     const p = fin(r.premium) ? r.premium : 0;
@@ -133,6 +178,20 @@ export function summarizeFlow(rows: LiveRow[], now = Date.now()): FlowSummary {
     if (r.sweep) s.sweeps++;
     if (r.multileg) s.multileg++;
     if (fin(r.volume) && fin(r.openInterest) && r.volume > r.openInterest) s.newPositions++;
+    /* Chỉ call/put vào hai bảng này — loại lạ đã được cộng vào `otherSide`,
+       và đổ nó vào cột call là đúng cái bẫy `flowSide()` #125. */
+    if (r.type === 'call' || r.type === 'put') {
+      const dk = nyDate(r.at);
+      const dd = days.get(dk) ?? { day: dk, call: 0, put: 0, alerts: 0 };
+      dd[r.type] += p;
+      dd.alerts++;
+      days.set(dk, dd);
+      const bk = dteBucket(r.dte);
+      const bb = dtes.get(bk) ?? { bucket: bk, call: 0, put: 0, alerts: 0 };
+      bb[r.type] += p;
+      bb.alerts++;
+      dtes.set(bk, bb);
+    }
     if (fin(r.strike) && p > 0 && (r.type === 'call' || r.type === 'put')) {
       const k = byStrike.get(r.strike) ?? {
         strike: r.strike, premium: 0, callPremium: 0, putPremium: 0, lean: 'mixed' as const, alerts: 0,
@@ -154,7 +213,9 @@ export function summarizeFlow(rows: LiveRow[], now = Date.now()): FlowSummary {
   s.top = [...recent]
     .filter((r) => fin(r.premium))
     .sort((a, b) => (b.premium as number) - (a.premium as number))
-    .slice(0, 5);
+    .slice(0, TOP_ALERTS);
+  s.byDay = [...days.values()].sort((a, b) => a.day.localeCompare(b.day));
+  s.byDte = DTE_BUCKETS.map((b) => dtes.get(b)).filter((x): x is FlowDte => !!x);
   const times = recent.map((r) => r.at).sort();
   s.from = times[0] ?? null;
   s.to = times[times.length - 1] ?? null;
@@ -246,13 +307,18 @@ export function uwFacts(ctx: UwContext | null | undefined, now = Date.now()): st
         `  By fill side: calls at ask ${money(f.callAsk)} / at bid ${money(f.callBid)}; puts at ask ${money(f.putAsk)} / at bid ${money(f.putBid)}; mixed or unknown side ${money(f.otherSide)}.`,
         `  Sweeps ${f.sweeps}, multi-leg ${f.multileg}, volume above open interest (likely new positions) ${f.newPositions}.`,
         `  Largest strikes by premium: ${f.strikes.map((k) => `${k.strike} (${money(k.premium)}, ${k.lean})`).join(', ') || 'n/a'}.`,
-        '  Largest alerts:'
+        `  By day (New York, oldest first): ${f.byDay.map((d) => `${d.day} call ${money(d.call)} / put ${money(d.put)}`).join('; ') || 'n/a'}.`,
+        `  By days to expiry: ${f.byDte.map((b) => `${b.bucket}d call ${money(b.call)} / put ${money(b.put)}`).join('; ') || 'n/a'}.`,
+        `  Largest alerts (top ${TOP_ALERTS} by premium):`
       );
       for (const r of f.top) {
         out.push(
           `    ${day(r.at)} ${r.type} ${r.strike ?? '?'} exp ${r.expiry ?? '?'}${r.dte !== null ? ` (${r.dte}d)` : ''}: ${fin(r.premium) ? money(r.premium) : 'n/a'}, side ${r.side}${r.sweep ? ', sweep' : ''}${r.multileg ? ', multi-leg' : ''}${fin(r.volume) && fin(r.openInterest) ? `, vol/OI ${(r.volume / Math.max(1, r.openInterest)).toFixed(1)}` : ''}`
         );
       }
+    }
+    if (flow.capped) {
+      out.push(`  The fetch stopped at its page limit before covering all ${FLOW_DAYS} days, so the oldest days may be missing.`);
     }
     if (fin(flow.unparsed) && flow.unparsed > 0) {
       out.push(`  ${flow.unparsed} records could not be parsed and are excluded.`);
