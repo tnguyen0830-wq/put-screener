@@ -5,6 +5,8 @@ import { useLang } from '@/lib/i18n';
 import { buildOutlook } from '@/lib/outlook';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import OutlookMap from './OutlookMap';
+import UwContextCard from './UwContextCard';
+import type { UwContext } from '@/lib/uwsummary';
 
 const MODES = ['read', 'outlook'] as const;
 type Mode = (typeof MODES)[number];
@@ -54,11 +56,40 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
     remember('aiMode', m);
   };
 
+  /* Dữ liệu Unusual Whales của mã đang mở — hai request UW mỗi mã, cache
+     10 phút phía server. Tải ngay khi mã đổi để khối tóm tắt và bản đồ có
+     số trước khi ai bấm; nút phân tích đợi lượt tải này thay vì gửi thiếu. */
+  const [uw, setUw] = useState<UwContext | null>(null);
+  const [uwLoading, setUwLoading] = useState(false);
+  const uwPromise = useRef<Promise<UwContext | null> | null>(null);
+  const sym = analysis?.symbol as string | undefined;
+  useEffect(() => {
+    setUw(null);
+    if (!sym) return;
+    let live = true;
+    setUwLoading(true);
+    const pr = fetch(`/api/analyze/uw?symbol=${encodeURIComponent(sym)}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as UwContext) : null))
+      .catch(() => null);
+    uwPromise.current = pr;
+    pr.then((v) => {
+      if (!live) return;
+      setUw(v);
+      setUwLoading(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [sym]);
+
   /* Bản đồ tính ngay trên trình duyệt từ đúng payload đang hiện — miễn phí.
      Route dựng lại nó bằng CÙNG hàm, nên màn hình và prompt không lệch. */
   const outlook = useMemo(
-    () => (mode === 'outlook' ? buildOutlook(analysis, gex ?? null) : null),
-    [mode, analysis, gex]
+    () =>
+      mode === 'outlook'
+        ? buildOutlook(analysis, gex ?? null, undefined, uwLoading ? null : uw)
+        : null,
+    [mode, analysis, gex, uw, uwLoading]
   );
 
   const run = async () => {
@@ -86,10 +117,12 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
         }
       }
 
+      const uwData = uw ?? (uwPromise.current ? await uwPromise.current : null);
+
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode }),
+        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData }),
         signal: ctrl.signal,
       });
 
@@ -167,6 +200,8 @@ export default function AiRead({ analysis, gex }: { analysis: any; gex?: any }) 
       {state === 'idle' && !text && (
         <p className="cap">{t(mode === 'outlook' ? 'ol.idle' : 'ai.idle')}</p>
       )}
+
+      <UwContextCard uw={uw} loading={uwLoading} />
 
       {mode === 'outlook' && outlook && <OutlookMap o={outlook} />}
 

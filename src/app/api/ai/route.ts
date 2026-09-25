@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { facts, system } from '@/lib/airead';
 import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
+import { uwFacts, type UwContext } from '@/lib/uwsummary';
 import { logActivity } from '@/lib/activity';
 import { currentUser } from '@/lib/users';
 
@@ -67,7 +68,15 @@ export async function POST(req: Request) {
     mode === 'outlook' ? `${analysis.symbol} · kịch bản` : String(analysis.symbol)
   );
 
-  const table = facts(analysis, gex, gexError);
+  /* Dữ liệu Unusual Whales mà trang đang hiện (`/api/analyze/uw`), gửi lên
+     như `gex` — "post what you display". Chỉ nhận đúng hình dạng; thứ khác
+     coi như không có, và prompt nói KHÔNG CÓ chứ không để trống. */
+  const uw: UwContext | null =
+    body?.uw && typeof body.uw === 'object' && typeof body.uw.configured === 'boolean'
+      ? (body.uw as UwContext)
+      : null;
+
+  const table = `${facts(analysis, gex, gexError)}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
   const params = {
     model: MODEL,
@@ -79,7 +88,7 @@ export async function POST(req: Request) {
         role: 'user' as const,
         content:
           mode === 'outlook'
-            ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex))}`
+            ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex, undefined, uw))}`
             : table,
       },
     ],

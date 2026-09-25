@@ -4832,3 +4832,12 @@ body {
   .oltable .olsub { display: block; font-size: 11px; }
   .oltable .olconf { margin-left: 0; white-space: normal; }
 }
+
+/* ---------- Analyze: khối Unusual Whales (lib/uwsummary.ts) ---------- */
+.uwctx { margin-top: 10px; font-size: 13px; line-height: 1.6; }
+.uwctx > summary { cursor: pointer; color: var(--ink); }
+.uwctx h4 { margin: 10px 0 2px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.uwctx p { margin: 2px 0; }
+/* Lời UW nguyên văn là một "từ" dài không khoảng trắng — phải xuống dòng
+   được, không thì nửa câu nằm ngoài màn hình (bài học `.ttserr` #195). */
+.uwctx .uwerr { min-width: 0; overflow-wrap: anywhere; }

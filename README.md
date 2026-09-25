@@ -476,6 +476,19 @@ log-chuẩn), không phải xác suất chỉ báo kỹ thuật ủng hộ — m
 đó. Earnings rơi vào 30 ngày tới thì có dòng cảnh báo, vì cú nhảy earnings không
 theo phân phối chuẩn. Đây là kịch bản có điều kiện, không phải dự báo.
 
+**Dữ liệu Unusual Whales cho mã đang mở.** Khi có `UW_API_KEY`, cả hai chế độ
+Claude (Đọc chỉ số và Kịch bản giá) đọc thêm: luồng quyền chọn 7 ngày (premium
+call/put, khớp ở ask hay bid, sweep, vị thế mới KL > OI, strike nhiều tiền
+nhất), dark pool ≥ $1M trong 14 ngày (tổng tiền, mua/bán ước lượng, mức giá
+nhiều tiền nhất) và giao dịch nghị sĩ 90 ngày. Khối **Unusual Whales** phía trên
+bảng in đúng những số Claude đọc. Strike nhiều premium và mức giá dark pool
+nhiều tiền nhất cũng vào bản đồ mức giá. Mỗi mã tốn **hai** request UW (luồng
+quyền chọn và dark pool), cache 10 phút; phần nghị sĩ đọc từ kho sẵn có nên
+không tốn request, nhưng kho chỉ phủ mã thuộc S&P 500, watchlist và danh mục.
+Mỗi phần hỏng độc lập và in nguyên văn lời UW. Khớp ở ask **không** có nghĩa là
+lạc quan, phía dark pool chỉ là ước lượng, và giao dịch nghị sĩ công bố trễ —
+màn hình và prompt đều nói vậy.
+
 **Hồ sơ công ty tự dịch sang tiếng Việt.** Lĩnh vực, ngành, quốc gia (Finviz)
 và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
 trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude

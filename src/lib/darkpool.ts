@@ -166,7 +166,7 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function parsePrint(raw: any): DarkpoolPrint {
+export function parsePrint(raw: any): DarkpoolPrint {
   const price = num(raw.price);
   const nbboBid = num(raw.nbbo_bid);
   const nbboAsk = num(raw.nbbo_ask);
