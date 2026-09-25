@@ -478,6 +478,10 @@ construction; do not treat it as a level price is drawn to.
 concentrated, not which way it bets: a strike heavy in call premium can be \
 calls being sold, and dark-pool side is only an estimate. Use them as levels \
 and as context, read against the UNUSUAL WHALES section of the table.
+- The "Trend across the week" lines in the UNUSUAL WHALES section say how \
+the flow has been evolving (labels computed in code). You may use them in \
+section 2 as evidence for or against the lean; never describe a trend \
+those lines do not label, and a shift in flow is not a price forecast.
 - Levels that sit within 1% of each other are a confluence zone and matter \
 more than a single line; say so when you use one.
 - Do not give a buy, sell or hold recommendation.

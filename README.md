@@ -497,6 +497,18 @@ nhất). Mã sôi động như SPY, TSLA có thể vượt 200 alert trong vài 
 lật trang lùi tới khi đủ 7 ngày, tối đa 3 trang; dừng ở trần mà chưa đủ thì
 nói ra. Claude cũng đọc cả hai bảng theo ngày/kỳ hạn và 12 alert lớn nhất.
 
+Khối **Flow trend** trả lời *flow đang diễn biến ra sao*: app so nửa đầu với
+nửa sau của tuần — premium mỗi phiên, tỉ trọng call, tỉ trọng kỳ 0–7 ngày, tỉ
+trọng vị thế mới (KL > OI), tỉ lệ khớp ở ask — rồi tự gắn nhãn (đang tăng /
+đang nguội / đều, dịch về call hay put, về kỳ ngắn hay dài) theo ngưỡng cố
+định: premium đổi ≥ 1,5×, tỉ trọng dịch ≥ 15 điểm %. Chỉ tính phiên **trọn
+vẹn** 09:30–16:00 New York: hôm nay còn đang giao dịch và phiên đầu cửa sổ chỉ
+lọt một phần được in riêng chứ không đem so, vì so tổng dở dang là ra "flow
+đang nguội" giả. Mỗi nửa dưới 3 alert thì app không gắn nhãn và nói là quá
+mỏng. Claude đọc đúng các con số và nhãn này (cả hai chế độ) và được dặn không
+tự vẽ ra xu hướng mà bảng không ghi; flow dịch chuyển là tiền đổi chỗ giao
+dịch, không phải dự báo giá. Ngày lễ không được nhận ra.
+
 **Hồ sơ công ty tự dịch sang tiếng Việt.** Lĩnh vực, ngành, quốc gia (Finviz)
 và mô tả doanh nghiệp (FMP) chỉ có nguyên văn tiếng Anh — mọi nhãn khác trên
 trang đều đã có bản tiếng Việt. Khi bật giao diện tiếng Việt, app tự gọi Claude
