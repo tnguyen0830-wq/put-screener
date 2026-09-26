@@ -2388,8 +2388,56 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No stories are tagged to this ticker.',
   },
   'an.newsNote': {
-    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance. Bài gắn ít mã được xếp lên trước vì nhiều khả năng viết riêng về mã này; bài gắn nhiều mã thường là bản tin thị trường chung. Không có nguồn mạng xã hội — X, StockTwits, Reddit đều đóng API công khai hoặc bắt trả phí.',
-    en: 'Source: Yahoo Finance news search. Stories tagged to fewer tickers sort first, since they are more likely written about this company; stories tagged to many are usually general market wraps. No social sources — X, StockTwits and Reddit have all closed their public APIs or put them behind a paywall.',
+    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance, Google News (tìm theo tên công ty) và hồ sơ SEC (8-K, 10-Q/10-K, bản cáo bạch). Bài gắn ít mã xếp trước vì nhiều khả năng viết riêng về mã này. Khi bấm hỏi Claude, Claude đọc đúng các tiêu đề này — chỉ tiêu đề, không đọc thân bài — cùng bảng diễn biến giá ở trên để nói thị trường đang nói gì về mã. Không có nguồn mạng xã hội — X, StockTwits, Reddit đều đóng API công khai hoặc bắt trả phí.',
+    en: 'Sources: Yahoo Finance news search, Google News (searched by company name) and SEC filings (8-K, 10-Q/10-K, prospectuses). Stories tagged to fewer tickers sort first, since they are more likely written about this company. When you ask Claude, it reads exactly these headlines — headlines only, not the articles — together with the price-move table above, to say what the market is saying about the stock. No social sources — X, StockTwits and Reddit have all closed their public APIs or put them behind a paywall.',
+  },
+  'an.newsAllFailed': {
+    vi: 'Không lấy được tin: MỌI nguồn tin đều hỏng (xem lý do bên dưới). Đây KHÔNG phải "không có tin" — chưa kiểm được.',
+    en: 'Could not fetch news: EVERY source failed (reasons below). This is NOT "no news" — it could not be checked.',
+  },
+  'an.newsOk': {
+    vi: (s: string) => `Nguồn trả lời: ${s}.`,
+    en: (s: string) => `Sources that answered: ${s}.`,
+  },
+  'an.newsFailed': {
+    vi: (v: { src: string; err: string }) => ` Hỏng: ${v.src} — ${v.err}`,
+    en: (v: { src: string; err: string }) => ` Failed: ${v.src} — ${v.err}`,
+  },
+  'mv.title': { vi: 'Price move vs market', en: 'Price move vs market' },
+  'mv.window': { vi: 'Khung', en: 'Window' },
+  'mv.stock': { vi: 'Mã này', en: 'This stock' },
+  'mv.label': { vi: 'Diễn biến', en: 'Move' },
+  'mv.driver': { vi: 'Kéo bởi', en: 'Driven by' },
+  'mv.w1': { vi: 'Phiên gần nhất', en: 'Last session' },
+  'mv.wn': { vi: (n: number) => `${n} phiên`, en: (n: number) => `${n} sessions` },
+  'mv.label.up': { vi: 'Tăng', en: 'Up' },
+  'mv.label.down': { vi: 'Giảm', en: 'Down' },
+  'mv.label.flat': { vi: 'Đi ngang', en: 'Sideways' },
+  'mv.driver.market': { vi: 'Theo thị trường', en: 'The market' },
+  'mv.driver.sector': { vi: 'Theo ngành', en: 'Its sector' },
+  'mv.driver.stock': { vi: 'Riêng mã này', en: 'This company alone' },
+  'mv.driver.none': { vi: 'Không có gì để giải thích', en: 'Nothing to explain' },
+  'mv.note': {
+    vi: ({ f, r, d }: { f: number; r: number; d: string }) =>
+      `App tự tính, so với phiên ${d}. "Đi ngang" = biến động dưới ${f}σ của chính mã (σ từ HV20 quy về số phiên của khung) — 2% là đi ngang với mã biến động mạnh nhưng là cú rớt thật với mã tiện ích. "Theo thị trường/ngành" = chênh với SPY/ETF ngành dưới ${r}σ; "riêng mã này" = đi lệch cả hai, tức nhiều khả năng có nguyên nhân của chính công ty. Claude đọc đúng các nhãn này.`,
+    en: ({ f, r, d }: { f: number; r: number; d: string }) =>
+      `Computed by the app, against the ${d} session. "Sideways" = a move under ${f}σ of the stock's own volatility (σ from HV20 scaled to the window) — 2% is sideways for a volatile stock and a real drop for a utility. "The market / its sector" = within ${r}σ of SPY / the sector ETF; "this company alone" = apart from both, so a company-specific cause is likely. Claude reads exactly these labels.`,
+  },
+  'mv.noSector': {
+    vi: 'Mã này không có trong rổ S&P 500 nên app không biết ngành — chỉ so với SPY.',
+    en: 'This symbol is not in the S&P 500 basket, so its sector is unknown — compared with SPY only.',
+  },
+  'mv.noHv': {
+    vi: 'Thiếu HV20 nên không gắn được nhãn tăng/giảm/đi ngang — chỉ có phần trăm thô.',
+    en: 'HV20 is missing, so no up/down/sideways label can be given — raw percentages only.',
+  },
+  'mv.failed': {
+    vi: (v: { src: string; err: string }) => `Không lấy được ${v.src}: ${v.err}`,
+    en: (v: { src: string; err: string }) => `Could not get ${v.src}: ${v.err}`,
+  },
+  'mv.none': {
+    vi: 'Không tính được diễn biến giá so với thị trường cho lượt này (thiếu dữ liệu Schwab của mã).',
+    en: 'Could not compute the price move vs the market this time (the symbol\'s Schwab data is missing).',
   },
   'an.tvGaugeNote': {
     vi: 'Đồng hồ của TradingView tổng hợp nhiều chỉ báo theo công thức riêng của họ. Dùng để đối chiếu chéo với các số tự tính ở trên, không phải tín hiệu vào lệnh.',

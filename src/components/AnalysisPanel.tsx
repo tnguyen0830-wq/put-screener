@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
 import SymbolFlow from './SymbolFlow';
+import MoveVsMarket from './MoveVsMarket';
+import type { MoveRead } from '@/lib/moveread';
 import type { UwContext } from '@/lib/uwsummary';
 import { useLang } from '@/lib/i18n';
 import GexChart from './GexChart';
@@ -78,6 +80,10 @@ type Analysis = {
     tickerCount: number | null;
     relatedTickers: string[];
   }[];
+  /** Nguồn tin nào trả lời, nguồn nào hỏng (lib/news.ts `symbolNewsAll`). */
+  newsStatus?: { ok: string[]; failed: { source: string; error: string }[] };
+  /** Diễn biến giá so với SPY/ngành (lib/moveread.ts); null = không tính được. */
+  moves?: MoveRead | null;
   profile: {
     sector: string | null;
     industry: string | null;
@@ -538,7 +544,7 @@ export default function AnalysisPanel({
                 })}
                 tone={(t.vsSma200 ?? 0) >= 0 ? 'good' : 'bad'}
               />
-              <Row label="Bollinger %B" value={num(t.bollinger?.pctB ?? null)} note={bbLabel(t.bollinger?.pctB ?? null)} />
+              <Row label="Bollinger %B" value={num(t.bollinger?.pctB ?? null)} note={bbLabel(t.bollinger?.pctB ?? null) ? tr(bbLabel(t.bollinger?.pctB ?? null)) : ''} />
               <Row label="ATR(14)" value={usd(t.atr14)} note={pct(t.atrPct)} />
               <Row label="HV20 / HV60" value={`${pct(t.hv20, 0)} / ${pct(t.hv60, 0)}`} note={t.volRatio ? tr('an.volRatio', num(t.volRatio)) : ''} />
             </dl>
@@ -637,6 +643,9 @@ export default function AnalysisPanel({
               </>
             )}
 
+            <h3 className="dsec">{tr('mv.title')}</h3>
+            <MoveVsMarket moves={data.moves} />
+
             <h3 className="dsec">{tr('an.news')}</h3>
             {data.news?.length ? (
               <ul className="newslist">
@@ -656,8 +665,22 @@ export default function AnalysisPanel({
                   </li>
                 ))}
               </ul>
+            ) : data.newsStatus && !data.newsStatus.ok.length && data.newsStatus.failed.length ? (
+              /* Mọi nguồn hỏng KHÁC "không có tin": trước đây lỗi bị nuốt
+                 thành mảng rỗng và hiện y hệt câu "không có tin nào". */
+              <p className="cap hint hint-warn">{tr('an.newsAllFailed')}</p>
             ) : (
               <p className="cap">{tr('an.noNews')}</p>
+            )}
+            {data.newsStatus && (
+              <p className="cap newsstatus">
+                {data.newsStatus.ok.length > 0 && tr('an.newsOk', data.newsStatus.ok.join(', '))}
+                {data.newsStatus.failed.map((f) => (
+                  <span key={f.source} className="hint-warn newsfail">
+                    {tr('an.newsFailed', { src: f.source, err: f.error })}
+                  </span>
+                ))}
+              </p>
             )}
             <p className="cap">
               {tr('an.newsNote')}

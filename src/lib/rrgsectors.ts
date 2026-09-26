@@ -71,6 +71,16 @@ const GICS_TO_KEY: Record<string, string> = {
   'Communication Services': 'comm',
 };
 
+/**
+ * ETF SPDR của một ngành GICS (`XLK` cho "Information Technology"...), dựng
+ * từ CHÍNH hai bảng trên — không phải bảng thứ ba có thể trôi lệch. Tên lạ
+ * trả `null`, không rơi về ngành mặc định (cùng lý do `GICS_TO_KEY`).
+ */
+export function sectorEtfForGics(gics: string | null | undefined): string | null {
+  const key = gics ? GICS_TO_KEY[gics] : undefined;
+  return key ? SECTORS.find((x) => x.key === key)?.symbol ?? null : null;
+}
+
 export type RrgSectorPoint = {
   key: string;
   symbol: string;
