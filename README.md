@@ -465,10 +465,31 @@ lịch sử giá Schwab, hồ sơ công ty, tin tức, và biểu đồ TradingV
 Nút **"Nhờ Claude phân tích"** đọc **toàn bộ** chỉ số trên trang trong một lượt:
 kỹ thuật (SMA, RSI, MACD, ATR, Bollinger, HV), biến động ngụ ý, cơ bản, **và
 cấu trúc gamma** lấy từ đúng biểu đồ GEX cuối trang (put wall, call wall, zero
-gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi). Claude chỉ được dùng
-đúng những con số đang hiện, không có tin tức hay dữ liệu ngoài, và phải nói
-thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual Whales — một mục vắng mặt
-rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent API.
+gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi), **và tin tức của mã**
+(xem đoạn dưới). Claude chỉ được dùng đúng những con số và tiêu đề đang hiện,
+không thêm kiến thức ngoài, và phải nói thẳng khi GEX thiếu, cũ, hay chỉ có mức
+của Unusual Whales — một mục vắng mặt rất dễ đọc thành "không có gì đáng nói".
+Mỗi lần bấm tốn vài cent API.
+
+**Thị trường đang nói gì về mã này.** Mục đầu tiên Claude viết trả lời *mã đang
+rớt, lên hay đi ngang, và vì sao*. Hai nửa khó của câu đó do app tự tính, trong
+bảng **Price move vs market** ngay trên mục News: % thay đổi của mã, SPY và ETF
+ngành (XLK, XLF…) trong phiên gần nhất, 5 phiên và 20 phiên; nhãn **Tăng /
+Giảm / Đi ngang** so với chính biến động của mã (dưới 0,5σ của HV20 là đi ngang
+— 2% là đi ngang với mã biến động mạnh nhưng là cú rớt thật với mã tiện ích);
+và **Kéo bởi**: *thị trường* (chênh với SPY dưới 0,5σ), *ngành* (đi cùng ETF
+ngành mà lệch SPY), hay *riêng mã này* (lệch cả hai — nhiều khả năng có nguyên
+nhân của chính công ty). Một mã rớt 4% trong tuần SPY rớt 4% không cần tin riêng
+nào để giải thích, và Claude được dặn không gán một cú rớt chung của thị trường
+cho một tiêu đề về công ty. Rồi Claude ghép các tiêu đề có ngày tháng (Yahoo
+Finance, Google News theo tên công ty, hồ sơ SEC 8-K/10-Q/10-K) vào từng khung,
+ghi rõ toà báo nào nói gì, và nói thẳng khi tin tức không giải thích được diễn
+biến giá. Claude chỉ thấy **tiêu đề**, không đọc thân bài. Earnings vừa báo cáo
+trong 4 tuần cũng được nêu như một nguyên nhân ứng viên. Nguồn nào trả lời,
+nguồn nào hỏng (kèm lý do) được in dưới danh sách tin; mọi nguồn cùng hỏng thì
+màn hình nói "không lấy được tin", không nói "không có tin". Chi phí thêm: một
+request Schwab (giá SPY + ETF ngành) và nến ngày của hai mã đó, đã cache theo
+ngày. Mã ngoài rổ S&P 500 thì app không biết ngành nên chỉ so với SPY.
 
 **Kịch bản giá** là chế độ thứ hai của cùng khung đó, trả lời câu *"cổ phiếu
 sẽ về đâu"* theo cách trung thực duy nhất có thể: không ai biết giá sẽ về đâu,

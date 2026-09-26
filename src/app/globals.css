@@ -4876,3 +4876,11 @@ body {
    không khoảng trắng, nên phải xuống dòng được (bẫy .ttserr #195). */
 .erstatus { margin: 4px 0 8px; }
 .erstatus p { margin: 2px 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Analyze: diễn biến giá so với thị trường (MoveVsMarket.tsx) ---------- */
+.mvwrap { margin: 4px 0 10px; }
+.mvtable { max-width: 720px; }
+.mvtable td.mvlabel { color: var(--ink); font-weight: 600; }
+.mvtable td.mvdriver { white-space: normal; }
+.mvwrap .mverr, .newsstatus .newsfail { min-width: 0; overflow-wrap: anywhere; }
+.newsstatus .newsfail { color: var(--warn); }

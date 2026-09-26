@@ -4,7 +4,8 @@ import { ttEarningsFor, ttEarningsStatus } from '@/lib/ttearnings';
 import { resolveNextEarnings } from '@/lib/earningsdate';
 import { startAlertLoop } from '@/lib/alert-runner';
 import { normalizeSymbol } from '@/lib/watchlist';
-import { symbolNews } from '@/lib/news';
+import { symbolNewsAll, type NewsResult } from '@/lib/news';
+import { basketEntry, loadMoves } from '@/lib/moveload';
 import { finvizQuote } from '@/lib/finviz';
 import { fmpCompanyProfile, mergeProfile } from '@/lib/profile';
 import { technicalSnapshot } from '@/lib/technical';
@@ -14,8 +15,10 @@ import { currentUser } from '@/lib/users';
 export const dynamic = 'force-dynamic';
 
 /**
- * Năm việc song song cho mỗi lần phân tích: chỉ số kỹ thuật (3 request
- * Schwab, xem lib/technical.ts), lịch earnings, tin tức, Finviz, hồ sơ FMP.
+ * Các việc song song cho mỗi lần phân tích: chỉ số kỹ thuật (3 request
+ * Schwab, xem lib/technical.ts), lịch earnings, tin tức (Yahoo + Google News
+ * + SEC), Finviz, hồ sơ FMP, và diễn biến giá so với SPY/ngành (1 request
+ * Schwab + nến ngày đã cache — lib/moveload.ts).
  * Chỉ chạy khi người dùng bấm, nên không đụng tới hạn mức của lần quét rổ.
  */
 export async function GET(req: NextRequest) {
@@ -32,8 +35,40 @@ export async function GET(req: NextRequest) {
   startAlertLoop();
 
   try {
-    const [snap, manual, ttLookup, ttStatus, news, finviz, fmpProfile] = await Promise.all([
-      technicalSnapshot(symbol),
+    /* Tên công ty cho Google News: rổ S&P 500 có tên sạch ngay tức thì (đọc
+       file), nên tin tức chạy SONG SONG với Schwab. Mã ngoài rổ thì chờ tên
+       Schwab trả về — tìm theo mã trần ra tin rác với ALL, ON, IT, NOW. */
+    const entry = await basketEntry(symbol);
+    const snapP = technicalSnapshot(symbol);
+    const namedP: Promise<string | null> = entry?.name
+      ? Promise.resolve(entry.name)
+      : snapP.then((s) => s.name).catch(() => null);
+    /* Ba nguồn tin hỏng ĐỘC LẬP (news.ts). Trước đây lỗi bị nuốt thành mảng
+       rỗng, tức "mọi nguồn chết" hiện y hệt "không có tin" — giờ trả kèm
+       nguồn nào trả lời, nguồn nào hỏng và vì sao. */
+    const newsP: Promise<NewsResult> = namedP
+      .then((name) => symbolNewsAll(symbol, 12, name))
+      .catch((e: any) => ({
+        items: [],
+        ok: [],
+        failed: [{ source: 'news', error: String(e?.message ?? e).slice(0, 200) }],
+      }));
+    /* Diễn biến giá so với SPY/ngành (lib/moveread.ts) — cần nến và HV20 của
+       chính mã, nên chạy sau Schwab; hỏng thì null, phần còn lại vẫn đủ. */
+    const movesP = snapP
+      .then((s) =>
+        loadMoves({
+          symbol,
+          spot: s.price.spot,
+          recent: s.recent,
+          hv20: s.technical.hv20,
+          gicsSector: entry?.sector ?? null,
+        })
+      )
+      .catch(() => null);
+
+    const [snap, manual, ttLookup, ttStatus, newsR, finviz, fmpProfile, moves] = await Promise.all([
+      snapP,
       loadManualEarnings().catch(() => ({}) as Record<string, string[]>),
       // Hỏi riêng mã này nếu kho chưa có hoặc đã quá 24 giờ - mã ngoài danh
       // sách theo dõi không bao giờ được lượt nền hỏi tới.
@@ -43,11 +78,12 @@ export async function GET(req: NextRequest) {
       })),
       ttEarningsStatus().catch(() => null),
       // Tin tức là phần phụ: hỏng thì phần còn lại vẫn trả về đủ.
-      symbolNews(symbol).catch(() => []),
+      newsP,
       // Finviz là đọc HTML, dễ hỏng khi họ đổi giao diện: hỏng thì bỏ qua.
       finvizQuote(symbol).catch(() => null),
       // Hồ sơ công ty: tự nuốt lỗi, lý do trả về trong `note`.
       fmpCompanyProfile(symbol),
+      movesP,
     ]);
 
     /* Ngày New York, không phải UTC: sau 20:00 ET ngày UTC đã sang hôm sau
@@ -82,7 +118,9 @@ export async function GET(req: NextRequest) {
          trạng lượt đồng bộ tastytrade dùng chung cho Screener/My Portfolio. */
       earnings: { ...earnings, sync: ttStatus },
 
-      news,
+      news: newsR.items,
+      newsStatus: { ok: newsR.ok, failed: newsR.failed },
+      moves,
       finviz,
       // Công ty này làm gì — Schwab không có dòng nào về chuyện đó, nên ghép từ
       // FMP và Finviz. null nghĩa là cả hai nguồn đều không nói gì.

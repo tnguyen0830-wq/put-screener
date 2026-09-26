@@ -10,9 +10,11 @@ import { currentUser } from '@/lib/users';
  *
  * The client posts the analysis object it is displaying rather than a symbol,
  * so this route costs no extra Schwab quota and cannot describe numbers the
- * user is not looking at. Only the fields lib/airead.ts picks are forwarded -
- * the payload also carries a news array and raw candles, which would inflate
- * the prompt without changing the reading. The GEX reading the page already
+ * user is not looking at. Only the fields lib/airead.ts picks are forwarded.
+ * Since #229 that includes the news list, its per-source status and the
+ * price-move-vs-market read (`moves`), so Claude can say what the market is
+ * saying about the move; headlines are capped at MAX_NEWS and length-clipped
+ * in `newsFacts()`. The GEX reading the page already
  * fetched rides along as `gex` (any of /api/gex's response shapes), or
  * `gexError` when the page could not get one - the prompt then says so
  * explicitly instead of leaving a gap Claude would read as "nothing there".

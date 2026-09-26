@@ -137,6 +137,12 @@ export type TechnicalSnapshot = {
   };
   /** Vùng giá tính từ đáy/đỉnh xoay — xem `priceZones`. */
   zones: PriceZones;
+  /**
+   * 30 giá đóng cửa ngày gần nhất, cho phép so diễn biến giá với SPY/ngành
+   * (`lib/moveread.ts`). Route Analyze KHÔNG trả trường này ra ngoài — nó chỉ
+   * dùng để tính, tránh đẩy nến thô qua mạng.
+   */
+  recent: { datetime: number; close: number }[];
   meta: {
     bars: number;
     firstBar: string;
@@ -264,6 +270,8 @@ export async function technicalSnapshot(symbol: string): Promise<TechnicalSnapsh
     },
 
     zones: priceZones(candles),
+
+    recent: candles.slice(-30).map((c) => ({ datetime: c.datetime, close: c.close })),
 
     meta: {
       bars: candles.length,
