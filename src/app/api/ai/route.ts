@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { facts, system } from '@/lib/airead';
 import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
 import { uwFacts, type UwContext } from '@/lib/uwsummary';
+import { xFacts, type XSymbolResult } from '@/lib/xsymbol';
 import { logActivity } from '@/lib/activity';
 import { currentUser } from '@/lib/users';
 
@@ -78,7 +79,14 @@ export async function POST(req: Request) {
       ? (body.uw as UwContext)
       : null;
 
-  const table = `${facts(analysis, gex, gexError)}\n\n${uwFacts(uw)}`;
+  /* Bài đăng X của mã (`/api/analyze/x`), gửi lên như `uw`. Thiếu thì
+     `xFacts()` nói KHÔNG CÓ chứ không để trống. */
+  const x: XSymbolResult | null =
+    body?.x && typeof body.x === 'object' && typeof body.x.configured === 'boolean'
+      ? (body.x as XSymbolResult)
+      : null;
+
+  const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
   const params = {
     model: MODEL,

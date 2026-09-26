@@ -2388,8 +2388,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No stories are tagged to this ticker.',
   },
   'an.newsNote': {
-    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance, Google News (tìm theo tên công ty) và hồ sơ SEC (8-K, 10-Q/10-K, bản cáo bạch). Bài gắn ít mã xếp trước vì nhiều khả năng viết riêng về mã này. Khi bấm hỏi Claude, Claude đọc đúng các tiêu đề này — chỉ tiêu đề, không đọc thân bài — cùng bảng diễn biến giá ở trên để nói thị trường đang nói gì về mã. Không có nguồn mạng xã hội — X, StockTwits, Reddit đều đóng API công khai hoặc bắt trả phí.',
-    en: 'Sources: Yahoo Finance news search, Google News (searched by company name) and SEC filings (8-K, 10-Q/10-K, prospectuses). Stories tagged to fewer tickers sort first, since they are more likely written about this company. When you ask Claude, it reads exactly these headlines — headlines only, not the articles — together with the price-move table above, to say what the market is saying about the stock. No social sources — X, StockTwits and Reddit have all closed their public APIs or put them behind a paywall.',
+    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance, Google News (tìm theo tên công ty) và hồ sơ SEC (8-K, 10-Q/10-K, bản cáo bạch). Bài gắn ít mã xếp trước vì nhiều khả năng viết riêng về mã này. Khi bấm hỏi Claude, Claude đọc đúng các tiêu đề này — chỉ tiêu đề, không đọc thân bài — cùng bảng diễn biến giá ở trên và các bài đăng X bên dưới để nói thị trường đang nói gì về mã. X nằm ở khối riêng bên dưới (tốn tiền theo lượng đọc); StockTwits và Reddit chưa có.',
+    en: 'Sources: Yahoo Finance news search, Google News (searched by company name) and SEC filings (8-K, 10-Q/10-K, prospectuses). Stories tagged to fewer tickers sort first, since they are more likely written about this company. When you ask Claude, it reads exactly these headlines — headlines only, not the articles — together with the price-move table above and the X posts below, to say what the market is saying about the stock. X has its own block below (billed per read); StockTwits and Reddit are not included.',
   },
   'an.newsAllFailed': {
     vi: 'Không lấy được tin: MỌI nguồn tin đều hỏng (xem lý do bên dưới). Đây KHÔNG phải "không có tin" — chưa kiểm được.',
@@ -2403,6 +2403,42 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: (v: { src: string; err: string }) => ` Hỏng: ${v.src} — ${v.err}`,
     en: (v: { src: string; err: string }) => ` Failed: ${v.src} — ${v.err}`,
   },
+  'xp.title': { vi: 'Posts on X', en: 'Posts on X' },
+  'xp.loading': { vi: 'Đang hỏi X…', en: 'Asking X…' },
+  'xp.none': {
+    vi: 'Không lấy được bài đăng X cho lượt này (máy chủ không trả lời).',
+    en: 'Could not load X posts this time (the server did not answer).',
+  },
+  'xp.notConfigured': {
+    vi: 'X chưa được cấu hình trên app (thiếu X_BEARER_TOKEN), nên Claude không đọc được X.',
+    en: 'X is not configured on this app (no X_BEARER_TOKEN), so Claude cannot read X.',
+  },
+  'xp.failed': { vi: (e: string) => `X từ chối: ${e}`, en: (e: string) => `X refused: ${e}` },
+  'xp.caveat': {
+    vi: 'Đây là BÀN TÁN CHƯA KIỂM CHỨNG của người dùng X, không phải tin tức — chỉ cho biết giọng điệu và chủ đề người ta đang nói. Claude được dặn không coi bài nào là sự thật.',
+    en: 'This is UNVERIFIED chatter from X users, not news — it shows only the tone and the topics people are discussing. Claude is told never to treat a post as fact.',
+  },
+  'xp.empty': {
+    vi: (n: number) => `X trả lời nhưng không có bài dùng được trong 7 ngày (X trả ${n} bài trước khi lọc) — tức ít người bàn về mã này.`,
+    en: (n: number) => `X answered but has no usable post in the last 7 days (${n} returned before filtering) — little chatter about this symbol.`,
+  },
+  'xp.unknownAuthor': { vi: 'tài khoản không rõ', en: 'unknown account' },
+  'xp.min': { vi: (n: number) => `${n} phút trước`, en: (n: number) => `${n}m ago` },
+  'xp.hour': { vi: (n: number) => `${n} giờ trước`, en: (n: number) => `${n}h ago` },
+  'xp.day': { vi: (n: number) => `${n} ngày trước`, en: (n: number) => `${n}d ago` },
+  'xp.eng': { vi: (n: number) => `${n} tương tác`, en: (n: number) => `${n} engagements` },
+  'xp.open': { vi: 'mở trên X', en: 'open on X' },
+  'xp.note': {
+    vi: (v: { q: string; returned: number; other: number; spam: number; max: number; min: number }) =>
+      `Tìm "${v.q}" trong 7 ngày gần nhất; X trả ${v.returned} bài, bỏ ${v.other} bài gắn mã khác và ${v.spam} bài gắn quá ${v.max} mã (bài điểm danh hàng loạt mã). Xếp theo lượt tương tác. X tính tiền theo lượng đọc nên mỗi mã chỉ hỏi lại sau ${v.min} phút.`,
+    en: (v: { q: string; returned: number; other: number; spam: number; max: number; min: number }) =>
+      `Searched "${v.q}" over the last 7 days; X returned ${v.returned}, dropped ${v.other} tagged to another ticker and ${v.spam} tagged to more than ${v.max} tickers (mass ticker lists). Sorted by engagement. X bills per read, so each symbol is asked again only after ${v.min} minutes.`,
+  },
+  'xp.noMetrics': {
+    vi: 'X từ chối trường tương tác (public_metrics), nên app hỏi lại không kèm nó và chỉ xếp theo thời gian.',
+    en: 'X refused the engagement field (public_metrics), so the app asked again without it and sorts by time only.',
+  },
+  'xp.partial': { vi: (e: string) => `X trả kèm lỗi từng phần: ${e}`, en: (e: string) => `X returned partial errors: ${e}` },
   'mv.title': { vi: 'Price move vs market', en: 'Price move vs market' },
   'mv.window': { vi: 'Khung', en: 'Window' },
   'mv.stock': { vi: 'Mã này', en: 'This stock' },

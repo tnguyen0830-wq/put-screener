@@ -4884,3 +4884,8 @@ body {
 .mvtable td.mvdriver { white-space: normal; }
 .mvwrap .mverr, .newsstatus .newsfail { min-width: 0; overflow-wrap: anywhere; }
 .newsstatus .newsfail { color: var(--warn); }
+
+/* ---------- Analyze: bài đăng X của mã (XPosts.tsx) ---------- */
+.xposts { margin: 4px 0 10px; }
+.xplist .xptext { display: block; color: var(--ink); line-height: 1.45; overflow-wrap: anywhere; }
+.xposts .xperr { min-width: 0; overflow-wrap: anywhere; }
