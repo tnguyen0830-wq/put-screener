@@ -491,6 +491,17 @@ màn hình nói "không lấy được tin", không nói "không có tin". Chi p
 request Schwab (giá SPY + ETF ngành) và nến ngày của hai mã đó, đã cache theo
 ngày. Mã ngoài rổ S&P 500 thì app không biết ngành nên chỉ so với SPY.
 
+Ngay dưới mục News là khối **Posts on X**: bài đăng 7 ngày gần nhất mang
+cashtag của mã (`$AAPL`), bỏ retweet và trả lời, xếp theo tương tác. Bài chỉ
+được giữ khi chính X gắn đúng cashtag của mã này, và bài gắn hơn 4 mã (bài
+"điểm danh" câu view) bị loại — số bị loại được in ra. Claude đọc các bài này
+ở mục 1 với nhãn **bàn tán chưa kiểm chứng**: chỉ dùng để tả giọng điệu và chủ
+đề đang được nhắc, không bao giờ coi là sự thật hay nguyên nhân, và không được
+nặng hơn một tiêu đề báo hay hồ sơ SEC. X tính tiền theo lượng đọc, nên mỗi mã
+tốn **một** request (tối đa 25 bài) và kết quả — kể cả lỗi — được giữ 30 phút.
+Cần `X_BEARER_TOKEN` (token app-only, chỉ đọc); không có thì khối nói rõ là
+chưa cấu hình và không gửi request nào. StockTwits và Reddit chưa có.
+
 **Kịch bản giá** là chế độ thứ hai của cùng khung đó, trả lời câu *"cổ phiếu
 sẽ về đâu"* theo cách trung thực duy nhất có thể: không ai biết giá sẽ về đâu,
 nhưng hai thứ thì TÍNH được. Một là **biên dao động thị trường quyền chọn đang

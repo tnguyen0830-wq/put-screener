@@ -8,6 +8,8 @@ import TradingViewWidget from './TradingViewWidget';
 import AiRead from './AiRead';
 import SymbolFlow from './SymbolFlow';
 import MoveVsMarket from './MoveVsMarket';
+import XPosts from './XPosts';
+import type { XSymbolResult } from '@/lib/xsymbol';
 import type { MoveRead } from '@/lib/moveread';
 import type { UwContext } from '@/lib/uwsummary';
 import { useLang } from '@/lib/i18n';
@@ -284,6 +286,12 @@ export default function AnalysisPanel({
   const [uwLoading, setUwLoading] = useState(false);
   const [uwPromise, setUwPromise] = useState<Promise<UwContext | null> | null>(null);
   const uwSym = useRef<string | null>(null);
+  /* Bài đăng X của mã (`/api/analyze/x`) — cùng khuôn UW: tải MỘT lần cho
+     cả khối hiển thị lẫn Claude, sau /api/analyze. */
+  const [xr, setXr] = useState<XSymbolResult | null>(null);
+  const [xLoading, setXLoading] = useState(false);
+  const [xPromise, setXPromise] = useState<Promise<XSymbolResult | null> | null>(null);
+  const xSym = useRef<string | null>(null);
   /* Bản dịch tiếng Việt của sector/industry/country/description - nguồn
      gốc (Finviz/FMP) chỉ có tiếng Anh, đây là chỗ duy nhất trên trang còn
      tiếng Anh khi UI ở chế độ tiếng Việt. null = chưa dịch xong hoặc dịch
@@ -319,6 +327,28 @@ export default function AnalysisPanel({
       if (uwSym.current !== sym) return;
       setUw(v);
       setUwLoading(false);
+    });
+  }, [data?.symbol]);
+
+  useEffect(() => {
+    const sym = data?.symbol ?? null;
+    if (sym === xSym.current) return;
+    xSym.current = sym;
+    setXr(null);
+    setXPromise(null);
+    if (!sym) {
+      setXLoading(false);
+      return;
+    }
+    setXLoading(true);
+    const pr = fetch(`/api/analyze/x?symbol=${encodeURIComponent(sym)}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as XSymbolResult) : null))
+      .catch(() => null);
+    setXPromise(pr);
+    pr.then((v) => {
+      if (xSym.current !== sym) return;
+      setXr(v);
+      setXLoading(false);
     });
   }, [data?.symbol]);
 
@@ -514,7 +544,7 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} />
+            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} />
 
             <SymbolFlow uw={uw} loading={uwLoading} />
 
@@ -685,6 +715,9 @@ export default function AnalysisPanel({
             <p className="cap">
               {tr('an.newsNote')}
             </p>
+
+            <h3 className="dsec">{tr('xp.title')}</h3>
+            <XPosts x={xr} loading={xLoading} />
 
             <h3 className="dsec">{tr('dd.chart')}</h3>
             <TradingViewWidget
