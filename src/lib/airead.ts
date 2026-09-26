@@ -13,7 +13,7 @@
  * tên là `hist`, bản trước đọc `histogram` nên luôn ra "n/a").
  */
 
-import { moveFacts } from './moveread';
+import { MARKET_SECTION, moveFacts } from './moveread';
 
 const n = (v: unknown, digits = 2) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : 'n/a';
@@ -297,17 +297,7 @@ paid, and about where the option market's own hedging flow would help or hurt \
 a short put.
 
 Cover, in short labelled sections:
-1. What the market is saying about this stock right now. Start from the \
-PRICE MOVE VS MARKET lines: say whether the stock is up, down or flat over \
-the last session, 5 sessions and 20 sessions, using the code's labels, and \
-whether it is moving with the market, with its sector, or on its own. Then \
-match the dated headlines to those windows: which headlines plausibly explain \
-the move, what outlets are reporting (attribute each claim: "Reuters \
-reports...", "per an 8-K filing..."), and whether the news tone agrees with \
-the price. A stock moving with the market needs no company story - say so \
-rather than pinning a market-wide move on a company headline. If the \
-headlines do not explain the move, say that plainly; it is a real finding. \
-If the news sources failed, say you could not check.
+1. ${MARKET_SECTION}
 2. What the trend and momentum indicators say when read together (moving \
 averages, RSI, MACD, Bollinger, ATR).
 3. What the volatility picture says about whether premium is rich or thin \
