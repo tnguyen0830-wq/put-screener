@@ -156,6 +156,29 @@ export function readMoves(input: {
 
 /* ---------------- prompt ---------------- */
 
+/**
+ * Mục "thị trường đang nói gì" — DÙNG CHUNG cho cả hai chế độ Claude ở tab
+ * Analyze (đọc chỉ số và kịch bản giá). #229 chỉ đặt mục này vào chế độ đọc
+ * chỉ số; chủ app hỏi ở chế độ Kịch bản giá (app nhớ chế độ bấm lần trước)
+ * nên câu trả lời không có phần tin tức. Một đoạn chữ, hai nơi dùng — hai bản
+ * chép là hai bản sẽ trôi lệch.
+ */
+export const MARKET_SECTION =
+  "What the market is saying about this stock right now. Start from the " +
+  "PRICE MOVE VS MARKET lines: say whether the stock is up, down or flat over " +
+  "the last session, 5 sessions and 20 sessions, using the code's labels, and " +
+  "whether it is moving with the market, with its sector, or on its own. Then " +
+  "match the dated headlines in RECENT NEWS AND SEC FILINGS to those windows: " +
+  "which headlines plausibly explain the move, what outlets are reporting " +
+  "(attribute each claim: \"Reuters reports...\", \"per an 8-K filing...\"), and " +
+  "whether the news tone agrees with the price. A stock moving with the market " +
+  "needs no company story - say so rather than pinning a market-wide move on a " +
+  "company headline. If the headlines do not explain the move, say that " +
+  "plainly; it is a real finding. If the news sources failed, say you could " +
+  "not check. Write this section even when the news is thin: it is the part " +
+  "the reader asked for.";
+
+
 const p = (v: number | null, d = 1) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''}${v.toFixed(d)}%`);
 
 const LABEL: Record<MoveLabel, string> = { up: 'UP', down: 'DOWN', flat: 'FLAT (sideways)' };
