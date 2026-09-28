@@ -28,10 +28,10 @@ function span(min: number | null, t: T): string {
   return min < 120 ? t('st.spanMin', min) : t('st.spanHour', Math.round(min / 60));
 }
 
-export function StocktwitsPosts({ st, loading }: { st: StResult | null; loading: boolean }) {
+export function StocktwitsPosts({ st, loading, error = null }: { st: StResult | null; loading: boolean; error?: string | null }) {
   const { t } = useLang();
   if (loading) return <p className="cap">{t('st.loading')}</p>;
-  if (!st) return <p className="cap hint hint-warn">{t('st.none')}</p>;
+  if (!st) return <p className="cap hint hint-warn xperr">{t('st.none', error)}</p>;
   if (st.error)
     return (
       <p className="cap hint hint-warn xperr">
@@ -90,10 +90,10 @@ export function StocktwitsPosts({ st, loading }: { st: StResult | null; loading:
   );
 }
 
-export function RedditPosts({ rd, loading }: { rd: RdResult | null; loading: boolean }) {
+export function RedditPosts({ rd, loading, error = null }: { rd: RdResult | null; loading: boolean; error?: string | null }) {
   const { t } = useLang();
   if (loading) return <p className="cap">{t('rd.loading')}</p>;
-  if (!rd) return <p className="cap hint hint-warn">{t('rd.none')}</p>;
+  if (!rd) return <p className="cap hint hint-warn xperr">{t('rd.none', error)}</p>;
   const routeLine = <p className="cap">{t(rd.route === 'oauth' ? 'rd.routeOauth' : 'rd.routePublic')}</p>;
   if (rd.error)
     return (

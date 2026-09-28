@@ -10,11 +10,12 @@ import SymbolFlow from './SymbolFlow';
 import MoveVsMarket from './MoveVsMarket';
 import XPosts from './XPosts';
 import { StocktwitsPosts, RedditPosts } from './SocialPosts';
-import type { SocialResult } from '@/lib/social';
+import type { SocialLoad, SocialResult } from '@/lib/social';
 import type { XSymbolResult } from '@/lib/xsymbol';
 import type { MoveRead } from '@/lib/moveread';
 import type { UwContext } from '@/lib/uwsummary';
 import { useLang } from '@/lib/i18n';
+import { readJsonOrText } from '@/lib/fetchjson';
 import GexChart from './GexChart';
 import { tvSymbol, tradingViewChartUrl } from '@/lib/links';
 import ColorLegend from './ColorLegend';
@@ -298,7 +299,8 @@ export default function AnalysisPanel({
      cho cả hai khối hiển thị lẫn Claude, sau /api/analyze. */
   const [social, setSocial] = useState<SocialResult | null>(null);
   const [socialLoading, setSocialLoading] = useState(false);
-  const [socialPromise, setSocialPromise] = useState<Promise<SocialResult | null> | null>(null);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [socialPromise, setSocialPromise] = useState<Promise<SocialLoad> | null>(null);
   const socialSym = useRef<string | null>(null);
   /* Bản dịch tiếng Việt của sector/industry/country/description - nguồn
      gốc (Finviz/FMP) chỉ có tiếng Anh, đây là chỗ duy nhất trên trang còn
@@ -365,6 +367,7 @@ export default function AnalysisPanel({
     if (sym === socialSym.current) return;
     socialSym.current = sym;
     setSocial(null);
+    setSocialError(null);
     setSocialPromise(null);
     if (!sym) {
       setSocialLoading(false);
@@ -372,13 +375,22 @@ export default function AnalysisPanel({
     }
     setSocialLoading(true);
     const q = `symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(data?.name ?? '')}`;
-    const pr = fetch(`/api/analyze/social?${q}`)
-      .then(async (r) => (r.ok ? ((await r.json()) as SocialResult) : null))
-      .catch(() => null);
+    /* Hỏng thì GIỮ lý do thật (mã HTTP + tiêu đề trang) chứ không nuốt thành
+       null: null hiện y hệt "không có", và Claude đọc nó thành "không khả
+       dụng" mà không ai biết vì sao — đúng ảnh chụp production 2026-09-28. */
+    const pr: Promise<SocialLoad> = fetch(`/api/analyze/social?${q}`)
+      .then(async (r) => {
+        const b = await readJsonOrText(r);
+        if (!b.ok) return { data: null, error: b.summary };
+        if (!r.ok) return { data: null, error: `HTTP ${r.status} · ${String(b.json?.error ?? '').slice(0, 160) || '(không có chữ)'}` };
+        return { data: b.json as SocialResult, error: null };
+      })
+      .catch((e: any) => ({ data: null, error: String(e?.message ?? e).slice(0, 200) }));
     setSocialPromise(pr);
     pr.then((v) => {
       if (socialSym.current !== sym) return;
-      setSocial(v);
+      setSocial(v.data);
+      setSocialError(v.error);
       setSocialLoading(false);
     });
   }, [data?.symbol, data?.name]);
@@ -575,7 +587,7 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} social={social} socialPromise={socialPromise} />
+            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} social={social} socialError={socialError} socialPromise={socialPromise} />
 
             <SymbolFlow uw={uw} loading={uwLoading} />
 
@@ -751,10 +763,10 @@ export default function AnalysisPanel({
             <XPosts x={xr} loading={xLoading} />
 
             <h3 className="dsec">{tr('st.title')}</h3>
-            <StocktwitsPosts st={social?.stocktwits ?? null} loading={socialLoading} />
+            <StocktwitsPosts st={social?.stocktwits ?? null} loading={socialLoading} error={socialError} />
 
             <h3 className="dsec">{tr('rd.title')}</h3>
-            <RedditPosts rd={social?.reddit ?? null} loading={socialLoading} />
+            <RedditPosts rd={social?.reddit ?? null} loading={socialLoading} error={socialError} />
 
             <h3 className="dsec">{tr('dd.chart')}</h3>
             <TradingViewWidget
