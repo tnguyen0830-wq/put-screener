@@ -2442,8 +2442,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'st.title': { vi: 'StockTwits', en: 'StockTwits' },
   'st.loading': { vi: 'Đang hỏi StockTwits…', en: 'Asking StockTwits…' },
   'st.none': {
-    vi: 'Không lấy được StockTwits cho lượt này (máy chủ app không trả lời).',
-    en: 'Could not load StockTwits this time (the app server did not answer).',
+    vi: (e?: string | null) =>
+      e
+        ? `Không lấy được StockTwits: chính lượt hỏi của app tới máy chủ app hỏng — ${e}. Tải lại trang thử một lần; vẫn hỏng thì gửi nguyên dòng này về.`
+        : 'Không lấy được StockTwits cho lượt này (máy chủ app không trả lời).',
+    en: (e?: string | null) =>
+      e
+        ? `Could not load StockTwits: the app's own request to its server failed — ${e}. Reload the page once; if it persists, send this line.`
+        : 'Could not load StockTwits this time (the app server did not answer).',
   },
   'st.caveat': {
     vi: 'BÀN TÁN CHƯA KIỂM CHỨNG của người dùng StockTwits, không phải tin tức. Nhãn Bullish/Bearish là do CHÍNH người đăng tự gắn — không phải phép đo cảm xúc. Claude được dặn không coi bài nào là sự thật.',
@@ -2495,8 +2501,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'rd.title': { vi: 'Reddit', en: 'Reddit' },
   'rd.loading': { vi: 'Đang hỏi Reddit…', en: 'Asking Reddit…' },
   'rd.none': {
-    vi: 'Không lấy được Reddit cho lượt này (máy chủ app không trả lời).',
-    en: 'Could not load Reddit this time (the app server did not answer).',
+    vi: (e?: string | null) =>
+      e
+        ? `Không lấy được Reddit: chính lượt hỏi của app tới máy chủ app hỏng — ${e}. Tải lại trang thử một lần; vẫn hỏng thì gửi nguyên dòng này về.`
+        : 'Không lấy được Reddit cho lượt này (máy chủ app không trả lời).',
+    en: (e?: string | null) =>
+      e
+        ? `Could not load Reddit: the app's own request to its server failed — ${e}. Reload the page once; if it persists, send this line.`
+        : 'Could not load Reddit this time (the app server did not answer).',
   },
   'rd.caveat': {
     vi: 'BÀN TÁN CHƯA KIỂM CHỨNG trên Reddit, không phải tin tức — người ta thường đoán lý do SAU khi giá đã chạy và hay đoán sai. Claude chỉ dùng để tả giọng điệu, không coi là nguyên nhân.',

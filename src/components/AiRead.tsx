@@ -8,7 +8,7 @@ import OutlookMap from './OutlookMap';
 import UwContextCard from './UwContextCard';
 import type { UwContext } from '@/lib/uwsummary';
 import type { XSymbolResult } from '@/lib/xsymbol';
-import type { SocialResult } from '@/lib/social';
+import type { SocialLoad, SocialResult } from '@/lib/social';
 
 const MODES = ['read', 'outlook'] as const;
 type Mode = (typeof MODES)[number];
@@ -42,6 +42,7 @@ export default function AiRead({
   x = null,
   xPromise = null,
   social = null,
+  socialError = null,
   socialPromise = null,
 }: {
   analysis: any;
@@ -57,7 +58,9 @@ export default function AiRead({
   xPromise?: Promise<XSymbolResult | null> | null;
   /** StockTwits + Reddit của mã (`/api/analyze/social`), tải MỘT lần ở AnalysisPanel. */
   social?: SocialResult | null;
-  socialPromise?: Promise<SocialResult | null> | null;
+  /** Lý do thật khi lượt tải hỏng — gửi kèm để prompt nói ra, không nuốt. */
+  socialError?: string | null;
+  socialPromise?: Promise<SocialLoad> | null;
 }) {
   const { t, lang } = useLang();
   const [text, setText] = useState('');
@@ -120,12 +123,18 @@ export default function AiRead({
 
       const uwData = uw ?? (uwPromise ? await uwPromise : null);
       const xData = x ?? (xPromise ? await xPromise : null);
-      const socialData = social ?? (socialPromise ? await socialPromise : null);
+      let socialData = social;
+      let socialErr = socialError;
+      if (!socialData && !socialErr && socialPromise) {
+        const got = await socialPromise;
+        socialData = got.data;
+        socialErr = got.error;
+      }
 
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData }),
+        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData, socialError: socialErr }),
         signal: ctrl.signal,
       });
 

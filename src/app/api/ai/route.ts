@@ -94,7 +94,19 @@ export async function POST(req: Request) {
       ? (body.social as SocialResult)
       : null;
 
-  const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${socialFacts(social).join('\n')}\n\n${uwFacts(uw)}`;
+  /* Ba lý do "không có" khác nhau, và chỉ lý do nói ra được cách sửa: trang
+     gửi yêu cầu này nạp TRƯỚC khi có StockTwits/Reddit (khoá `social` vắng
+     hẳn — tải lại trang là xong), hay chính lượt hỏi `/api/analyze/social`
+     của trang đã hỏng (lý do thật đi kèm). */
+  const socialMissing = social
+    ? null
+    : !body || typeof body !== 'object' || !('social' in body)
+      ? 'the page that sent this request was loaded before StockTwits/Reddit were added to the app; tell the user to reload the page'
+      : typeof body.socialError === 'string' && body.socialError
+        ? `the app's own request for this data failed: ${body.socialError.slice(0, 200)}`
+        : null;
+
+  const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${socialFacts(social, Date.now(), socialMissing).join('\n')}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
   const params = {
     model: MODEL,
