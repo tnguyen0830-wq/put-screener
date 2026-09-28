@@ -87,6 +87,10 @@ export function prune(state: State, day: string): State {
 }
 
 /**
+ * `pressDue` cũng quyết định tầng X (#235): X tính tiền theo BÀI ĐỌC, và hỏi
+ * mỗi 15 phút suốt ngày đêm đã làm cạn credit trả-theo-lượng-dùng. Cùng cửa
+ * sổ 90 phút nên cũng không mất bài, chỉ chậm hơn tối đa ~1 giờ.
+ *
  * `pressDue` giãn riêng cho tầng tiêu đề báo chí: Yahoo tốn 1 request MỖI
  * MÃ (không gộp lô được), nên gọi ở đúng nhịp 15 phút như mọi thứ khác là
  * đi lại vết xe Dark Pool từng đốt sạch hạn mức UW. Mặc định theo `force`,
@@ -209,7 +213,7 @@ export function startAlertLoop() {
   void syncEarningsCalendar().catch(() => {});
   timer = setInterval(() => {
     tick++;
-    // 1 trong 4 tick (~60 phút) mới hỏi tin báo chí - xem chú thích
+    // 1 trong 4 tick (~60 phút) mới hỏi tin báo chí và X - xem chú thích
     // `pressDue` ở `runOnce`. Cùng nhịp với syncDarkpool() bên dưới, nhưng
     // là host khác nên không cộng dồn vào cùng một hạn mức.
     void runOnce(false, tick % 4 === 0).catch(() => {});

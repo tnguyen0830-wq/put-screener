@@ -34,6 +34,9 @@ type Status = {
       pressOverflow: number;
       pressErrors: string[];
       xConfigured: boolean;
+      /** Thiếu ở bản ghi của server cũ (trước #235) - đọc thành "đã hỏi". */
+      xRan?: boolean;
+      xFull?: number;
       xChecked: number;
       xBatches: number;
       xRoutine: number;
@@ -271,12 +274,17 @@ export default function AlertSettings() {
           {/* Tầng X. `xConfigured: false` (chưa đặt X_BEARER_TOKEN) tách
               khỏi "đã hỏi và không có gì" - X tự tắt như UW/Telegram nên
               phần lớn người đọc file này sẽ thấy đúng dòng "chưa cấu hình". */}
-          {lr.events.xConfigured ? (
+          {lr.events.xConfigured && lr.events.xRan === false ? (
+            <p className="cap">{t('al.xWait')}</p>
+          ) : lr.events.xConfigured ? (
             <>
               <p className="cap">
                 {t('al.x', { checked: lr.events.xChecked, batches: lr.events.xBatches })}{' '}
                 {t('al.xQuiet', lr.events.xRoutine)}
               </p>
+              {(lr.events.xFull ?? 0) > 0 && (
+                <p className="cap warnline">{t('al.xFull', lr.events.xFull)}</p>
+              )}
               {lr.events.xOverflow > 0 && (
                 <p className="cap warnline">{t('al.xOverflow', lr.events.xOverflow)}</p>
               )}
