@@ -411,6 +411,9 @@ export type EventReport = {
    * một bài nào rơi khỏi cửa sổ - cái mất là tốc độ, tối đa ~1 giờ.
    */
   xConfigured: boolean;
+  /** Có token nhưng chưa đặt `X_ALERTS=on` → tầng này tắt có chủ ý (#236),
+   *  khác hẳn "chưa cấu hình" và "chưa tới lượt". */
+  xEnabled: boolean;
   xRan: boolean;
   /** Số lô về đầy trần bài - có thể còn bài chưa đọc (xem `XReport.full`). */
   xFull: number;
@@ -499,6 +502,7 @@ export async function collectEventAlerts(
     pressOverflow: 0,
     pressErrors: [],
     xConfigured: false,
+    xEnabled: false,
     xRan: false,
     xFull: 0,
     xChecked: 0,
@@ -541,7 +545,8 @@ export async function collectEventAlerts(
        tránh vòng import. */
     xDue
       ? (async () => {
-          const { collectXAlerts } = await import('./xalerts');
+          const { collectXAlerts, xAlertsEnabled } = await import('./xalerts');
+          if (!xAlertsEnabled()) return null;
           return collectXAlerts(symbols, {}, now);
         })()
       : Promise.resolve(null),
@@ -588,7 +593,9 @@ export async function collectEventAlerts(
 
   if (xSettled.status === 'fulfilled') {
     const { xConfigured } = await import('./xnews');
+    const { xAlertsEnabled } = await import('./xalerts');
     report.xConfigured = xConfigured();
+    report.xEnabled = xAlertsEnabled();
     if (!xSettled.value) return { alerts, report };
     const { alerts: xAlerts, report: xr } = xSettled.value;
     report.xRan = xr.ran;
@@ -601,7 +608,9 @@ export async function collectEventAlerts(
     alerts.push(...xAlerts);
   } else {
     const { xConfigured } = await import('./xnews');
+    const { xAlertsEnabled } = await import('./xalerts');
     report.xConfigured = xConfigured();
+    report.xEnabled = xAlertsEnabled();
     /* Cả tầng ném vẫn là "đã hỏi" - cùng lý do nhánh báo chí đặt pressRan. */
     report.xRan = true;
     report.xErrors = [String(xSettled.reason?.message ?? xSettled.reason).slice(0, 200)];

@@ -35,6 +35,8 @@ type Status = {
       pressErrors: string[];
       xConfigured: boolean;
       /** Thiếu ở bản ghi của server cũ (trước #235) - đọc thành "đã hỏi". */
+      /** Thiếu ở bản ghi cũ (trước #236) - đọc thành "đang bật". */
+      xEnabled?: boolean;
       xRan?: boolean;
       xFull?: number;
       xChecked: number;
@@ -274,7 +276,9 @@ export default function AlertSettings() {
           {/* Tầng X. `xConfigured: false` (chưa đặt X_BEARER_TOKEN) tách
               khỏi "đã hỏi và không có gì" - X tự tắt như UW/Telegram nên
               phần lớn người đọc file này sẽ thấy đúng dòng "chưa cấu hình". */}
-          {lr.events.xConfigured && lr.events.xRan === false ? (
+          {lr.events.xConfigured && lr.events.xEnabled === false ? (
+            <p className="cap">{t('al.xOff')}</p>
+          ) : lr.events.xConfigured && lr.events.xRan === false ? (
             <p className="cap">{t('al.xWait')}</p>
           ) : lr.events.xConfigured ? (
             <>
