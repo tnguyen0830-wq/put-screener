@@ -77,6 +77,9 @@ import {
 
 export const X_FRESH_MS = 90 * 60_000;
 export const MAX_X_ALERTS = 5;
+/** Bài tối đa mỗi lô mỗi lượt. X tính tiền theo BÀI ĐỌC (#161), nên đây là
+ *  trần chi phí của một lượt: lô × 50 bài. */
+export const X_MAX_RESULTS = 50;
 /** Nhiều nhất bao nhiêu mã hỏi trong một lượt — chặn watchlist khổng lồ
  *  không làm một lượt chạy phình ra quá nhiều lô. */
 export const MAX_X_SYMBOLS = 200;
@@ -197,6 +200,15 @@ function maxId(a: string | null, b: string | null): string | null {
 export type XReport = {
   ran: boolean;
   checked: number;
+  /**
+   * Số lô về ĐẦY `X_MAX_RESULTS` bài. Một lô đầy nghĩa là trong khoảng từ
+   * lượt trước có thể còn bài nữa mà lượt này KHÔNG đọc: X trả bài mới nhất
+   * trước, rồi `since_id` nhảy lên bài mới nhất, nên phần cũ hơn bị bỏ qua
+   * hẳn. Đó là cái giá của trần bài (thứ giữ credit X có giới hạn) và nó
+   * phải được NÓI RA, không im lặng — nhất là từ khi tầng này chạy ~60 phút
+   * một lần (#235), khoảng giữa hai lượt dài gấp bốn.
+   */
+  full: number;
   batches: number;
   routine: number;
   overflow: number;
@@ -220,6 +232,7 @@ export async function collectXAlerts(
   const report: XReport = {
     ran: false,
     checked: 0,
+    full: 0,
     batches: 0,
     routine: 0,
     overflow: 0,
@@ -241,7 +254,7 @@ export async function collectXAlerts(
     batches.map(async (b) => {
       const { json } = await xGet('/tweets/search/recent', {
         query: b.query,
-        max_results: 50,
+        max_results: X_MAX_RESULTS,
         since_id: state.sinceId ?? undefined,
         'tweet.fields': 'created_at,author_id,entities,lang',
         expansions: 'author_id',
@@ -255,6 +268,7 @@ export async function collectXAlerts(
   const posts: XPost[] = [];
   for (const r of settled) {
     if (r.status === 'fulfilled') {
+      if (r.value.posts.length >= X_MAX_RESULTS) report.full++;
       posts.push(...r.value.posts);
       newestSeen = maxId(newestSeen, r.value.newest);
     } else if (report.errors.length < 3) {

@@ -1658,6 +1658,14 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'X (Twitter) chưa được cấu hình - đặt X_BEARER_TOKEN trên Render để bật tầng cảnh báo nhanh nhất (bài đăng trên X về mã đang nắm).',
     en: 'X (Twitter) is not configured - set X_BEARER_TOKEN on Render to enable the fastest alert tier (X posts about held symbols).',
   },
+  'al.xWait': {
+    vi: 'Bài đăng X được hỏi khoảng 60 phút một lần chứ không phải mỗi lượt — X tính tiền theo từng bài đọc. Cửa sổ cảnh báo là 90 phút nên nhịp này không bỏ sót bài nào, chỉ báo chậm hơn tối đa khoảng 1 giờ. Bấm "Chạy thử ngay" để hỏi X luôn.',
+    en: 'X posts are checked about hourly, not every run — X bills per post read. The alert window is 90 minutes, so nothing is missed; alerts just arrive up to about an hour later. Press "Send a test now" to check X immediately.',
+  },
+  'al.xFull': {
+    vi: (n: number) => `${n} lô X về đầy trần 50 bài — trong giờ qua có thể còn bài cũ hơn mà app KHÔNG đọc (trần này là thứ giữ credit X có giới hạn).`,
+    en: (n: number) => `${n} X batches came back at the 50-post ceiling — older posts from the past hour may not have been read (that ceiling is what caps the X credit spent).`,
+  },
   'al.x': {
     vi: (v: any) => `X: đã hỏi ${v.checked} mã trong ${v.batches} lô.`,
     en: (v: any) => `X: checked ${v.checked} symbols in ${v.batches} batches.`,

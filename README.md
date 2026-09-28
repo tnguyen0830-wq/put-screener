@@ -661,7 +661,7 @@ của bằng chứng**:
 | **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào | 15 phút |
 | **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch | 15 phút |
 | **Tiêu đề báo chí** | Yahoo Finance | bất kể giờ nào | ~60 phút |
-| **Bài đăng trên X** | X (Twitter) | bất kể giờ nào | mỗi 15 phút |
+| **Bài đăng trên X** | X (Twitter) | bất kể giờ nào | ~60 phút — X tính tiền theo bài đọc; cửa sổ 90 phút nên không sót bài, chỉ báo chậm tối đa ~1 giờ |
 
 **8-K là nguồn gốc, không phải bài viết về nguồn gốc** — đó là chính công ty bị
 luật bắt buộc phải khai một sự kiện trọng yếu. Miễn phí, không cần key. Bốn mục

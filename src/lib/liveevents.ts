@@ -398,15 +398,22 @@ export type EventReport = {
   pressOverflow: number;
   pressErrors: string[];
   /**
-   * Tầng X (thứ tư). KHÔNG giống `pressRan`: X không giãn nhịp theo tick -
-   * xnews.ts gộp cả watchlist vào vài LÔ (`cashtagBatches`, $A OR $B OR $C
-   * trong một request), khác hẳn Yahoo bắt hỏi từng mã, nên chi phí mỗi
-   * lượt đã rẻ sẵn và `since_id` (xalerts.ts) mới là thứ giữ chi phí xuống
-   * theo thời gian, không phải giãn nhịp. `xConfigured: false` (chưa đặt
-   * X_BEARER_TOKEN) phải tách khỏi "đã hỏi và không có gì" - hai chuyện
-   * khác nhau, đúng luật "chưa biết không được trông giống không có gì".
+   * Tầng X (thứ tư). `xConfigured: false` (chưa đặt X_BEARER_TOKEN) phải
+   * tách khỏi "đã hỏi và không có gì" - hai chuyện khác nhau, đúng luật
+   * "chưa biết không được trông giống không có gì".
+   *
+   * `xRan: false` là trạng thái THỨ BA, cùng lý do `pressRan` tồn tại: từ
+   * #235 X chạy ~60 phút một lần (cùng nhịp báo chí) chứ không mỗi 15 phút.
+   * Thiết kế cũ cho rằng gộp lô + `since_id` là đủ rẻ để hỏi mỗi lượt - nhưng
+   * X tính tiền theo BÀI ĐỌC, và mỗi lô mỗi lượt có thể đọc tới 50 bài của
+   * mã sôi động, suốt ngày đêm (96 lượt/ngày); chủ app báo hết credit. Cửa
+   * sổ 90 phút (`X_FRESH_MS`) rộng hơn nhịp 60 phút, nên giãn nhịp không làm
+   * một bài nào rơi khỏi cửa sổ - cái mất là tốc độ, tối đa ~1 giờ.
    */
   xConfigured: boolean;
+  xRan: boolean;
+  /** Số lô về đầy trần bài - có thể còn bài chưa đọc (xem `XReport.full`). */
+  xFull: number;
   xChecked: number;
   xBatches: number;
   xRoutine: number;
@@ -465,7 +472,13 @@ export async function collectEventAlerts(
    * đã sẵn có - đúng khuôn syncDarkpool(). Cửa sổ 90 phút khiến nhịp giãn
    * này không làm mất bài nào.
    */
-  pressDue = false
+  pressDue = false,
+  /**
+   * Lượt này có hỏi X không. Mặc định theo `pressDue` - cùng nhịp ~60 phút
+   * (#235), vì X tính tiền theo bài đọc. Tách thành tham số riêng để đổi
+   * nhịp một tầng không kéo theo tầng kia.
+   */
+  xDue = pressDue
 ): Promise<{ alerts: Alert[]; report: EventReport }> {
   const { symbols, heldError } = await alertSymbols();
 
@@ -486,6 +499,8 @@ export async function collectEventAlerts(
     pressOverflow: 0,
     pressErrors: [],
     xConfigured: false,
+    xRan: false,
+    xFull: 0,
     xChecked: 0,
     xBatches: 0,
     xRoutine: 0,
@@ -519,13 +534,17 @@ export async function collectEventAlerts(
           return { got, scan: pressAlertsFrom(got.items, now) };
         })()
       : Promise.resolve(null),
-    /* Tầng BỐN: X. Chạy BẤT KỂ GIỜ và BẤT KỂ TICK - đúng lý do X đáng tiền
-       hơn báo chí (#155/#159): nhanh hơn, và chỉ nhanh khi hỏi mỗi lượt.
-       Nạp động cùng lý do với pressalerts.ts: tránh vòng import. */
-    (async () => {
-      const { collectXAlerts } = await import('./xalerts');
-      return collectXAlerts(symbols, {}, now);
-    })(),
+    /* Tầng BỐN: X. Chạy BẤT KỂ GIỜ, nhưng giãn ~60 phút một lần (#235):
+       X tính tiền theo bài đọc, và hỏi mỗi 15 phút suốt ngày đêm đã làm cạn
+       credit. Cửa sổ 90 phút khiến nhịp này không bỏ sót bài; đổi lại cảnh
+       báo X chậm tối đa ~1 giờ. Nạp động cùng lý do với pressalerts.ts:
+       tránh vòng import. */
+    xDue
+      ? (async () => {
+          const { collectXAlerts } = await import('./xalerts');
+          return collectXAlerts(symbols, {}, now);
+        })()
+      : Promise.resolve(null),
   ]);
 
   const alerts: Alert[] = [];
@@ -569,8 +588,11 @@ export async function collectEventAlerts(
 
   if (xSettled.status === 'fulfilled') {
     const { xConfigured } = await import('./xnews');
-    const { alerts: xAlerts, report: xr } = xSettled.value;
     report.xConfigured = xConfigured();
+    if (!xSettled.value) return { alerts, report };
+    const { alerts: xAlerts, report: xr } = xSettled.value;
+    report.xRan = xr.ran;
+    report.xFull = xr.full;
     report.xChecked = xr.checked;
     report.xBatches = xr.batches;
     report.xRoutine = xr.routine;
@@ -580,6 +602,8 @@ export async function collectEventAlerts(
   } else {
     const { xConfigured } = await import('./xnews');
     report.xConfigured = xConfigured();
+    /* Cả tầng ném vẫn là "đã hỏi" - cùng lý do nhánh báo chí đặt pressRan. */
+    report.xRan = true;
     report.xErrors = [String(xSettled.reason?.message ?? xSettled.reason).slice(0, 200)];
   }
 

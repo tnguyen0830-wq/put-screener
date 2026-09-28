@@ -627,9 +627,11 @@ Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo đư
 theo tài liệu.
 
 **Bước 3 — không cần làm gì thêm.** Tầng cảnh báo X tự bật ngay khi thấy
-`X_BEARER_TOKEN`, chạy chung nhịp với hồ sơ 8-K (mỗi 15 phút, bất kể giờ giao
-dịch) — khác tầng báo chí (Yahoo) vốn phải giãn nhịp vì tốn một request MỖI
-MÃ, X gộp cả watchlist vào vài lô trong một request nên không cần giãn. Đặt
+`X_BEARER_TOKEN`, chạy bất kể giờ giao dịch nhưng **~60 phút một lần**, cùng
+nhịp tầng báo chí. Ban đầu nó chạy mỗi 15 phút vì X gộp cả watchlist vào vài
+lô — nhưng X tính tiền theo BÀI ĐỌC chứ không theo request, mỗi lô mỗi lượt
+đọc tới 50 bài của mã sôi động, và 96 lượt/ngày đã làm cạn credit (#235).
+Cửa sổ cảnh báo 90 phút nên nhịp 60 phút không bỏ sót bài; cái mất là tốc độ. Đặt
 thêm `X_SINCE_PATH` là tuỳ chọn: bỏ trống thì rơi vào `.cache/x-since.json`,
 mất được và dựng lại được — không cần `/var/data`.
 
