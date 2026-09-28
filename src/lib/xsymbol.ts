@@ -23,8 +23,10 @@ import { XError, parseSearch, toCashtag, xConfigured, xGet, type XPost } from '.
  *    nói gì về riêng mã này. Số bị loại được ĐẾM, không rơi im lặng.
  */
 
-/** X đòi 10–100; 25 đủ để thấy giọng chung mà không tốn gấp bốn. */
-export const MAX_RESULTS = 25;
+/** X đòi 10–100. 10 là mức thấp nhất X nhận: ĐO được ở production
+ *  2026-09-28 là $100,15 cho 20.030 bài ≈ $0,005 MỖI BÀI ĐỌC, nên mỗi bài
+ *  thêm ở đây là tiền thật mỗi lần mở một mã mới (#236). */
+export const MAX_RESULTS = 10;
 /** Bài gắn nhiều hơn chừng này mã coi là bài điểm danh, loại. */
 export const MAX_CASHTAGS = 4;
 /** Số bài tối đa hiện ra và đưa cho Claude. */

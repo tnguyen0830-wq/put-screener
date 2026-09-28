@@ -498,7 +498,7 @@ cashtag của mã (`$AAPL`), bỏ retweet và trả lời, xếp theo tương t�
 ở mục 1 với nhãn **bàn tán chưa kiểm chứng**: chỉ dùng để tả giọng điệu và chủ
 đề đang được nhắc, không bao giờ coi là sự thật hay nguyên nhân, và không được
 nặng hơn một tiêu đề báo hay hồ sơ SEC. X tính tiền theo lượng đọc, nên mỗi mã
-tốn **một** request (tối đa 25 bài) và kết quả — kể cả lỗi — được giữ 30 phút.
+tốn **một** request (tối đa 10 bài — X tính khoảng $0,005 mỗi bài đọc, đo ở production) và kết quả — kể cả lỗi — được giữ 30 phút.
 Cần `X_BEARER_TOKEN` (token app-only, chỉ đọc); không có thì khối nói rõ là
 chưa cấu hình và không gửi request nào.
 
@@ -661,7 +661,7 @@ của bằng chứng**:
 | **Hồ sơ 8-K trọng yếu** | SEC EDGAR | bất kể giờ nào | 15 phút |
 | **Giá chạy quá 7%** (12% là khẩn) | Schwab | chỉ trong giờ giao dịch | 15 phút |
 | **Tiêu đề báo chí** | Yahoo Finance | bất kể giờ nào | ~60 phút |
-| **Bài đăng trên X** | X (Twitter) | bất kể giờ nào | ~60 phút — X tính tiền theo bài đọc; cửa sổ 90 phút nên không sót bài, chỉ báo chậm tối đa ~1 giờ |
+| **Bài đăng trên X** | X (Twitter) | **mặc định TẮT** — bật bằng `X_ALERTS=on` | ~60 phút khi bật. Đo được ~$0,005 mỗi bài đọc và ~48 bài mỗi lượt, nên chạy nền suốt ngày tốn ~$6-17/ngày |
 
 **8-K là nguồn gốc, không phải bài viết về nguồn gốc** — đó là chính công ty bị
 luật bắt buộc phải khai một sự kiện trọng yếu. Miễn phí, không cần key. Bốn mục

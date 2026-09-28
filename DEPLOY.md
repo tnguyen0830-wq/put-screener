@@ -626,9 +626,14 @@ lời. Bốn dòng đáng đọc, theo thứ tự:
 Gửi nguyên khối JSON đó cho Claude; tính năng viết theo cái đo được, không
 theo tài liệu.
 
-**Bước 3 — không cần làm gì thêm.** Tầng cảnh báo X tự bật ngay khi thấy
-`X_BEARER_TOKEN`, chạy bất kể giờ giao dịch nhưng **~60 phút một lần**, cùng
-nhịp tầng báo chí. Ban đầu nó chạy mỗi 15 phút vì X gộp cả watchlist vào vài
+**Bước 3 — tầng cảnh báo X mặc định TẮT (#236).** Đo ở production
+2026-09-28: **$100,15 cho 20.030 bài đọc ≈ $0,005 mỗi bài**, và 419 lượt gọi
+≈ 48 bài mỗi lượt — gần như mọi lượt chạm trần 50, vì cashtag của mã sôi
+động luôn có hơn 50 bài mới. Chạy nền suốt ngày là ~$6-17 mỗi ngày. Nên có
+`X_BEARER_TOKEN` chỉ bật X ở tab Analyze (10 bài mỗi mã, giữ 30 phút) và tab
+Tin tức (15 bài mỗi cột, giữ 15 phút); muốn cả tầng cảnh báo thì đặt thêm
+**`X_ALERTS=on`**. Khi bật, nó chạy bất kể giờ giao dịch, ~60 phút một lần,
+cùng nhịp tầng báo chí. Ban đầu nó chạy mỗi 15 phút vì X gộp cả watchlist vào vài
 lô — nhưng X tính tiền theo BÀI ĐỌC chứ không theo request, mỗi lô mỗi lượt
 đọc tới 50 bài của mã sôi động, và 96 lượt/ngày đã làm cạn credit (#235).
 Cửa sổ cảnh báo 90 phút nên nhịp 60 phút không bỏ sót bài; cái mất là tốc độ. Đặt

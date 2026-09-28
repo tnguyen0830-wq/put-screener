@@ -77,6 +77,22 @@ import {
 
 export const X_FRESH_MS = 90 * 60_000;
 export const MAX_X_ALERTS = 5;
+
+/**
+ * Tầng cảnh báo X là OPT-IN (#236). ĐO ở production 2026-09-28: $100,15 cho
+ * 20.030 bài đọc ≈ $0,005 mỗi bài, 419 lượt gọi ≈ 48 bài mỗi lượt — tức
+ * gần như MỌI lượt đều chạm trần 50, vì cashtag của mã sôi động có hơn 50
+ * bài mới trong bất kỳ khoảng 15-60 phút nào. `since_id` không cứu được
+ * điều đó, và giãn nhịp (#235) chỉ bớt số lượt chứ không làm mỗi lượt rẻ
+ * đi: chạy suốt ngày vẫn ~$6-17 mỗi ngày. Nên không có X_BEARER_TOKEN là
+ * tắt (như trước), CÓ token mà không đặt `X_ALERTS=on` cũng tắt — token còn
+ * phục vụ tab Analyze và Tin tức, hai chỗ chỉ tốn tiền khi có người mở.
+ * Nút "Chạy thử ngay" cũng tôn trọng công tắc này: một lần bấm thử không
+ * được là cửa sau tiêu tiền.
+ */
+export function xAlertsEnabled(): boolean {
+  return /^(1|on|true|yes)$/i.test(String(process.env.X_ALERTS ?? '').trim());
+}
 /** Bài tối đa mỗi lô mỗi lượt. X tính tiền theo BÀI ĐỌC (#161), nên đây là
  *  trần chi phí của một lượt: lô × 50 bài. */
 export const X_MAX_RESULTS = 50;
@@ -239,7 +255,7 @@ export async function collectXAlerts(
     errors: [],
   };
 
-  if (!xConfigured() || !symbols.length) return { alerts: [], report };
+  if (!xConfigured() || !xAlertsEnabled() || !symbols.length) return { alerts: [], report };
 
   const asked = symbols.slice(0, MAX_X_SYMBOLS);
   const batches = cashtagBatches(asked);

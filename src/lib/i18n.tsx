@@ -1658,6 +1658,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'X (Twitter) chưa được cấu hình - đặt X_BEARER_TOKEN trên Render để bật tầng cảnh báo nhanh nhất (bài đăng trên X về mã đang nắm).',
     en: 'X (Twitter) is not configured - set X_BEARER_TOKEN on Render to enable the fastest alert tier (X posts about held symbols).',
   },
+  'al.xOff': {
+    vi: 'Tầng cảnh báo X đang TẮT có chủ ý: đo được X tính khoảng $0,005 mỗi bài đọc, và mỗi lượt dò các mã sôi động đọc gần đủ 50 bài (~$0,24), nên chạy nền suốt ngày tốn vài chục đến vài trăm đô mỗi tháng. Bài X trong tab Analyze vẫn chạy khi anh/chị mở một mã. Muốn bật lại tầng này: đặt X_ALERTS=on trên Render.',
+    en: 'The X alert tier is deliberately OFF: X was measured at about $0.005 per post read, and each pass over busy symbols reads close to 50 posts (~$0.24), so running it in the background all day costs tens to hundreds of dollars a month. X posts in the Analyze tab still load when you open a symbol. To turn this tier back on, set X_ALERTS=on on Render.',
+  },
   'al.xWait': {
     vi: 'Bài đăng X được hỏi khoảng 60 phút một lần chứ không phải mỗi lượt — X tính tiền theo từng bài đọc. Cửa sổ cảnh báo là 90 phút nên nhịp này không bỏ sót bài nào, chỉ báo chậm hơn tối đa khoảng 1 giờ. Bấm "Chạy thử ngay" để hỏi X luôn.',
     en: 'X posts are checked about hourly, not every run — X bills per post read. The alert window is 90 minutes, so nothing is missed; alerts just arrive up to about an hour later. Press "Send a test now" to check X immediately.',

@@ -452,7 +452,9 @@ async function fetchX(column: NewsColumn, handles: string[]): Promise<Headline[]
   if (!q.query) return [];
   const { json } = await xGet('/tweets/search/recent', {
     query: q.query,
-    max_results: 50,
+    // $0,005 mỗi bài đọc, đo ở production 2026-09-28 (#236): 50 bài một lượt
+    // là $0,25 mỗi cột mỗi 15 phút tab còn mở. 15 vẫn đủ cho một cột tin.
+    max_results: 15,
     'tweet.fields': 'created_at,author_id,entities,attachments',
     expansions: 'author_id,attachments.media_keys',
     'user.fields': 'username,name',
