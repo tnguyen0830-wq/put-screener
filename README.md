@@ -500,7 +500,23 @@ cashtag của mã (`$AAPL`), bỏ retweet và trả lời, xếp theo tương t�
 nặng hơn một tiêu đề báo hay hồ sơ SEC. X tính tiền theo lượng đọc, nên mỗi mã
 tốn **một** request (tối đa 25 bài) và kết quả — kể cả lỗi — được giữ 30 phút.
 Cần `X_BEARER_TOKEN` (token app-only, chỉ đọc); không có thì khối nói rõ là
-chưa cấu hình và không gửi request nào. StockTwits và Reddit chưa có.
+chưa cấu hình và không gửi request nào.
+
+Hai khối nữa ngay dưới: **StockTwits** (luồng bài mới nhất của mã, không cần
+khoá) và **Reddit** (bài 7 ngày gần nhất trong r/wallstreetbets, r/stocks,
+r/investing, r/options, r/StockMarket). StockTwits cho biết số bài người đăng
+tự gắn **Bullish/Bearish** — đó là lời TỰ KHAI chứ không phải phép đo cảm xúc,
+và luôn in kèm khoảng thời gian 30 bài đó phủ (mã sôi động có khi chỉ vài chục
+phút). Reddit chỉ giữ bài nhắc `$MÃ`, tên công ty, hoặc mã viết hoa đứng
+riêng — mã trùng chữ thông dụng (ALL, ON, IT…) thì chỉ nhận `$MÃ` hoặc tên;
+số bài bị loại được in ra. Claude đọc cả hai ở mục 1 với nhãn bàn tán chưa
+kiểm chứng, và được dặn rằng người trên Reddit hay đoán lý do SAU khi giá đã
+chạy. Mỗi nguồn một request mỗi mã mỗi 30 phút, kể cả khi lỗi. StockTwits
+không cần khoá; Reddit không khoá thì thử JSON công khai (hay bị chặn từ máy
+chủ), có `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` thì dùng API chính thức
+chỉ đọc — xem DEPLOY.md. Khi một nguồn hỏng, khối đó nói "bị chặn / vượt giới
+hạn / khoá sai" kèm nguyên văn câu trả lời, không bao giờ hiện thành "không ai
+bàn".
 
 **Kịch bản giá** là chế độ thứ hai của cùng khung đó, trả lời câu *"cổ phiếu
 sẽ về đâu"* theo cách trung thực duy nhất có thể: không ai biết giá sẽ về đâu,

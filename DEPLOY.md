@@ -669,6 +669,40 @@ của tab báo "không bóc được dòng nào - khoá: …".
 
 ---
 
+## StockTwits + Reddit (tuỳ chọn) — bàn tán về mã ở tab Analyze
+
+Tab Analyze có hai khối **StockTwits** và **Reddit** dưới khối X, và Claude
+đọc chúng ở mục 1 như **bàn tán chưa kiểm chứng** (chỉ tả giọng điệu, không
+coi là nguyên nhân). Cả hai CHƯA đo được từ môi trường phát triển —
+`api.stocktwits.com` và `reddit.com` đều bị chặn ở đó — nên mỗi khối tự in
+mã HTTP + nguyên văn câu trả lời khi hỏng. Lần đầu mở Analyze sau deploy
+chính là phép đo.
+
+**StockTwits không cần khoá.** Nếu khối hiện "StockTwits chặn yêu cầu từ máy
+chủ app" kèm `Just a moment` / `Cloudflare`, nghĩa là StockTwits chặn IP của
+Render — không có cách sửa bằng code, và app không vượt tường chống bot.
+
+**Reddit: không khoá thì thử JSON công khai, có khoá thì dùng API chính
+thức.** Reddit hay chặn máy chủ trung tâm dữ liệu, nên nếu khối Reddit hiện
+"bị chặn":
+
+1. Đăng nhập Reddit → mở **reddit.com/prefs/apps** → **create another app…**
+2. Chọn loại **script**, đặt tên (ví dụ `put-screener`), redirect uri điền
+   `http://localhost` (không dùng tới, nhưng ô bắt buộc).
+3. Chuỗi ngắn dưới tên app là **client id**; ô **secret** là client secret.
+4. Render → Environment: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` (tuỳ chọn
+   `REDDIT_USER_AGENT` dạng `web:put-screener:1.0 (by /u/<tên-bạn>)`).
+
+App chỉ xin token "app-only" (`grant_type=client_credentials`) — token đó
+CHỈ ĐỌC, không đăng bài hay bình luận dưới tên bạn được. Reddit có thể đòi
+đồng ý điều khoản Data API hoặc duyệt app trước khi khoá chạy; nếu khối hiện
+"Reddit từ chối REDDIT_CLIENT_ID/SECRET" kèm `invalid_grant` /
+`unauthorized_client`, đó là lời của Reddit — kiểm lại khoá hoặc trạng thái
+app trên trang Reddit.
+
+Chi phí: mỗi nguồn một request mỗi mã mỗi 30 phút, kể cả khi lỗi (bấm lại
+một mã đang bị chặn không gõ cửa thêm).
+
 ## ElevenLabs (tuỳ chọn) — giọng đọc AI cho bản tóm tắt tin
 
 Giọng của trình duyệt là giọng máy; muốn giọng tự nhiên thì cần một dịch vụ

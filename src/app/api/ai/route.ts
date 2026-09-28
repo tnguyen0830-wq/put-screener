@@ -3,6 +3,7 @@ import { facts, system } from '@/lib/airead';
 import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
 import { uwFacts, type UwContext } from '@/lib/uwsummary';
 import { xFacts, type XSymbolResult } from '@/lib/xsymbol';
+import { socialFacts, type SocialResult } from '@/lib/social';
 import { logActivity } from '@/lib/activity';
 import { currentUser } from '@/lib/users';
 
@@ -86,7 +87,14 @@ export async function POST(req: Request) {
       ? (body.x as XSymbolResult)
       : null;
 
-  const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${uwFacts(uw)}`;
+  /* StockTwits + Reddit (`/api/analyze/social`), gửi lên như `x`. Thiếu
+     thì `socialFacts()` nói KHÔNG CÓ cho từng nguồn chứ không để trống. */
+  const social: SocialResult | null =
+    body?.social && typeof body.social === 'object' && (body.social.stocktwits || body.social.reddit)
+      ? (body.social as SocialResult)
+      : null;
+
+  const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${socialFacts(social).join('\n')}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
   const params = {
     model: MODEL,
