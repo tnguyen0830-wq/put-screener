@@ -2524,8 +2524,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Route: official Reddit API (read-only OAuth, REDDIT_CLIENT_ID).',
   },
   'rd.routePublic': {
-    vi: 'Đường gọi: JSON công khai của Reddit, không khoá. Reddit hay chặn máy chủ trung tâm dữ liệu — nếu hỏng, đặt REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET trên Render (xem DEPLOY.md).',
-    en: 'Route: Reddit public JSON, no key. Reddit often blocks datacenter servers — if it fails, set REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET on Render (see DEPLOY.md).',
+    vi: 'Đường gọi: JSON công khai của Reddit, không khoá. Reddit hay chặn máy chủ trung tâm dữ liệu; khoá API chính thức giờ phải xin Reddit duyệt, không tự tạo được (xem DEPLOY.md).',
+    en: 'Route: Reddit public JSON, no key. Reddit often blocks datacenter servers; an official API key now needs Reddit\'s approval and cannot be self-created (see DEPLOY.md).',
   },
   'rd.fail.blocked': {
     vi: 'Reddit chặn yêu cầu từ máy chủ app — không phải "không ai bàn".',
