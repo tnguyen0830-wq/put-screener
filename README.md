@@ -514,7 +514,8 @@ kiểm chứng, và được dặn rằng người trên Reddit hay đoán lý d
 chạy. Mỗi nguồn một request mỗi mã mỗi 30 phút, kể cả khi lỗi. StockTwits
 không cần khoá; Reddit không khoá thì thử JSON công khai (hay bị chặn từ máy
 chủ), có `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` thì dùng API chính thức
-chỉ đọc — xem DEPLOY.md. Khi một nguồn hỏng, khối đó nói "bị chặn / vượt giới
+chỉ đọc — nhưng khoá đó giờ phải xin Reddit duyệt chứ không tự tạo được, xem
+DEPLOY.md. Khi một nguồn hỏng, khối đó nói "bị chặn / vượt giới
 hạn / khoá sai" kèm nguyên văn câu trả lời, không bao giờ hiện thành "không ai
 bàn".
 

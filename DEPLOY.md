@@ -682,23 +682,38 @@ chính là phép đo.
 chủ app" kèm `Just a moment` / `Cloudflare`, nghĩa là StockTwits chặn IP của
 Render — không có cách sửa bằng code, và app không vượt tường chống bot.
 
-**Reddit: không khoá thì thử JSON công khai, có khoá thì dùng API chính
-thức.** Reddit hay chặn máy chủ trung tâm dữ liệu, nên nếu khối Reddit hiện
-"bị chặn":
+**Reddit: đường mặc định là JSON công khai, KHÔNG khoá.** Không cần làm gì
+cả — mở Analyze một mã sôi động là phép đo. Có bài là chạy; khối hiện "bị
+chặn" nghĩa là Reddit chặn IP của Render.
 
-1. Đăng nhập Reddit → mở **reddit.com/prefs/apps** → **create another app…**
-2. Chọn loại **script**, đặt tên (ví dụ `put-screener`), redirect uri điền
-   `http://localhost` (không dùng tới, nhưng ô bắt buộc).
-3. Chuỗi ngắn dưới tên app là **client id**; ô **secret** là client secret.
-4. Render → Environment: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` (tuỳ chọn
-   `REDDIT_USER_AGENT` dạng `web:put-screener:1.0 (by /u/<tên-bạn>)`).
+> ⛔ **Tự tạo khoá Reddit KHÔNG còn làm được — đo 2026-09-28 bằng ảnh chụp
+> của chủ app.** Bản trước của mục này bảo vào `reddit.com/prefs/apps` →
+> *create another app…* → loại *script*. Làm đúng như thế, bấm *create app*
+> thì Reddit không tạo gì mà trả một dòng: *"In order to create an
+> application or use our API you can read our full policies here"* — trỏ tới
+> **Responsible Builder Policy**. Trang wiki `r/reddit.com/wiki/api` nói rõ:
+> app mới dùng **Data API** phải **gửi yêu cầu** (form hỗ trợ → *I'm a
+> Developer* → *I want to register to use the Reddit API*), và câu dẫn đi kèm
+> là *"If you have a valid **moderation** use case"*. Một app đọc bàn tán
+> chứng khoán cho cá nhân không phải việc kiểm duyệt, nên khả năng được duyệt
+> thấp — ghi ra để khỏi ai làm lại bước prefs/apps rồi tưởng mình bấm sai.
+>
+> Nếu vẫn muốn thử: gửi yêu cầu qua form đó, mô tả đúng sự thật (đọc bài
+> công khai, chỉ đọc, một request mỗi mã mỗi 30 phút). Được duyệt thì đặt
+> `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` (+ tuỳ chọn
+> `REDDIT_USER_AGENT` dạng `web:put-screener:1.0 (by /u/<tên-bạn>)`) trên
+> Render; app tự chuyển sang OAuth "app-only" (`grant_type=client_credentials`,
+> token CHỈ ĐỌC). **Không dán client id/secret vào chat với Claude** — chỉ đặt
+> trên Render.
 
-App chỉ xin token "app-only" (`grant_type=client_credentials`) — token đó
-CHỈ ĐỌC, không đăng bài hay bình luận dưới tên bạn được. Reddit có thể đòi
-đồng ý điều khoản Data API hoặc duyệt app trước khi khoá chạy; nếu khối hiện
-"Reddit từ chối REDDIT_CLIENT_ID/SECRET" kèm `invalid_grant` /
-`unauthorized_client`, đó là lời của Reddit — kiểm lại khoá hoặc trạng thái
-app trên trang Reddit.
+Code đường OAuth giữ nguyên (không tốn gì khi không có khoá, và bật ngay khi
+có). Khi có khoá mà khối hiện "Reddit từ chối REDDIT_CLIENT_ID/SECRET" kèm
+`invalid_grant` / `unauthorized_client`, đó là lời của Reddit — kiểm lại khoá
+hoặc trạng thái duyệt app.
+
+Nếu JSON công khai bị chặn và không có khoá: khối Reddit cứ hiện "bị chặn"
+(Claude được báo là không kiểm được Reddit, không đoán), hoặc bỏ hẳn khối —
+quyết định của chủ app.
 
 Chi phí: mỗi nguồn một request mỗi mã mỗi 30 phút, kể cả khi lỗi (bấm lại
 một mã đang bị chặn không gõ cửa thêm).
