@@ -86,6 +86,13 @@ services:
         sync: false
       - key: TT_PASSWORD
         sync: false
+      # Reddit (tuỳ chọn) - khối Reddit ở tab Analyze. Bỏ trống thì app thử
+      # JSON công khai không khoá (Reddit hay chặn máy chủ). OAuth app-only,
+      # token chỉ đọc. StockTwits không cần khoá.
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
       - key: OPTIONFLOW_PATH
         value: /var/data/optionflow.json
       - key: DARKPOOL_PATH

@@ -2388,8 +2388,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'No stories are tagged to this ticker.',
   },
   'an.newsNote': {
-    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance, Google News (tìm theo tên công ty) và hồ sơ SEC (8-K, 10-Q/10-K, bản cáo bạch). Bài gắn ít mã xếp trước vì nhiều khả năng viết riêng về mã này. Khi bấm hỏi Claude, Claude đọc đúng các tiêu đề này — chỉ tiêu đề, không đọc thân bài — cùng bảng diễn biến giá ở trên và các bài đăng X bên dưới để nói thị trường đang nói gì về mã. X nằm ở khối riêng bên dưới (tốn tiền theo lượng đọc); StockTwits và Reddit chưa có.',
-    en: 'Sources: Yahoo Finance news search, Google News (searched by company name) and SEC filings (8-K, 10-Q/10-K, prospectuses). Stories tagged to fewer tickers sort first, since they are more likely written about this company. When you ask Claude, it reads exactly these headlines — headlines only, not the articles — together with the price-move table above and the X posts below, to say what the market is saying about the stock. X has its own block below (billed per read); StockTwits and Reddit are not included.',
+    vi: 'Nguồn: tìm kiếm tin của Yahoo Finance, Google News (tìm theo tên công ty) và hồ sơ SEC (8-K, 10-Q/10-K, bản cáo bạch). Bài gắn ít mã xếp trước vì nhiều khả năng viết riêng về mã này. Khi bấm hỏi Claude, Claude đọc đúng các tiêu đề này — chỉ tiêu đề, không đọc thân bài — cùng bảng diễn biến giá ở trên và các bài đăng X, StockTwits, Reddit bên dưới để nói thị trường đang nói gì về mã. X, StockTwits và Reddit nằm ở các khối riêng bên dưới — cả ba là bàn tán chưa kiểm chứng, Claude đọc chúng để tả giọng điệu chứ không coi là nguyên nhân.',
+    en: 'Sources: Yahoo Finance news search, Google News (searched by company name) and SEC filings (8-K, 10-Q/10-K, prospectuses). Stories tagged to fewer tickers sort first, since they are more likely written about this company. When you ask Claude, it reads exactly these headlines — headlines only, not the articles — together with the price-move table above and the X, StockTwits and Reddit posts below, to say what the market is saying about the stock. X, StockTwits and Reddit each have their own block below — all three are unverified chatter, which Claude reads for tone, never as a cause.',
   },
   'an.newsAllFailed': {
     vi: 'Không lấy được tin: MỌI nguồn tin đều hỏng (xem lý do bên dưới). Đây KHÔNG phải "không có tin" — chưa kiểm được.',
@@ -2439,6 +2439,111 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'X refused the engagement field (public_metrics), so the app asked again without it and sorts by time only.',
   },
   'xp.partial': { vi: (e: string) => `X trả kèm lỗi từng phần: ${e}`, en: (e: string) => `X returned partial errors: ${e}` },
+  'st.title': { vi: 'StockTwits', en: 'StockTwits' },
+  'st.loading': { vi: 'Đang hỏi StockTwits…', en: 'Asking StockTwits…' },
+  'st.none': {
+    vi: 'Không lấy được StockTwits cho lượt này (máy chủ app không trả lời).',
+    en: 'Could not load StockTwits this time (the app server did not answer).',
+  },
+  'st.caveat': {
+    vi: 'BÀN TÁN CHƯA KIỂM CHỨNG của người dùng StockTwits, không phải tin tức. Nhãn Bullish/Bearish là do CHÍNH người đăng tự gắn — không phải phép đo cảm xúc. Claude được dặn không coi bài nào là sự thật.',
+    en: 'UNVERIFIED chatter from StockTwits users, not news. Bullish/Bearish tags are set BY THE POSTER — not a measured sentiment. Claude is told never to treat a post as fact.',
+  },
+  'st.tagsLead': {
+    vi: ({ n, span }: { n: number; span: string }) => `${n} bài gần nhất (${span}). Nhãn người đăng tự gắn:`,
+    en: ({ n, span }: { n: number; span: string }) => `${n} most recent posts (${span}). Poster-declared tags:`,
+  },
+  'st.spanMin': { vi: (n: number) => `trải trong ${n} phút`, en: (n: number) => `spanning ${n} minutes` },
+  'st.spanHour': { vi: (n: number) => `trải trong ${n} giờ`, en: (n: number) => `spanning ${n} hours` },
+  'st.spanUnknown': { vi: 'không rõ khoảng thời gian', en: 'time span unknown' },
+  'st.bull': { vi: (n: number) => `${n} Bullish`, en: (n: number) => `${n} Bullish` },
+  'st.bear': { vi: (n: number) => `${n} Bearish`, en: (n: number) => `${n} Bearish` },
+  'st.untagged': { vi: (n: number) => `${n} không gắn nhãn`, en: (n: number) => `${n} untagged` },
+  'st.likes': { vi: (n: number) => `${n} thích`, en: (n: number) => `${n} likes` },
+  'st.open': { vi: 'mở trên StockTwits', en: 'open on StockTwits' },
+  'st.empty': {
+    vi: (n: number) => `StockTwits trả lời nhưng không có bài dùng được (trả ${n} bài trước khi lọc) — tức ít người bàn về mã này.`,
+    en: (n: number) => `StockTwits answered but has no usable post (${n} returned before filtering) — little chatter about this symbol.`,
+  },
+  'st.note': {
+    vi: (v: { sym: string; returned: number; spam: number; other: number; max: number; min: number }) =>
+      `Luồng bài mới nhất của ${v.sym}; StockTwits trả ${v.returned} bài, bỏ ${v.spam} bài gắn quá ${v.max} mã (bài điểm danh) và ${v.other} bài không gắn mã này. Mã sôi động thì 30 bài có thể chỉ phủ vài chục phút — tỉ lệ nhãn phải đọc cùng khoảng thời gian. Mỗi mã chỉ hỏi lại sau ${v.min} phút.`,
+    en: (v: { sym: string; returned: number; spam: number; other: number; max: number; min: number }) =>
+      `Latest stream for ${v.sym}; StockTwits returned ${v.returned}, dropped ${v.spam} tagging more than ${v.max} tickers (mass lists) and ${v.other} not tagged to this ticker. For a busy symbol 30 posts can cover only minutes — read the tag split together with the time span. Each symbol is asked again only after ${v.min} minutes.`,
+  },
+  'st.raw': { vi: (e: string) => `Nguyên văn: ${e}`, en: (e: string) => `Verbatim: ${e}` },
+  'st.fail.blocked': {
+    vi: 'StockTwits chặn yêu cầu từ máy chủ app (thường là lớp chống bot Cloudflare với IP trung tâm dữ liệu) — không phải "không ai bàn".',
+    en: 'StockTwits blocked the request from the app server (usually its Cloudflare bot wall on datacenter IPs) — not "nobody is talking".',
+  },
+  'st.fail.rate-limited': {
+    vi: 'StockTwits báo vượt giới hạn lượt gọi — app thử lại sau 30 phút.',
+    en: 'StockTwits reports a rate limit — the app retries after 30 minutes.',
+  },
+  'st.fail.not-found': {
+    vi: 'StockTwits không có luồng cho cách viết mã này.',
+    en: 'StockTwits has no stream for this spelling of the symbol.',
+  },
+  'st.fail.bad-shape': {
+    vi: 'StockTwits trả lời nhưng app không bóc được bài nào — tên trường app nhớ có thể đã sai; dòng nguyên văn in khoá thật.',
+    en: 'StockTwits answered but the app could not parse a single post — the field names it remembers may be wrong; the verbatim line shows the real keys.',
+  },
+  'st.fail.unavailable': {
+    vi: 'Không gọi được StockTwits.',
+    en: 'Could not reach StockTwits.',
+  },
+  'rd.title': { vi: 'Reddit', en: 'Reddit' },
+  'rd.loading': { vi: 'Đang hỏi Reddit…', en: 'Asking Reddit…' },
+  'rd.none': {
+    vi: 'Không lấy được Reddit cho lượt này (máy chủ app không trả lời).',
+    en: 'Could not load Reddit this time (the app server did not answer).',
+  },
+  'rd.caveat': {
+    vi: 'BÀN TÁN CHƯA KIỂM CHỨNG trên Reddit, không phải tin tức — người ta thường đoán lý do SAU khi giá đã chạy và hay đoán sai. Claude chỉ dùng để tả giọng điệu, không coi là nguyên nhân.',
+    en: 'UNVERIFIED discussion on Reddit, not news — people often guess at a cause AFTER the move, and often wrongly. Claude uses it only for tone, never as a cause.',
+  },
+  'rd.score': { vi: (n: number) => `${n} điểm`, en: (n: number) => `score ${n}` },
+  'rd.comments': { vi: (n: number) => `${n} bình luận`, en: (n: number) => `${n} comments` },
+  'rd.open': { vi: 'mở trên Reddit', en: 'open on Reddit' },
+  'rd.empty': {
+    vi: (n: number) => `Reddit trả lời nhưng không có bài nào nói về mã này trong 7 ngày (tìm ra ${n} bài trước khi lọc) — tức ít người bàn.`,
+    en: (n: number) => `Reddit answered but no post in the last 7 days is about this stock (${n} search results before filtering) — little discussion.`,
+  },
+  'rd.note': {
+    vi: (v: { q: string; subs: string; returned: number; dropped: number; min: number }) =>
+      `Tìm ${v.q} trong ${v.subs}, 7 ngày gần nhất; Reddit trả ${v.returned} bài, bỏ ${v.dropped} bài không thật sự nói về mã này (chỉ giữ bài nhắc $MÃ, tên công ty, hoặc mã viết hoa đứng riêng). Xếp theo điểm. Mỗi mã chỉ hỏi lại sau ${v.min} phút.`,
+    en: (v: { q: string; subs: string; returned: number; dropped: number; min: number }) =>
+      `Searched ${v.q} in ${v.subs} over the last 7 days; Reddit returned ${v.returned}, dropped ${v.dropped} not actually about this stock (kept only posts naming $TICKER, the company, or the ticker in capitals on its own). Sorted by score. Each symbol is asked again only after ${v.min} minutes.`,
+  },
+  'rd.ambiguous': {
+    vi: 'Mã này trùng một chữ hay gặp (hoặc chỉ một chữ cái), nên chỉ bài nhắc $MÃ hoặc tên công ty mới được giữ.',
+    en: 'This ticker doubles as a common word (or is a single letter), so only posts naming $TICKER or the company are kept.',
+  },
+  'rd.routeOauth': {
+    vi: 'Đường gọi: Reddit API chính thức (OAuth chỉ đọc, REDDIT_CLIENT_ID).',
+    en: 'Route: official Reddit API (read-only OAuth, REDDIT_CLIENT_ID).',
+  },
+  'rd.routePublic': {
+    vi: 'Đường gọi: JSON công khai của Reddit, không khoá. Reddit hay chặn máy chủ trung tâm dữ liệu — nếu hỏng, đặt REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET trên Render (xem DEPLOY.md).',
+    en: 'Route: Reddit public JSON, no key. Reddit often blocks datacenter servers — if it fails, set REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET on Render (see DEPLOY.md).',
+  },
+  'rd.fail.blocked': {
+    vi: 'Reddit chặn yêu cầu từ máy chủ app — không phải "không ai bàn".',
+    en: 'Reddit blocked the request from the app server — not "nobody is talking".',
+  },
+  'rd.fail.rate-limited': {
+    vi: 'Reddit báo vượt giới hạn lượt gọi — app thử lại sau 30 phút.',
+    en: 'Reddit reports a rate limit — the app retries after 30 minutes.',
+  },
+  'rd.fail.bad-key': {
+    vi: 'Reddit từ chối REDDIT_CLIENT_ID/SECRET (khoá sai, hoặc app chưa được Reddit duyệt).',
+    en: 'Reddit rejected REDDIT_CLIENT_ID/SECRET (wrong key, or the app is not approved by Reddit).',
+  },
+  'rd.fail.bad-shape': {
+    vi: 'Reddit trả lời nhưng app không bóc được bài nào — dòng nguyên văn in khoá thật.',
+    en: 'Reddit answered but the app could not parse a single post — the verbatim line shows the real keys.',
+  },
+  'rd.fail.unavailable': { vi: 'Không gọi được Reddit.', en: 'Could not reach Reddit.' },
   'mv.title': { vi: 'Price move vs market', en: 'Price move vs market' },
   'mv.window': { vi: 'Khung', en: 'Window' },
   'mv.stock': { vi: 'Mã này', en: 'This stock' },

@@ -8,6 +8,7 @@ import OutlookMap from './OutlookMap';
 import UwContextCard from './UwContextCard';
 import type { UwContext } from '@/lib/uwsummary';
 import type { XSymbolResult } from '@/lib/xsymbol';
+import type { SocialResult } from '@/lib/social';
 
 const MODES = ['read', 'outlook'] as const;
 type Mode = (typeof MODES)[number];
@@ -40,6 +41,8 @@ export default function AiRead({
   uwPromise = null,
   x = null,
   xPromise = null,
+  social = null,
+  socialPromise = null,
 }: {
   analysis: any;
   gex?: any;
@@ -52,6 +55,9 @@ export default function AiRead({
   /** Bài đăng X của mã (`/api/analyze/x`), tải MỘT lần ở AnalysisPanel. */
   x?: XSymbolResult | null;
   xPromise?: Promise<XSymbolResult | null> | null;
+  /** StockTwits + Reddit của mã (`/api/analyze/social`), tải MỘT lần ở AnalysisPanel. */
+  social?: SocialResult | null;
+  socialPromise?: Promise<SocialResult | null> | null;
 }) {
   const { t, lang } = useLang();
   const [text, setText] = useState('');
@@ -114,11 +120,12 @@ export default function AiRead({
 
       const uwData = uw ?? (uwPromise ? await uwPromise : null);
       const xData = x ?? (xPromise ? await xPromise : null);
+      const socialData = social ?? (socialPromise ? await socialPromise : null);
 
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData }),
+        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData }),
         signal: ctrl.signal,
       });
 

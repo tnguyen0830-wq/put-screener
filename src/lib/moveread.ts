@@ -175,10 +175,12 @@ export const MARKET_SECTION =
   "needs no company story - say so rather than pinning a market-wide move on a " +
   "company headline. If the headlines do not explain the move, say that " +
   "plainly; it is a real finding. If the news sources failed, say you could " +
-  "not check. Then add what people on X are saying, from the POSTS ON X " +
-  "lines: the tone of the conversation and the topics that keep coming up, " +
-  "clearly labelled as unverified chatter and never as a cause or a fact; if X " +
-  "was not available, say so in one line. " +
+  "not check. Then add what people on X, StockTwits and Reddit are saying, from " +
+  "the POSTS ON X, STOCKTWITS and REDDIT lines: the tone of the conversation " +
+  "and the topics that keep coming up, clearly labelled as unverified chatter " +
+  "and never as a cause or a fact; StockTwits Bullish/Bearish counts are " +
+  "self-declared by posters, so quote them with their time span. If one of " +
+  "those sources was not available, say so in one line. " +
   "Write this section even when the news is thin: it is the part " +
   "the reader asked for.";
 

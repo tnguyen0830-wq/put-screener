@@ -9,6 +9,8 @@ import AiRead from './AiRead';
 import SymbolFlow from './SymbolFlow';
 import MoveVsMarket from './MoveVsMarket';
 import XPosts from './XPosts';
+import { StocktwitsPosts, RedditPosts } from './SocialPosts';
+import type { SocialResult } from '@/lib/social';
 import type { XSymbolResult } from '@/lib/xsymbol';
 import type { MoveRead } from '@/lib/moveread';
 import type { UwContext } from '@/lib/uwsummary';
@@ -292,6 +294,12 @@ export default function AnalysisPanel({
   const [xLoading, setXLoading] = useState(false);
   const [xPromise, setXPromise] = useState<Promise<XSymbolResult | null> | null>(null);
   const xSym = useRef<string | null>(null);
+  /* StockTwits + Reddit (`/api/analyze/social`) — cùng khuôn X: tải MỘT lần
+     cho cả hai khối hiển thị lẫn Claude, sau /api/analyze. */
+  const [social, setSocial] = useState<SocialResult | null>(null);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialPromise, setSocialPromise] = useState<Promise<SocialResult | null> | null>(null);
+  const socialSym = useRef<string | null>(null);
   /* Bản dịch tiếng Việt của sector/industry/country/description - nguồn
      gốc (Finviz/FMP) chỉ có tiếng Anh, đây là chỗ duy nhất trên trang còn
      tiếng Anh khi UI ở chế độ tiếng Việt. null = chưa dịch xong hoặc dịch
@@ -351,6 +359,29 @@ export default function AnalysisPanel({
       setXLoading(false);
     });
   }, [data?.symbol]);
+
+  useEffect(() => {
+    const sym = data?.symbol ?? null;
+    if (sym === socialSym.current) return;
+    socialSym.current = sym;
+    setSocial(null);
+    setSocialPromise(null);
+    if (!sym) {
+      setSocialLoading(false);
+      return;
+    }
+    setSocialLoading(true);
+    const q = `symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(data?.name ?? '')}`;
+    const pr = fetch(`/api/analyze/social?${q}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as SocialResult) : null))
+      .catch(() => null);
+    setSocialPromise(pr);
+    pr.then((v) => {
+      if (socialSym.current !== sym) return;
+      setSocial(v);
+      setSocialLoading(false);
+    });
+  }, [data?.symbol, data?.name]);
 
   const load = useCallback(async (symbol: string) => {
     const s = symbol.trim().toUpperCase();
@@ -544,7 +575,7 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} />
+            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} social={social} socialPromise={socialPromise} />
 
             <SymbolFlow uw={uw} loading={uwLoading} />
 
@@ -718,6 +749,12 @@ export default function AnalysisPanel({
 
             <h3 className="dsec">{tr('xp.title')}</h3>
             <XPosts x={xr} loading={xLoading} />
+
+            <h3 className="dsec">{tr('st.title')}</h3>
+            <StocktwitsPosts st={social?.stocktwits ?? null} loading={socialLoading} />
+
+            <h3 className="dsec">{tr('rd.title')}</h3>
+            <RedditPosts rd={social?.reddit ?? null} loading={socialLoading} />
 
             <h3 className="dsec">{tr('dd.chart')}</h3>
             <TradingViewWidget
