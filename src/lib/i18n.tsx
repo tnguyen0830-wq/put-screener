@@ -600,6 +600,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tape.vix': { vi: 'Chỉ số biến động CBOE - đo mức lo sợ của thị trường', en: 'CBOE Volatility Index - the market fear gauge' },
   'tape.gold': { vi: 'Hợp đồng tương lai vàng', en: 'Gold futures' },
   'tape.oil': { vi: 'Hợp đồng tương lai dầu thô WTI', en: 'WTI crude oil futures' },
+  'tape.noPct': { vi: 'Schwab không gửi mức thay đổi cho mã này và app không tự tính được (thiếu giá chốt phiên trước).', en: 'Schwab sent no change for this symbol and the app could not compute one (no previous close).' },
   'tape.btc': { vi: 'Hợp đồng tương lai Bitcoin', en: 'Bitcoin futures' },
   'brand.home': {
     vi: 'Tyler Investment Tool — về trang chính',
