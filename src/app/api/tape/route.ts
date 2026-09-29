@@ -1,4 +1,5 @@
 import { quotes } from '@/lib/schwab';
+import { tapeChange } from '@/lib/tapequote';
 
 /**
  * Quotes for the scrolling market bar.
@@ -126,8 +127,11 @@ export async function GET() {
             // for anyone reading this endpoint directly.
             contract: display(symbol),
             last: quote.lastPrice,
-            change: quote.netChange ?? 0,
-            changePercent: quote.netPercentChange ?? 0,
+            // Hợp đồng tương lai không mang `netPercentChange` (#241) - tự tính
+            // từ giá chốt phiên trước thay vì in 0.00%, và null khi không tính
+            // được. `pctFrom` + `quoteKeys` để lần đo sau thấy trường thật.
+            ...tapeChange(quote),
+            quoteKeys: symbol.startsWith('/') ? Object.keys(quote).sort() : undefined,
           };
         }
       }

@@ -1199,6 +1199,8 @@ table.results tbody tr.clickable {
   color: var(--label);
 }
 
+.tapena { color: var(--muted); }
+
 .tapelast {
   color: var(--ink);
 }

@@ -10,8 +10,9 @@ type Item = {
   /** The contract that price came from - GCZ26 where the row says GC. */
   contract?: string;
   last: number;
-  change: number;
-  changePercent: number;
+  /** null khi Schwab không gửi và không tự tính được - KHÔNG phải 0. */
+  change: number | null;
+  changePercent: number | null;
 };
 
 /**
@@ -80,7 +81,9 @@ export default function TickerTape() {
   if (!items) return <div className="tape tape-placeholder" />;
 
   const row = items.map((it) => {
-    const up = it.change >= 0;
+    // Chiều lấy từ % nếu có, không thì từ mức thay đổi tuyệt đối.
+    const dir = it.changePercent ?? it.change;
+    const up = (dir ?? 0) >= 0;
     return (
       <span className="tapeitem" key={it.key}>
         {/* The symbol itself, not a translated name: SPX and CL read the same
@@ -96,9 +99,15 @@ export default function TickerTape() {
           })}
         </span>
         {/* House rule (globals.css): green is up, red is down, direction only. */}
-        <span className={up ? 'good' : 'bad'}>
-          {up ? '▲' : '▼'} {Math.abs(it.changePercent).toFixed(2)}%
-        </span>
+        {/* Không biết % thì in "—" chứ không in 0.00%: 0.00% đọc thành "giá
+            đứng yên", tức một lời khẳng định về thứ không ai đo (#241). */}
+        {it.changePercent === null || it.changePercent === undefined ? (
+          <span className="tapena" title={t('tape.noPct')}>—</span>
+        ) : (
+          <span className={up ? 'good' : 'bad'}>
+            {up ? '▲' : '▼'} {Math.abs(it.changePercent).toFixed(2)}%
+          </span>
+        )}
       </span>
     );
   });
