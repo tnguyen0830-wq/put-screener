@@ -4,7 +4,7 @@ import { useLang } from '@/lib/i18n';
 import { PROB_DAYS, type Outlook } from '@/lib/outlook';
 
 /**
- * Bản đồ mức giá của chế độ "Kịch bản giá" — những con số Claude được phép
+ * Bản đồ mức giá trong khối Claude ở Analyze (luôn hiện từ #239) — những con số Claude được phép
  * dùng, in ra TRƯỚC khi ai bấm gì.
  *
  * Hiện ra ngay vì nó miễn phí: mọi thứ tính từ payload trang Analyze đã có,

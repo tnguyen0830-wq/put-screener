@@ -462,14 +462,22 @@ lịch sử giá Schwab, hồ sơ công ty, tin tức, và biểu đồ TradingV
 `/api/analyze` nói rõ **nguồn nào trả lời được, nguồn nào không** thay vì lặng lẽ
 để trống — một mục trống vì API lỗi trông y hệt một mục trống vì không có tin gì.
 
-Nút **"Nhờ Claude phân tích"** đọc **toàn bộ** chỉ số trên trang trong một lượt:
-kỹ thuật (SMA, RSI, MACD, ATR, Bollinger, HV), biến động ngụ ý, cơ bản, **và
-cấu trúc gamma** lấy từ đúng biểu đồ GEX cuối trang (put wall, call wall, zero
-gamma, net GEX, các strike gamma lớn nhất, nguồn chuỗi), **và tin tức của mã**
-(xem đoạn dưới). Claude chỉ được dùng đúng những con số và tiêu đề đang hiện,
-không thêm kiến thức ngoài, và phải nói thẳng khi GEX thiếu, cũ, hay chỉ có mức
-của Unusual Whales — một mục vắng mặt rất dễ đọc thành "không có gì đáng nói".
-Mỗi lần bấm tốn vài cent API.
+Nút **"Nhờ Claude phân tích"** là **một lượt đọc duy nhất**, viết theo đúng
+thứ tự: (1) **chart** — ảnh bạn đính kèm nếu có, không có thì đọc cấu trúc giá
+từ bảng và nói rõ là không có ảnh; (2) **chỉ báo** kỹ thuật (SMA, RSI, MACD,
+ATR, Bollinger) và biến động (IV so với HV); (3) **cấu trúc gamma** lấy từ đúng
+biểu đồ GEX cuối trang (put wall, call wall, zero gamma, net GEX); (4) **dòng
+tiền** Unusual Whales (luồng quyền chọn, xu hướng flow trong tuần, dark pool,
+nghị sĩ); (5) **thị trường và tin tức đang nói gì** (xem đoạn dưới); (6) **kết
+luận** — các phần trên đồng thuận hay mâu thuẫn ở đâu, và nghĩa là gì với
+người bán put; (7) **xu hướng sắp tới** (1 tuần – 1 tháng) — đang nghiêng về
+đâu, ba kịch bản chính/tăng/giảm và mức mà thủng thì nhận định sai; (8) điều
+làm yếu nhận định. Trước đây (tới #238) phần 7 là một chế độ riêng "Kịch bản
+giá" phải bấm chọn; giờ nó là phần cuối của cùng một câu trả lời. Claude chỉ
+được dùng đúng những con số và tiêu đề đang hiện, không thêm kiến thức ngoài,
+và phải nói thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual Whales — một
+mục vắng mặt rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent
+API.
 
 **Chart TradingView cho Claude đọc.** Chart TradingView của mã nằm ngay trong
 khung Claude (theo theme sáng/tối và ngôn ngữ của app). Claude **không** tự
@@ -478,15 +486,15 @@ nhìn thấy khung chart đó: đó là trang của TradingView nhúng vào, app
 **Chụp chart này** (Chrome/Edge máy tính, chọn "Tab này" khi trình duyệt hỏi,
 app tự cắt đúng khung chart), **Chọn ảnh** (điện thoại: chụp màn hình rồi chọn),
 **dán** Ctrl+V hoặc **kéo thả** ảnh vào. Bạn có thể vẽ đường, vùng, đổi khung
-thời gian trước khi chụp; Claude đọc cả thứ bạn vẽ. Claude thêm một mục cuối
-nói về ảnh, và được dặn: kiểm tra mã và khung thời gian trong ảnh trước (ảnh
+thời gian trước khi chụp; Claude đọc cả thứ bạn vẽ. Ảnh là mục đầu tiên của
+câu trả lời, và Claude được dặn: kiểm tra mã và khung thời gian trong ảnh trước (ảnh
 của mã khác thì bỏ), bảng số do app tính luôn thắng khi lệch với giá đọc bằng
-mắt từ trục ảnh, và ở chế độ Kịch bản giá thì mọi giá vẫn phải chép từ bảng mức.
+mắt từ trục ảnh, và ở phần kết luận / xu hướng thì mọi giá vẫn phải chép từ bảng mức.
 Ảnh được thu nhỏ còn cạnh dài 1568px và nén JPEG trong trình duyệt, không lưu ở
 đâu cả, và bị xoá khi đổi sang mã khác. Mỗi ảnh tốn thêm khoảng 1.500 token cho
 lượt hỏi.
 
-**Thị trường đang nói gì về mã này.** Mục đầu tiên Claude viết trả lời *mã đang
+**Thị trường đang nói gì về mã này.** Mục thứ năm Claude viết trả lời *mã đang
 rớt, lên hay đi ngang, và vì sao*. Hai nửa khó của câu đó do app tự tính, trong
 bảng **Price move vs market** ngay trên mục News: % thay đổi của mã, SPY và ETF
 ngành (XLK, XLF…) trong phiên gần nhất, 5 phiên và 20 phiên; nhãn **Tăng /
@@ -510,7 +518,7 @@ Ngay dưới mục News là khối **Posts on X**: bài đăng 7 ngày gần nh�
 cashtag của mã (`$AAPL`), bỏ retweet và trả lời, xếp theo tương tác. Bài chỉ
 được giữ khi chính X gắn đúng cashtag của mã này, và bài gắn hơn 4 mã (bài
 "điểm danh" câu view) bị loại — số bị loại được in ra. Claude đọc các bài này
-ở mục 1 với nhãn **bàn tán chưa kiểm chứng**: chỉ dùng để tả giọng điệu và chủ
+ở mục 5 với nhãn **bàn tán chưa kiểm chứng**: chỉ dùng để tả giọng điệu và chủ
 đề đang được nhắc, không bao giờ coi là sự thật hay nguyên nhân, và không được
 nặng hơn một tiêu đề báo hay hồ sơ SEC. X tính tiền theo lượng đọc, nên mỗi mã
 tốn **một** request (tối đa 10 bài — X tính khoảng $0,005 mỗi bài đọc, đo ở production) và kết quả — kể cả lỗi — được giữ 30 phút.
@@ -524,7 +532,7 @@ tự gắn **Bullish/Bearish** — đó là lời TỰ KHAI chứ không phải 
 và luôn in kèm khoảng thời gian 30 bài đó phủ (mã sôi động có khi chỉ vài chục
 phút). Reddit chỉ giữ bài nhắc `$MÃ`, tên công ty, hoặc mã viết hoa đứng
 riêng — mã trùng chữ thông dụng (ALL, ON, IT…) thì chỉ nhận `$MÃ` hoặc tên;
-số bài bị loại được in ra. Claude đọc cả hai ở mục 1 với nhãn bàn tán chưa
+số bài bị loại được in ra. Claude đọc cả hai ở mục 5 với nhãn bàn tán chưa
 kiểm chứng, và được dặn rằng người trên Reddit hay đoán lý do SAU khi giá đã
 chạy. Mỗi nguồn một request mỗi mã mỗi 30 phút, kể cả khi lỗi. StockTwits
 không cần khoá; Reddit không khoá thì thử JSON công khai (hay bị chặn từ máy
@@ -534,7 +542,7 @@ DEPLOY.md. Khi một nguồn hỏng, khối đó nói "bị chặn / vượt gi�
 hạn / khoá sai" kèm nguyên văn câu trả lời, không bao giờ hiện thành "không ai
 bàn".
 
-**Kịch bản giá** là chế độ thứ hai của cùng khung đó, trả lời câu *"cổ phiếu
+**Xu hướng sắp tới** (mục 7 của cùng câu trả lời) trả lời câu *"cổ phiếu
 sẽ về đâu"* theo cách trung thực duy nhất có thể: không ai biết giá sẽ về đâu,
 nhưng hai thứ thì TÍNH được. Một là **biên dao động thị trường quyền chọn đang
 định giá** — từ IV của chính chuỗi Schwab, app in khoảng 1σ (~68%) và 2σ
@@ -545,7 +553,7 @@ kèm khoảng cách tới giá và **xác suất thị trường quyền chọn 
 vượt qua / chạm mức đó trong 30 ngày. Những mức nằm trong 1% của nhau được đánh
 dấu **hội tụ**. Bảng này hiện ngay, miễn phí.
 
-Bấm nút thì Claude đọc các chỉ báo, nói đang **nghiêng** về phía nào (và mạnh
+Trong câu trả lời, Claude nói đang **nghiêng** về phía nào (và mạnh
 tới đâu, kể cả "trung tính"), rồi viết ba kịch bản — chính / tăng / giảm — mỗi
 kịch bản có điều kiện kích hoạt (đóng cửa trên/dưới một mức), vùng tiếp theo, và
 mức mà nếu thủng thì nhận định sai. **Mọi mức giá Claude viết phải chép từ
@@ -555,8 +563,8 @@ log-chuẩn), không phải xác suất chỉ báo kỹ thuật ủng hộ — m
 đó. Earnings rơi vào 30 ngày tới thì có dòng cảnh báo, vì cú nhảy earnings không
 theo phân phối chuẩn. Đây là kịch bản có điều kiện, không phải dự báo.
 
-**Dữ liệu Unusual Whales cho mã đang mở.** Khi có `UW_API_KEY`, cả hai chế độ
-Claude (Đọc chỉ số và Kịch bản giá) đọc thêm: luồng quyền chọn 7 ngày (premium
+**Dữ liệu Unusual Whales cho mã đang mở.** Khi có `UW_API_KEY`, Claude đọc
+thêm (mục 4): luồng quyền chọn 7 ngày (premium
 call/put, khớp ở ask hay bid, sweep, vị thế mới KL > OI, strike nhiều tiền
 nhất), dark pool ≥ $1M trong 14 ngày (tổng tiền, mua/bán ước lượng, mức giá
 nhiều tiền nhất) và giao dịch nghị sĩ 90 ngày. Khối **Unusual Whales** phía trên
@@ -584,7 +592,7 @@ trọng vị thế mới (KL > OI), tỉ lệ khớp ở ask — rồi tự gắ
 vẹn** 09:30–16:00 New York: hôm nay còn đang giao dịch và phiên đầu cửa sổ chỉ
 lọt một phần được in riêng chứ không đem so, vì so tổng dở dang là ra "flow
 đang nguội" giả. Mỗi nửa dưới 3 alert thì app không gắn nhãn và nói là quá
-mỏng. Claude đọc đúng các con số và nhãn này (cả hai chế độ) và được dặn không
+mỏng. Claude đọc đúng các con số và nhãn này và được dặn không
 tự vẽ ra xu hướng mà bảng không ghi; flow dịch chuyển là tiền đổi chỗ giao
 dịch, không phải dự báo giá. Ngày lễ không được nhận ra.
 

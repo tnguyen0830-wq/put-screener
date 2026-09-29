@@ -2,7 +2,7 @@
  * Dữ liệu Unusual Whales cho MỘT mã ở tab Analyze — phần tóm tắt thuần.
  *
  * Chủ app hỏi: *"Có thể lấy thông tin bên UW data được không?"* — tức cho
- * phần Claude phân tích (cả "Đọc chỉ số" lẫn "Kịch bản giá") đọc thêm luồng
+ * phần Claude phân tích (một lượt đọc gộp, #239) đọc thêm luồng
  * quyền chọn, dark pool và giao dịch của nghị sĩ.
  *
  * Tải dữ liệu nằm ở `uwcontext.ts` (Node, gọi UW). File này KHÔNG import

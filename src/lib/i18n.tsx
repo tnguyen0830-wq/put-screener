@@ -2734,23 +2734,16 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'ai.rerun': { vi: 'Phân tích lại', en: 'Run again' },
   'ai.running': { vi: 'Đang đọc…', en: 'Reading…' },
   'ai.idle': {
-    vi: 'Claude đọc TẤT CẢ chỉ số trên trang này trong một lượt - kỹ thuật (SMA, RSI, MACD, ATR, Bollinger, HV), biến động ngụ ý, cơ bản, và cấu trúc gamma (put wall, call wall, zero gamma, net GEX từ biểu đồ cuối trang) - rồi nói chúng hợp nhau hay mâu thuẫn ở đâu. Mỗi lần bấm tốn khoảng 3 cent tiền API, nên nó chỉ chạy khi bạn bấm.',
-    en: 'Claude reads ALL the indicators on this page in one pass - technical (SMA, RSI, MACD, ATR, Bollinger, HV), implied vol, fundamentals, and the gamma structure (put wall, call wall, zero gamma, net GEX from the chart at the bottom) - and says where they agree and where they contradict each other. Each run costs a few cents of API credit, so it only runs when you ask.',
+    vi: 'Một lượt Claude đọc HẾT theo đúng thứ tự: chart (ảnh bạn đính kèm bên dưới, nếu có) → chỉ báo kỹ thuật và biến động (SMA, RSI, MACD, ATR, Bollinger, IV so với HV) → cấu trúc gamma (put wall, call wall, zero gamma, net GEX) → dòng tiền Unusual Whales → tin tức và bàn tán trên X/StockTwits/Reddit → rồi KẾT LUẬN chung và XU HƯỚNG sắp tới (nghiêng về đâu + ba kịch bản chính/tăng/giảm). Mọi mức giá trong phần xu hướng phải chép từ bảng mức giá app tự tính bên dưới. Mỗi lần bấm tốn vài cent tiền API, nên nó chỉ chạy khi bạn bấm.',
+    en: 'One Claude pass reads EVERYTHING in this order: the chart (images you attach below, if any) → technical and volatility indicators (SMA, RSI, MACD, ATR, Bollinger, IV vs HV) → the gamma structure (put wall, call wall, zero gamma, net GEX) → Unusual Whales money flow → the news and chatter on X/StockTwits/Reddit → then an overall CONCLUSION and the TREND AHEAD (which way it leans + three base/upside/downside scenarios). Every price in the trend part must be copied from the price map the app computes below. Each run costs a few cents of API credit, so it only runs when you ask.',
   },
   'ai.caveat': {
     vi: 'Claude chỉ đọc đúng những con số hiện trên trang này, không có tin tức hay dữ liệu ngoài. Đây là cách diễn giải chỉ số, không phải khuyến nghị mua bán — quyết định vẫn là của bạn.',
     en: 'Claude reads only the numbers on this page — no news, no outside data. This is a reading of the indicators, not a recommendation to buy or sell; the decision stays yours.',
   },
-  'ai.mode.read': { vi: 'Đọc chỉ số', en: 'Read indicators' },
-  'ai.mode.outlook': { vi: 'Kịch bản giá', en: 'Price scenarios' },
-  'ol.run': { vi: 'Nhờ Claude viết kịch bản', en: 'Ask Claude for scenarios' },
-  'ol.idle': {
-    vi: 'Bảng dưới đây do app TỰ TÍNH, miễn phí: biên dao động mà thị trường quyền chọn đang định giá, và các mức giá từng làm giá quay đầu hoặc nơi dòng phòng hộ tập trung. Bấm nút để Claude đọc các chỉ báo xem đang nghiêng về phía nào và viết ba kịch bản (chính / tăng / giảm) nối các mức trong bảng — Claude không được tự nghĩ ra mức giá nào ngoài bảng. Mỗi lần bấm tốn vài cent.',
-    en: 'The table below is computed by the app, free: the range the option market is pricing, and the levels where price has turned before or where hedging flow concentrates. Press the button for Claude to read which way the indicators lean and write three scenarios (base / upside / downside) linking the levels in the table — Claude may not invent any price outside it. Each run costs a few cents.',
-  },
-  'ol.caveat': {
-    vi: 'Đây là kịch bản CÓ ĐIỀU KIỆN, không phải dự báo. Không ai — kể cả thị trường quyền chọn — biết giá sẽ về đâu; bảng trên chỉ nói thị trường đang định giá khoảng nào và giá hay dừng ở đâu. Không phải khuyến nghị mua bán.',
-    en: 'These are CONDITIONAL scenarios, not a forecast. Nobody — the option market included — knows where price will go; the table only says what range is being priced and where price tends to stop. Not a recommendation to buy or sell.',
+  'ai.fullCaveat': {
+    vi: 'Claude chỉ đọc những gì app đưa cho nó: số liệu trên trang, tiêu đề tin (không đọc thân bài) và ảnh bạn đính kèm. Phần xu hướng là kịch bản CÓ ĐIỀU KIỆN, không phải dự báo — không ai, kể cả thị trường quyền chọn, biết giá sẽ về đâu; xác suất trong bảng là thứ giá quyền chọn hàm ý. Không phải khuyến nghị mua bán — quyết định vẫn là của bạn.',
+    en: 'Claude reads only what the app gives it: the numbers on this page, the headlines (not the articles) and the images you attach. The trend part is CONDITIONAL scenarios, not a forecast — nobody, the option market included, knows where price will go; the probabilities in the table are what option prices imply. Not a recommendation to buy or sell — the decision stays yours.',
   },
   'ol.noSpot': {
     vi: 'Không có giá hiện tại, nên không dựng được bản đồ giá.',

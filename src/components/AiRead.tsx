@@ -3,16 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { buildOutlook } from '@/lib/outlook';
-import { readRememberedOneOf, remember } from '@/lib/remember';
 import OutlookMap from './OutlookMap';
 import UwContextCard from './UwContextCard';
 import ChartForClaude, { type Shot } from './ChartForClaude';
 import type { UwContext } from '@/lib/uwsummary';
 import type { XSymbolResult } from '@/lib/xsymbol';
 import type { SocialLoad, SocialResult } from '@/lib/social';
-
-const MODES = ['read', 'outlook'] as const;
-type Mode = (typeof MODES)[number];
 
 /**
  * Claude's read of the indicators below it, on demand.
@@ -85,30 +81,14 @@ export default function AiRead({
     setSentShots(0);
   }, [symbol]);
 
-  /* Hai chế độ: "đọc chỉ số" (bản gốc) và "kịch bản giá" (lib/outlook.ts).
-     Nhớ lựa chọn như mọi nút chọn khác của app; đọc sau hydrate (#110). */
-  const [mode, setMode] = useState<Mode>('read');
-  useEffect(() => {
-    const m = readRememberedOneOf('aiMode', MODES);
-    if (m) setMode(m);
-  }, []);
-  const pick = (m: Mode) => {
-    if (m === mode) return;
-    abort.current?.abort();
-    setText('');
-    setState('idle');
-    setMode(m);
-    remember('aiMode', m);
-  };
-
-  /* Bản đồ tính ngay trên trình duyệt từ đúng payload đang hiện — miễn phí.
-     Route dựng lại nó bằng CÙNG hàm, nên màn hình và prompt không lệch. */
+  /* MỘT lượt đọc (#239): trước đây có hai chế độ (Đọc chỉ số / Kịch bản giá)
+     và người dùng phải chọn một, trong khi câu họ hỏi là cả hai nối nhau.
+     Bản đồ mức giá giờ luôn hiện: nó tính ngay trên trình duyệt từ đúng
+     payload đang hiện, miễn phí, và route dựng lại nó bằng CÙNG hàm nên màn
+     hình và prompt không lệch. */
   const outlook = useMemo(
-    () =>
-      mode === 'outlook'
-        ? buildOutlook(analysis, gex ?? null, undefined, uwLoading ? null : uw)
-        : null,
-    [mode, analysis, gex, uw, uwLoading]
+    () => buildOutlook(analysis, gex ?? null, undefined, uwLoading ? null : uw),
+    [analysis, gex, uw, uwLoading]
   );
 
   const run = async () => {
@@ -151,7 +131,7 @@ export default function AiRead({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData, socialError: socialErr,
+          analysis, gex: gexData, gexError, lang, uw: uwData, x: xData, social: socialData, socialError: socialErr,
           images: shots.map((s) => ({ media_type: s.media_type, data: s.data })),
         }),
         signal: ctrl.signal,
@@ -209,28 +189,12 @@ export default function AiRead({
           {state === 'running'
             ? t('ai.running')
             : state === 'idle'
-              ? t(mode === 'outlook' ? 'ol.run' : 'ai.run')
+              ? t('ai.run')
               : t('ai.rerun')}
         </button>
       </div>
 
-      <div className="chiprow aimodes" role="group">
-        {MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            className={mode === m ? 'on' : ''}
-            aria-pressed={mode === m}
-            onClick={() => pick(m)}
-          >
-            {t(m === 'outlook' ? 'ai.mode.outlook' : 'ai.mode.read')}
-          </button>
-        ))}
-      </div>
-
-      {state === 'idle' && !text && (
-        <p className="cap">{t(mode === 'outlook' ? 'ol.idle' : 'ai.idle')}</p>
-      )}
+      {state === 'idle' && !text && <p className="cap">{t('ai.idle')}</p>}
 
       <ChartForClaude
         symbol={symbol}
@@ -242,7 +206,7 @@ export default function AiRead({
 
       <UwContextCard uw={uw} loading={uwLoading} />
 
-      {mode === 'outlook' && outlook && <OutlookMap o={outlook} />}
+      {outlook && <OutlookMap o={outlook} />}
 
       {text && <div className="aitext">{text}</div>}
 
@@ -253,7 +217,7 @@ export default function AiRead({
       )}
 
       {(state === 'done' || state === 'running') && text && (
-        <p className="cap">{t(mode === 'outlook' ? 'ol.caveat' : 'ai.caveat')}</p>
+        <p className="cap">{t('ai.fullCaveat')}</p>
       )}
     </section>
   );
