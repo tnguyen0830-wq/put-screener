@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { autoRefreshDue } from '@/lib/newspoll';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, remember } from '@/lib/remember';
 import SpeakBrief from './SpeakBrief';
@@ -130,6 +131,8 @@ export default function NewsPanel() {
   const [briefErr, setBriefErr] = useState<string | null>(null);
   const [briefAt, setBriefAt] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Lúc lượt tải gần nhất xong — để biết khi quay lại tab có cần tải nữa không.
+  const lastFetchRef = useRef<number | null>(null);
   // Chỉ thử khôi phục MỘT lần, ngay sau lần tải tiêu đề đầu tiên — không
   // phải mỗi khi `load` đổi (lượt tự tải lại mỗi 5 phút không được phép
   // ghi đè một bản tóm tắt đang hiện hoặc vừa viết xong trong phiên này).
@@ -185,6 +188,9 @@ export default function NewsPanel() {
 
   const fetchNews = useCallback(async (refresh: boolean) => {
     if (refresh) setRefreshing(true);
+    // Ghi ngay lúc BẮT ĐẦU: lượt đang chờ mạng chậm quá một phút không được
+    // để nhịp kiểm kế tiếp tưởng là chưa hỏi rồi bắn thêm một lượt nữa.
+    lastFetchRef.current = Date.now();
     try {
       const r = await fetch(`/api/news${refresh ? '?refresh=1' : ''}`, { cache: 'no-store' });
       if (!r.ok) {
@@ -198,18 +204,37 @@ export default function NewsPanel() {
       setLoad({ state: 'error', msg: String(e?.message ?? e) });
     } finally {
       setRefreshing(false);
+      // Ghi cả khi hỏng: lượt hỏng vẫn là một lượt hỏi, và thử lại mỗi phút
+      // khi nguồn đang chết chỉ đổi một dòng lỗi lấy thêm request.
+      lastFetchRef.current = Date.now();
     }
   }, []);
 
   useEffect(() => {
     fetchNews(false);
-    // Tự tải lại mỗi 5 phút — đúng nhịp cache của server, nên không tốn thêm
-    // request nguồn nào; chỉ để "3 phút trước" không đứng yên cả buổi.
-    const id = setInterval(() => fetchNews(false), 5 * 60_000);
-    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    // Tự tải lại theo nhịp cache của server, nhưng CHỈ khi tab trình duyệt
+    // đang hiện (lib/newspoll.ts): nguồn X tính tiền theo bài đọc, và một cửa
+    // sổ bỏ quên trong nền không phải là có người đang đọc tin.
+    const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible';
+    const maybe = () => {
+      if (autoRefreshDue(visible(), lastFetchRef.current, Date.now())) fetchNews(false);
+    };
+    const id = setInterval(maybe, 60_000);
+    const tick = setInterval(() => {
+      if (visible()) setNow(Date.now());
+    }, 30_000);
+    // Quay lại tab sau hơn một nhịp → tải đúng một lần, không chờ tới phút kế.
+    const onVis = () => {
+      if (visible()) {
+        setNow(Date.now());
+        maybe();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       clearInterval(id);
       clearInterval(tick);
+      document.removeEventListener('visibilitychange', onVis);
       abortRef.current?.abort();
     };
   }, [fetchNews]);

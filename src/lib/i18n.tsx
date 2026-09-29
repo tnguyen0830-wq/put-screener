@@ -3010,8 +3010,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // ---- Tab Tin tức ----
   'nw.title': { vi: 'News: markets & political economy', en: 'News: markets & political economy' },
   'nw.intro': {
-    vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước — tự dịch sang tiếng Việt khi app ở chế độ này (chuyển sang tiếng Anh để xem nguyên văn của báo). Bấm "Tóm tắt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt cùng ngôn ngữ — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc.',
-    en: 'Headlines from the last 48 hours, newest first — auto-translated to Vietnamese when the app is in that language (switch to English to see the outlet\'s own wording). Press "Summarise" to have Claude read both columns in ONE call and write a brief in the same language — from headlines only, no article bodies. Each line opens the original article.',
+    vi: 'Tiêu đề 48 giờ gần nhất, mới nhất trước — tự dịch sang tiếng Việt khi app ở chế độ này (chuyển sang tiếng Anh để xem nguyên văn của báo). Bấm "Tóm tắt" để Claude đọc cả hai cột trong MỘT lượt và viết bản tóm tắt cùng ngôn ngữ — chỉ dựa trên tiêu đề, không có thân bài. Mỗi dòng bấm vào là mở bài gốc. Trang tự làm mới mỗi 5 phút CHỈ khi tab trình duyệt đang hiện; để trong nền thì dừng, quay lại là tải lại ngay.',
+    en: 'Headlines from the last 48 hours, newest first — auto-translated to Vietnamese when the app is in that language (switch to English to see the outlet\'s own wording). Press "Summarise" to have Claude read both columns in ONE call and write a brief in the same language — from headlines only, no article bodies. Each line opens the original article. The page refreshes itself every 5 minutes ONLY while the browser tab is visible; in the background it stops, and coming back reloads at once.',
   },
   'nw.colMarket': { vi: 'Markets', en: 'Markets' },
   'nw.colPolitics': { vi: 'Politics & economy', en: 'Politics & economy' },

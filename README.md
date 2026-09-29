@@ -931,6 +931,11 @@ từ chính trị chạm vào thị trường). Tiêu đề 48 giờ gần nhấ
 | X theo danh sách tài khoản | `X_BEARER_TOKEN` + `X_NEWS_ACCOUNTS` / `X_NEWS_POLITICS_ACCOUNTS` | trả theo lượng đọc, nên cache riêng 15 phút mà nút Làm mới không vượt qua |
 | Unusual Whales `news/headlines` | `UW_API_KEY` | chưa đo hình dạng — chạy `/api/uwprobe` một lần rồi đọc bước `news-headlines` |
 
+**Trang chỉ tự làm mới khi tab trình duyệt đang hiện** (mỗi 5 phút). Để tab
+trong nền hay quên cửa sổ qua đêm thì trang ngừng hỏi; quay lại sau hơn 5 phút
+là tải lại đúng một lần. Lý do là tiền: nguồn X tính theo bài đọc, và một cửa
+sổ không ai xem vẫn có thể đọc X mỗi 15 phút suốt đêm.
+
 Reuters và AP **không có** trong danh sách RSS dù là hai hãng lớn nhất:
 Reuters đã ngừng RSS công khai từ 2020, AP không có RSS chính thức. Bài của
 họ về qua Google News, vốn gom lại hàng trăm báo.
