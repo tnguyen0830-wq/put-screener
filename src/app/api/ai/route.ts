@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { facts, system } from '@/lib/airead';
-import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
+import { buildOutlook, outlookFacts } from '@/lib/outlook';
 import { uwFacts, type UwContext } from '@/lib/uwsummary';
 import { xFacts, type XSymbolResult } from '@/lib/xsymbol';
 import { socialFacts, type SocialResult } from '@/lib/social';
@@ -57,11 +57,12 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Missing analysis' }, { status: 400 });
   }
 
-  /* Hai chế độ trên cùng một route: "đọc chỉ số" (bản gốc) và "kịch bản
-     giá" (lib/outlook.ts). Bản đồ mức giá được dựng LẠI ở đây từ đúng hai
-     payload client gửi, bằng CÙNG hàm màn hình dùng - không nhận bản đồ
-     client tự tính, để prompt không thể chứa một con số màn hình không có. */
-  const mode = body?.mode === 'outlook' ? 'outlook' : 'read';
+  /* MỘT lượt đọc (#239): chart → chỉ báo → GEX → dòng tiền → tin tức → kết
+     luận + xu hướng sắp tới. Trước đây là hai chế độ tách rời (đọc chỉ số /
+     kịch bản giá) và người dùng phải chọn một. Bản đồ mức giá vẫn được dựng
+     LẠI ở đây từ đúng các payload client gửi, bằng CÙNG hàm màn hình dùng —
+     không nhận bản đồ client tự tính, để prompt không thể chứa một con số
+     màn hình không có. Trường `mode` cũ (trang mở từ trước deploy) bị bỏ qua. */
   const lang = body?.lang === 'en' ? 'en' : 'vi';
   const gex = body?.gex ?? null;
   const gexError =
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
   await logActivity(
     currentUser(req),
     'ai',
-    `${analysis.symbol}${mode === 'outlook' ? ' · kịch bản' : ''}${shots.images.length ? ` · ${shots.images.length} ảnh` : ''}`
+    `${analysis.symbol}${shots.images.length ? ` · ${shots.images.length} ảnh` : ''}`
   );
 
   /* Dữ liệu Unusual Whales mà trang đang hiện (`/api/analyze/uw`), gửi lên
@@ -114,11 +115,8 @@ export async function POST(req: Request) {
 
   const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${socialFacts(social, Date.now(), socialMissing).join('\n')}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
-  const imageRules = chartImageRules(shots.images.length, shots.dropped.length, mode);
-  const text =
-    mode === 'outlook'
-      ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex, undefined, uw))}`
-      : table;
+  const imageRules = chartImageRules(shots.images.length, shots.dropped.length);
+  const text = `${table}\n\n${outlookFacts(buildOutlook(analysis, gex, undefined, uw))}`;
   /* Ảnh đứng TRƯỚC bảng chữ trong cùng một lượt user — thứ tự tài liệu API
      khuyên cho ảnh kèm câu hỏi. Không có ảnh thì nội dung vẫn là một chuỗi
      như cũ, nên lượt hỏi không ảnh gửi đi y hệt trước đây. */
@@ -134,7 +132,7 @@ export async function POST(req: Request) {
   const params = {
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: mode === 'outlook' ? outlookSystem(lang, imageRules) : system(lang, imageRules),
+    system: system(lang, imageRules, shots.images.length),
     thinking: { type: 'adaptive' as const },
     messages: [{ role: 'user' as const, content }],
   };

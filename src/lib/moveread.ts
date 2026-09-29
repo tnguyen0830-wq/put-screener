@@ -157,11 +157,10 @@ export function readMoves(input: {
 /* ---------------- prompt ---------------- */
 
 /**
- * Mục "thị trường đang nói gì" — DÙNG CHUNG cho cả hai chế độ Claude ở tab
- * Analyze (đọc chỉ số và kịch bản giá). #229 chỉ đặt mục này vào chế độ đọc
- * chỉ số; chủ app hỏi ở chế độ Kịch bản giá (app nhớ chế độ bấm lần trước)
- * nên câu trả lời không có phần tin tức. Một đoạn chữ, hai nơi dùng — hai bản
- * chép là hai bản sẽ trôi lệch.
+ * Mục "thị trường đang nói gì" của prompt Claude ở tab Analyze. Từng dùng
+ * chung cho hai chế độ (đọc chỉ số / kịch bản giá); từ #239 chỉ còn một
+ * prompt (`system()` trong airead.ts) và đây là mục 5 của nó. Để ở đây, cạnh
+ * `moveFacts()`, vì nó đọc đúng những dòng hàm đó viết ra.
  */
 export const MARKET_SECTION =
   "What the market is saying about this stock right now. Start from the " +
