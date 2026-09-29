@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import TradingViewWidget from './TradingViewWidget';
 import { useResolvedTheme } from './useResolvedTheme';
+import { tradingViewChartUrlFor } from '@/lib/links';
 import {
   CHART_IMAGE_EDGE,
   CHART_IMAGE_MAX,
@@ -278,6 +279,18 @@ export default function ChartForClaude({
       {/* Widget lặng lẽ vẽ AAPL cho mã nó không nhận (#173) — dòng này là
           dấu hiệu duy nhất để thấy chart không khớp mã đang mở. */}
       <p className="cap intmeta">{t('ci.symbol', tv)}</p>
+
+      {/* Widget nhúng là khách ẩn danh: không đăng nhập được, không có layout
+          hay hình vẽ đã lưu của người dùng. Mở chart đầy đủ ở tab riêng (trong
+          tài khoản TradingView của họ), vẽ xong chụp màn hình rồi dán về đây. */}
+      {tv && (
+        <div className="citv">
+          <a className="aibtn citvbtn" href={tradingViewChartUrlFor(tv)} target="_blank" rel="noopener noreferrer">
+            {t('ci.openTv')}
+          </a>
+          <span className="cap">{t('ci.openTvNote')}</span>
+        </div>
+      )}
 
       <div
         className="cibar"

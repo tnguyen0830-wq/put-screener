@@ -490,6 +490,10 @@ thời gian trước khi chụp; Claude đọc cả thứ bạn vẽ. Ảnh là 
 câu trả lời, và Claude được dặn: kiểm tra mã và khung thời gian trong ảnh trước (ảnh
 của mã khác thì bỏ), bảng số do app tính luôn thắng khi lệch với giá đọc bằng
 mắt từ trục ảnh, và ở phần kết luận / xu hướng thì mọi giá vẫn phải chép từ bảng mức.
+Chart trong khung là bản nhúng ẩn danh của TradingView nên **không đăng nhập
+được** tài khoản TradingView của bạn. Nút **Mở trên TradingView ↗** ngay dưới
+chart mở đúng mã đó ở tab mới trên tradingview.com — đã đăng nhập ở đó thì có
+layout, chỉ báo, hình vẽ của bạn; vẽ xong chụp màn hình rồi dán về đây.
 Ảnh được thu nhỏ còn cạnh dài 1568px và nén JPEG trong trình duyệt, không lưu ở
 đâu cả, và bị xoá khi đổi sang mã khác. Mỗi ảnh tốn thêm khoảng 1.500 token cho
 lượt hỏi.

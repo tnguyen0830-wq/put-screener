@@ -24,7 +24,12 @@ export function tvSymbol(symbol: string, exchange: string): string {
   return clean;
 }
 
+/** Link tới chart đầy đủ trên tradingview.com cho một mã ĐÃ viết theo kiểu
+ *  TradingView (`NASDAQ:AAPL`). Mở trong tài khoản TradingView của chính người
+ *  bấm — nếu họ đã đăng nhập thì có layout, chỉ báo và hình vẽ của họ, thứ
+ *  widget nhúng ẩn danh trong app không bao giờ có. */
+export const tradingViewChartUrlFor = (tv: string) =>
+  `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tv)}`;
+
 export const tradingViewChartUrl = (symbol: string, exchange: string) =>
-  `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(
-    tvSymbol(symbol, exchange)
-  )}`;
+  tradingViewChartUrlFor(tvSymbol(symbol, exchange));

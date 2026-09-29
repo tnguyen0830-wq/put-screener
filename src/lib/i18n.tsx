@@ -1410,6 +1410,11 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     vi: 'Chart TradingView của mã đang mở. Claude KHÔNG tự nhìn thấy khung chart này (đó là trang của TradingView nhúng vào, app không đọc được bên trong) — muốn Claude đọc chart thì đính kèm ảnh bên dưới. Có thể vẽ đường, vùng lên chart bằng thanh công cụ bên trái hoặc đổi khung thời gian trước khi chụp; Claude đọc cả những gì bạn vẽ.',
     en: 'TradingView chart for the open symbol. Claude does NOT see this chart by itself (it is a TradingView page embedded here, and the app cannot read inside it) — to have Claude read the chart, attach an image below. You can draw lines or zones with the left toolbar, or change the timeframe, before capturing; Claude reads what you draw.',
   },
+  'ci.openTv': { vi: 'Mở trên TradingView ↗', en: 'Open on TradingView ↗' },
+  'ci.openTvNote': {
+    vi: 'Mở mã này ở tab mới trên tradingview.com — nếu bạn đã đăng nhập ở đó thì có layout, chỉ báo và hình vẽ của bạn (khung chart ở trên là bản nhúng ẩn danh, không đăng nhập được). Vẽ xong thì chụp màn hình rồi dán (Ctrl+V) hoặc bấm Chọn ảnh ở đây để Claude đọc. Nút "Chụp chart này" chỉ chụp đúng tab app này, không chụp tab TradingView.',
+    en: 'Opens this symbol in a new tab on tradingview.com — if you are signed in there you get your own layouts, indicators and drawings (the chart above is an anonymous embed and cannot sign in). When done, take a screenshot and paste it (Ctrl+V) or use Choose image here for Claude to read. "Capture this chart" only captures this app tab, not the TradingView tab.',
+  },
   'ci.symbol': {
     vi: (s: string) => `Mã gửi cho TradingView: ${s}. Nếu chart hiện một mã khác (thường là AAPL) thì TradingView không nhận mã này.`,
     en: (s: string) => `Symbol sent to TradingView: ${s}. If the chart shows a different ticker (usually AAPL), TradingView did not recognise this one.`,
