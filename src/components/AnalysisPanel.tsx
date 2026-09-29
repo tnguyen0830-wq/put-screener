@@ -587,7 +587,7 @@ export default function AnalysisPanel({
 
             <ColorLegend />
 
-            <AiRead analysis={data} gex={gex} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} social={social} socialError={socialError} socialPromise={socialPromise} />
+            <AiRead analysis={data} gex={gex} tv={tv} uw={uw} uwLoading={uwLoading} uwPromise={uwPromise} x={xr} xPromise={xPromise} social={social} socialError={socialError} socialPromise={socialPromise} />
 
             <SymbolFlow uw={uw} loading={uwLoading} />
 
@@ -768,30 +768,8 @@ export default function AnalysisPanel({
             <h3 className="dsec">{tr('rd.title')}</h3>
             <RedditPosts rd={social?.reddit ?? null} loading={socialLoading} error={socialError} />
 
-            <h3 className="dsec">{tr('dd.chart')}</h3>
-            <TradingViewWidget
-              type="advanced-chart"
-              height={380}
-              attributionHref={`https://www.tradingview.com/symbols/${tv.replace(':', '-')}/`}
-              attributionLabel={`${data.symbol} chart`}
-              config={{
-                width: '100%',
-                height: 380,
-                symbol: tv,
-                interval: 'D',
-                range: '12M',
-                timezone: 'America/New_York',
-                theme: 'light',
-                style: '1',
-                locale: 'en',
-                hide_side_toolbar: true,
-                allow_symbol_change: false,
-                save_image: false,
-                studies: ['MASimple@tv-basicstudies', 'RSI@tv-basicstudies'],
-                support_host: 'https://www.tradingview.com',
-              }}
-            />
-
+            {/* Chart TradingView đã chuyển lên khối Claude (ChartForClaude) để
+                chụp/đính kèm ngay cạnh nút hỏi — giữ một chart duy nhất. */}
             <h3 className="dsec">{tr('dd.technicals')}</h3>
             <TradingViewWidget
               type="technical-analysis"

@@ -284,7 +284,12 @@ const LANG_LINE = {
   en: 'IMPORTANT: write the entire answer in English.',
 } as const;
 
-export const system = (lang: string) => {
+/**
+ * `extra` là một đoạn chèn ngay TRƯỚC neo ngôn ngữ cuối — hiện chỉ có luật
+ * đọc ảnh chart đính kèm (`chartImageRules()`), và nó rỗng khi không có ảnh.
+ * Chèn trước neo chứ không nối sau, để neo vẫn đứng ở cả hai đầu (#148).
+ */
+export const system = (lang: string, extra = '') => {
   const anchor = LANG_LINE[lang === 'en' ? 'en' : 'vi'];
   return `${anchor}
 
@@ -347,6 +352,6 @@ traded, not a forecast: never turn it into a price call.
 treat walls as zones where hedging flow concentrates, not as guarantees.
 - Around 550 words. No preamble - start with the first section.
 - Plain text only. No markdown: no asterisks, no hash marks, no bullet characters. Put each section's label on its own line - it is rendered as-is, so any syntax you type shows up literally as punctuation.
-
+${extra ? `\n${extra}\n` : ''}
 ${anchor}`;
 };
