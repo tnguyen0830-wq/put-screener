@@ -4,6 +4,7 @@ import { buildOutlook, outlookFacts, outlookSystem } from '@/lib/outlook';
 import { uwFacts, type UwContext } from '@/lib/uwsummary';
 import { xFacts, type XSymbolResult } from '@/lib/xsymbol';
 import { socialFacts, type SocialResult } from '@/lib/social';
+import { chartImageRules, parseChartImages } from '@/lib/chartimage';
 import { logActivity } from '@/lib/activity';
 import { currentUser } from '@/lib/users';
 
@@ -66,10 +67,15 @@ export async function POST(req: Request) {
   const gexError =
     typeof body?.gexError === 'string' ? body.gexError.slice(0, 300) : null;
 
+  /* Ảnh chart người dùng đính kèm (chụp tab / chọn ảnh / dán). Kiểm tra lại
+     ở đây vì client không đáng tin; ảnh bị loại được ĐẾM và prompt nói ra,
+     để câu trả lời không âm thầm thiếu một khung người dùng tưởng đã gửi. */
+  const shots = parseChartImages(body?.images);
+
   await logActivity(
     currentUser(req),
     'ai',
-    mode === 'outlook' ? `${analysis.symbol} · kịch bản` : String(analysis.symbol)
+    `${analysis.symbol}${mode === 'outlook' ? ' · kịch bản' : ''}${shots.images.length ? ` · ${shots.images.length} ảnh` : ''}`
   );
 
   /* Dữ liệu Unusual Whales mà trang đang hiện (`/api/analyze/uw`), gửi lên
@@ -108,20 +114,29 @@ export async function POST(req: Request) {
 
   const table = `${facts(analysis, gex, gexError)}\n\n${xFacts(x).join('\n')}\n\n${socialFacts(social, Date.now(), socialMissing).join('\n')}\n\n${uwFacts(uw)}`;
   const client = new Anthropic();
+  const imageRules = chartImageRules(shots.images.length, shots.dropped.length, mode);
+  const text =
+    mode === 'outlook'
+      ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex, undefined, uw))}`
+      : table;
+  /* Ảnh đứng TRƯỚC bảng chữ trong cùng một lượt user — thứ tự tài liệu API
+     khuyên cho ảnh kèm câu hỏi. Không có ảnh thì nội dung vẫn là một chuỗi
+     như cũ, nên lượt hỏi không ảnh gửi đi y hệt trước đây. */
+  const content: Anthropic.MessageParam['content'] = shots.images.length
+    ? [
+        ...shots.images.map((im) => ({
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: im.media_type, data: im.data },
+        })),
+        { type: 'text' as const, text },
+      ]
+    : text;
   const params = {
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    system: mode === 'outlook' ? outlookSystem(lang) : system(lang),
+    system: mode === 'outlook' ? outlookSystem(lang, imageRules) : system(lang, imageRules),
     thinking: { type: 'adaptive' as const },
-    messages: [
-      {
-        role: 'user' as const,
-        content:
-          mode === 'outlook'
-            ? `${table}\n\n${outlookFacts(buildOutlook(analysis, gex, undefined, uw))}`
-            : table,
-      },
-    ],
+    messages: [{ role: 'user' as const, content }],
   };
 
   const stream = new ReadableStream({

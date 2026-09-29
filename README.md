@@ -471,6 +471,21 @@ không thêm kiến thức ngoài, và phải nói thẳng khi GEX thiếu, cũ,
 của Unusual Whales — một mục vắng mặt rất dễ đọc thành "không có gì đáng nói".
 Mỗi lần bấm tốn vài cent API.
 
+**Chart TradingView cho Claude đọc.** Chart TradingView của mã nằm ngay trong
+khung Claude (theo theme sáng/tối và ngôn ngữ của app). Claude **không** tự
+nhìn thấy khung chart đó: đó là trang của TradingView nhúng vào, app không đọc
+được bên trong. Muốn Claude đọc chart thì đính kèm **ảnh** (tối đa 3 ảnh):
+**Chụp chart này** (Chrome/Edge máy tính, chọn "Tab này" khi trình duyệt hỏi,
+app tự cắt đúng khung chart), **Chọn ảnh** (điện thoại: chụp màn hình rồi chọn),
+**dán** Ctrl+V hoặc **kéo thả** ảnh vào. Bạn có thể vẽ đường, vùng, đổi khung
+thời gian trước khi chụp; Claude đọc cả thứ bạn vẽ. Claude thêm một mục cuối
+nói về ảnh, và được dặn: kiểm tra mã và khung thời gian trong ảnh trước (ảnh
+của mã khác thì bỏ), bảng số do app tính luôn thắng khi lệch với giá đọc bằng
+mắt từ trục ảnh, và ở chế độ Kịch bản giá thì mọi giá vẫn phải chép từ bảng mức.
+Ảnh được thu nhỏ còn cạnh dài 1568px và nén JPEG trong trình duyệt, không lưu ở
+đâu cả, và bị xoá khi đổi sang mã khác. Mỗi ảnh tốn thêm khoảng 1.500 token cho
+lượt hỏi.
+
 **Thị trường đang nói gì về mã này.** Mục đầu tiên Claude viết trả lời *mã đang
 rớt, lên hay đi ngang, và vì sao*. Hai nửa khó của câu đó do app tự tính, trong
 bảng **Price move vs market** ngay trên mục News: % thay đổi của mã, SPY và ETF

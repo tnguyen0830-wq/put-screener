@@ -1406,6 +1406,63 @@ const DICT: Record<string, Record<Lang, Entry>> = {
       `If assigned, you buy 100 ${v.symbol} at an effective cost of ${v.be} — ${v.pct}% below the current price.`,
   },
   'dd.chart': { vi: 'Chart', en: 'Chart' },
+  'ci.intro': {
+    vi: 'Chart TradingView của mã đang mở. Claude KHÔNG tự nhìn thấy khung chart này (đó là trang của TradingView nhúng vào, app không đọc được bên trong) — muốn Claude đọc chart thì đính kèm ảnh bên dưới. Có thể vẽ đường, vùng lên chart bằng thanh công cụ bên trái hoặc đổi khung thời gian trước khi chụp; Claude đọc cả những gì bạn vẽ.',
+    en: 'TradingView chart for the open symbol. Claude does NOT see this chart by itself (it is a TradingView page embedded here, and the app cannot read inside it) — to have Claude read the chart, attach an image below. You can draw lines or zones with the left toolbar, or change the timeframe, before capturing; Claude reads what you draw.',
+  },
+  'ci.symbol': {
+    vi: (s: string) => `Mã gửi cho TradingView: ${s}. Nếu chart hiện một mã khác (thường là AAPL) thì TradingView không nhận mã này.`,
+    en: (s: string) => `Symbol sent to TradingView: ${s}. If the chart shows a different ticker (usually AAPL), TradingView did not recognise this one.`,
+  },
+  'ci.capture': { vi: '📸 Chụp chart này', en: '📸 Capture this chart' },
+  'ci.capturing': { vi: 'Đang chụp…', en: 'Capturing…' },
+  'ci.pick': { vi: 'Chọn ảnh', en: 'Choose image' },
+  'ci.pasteHint': {
+    vi: 'hoặc dán ảnh (Ctrl+V) / kéo thả ảnh vào đây',
+    en: 'or paste an image (Ctrl+V) / drop one here',
+  },
+  'ci.noCapture': {
+    vi: 'Trình duyệt này không chụp được tab (điện thoại thường không) — chụp màn hình rồi bấm Chọn ảnh.',
+    en: 'This browser cannot capture the tab (phones usually cannot) — take a screenshot, then press Choose image.',
+  },
+  'ci.count': {
+    vi: (v: any) => `${v.n}/${v.max} ảnh sẽ được gửi kèm khi bấm Claude. Mỗi ảnh tốn thêm khoảng 1.500 token cho lượt hỏi.`,
+    en: (v: any) => `${v.n}/${v.max} image(s) will be sent when you ask Claude. Each image adds about 1,500 tokens to the request.`,
+  },
+  'ci.none': {
+    vi: 'Chưa đính kèm ảnh nào — Claude chỉ đọc bảng số.',
+    en: 'No image attached — Claude reads the data tables only.',
+  },
+  'ci.full': {
+    vi: (n: number) => `Tối đa ${n} ảnh mỗi lượt hỏi — bỏ bớt một ảnh để thêm.`,
+    en: (n: number) => `At most ${n} images per question — remove one to add another.`,
+  },
+  'ci.errDecode': {
+    vi: 'Không đọc được ảnh này (định dạng lạ?). Thử ảnh PNG hoặc JPG.',
+    en: 'Could not read this image (unusual format?). Try a PNG or JPG.',
+  },
+  'ci.errDenied': {
+    vi: 'Không chụp được: đã bấm Huỷ hoặc trình duyệt chặn chia sẻ màn hình. Có thể tự chụp màn hình rồi dán vào.',
+    en: 'Nothing captured: sharing was cancelled or blocked by the browser. You can take a screenshot yourself and paste it.',
+  },
+  'ci.errCapture': {
+    vi: (e: string) => `Chụp tab hỏng: ${e}. Có thể tự chụp màn hình rồi dán vào.`,
+    en: (e: string) => `Tab capture failed: ${e}. You can take a screenshot yourself and paste it.`,
+  },
+  'ci.notTab': {
+    vi: 'Bạn đã chọn chia sẻ cả cửa sổ hoặc màn hình chứ không phải tab này, nên ảnh là toàn bộ vùng đó chứ không chỉ khung chart. Muốn chỉ lấy chart thì bỏ ảnh này và chọn "Tab này" khi chụp.',
+    en: 'You shared a whole window or screen rather than this tab, so the image is that whole area, not just the chart. To get only the chart, remove it and pick "This tab" when capturing.',
+  },
+  'ci.cropMiss': {
+    vi: 'Khung chart nằm ngoài vùng nhìn lúc chụp, nên ảnh là toàn bộ tab.',
+    en: 'The chart was outside the visible area when captured, so the image is the whole tab.',
+  },
+  'ci.alt': { vi: (n: number) => `Ảnh chart ${n}`, en: (n: number) => `Chart image ${n}` },
+  'ci.remove': { vi: 'Bỏ ảnh này', en: 'Remove this image' },
+  'ci.sent': {
+    vi: (n: number) => `Câu trả lời này đã đọc ${n} ảnh chart đính kèm.`,
+    en: (n: number) => `This answer read ${n} attached chart image(s).`,
+  },
   'dd.chartNote': {
     vi: (v: any) =>
       `Kẻ tay mức ${v.strike} (strike) và ${v.be} (break-even) lên chart để xem giá đã từng thủng vùng đó chưa.`,

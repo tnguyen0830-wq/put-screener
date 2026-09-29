@@ -4889,3 +4889,46 @@ body {
 .xposts { margin: 4px 0 10px; }
 .xplist .xptext { display: block; color: var(--ink); line-height: 1.45; overflow-wrap: anywhere; }
 .xposts .xperr { min-width: 0; overflow-wrap: anywhere; }
+
+/* Chart TradingView + ảnh đính kèm cho Claude (ChartForClaude.tsx). */
+.ci { margin-top: 14px; min-width: 0; }
+.cichart { min-width: 0; }
+.cibar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--r-sm);
+}
+.cithumbs { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.cithumb {
+  position: relative;
+  margin: 0;
+  width: 140px;
+  max-width: 45%;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--card);
+}
+/* Ô cao cố định: ảnh dọc (chụp trên điện thoại) và ảnh ngang nằm cùng một hàng
+   gọn gàng, thấy trọn ảnh (contain) chứ không cắt mất một phần chart. */
+.cithumb img { display: block; width: 100%; height: 90px; object-fit: contain; background: var(--paper); }
+.cix {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--card);
+  font-size: 16px;
+  line-height: 24px;
+  cursor: pointer;
+}
+.ciwarn { min-width: 0; overflow-wrap: anywhere; }

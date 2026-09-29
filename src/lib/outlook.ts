@@ -430,7 +430,7 @@ export function outlookFacts(o: Outlook): string {
  * đích, ở CẢ HAI ĐẦU (bài học #148: một dòng tiếng Anh ở đáy prompt tiếng
  * Anh bị ngữ cảnh cuốn đi).
  */
-export function outlookSystem(lang: 'vi' | 'en'): string {
+export function outlookSystem(lang: 'vi' | 'en', extra = ''): string {
   const anchor =
     lang === 'en'
       ? 'Write the whole answer in English.'
@@ -497,6 +497,6 @@ more than a single line; say so when you use one.
 - Around 550 words. No preamble - start with the first section.
 - Plain text only. No markdown: no asterisks, no hash marks, no bullet \
 characters. Put each section's label on its own line.
-
+${extra ? `\n${extra}\n` : ''}
 ${anchor}`;
 }

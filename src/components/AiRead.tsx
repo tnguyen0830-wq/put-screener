@@ -6,6 +6,7 @@ import { buildOutlook } from '@/lib/outlook';
 import { readRememberedOneOf, remember } from '@/lib/remember';
 import OutlookMap from './OutlookMap';
 import UwContextCard from './UwContextCard';
+import ChartForClaude, { type Shot } from './ChartForClaude';
 import type { UwContext } from '@/lib/uwsummary';
 import type { XSymbolResult } from '@/lib/xsymbol';
 import type { SocialLoad, SocialResult } from '@/lib/social';
@@ -36,6 +37,7 @@ type Mode = (typeof MODES)[number];
 export default function AiRead({
   analysis,
   gex,
+  tv = '',
   uw = null,
   uwLoading = false,
   uwPromise = null,
@@ -47,6 +49,8 @@ export default function AiRead({
 }: {
   analysis: any;
   gex?: any;
+  /** Mã theo cách TradingView viết (`tvSymbol()`), cho chart nhúng. */
+  tv?: string;
   /** Dữ liệu Unusual Whales của mã, do AnalysisPanel tải MỘT lần cho cả khối
    *  này lẫn khối Options Flow (`/api/analyze/uw`). */
   uw?: UwContext | null;
@@ -69,6 +73,17 @@ export default function AiRead({
   );
   const [errKey, setErrKey] = useState('ai.failed');
   const abort = useRef<AbortController | null>(null);
+
+  /* Ảnh chart đính kèm. Gắn với MÃ đang mở: đổi mã là bỏ hết — một ảnh chart
+     AAPL gửi kèm câu hỏi về TSLA là dữ kiện sai trông y hệt dữ kiện đúng. */
+  const [shots, setShots] = useState<Shot[]>([]);
+  /** Số ảnh lượt trả lời hiện tại đã thật sự mang theo, để nói ra. */
+  const [sentShots, setSentShots] = useState(0);
+  const symbol = analysis?.symbol ?? '';
+  useEffect(() => {
+    setShots([]);
+    setSentShots(0);
+  }, [symbol]);
 
   /* Hai chế độ: "đọc chỉ số" (bản gốc) và "kịch bản giá" (lib/outlook.ts).
      Nhớ lựa chọn như mọi nút chọn khác của app; đọc sau hydrate (#110). */
@@ -103,6 +118,7 @@ export default function AiRead({
 
     setText('');
     setState('running');
+    setSentShots(shots.length);
 
     try {
       let gexData = gex ?? null;
@@ -134,7 +150,10 @@ export default function AiRead({
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData, socialError: socialErr }),
+        body: JSON.stringify({
+          analysis, gex: gexData, gexError, lang, mode, uw: uwData, x: xData, social: socialData, socialError: socialErr,
+          images: shots.map((s) => ({ media_type: s.media_type, data: s.data })),
+        }),
         signal: ctrl.signal,
       });
 
@@ -213,6 +232,14 @@ export default function AiRead({
         <p className="cap">{t(mode === 'outlook' ? 'ol.idle' : 'ai.idle')}</p>
       )}
 
+      <ChartForClaude
+        symbol={symbol}
+        tv={tv}
+        shots={shots}
+        setShots={setShots}
+        disabled={state === 'running'}
+      />
+
       <UwContextCard uw={uw} loading={uwLoading} />
 
       {mode === 'outlook' && outlook && <OutlookMap o={outlook} />}
@@ -220,6 +247,10 @@ export default function AiRead({
       {text && <div className="aitext">{text}</div>}
 
       {state === 'error' && <p className="hint hint-warn">{t(errKey)}</p>}
+
+      {(state === 'done' || state === 'running') && text && sentShots > 0 && (
+        <p className="cap">{t('ci.sent', sentShots)}</p>
+      )}
 
       {(state === 'done' || state === 'running') && text && (
         <p className="cap">{t(mode === 'outlook' ? 'ol.caveat' : 'ai.caveat')}</p>
