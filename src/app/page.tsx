@@ -69,10 +69,15 @@ type Status = {
  *  TỪNG CÁI thay vì xếp chồng cả bốn phải cuộn dài. */
 const INSIDER_SUBS = ['form4', 'congress', 'flow', 'darkpool'] as const;
 type InsiderSub = (typeof INSIDER_SUBS)[number];
-/** Bốn nội dung khác nhau trong tab Heatmap, cùng lý do tách tab con như
- *  Insider Trade ở trên - trước đó cả bốn (bản đồ nhiệt, Fear & Greed, RRG,
- *  GEX) xếp chồng trong một cột phải cuộn rất dài mới thấy hết. */
-const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex', 'internals'] as const;
+/** Các nội dung trong tab Market Data (tên cũ: Heatmap), cùng lý do tách
+ *  tab con như Insider Trade ở trên - trước đó bản đồ nhiệt, Fear & Greed,
+ *  RRG, GEX xếp chồng trong một cột phải cuộn rất dài mới thấy hết.
+ *
+ *  MM Exposure và Live Flow từng là hai tab chính (#214, #218); chủ app gom
+ *  chúng vào đây. Mã tab nội bộ VẪN là 'heatmap' - đổi mã là làm mồ côi bộ
+ *  nhớ trình duyệt, nhật ký Hoạt động và các nút "Xem thật" của Learn, trong
+ *  khi người dùng chỉ thấy NHÃN. */
+const HEATMAP_SUBS = ['map', 'feargreed', 'rrg', 'gex', 'mmexposure', 'liveflow', 'internals'] as const;
 type HeatmapSub = (typeof HEATMAP_SUBS)[number];
 
 /** Nhịp báo "đang mở tab nào". Hai phút, dưới hẳn ngưỡng 5 phút mà server
@@ -103,15 +108,25 @@ export default function Page() {
        thứ ba của Learn. 'patterns' đã rời TABS nên `readRememberedOneOf`
        trả null cho nó — đọc giá trị THÔ để người để mở Patterns lần trước
        mở lại đúng chỗ đó, thay vì rơi về tab mặc định. */
-    if (readRemembered('tab') === 'patterns') {
+    /* MM Exposure và Live Flow rời thanh tab chính vào Market Data. Cùng
+       lý do như Patterns: hai tên đó đã rời TABS nên phải đọc giá trị THÔ,
+       nếu không người để mở chúng lần trước rơi về Sell Put Screener. */
+    const rawTab = readRemembered('tab');
+    let movedSub: HeatmapSub | null = null;
+    if (rawTab === 'patterns') {
       setTab('learn');
       remember('learnMode', 'patterns');
       remember('tab', 'learn');
+    } else if (rawTab === 'mmexposure' || rawTab === 'liveflow') {
+      movedSub = rawTab;
+      setTab('heatmap');
     } else if (savedTab === 'daytrade' && readRemembered('dtmode') === 'mmexposure') {
-      setTab('mmexposure');
+      movedSub = 'mmexposure';
+      setTab('heatmap');
       remember('dtmode', 'stocks');
     } else if (savedTab) setTab(savedTab);
-    if (savedHm) setHeatmapSub(savedHm);
+    if (movedSub) setHeatmapSub(movedSub);
+    else if (savedHm) setHeatmapSub(savedHm);
     if (savedIn) setInsiderSub(savedIn);
     setRestored(true);
   }, []);
@@ -425,18 +440,6 @@ export default function Page() {
           >
             {t('tab.daytrade')}
           </button>
-          <button
-            className={tab === 'mmexposure' ? 'on' : undefined}
-            onClick={() => setTab('mmexposure')}
-          >
-            {t('tab.mmexposure')}
-          </button>
-          <button
-            className={tab === 'liveflow' ? 'on' : undefined}
-            onClick={() => setTab('liveflow')}
-          >
-            {t('tab.liveflow')}
-          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -534,14 +537,6 @@ export default function Page() {
         <div className="shell solo">
           <DaytradePanel />
         </div>
-      ) : tab === 'mmexposure' ? (
-        <div className="shell solo">
-          <MmExposurePanel />
-        </div>
-      ) : tab === 'liveflow' ? (
-        <div className="shell solo">
-          <LiveFlowPanel />
-        </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">
           {/* Bốn nguồn dữ liệu cùng trả lời "ai/cái gì đang mua", nhưng
@@ -618,6 +613,18 @@ export default function Page() {
               {t('hm.subGex')}
             </button>
             <button
+              className={heatmapSub === 'mmexposure' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('mmexposure')}
+            >
+              {t('hm.subMm')}
+            </button>
+            <button
+              className={heatmapSub === 'liveflow' ? 'on' : undefined}
+              onClick={() => setHeatmapSub('liveflow')}
+            >
+              {t('hm.subLiveFlow')}
+            </button>
+            <button
               className={heatmapSub === 'internals' ? 'on' : undefined}
               onClick={() => setHeatmapSub('internals')}
             >
@@ -638,6 +645,10 @@ export default function Page() {
             <RrgChart />
           ) : heatmapSub === 'gex' ? (
             <GexExposurePanel />
+          ) : heatmapSub === 'mmexposure' ? (
+            <MmExposurePanel />
+          ) : heatmapSub === 'liveflow' ? (
+            <LiveFlowPanel />
           ) : (
             <InternalsPanel />
           )}

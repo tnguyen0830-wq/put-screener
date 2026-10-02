@@ -14,6 +14,10 @@
  *
  * THỨ TỰ ở đây không quyết định thứ tự hiển thị (các nút trong `page.tsx`
  * mới quyết định, xem #189) — đây chỉ là tập hợp tên hợp lệ.
+ *
+ * 'mmexposure' và 'liveflow' đã rời danh sách: chúng là tab con của
+ * Market Data (mã 'heatmap'). Khoá i18n `tab.mmexposure`/`tab.liveflow`
+ * vẫn giữ vì màn Hoạt động in `tab.<tên>` cho bản ghi cũ.
  */
 export const TABS = [
   'news',
@@ -24,8 +28,6 @@ export const TABS = [
   'insider',
   'learn',
   'daytrade',
-  'mmexposure',
-  'liveflow',
   'portfolio',
 ] as const;
 

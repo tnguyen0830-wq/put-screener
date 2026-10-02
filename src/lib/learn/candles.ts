@@ -73,7 +73,7 @@ export const CANDLE_LESSONS: Lesson[] = [
         q: { vi: 'Tab nào trong app dùng nến 5 phút?', en: 'Which tab in this app uses 5-minute candles?' },
         choices: [
           { vi: 'Long-term', en: 'Long-term' },
-          { vi: 'Heatmap → Internals (TICK, VIX)', en: 'Heatmap → Internals (TICK, VIX)' },
+          { vi: 'Market Data → Internals (TICK, VIX)', en: 'Market Data → Internals (TICK, VIX)' },
           { vi: 'Insider Trade', en: 'Insider Trade' },
         ],
         answer: 1,
