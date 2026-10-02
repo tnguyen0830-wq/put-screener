@@ -47,7 +47,7 @@ export const GEX_LESSONS: Lesson[] = [
         en: 'Comparing GEX numbers across sources with different units. The app and UW share the "per 1%" unit; some sites use another convention and print numbers several times larger.',
       },
     ],
-    seeIn: { tab: 'heatmap', sub: 'gex', label: { vi: 'Mở biểu đồ GEX đang chạy (Heatmap → GEX)', en: 'Open the live GEX chart (Heatmap → GEX)' } },
+    seeIn: { tab: 'heatmap', sub: 'gex', label: { vi: 'Mở biểu đồ GEX đang chạy (Market Data → GEX)', en: 'Open the live GEX chart (Market Data → GEX)' } },
     quiz: [
       {
         q: { vi: 'Dealer long gamma làm gì khi giá tăng?', en: 'What does a long-gamma dealer do as price rises?' },
@@ -324,7 +324,7 @@ export const GEX_LESSONS: Lesson[] = [
         en: 'Waiting for Fear & Greed to hit 10 before selling puts: extremes are rare, and premium at 25 is already rich.',
       },
     ],
-    seeIn: { tab: 'heatmap', sub: 'rrg', label: { vi: 'Xem vòng xoay ngành tuần này (Heatmap → RRG)', en: 'See this week\'s sector rotation (Heatmap → RRG)' } },
+    seeIn: { tab: 'heatmap', sub: 'rrg', label: { vi: 'Xem vòng xoay ngành tuần này (Market Data → RRG)', en: 'See this week\'s sector rotation (Market Data → RRG)' } },
     quiz: [
       {
         q: { vi: 'RRG cho toạ độ của cái gì?', en: 'What does RRG give coordinates for?' },

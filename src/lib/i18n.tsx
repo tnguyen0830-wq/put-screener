@@ -29,7 +29,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   // Tab titles stay English in both languages: they name the screen, and a
   // trader reads these terms in English everywhere else too.
   'tab.analyze': { vi: 'Analyze', en: 'Analyze' },
-  'tab.heatmap': { vi: 'Heatmap', en: 'Heatmap' },
+  'tab.heatmap': { vi: 'Market Data', en: 'Market Data' },
   'tab.portfolio': { vi: 'My Portfolio', en: 'My Portfolio' },
   // Cố ý giữ NGUYÊN VĂN "Insider Trade" ở cả hai ngôn ngữ - người dùng
   // yêu cầu rõ tên tab này không đổi theo tiếng Việt/Anh.
@@ -217,8 +217,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'mm.cmpAppVol': { vi: 'App · KL', en: 'App · Vol' },
   'mm.cmpUwVol': { vi: 'UW · KL', en: 'UW · Vol' },
   'mm.caveat': {
-    vi: 'Quy ước dealer (long call, short put) là một MÔ HÌNH, không phải vị thế quan sát được — cùng giả định mà mọi biểu đồ GEX công khai dùng. Gamma tính bằng đô-la delta cho một bước dịch 1%, đúng cùng công thức với tab GEX bên Heatmap.',
-    en: 'The dealer convention (long calls, short puts) is a MODEL, not observed positioning — the same assumption every public GEX chart makes. Gamma is in dollars of delta per 1% move, the exact formula the Heatmap GEX tab uses.',
+    vi: 'Quy ước dealer (long call, short put) là một MÔ HÌNH, không phải vị thế quan sát được — cùng giả định mà mọi biểu đồ GEX công khai dùng. Gamma tính bằng đô-la delta cho một bước dịch 1%, đúng cùng công thức với tab GEX bên Market Data.',
+    en: 'The dealer convention (long calls, short puts) is a MODEL, not observed positioning — the same assumption every public GEX chart makes. Gamma is in dollars of delta per 1% move, the exact formula the Market Data GEX tab uses.',
   },
   'dt.intro': {
     vi: (v: { bar: number; days: number }) =>
@@ -782,8 +782,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'acct.title': { vi: 'Family accounts', en: 'Family accounts' },
   'acct.open': { vi: 'Quản lý tài khoản', en: 'Manage accounts' },
   'acct.intro': {
-    vi: 'Mỗi người nhà một tên đăng nhập và mật khẩu riêng. Họ dùng được Sell Put Screener, Analyze, Heatmap, Insider Trade và có watchlist riêng — nhưng không thấy My Portfolio, P/L đã chốt, cảnh báo, và không kết nối Schwab được. Mật khẩu lưu dưới dạng đã băm, không ai đọc lại được, kể cả bạn.',
-    en: 'Each family member gets their own username and password. They can use Sell Put Screener, Analyze, Heatmap and Insider Trade, and keep their own watchlist — but not My Portfolio, realized P/L or alerts, and they cannot connect Schwab. Passwords are stored hashed; nobody can read them back, including you.',
+    vi: 'Mỗi người nhà một tên đăng nhập và mật khẩu riêng. Họ dùng được Sell Put Screener, Analyze, Market Data, Insider Trade và có watchlist riêng — nhưng không thấy My Portfolio, P/L đã chốt, cảnh báo, và không kết nối Schwab được. Mật khẩu lưu dưới dạng đã băm, không ai đọc lại được, kể cả bạn.',
+    en: 'Each family member gets their own username and password. They can use Sell Put Screener, Analyze, Market Data and Insider Trade, and keep their own watchlist — but not My Portfolio, realized P/L or alerts, and they cannot connect Schwab. Passwords are stored hashed; nobody can read them back, including you.',
   },
   'acct.listTitle': { vi: 'Existing accounts', en: 'Existing accounts' },
   'acct.loading': { vi: 'Đang tải…', en: 'Loading…' },
@@ -1496,6 +1496,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'hm.subRrg': { vi: 'RRG', en: 'RRG' },
   'hm.subGex': { vi: 'GEX', en: 'GEX' },
   'hm.subInternals': { vi: 'Internals', en: 'Internals' },
+  'hm.subMm': { vi: 'MM Exposure', en: 'MM Exposure' },
+  'hm.subLiveFlow': { vi: 'Live Flow', en: 'Live Flow' },
   'hm.head': {
     vi: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
     en: (v: any) => `S&P 500 map · ${v.count} tickers · ${v.source}`,
@@ -1883,8 +1885,8 @@ const DICT: Record<string, Record<Lang, Entry>> = {
      phần tư của NGÀNH, không phải của mã. Thiếu vế đó thì cái nhãn "đang
      hồi" bị đọc thành một nhận định về chính công ty. */
   'rrgf.none': {
-    vi: 'Chưa chọn góc nào = không lọc theo dòng tiền. Muốn “ngành đang uptrend mạnh” thì bấm Dẫn đầu (mạnh hơn thị trường VÀ còn đang mạnh lên); Đang hồi là ngành còn yếu hơn thị trường nhưng đã quay đầu lên — thường là chỗ mã rớt về hỗ trợ hay nằm. Đây là góc phần tư của NGÀNH (11 quỹ ngành so với SPY, cùng số với biểu đồ RRG bên tab Heatmap), KHÔNG phải của riêng mã — một mã yếu vẫn có thể nằm trong ngành đang hồi, và ngược lại.',
-    en: 'Nothing selected = no money-flow filter. For "sectors in a strong uptrend" pick Leading (stronger than the market AND still strengthening); Improving means still weaker than the market but turning up — often where stocks falling toward support sit. This is the quadrant of the SECTOR (11 sector ETFs against SPY, the same numbers as the RRG chart in the Heatmap tab), NOT of the individual stock — a weak stock can sit in an improving sector, and the other way round.',
+    vi: 'Chưa chọn góc nào = không lọc theo dòng tiền. Muốn “ngành đang uptrend mạnh” thì bấm Dẫn đầu (mạnh hơn thị trường VÀ còn đang mạnh lên); Đang hồi là ngành còn yếu hơn thị trường nhưng đã quay đầu lên — thường là chỗ mã rớt về hỗ trợ hay nằm. Đây là góc phần tư của NGÀNH (11 quỹ ngành so với SPY, cùng số với biểu đồ RRG bên tab Market Data), KHÔNG phải của riêng mã — một mã yếu vẫn có thể nằm trong ngành đang hồi, và ngược lại.',
+    en: 'Nothing selected = no money-flow filter. For "sectors in a strong uptrend" pick Leading (stronger than the market AND still strengthening); Improving means still weaker than the market but turning up — often where stocks falling toward support sit. This is the quadrant of the SECTOR (11 sector ETFs against SPY, the same numbers as the RRG chart in the Market Data tab), NOT of the individual stock — a weak stock can sit in an improving sector, and the other way round.',
   },
   'rrgf.some': {
     vi: 'Chỉ giữ mã thuộc ngành đang ở các góc đang sáng. Nhắc lại: đây là góc của NGÀNH, không phải của mã. Mã không tra được ngành (ngoài rổ S&P 500) vẫn đi qua và được đánh dấu.',

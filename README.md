@@ -9,15 +9,15 @@ App có chín tab, đi theo đúng vòng đời của một lệnh bán put:
 |---|---|
 | **Sell Put Screener** | Bán con gì, strike nào, kỳ nào |
 | **Analyze** | Con này thực sự đang thế nào |
-| **Heatmap** | Cả thị trường đang thế nào (kèm GEX của SPX/mã bất kỳ) |
+| **Market Data** (tên cũ Heatmap) | Cả thị trường đang thế nào — bảy tab con: Heatmap, Fear & Greed, RRG, GEX, MM Exposure, Live Flow, Internals |
 | **My Portfolio** | Cái đang cầm có gì cần để ý |
 | **Insider Trade** | Ai đang mua — nội bộ công ty, Quốc hội, quyền chọn bất thường, dark pool |
 | **Đầu tư dài hạn** | Mã nào đang rớt về hỗ trợ mà công ty vẫn có lãi, vẫn tăng trưởng và chưa đắt |
 | **Tin tức** | Hôm nay thị trường và chính trị-kinh tế có gì — tiêu đề 48 giờ, hai cột, một nút tóm tắt tiếng Việt |
 | **Learn** | Ba chế độ: **Bài học** (nến, mẫu hình, GEX, bề rộng thị trường, flow/dark pool/insider, cách app chấm bán put — song ngữ, có hình, ôn tập, hỏi Claude), **Tra cứu nhanh**, và **Patterns** (mã nào đang có mẫu hình nến / mẫu hình giá trên nến ngày — quét watchlist hoặc cả rổ, biểu đồ nến vẽ mẫu, nút hỏi Claude đọc mẫu) |
 | **Daytrade** | VWAP, mốc phiên trước, khoảng mở cửa, KL tương đối cho tối đa 10 mã; thang strike 0DTE hôm nay |
-| **MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
-| **Live Flow** | Từng lệnh khớp quyền chọn toàn thị trường qua WebSocket của Unusual Whales (như màn Live Flow của UW), hoặc alert REST đã lọc — lọc theo mã, phía, call/put, premium |
+| **Market Data → MM Exposure** | Nhà tạo lập đang gánh gamma/delta ở strike nào — ba panel kiểu Unusual Whales; mỗi panel đặt số app tự tính cạnh số UW tự tính, kèm bảng so tường |
+| **Market Data → Live Flow** | Từng lệnh khớp quyền chọn toàn thị trường qua WebSocket của Unusual Whales (như màn Live Flow của UW), hoặc alert REST đã lọc — lọc theo mã, phía, call/put, premium |
 
 > **Đang làm đến đâu / tài khoản Claude kia đang giữ PR nào:** đừng tin trí nhớ
 > của một phiên chat cũ — luôn kiểm tra bằng `git log --oneline origin/main -15`
@@ -615,7 +615,13 @@ biệt "chưa chạy" với "chạy rồi mà hỏng luôn" — nên nếu bạn
 vẫn tiếng Anh dù đã bật tiếng Việt, hãy tìm dòng chữ cam bên dưới đoạn mô tả:
 nó nói đúng lý do và cách sửa.
 
-## Heatmap — nhìn cả thị trường
+## Market Data (tên cũ Heatmap) — nhìn cả thị trường
+
+Tab chính tên **Market Data** gom bảy tab con: Heatmap, Fear & Greed, RRG, GEX,
+MM Exposure, Live Flow và Internals. MM Exposure và Live Flow từng là hai tab
+chính riêng; giờ nằm ở đây, và ai để mở chúng lần trước sẽ mở lại đúng tab con
+đó.
+
 
 Bản đồ nhiệt toàn rổ theo nhiều khung thời gian, kèm biểu đồ **RRG** (xoay vòng
 sức mạnh tương đối theo ngành) và đồng hồ Fear & Greed. Bấm vào một ô sẽ nhảy
@@ -1079,7 +1085,7 @@ Kết quả quét lưu theo tài khoản và phạm vi (mở lại tab là có),
 chụp, giá đã cũ" như hai tab quét kia. Bài học về từng mẫu nằm ở tab Learn;
 các bài nến ở đó có nút nhảy thẳng sang tab này.
 
-## Live Flow — luồng lệnh quyền chọn đáng chú ý
+## Live Flow (Market Data → Live Flow) — luồng lệnh quyền chọn đáng chú ý
 
 **Hai nguồn, chọn bằng nút đầu tab** (nhớ cho lần sau):
 
@@ -1184,8 +1190,8 @@ sống hay chết, và biết vì sao; chuỗi rỗng vẫn được TRẢ VỀ 
 vì ném lỗi, vì chẩn đoán mới là thứ cần đọc. Không có OI thì màn hình chỉ
 thẳng sang SPY/QQQ (ETF, đo được là chạy bình thường).
 
-**Phơi nhiễm nhà tạo lập** — giờ là **tab chính riêng `MM Exposure`**, đứng
-ngay sau Daytrade (trước đây là tab con thứ ba của Daytrade). Ba biểu đồ theo bố cục
+**Phơi nhiễm nhà tạo lập** — giờ là tab con **Market Data → MM Exposure**
+(trước đó là tab chính riêng, và trước nữa là tab con thứ ba của Daytrade). Ba biểu đồ theo bố cục
 Unusual Whales, nhưng **mọi con số app tự tính từ chuỗi quyền chọn của
 chính tài khoản**, không mua của ai: gamma và delta không phải dữ liệu độc
 quyền, chúng là số học trên greek và open interest mà `/chains` đã trả.
