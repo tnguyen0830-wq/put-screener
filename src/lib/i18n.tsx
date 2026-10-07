@@ -426,6 +426,7 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'learn.ref.group.continuation': { vi: 'Tiếp diễn', en: 'Continuation' },
   'learn.ref.group.level': { vi: 'Mức giá', en: 'Levels' },
   'learn.ref.group.indicator': { vi: 'Chỉ báo', en: 'Indicators' },
+  'learn.replay': { vi: 'Phát lại', en: 'Replay' },
   'learn.ref.side.bull': { vi: 'tăng', en: 'bullish' },
   'learn.ref.side.bear': { vi: 'giảm', en: 'bearish' },
   'learn.ref.side.neutral': { vi: 'trung tính', en: 'neutral' },

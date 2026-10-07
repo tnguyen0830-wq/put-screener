@@ -18,7 +18,7 @@ export const CANDLE_LESSONS: Lesson[] = [
       vi: 'Thân, râu, màu — và vì sao râu dài quan trọng hơn thân dài.',
       en: 'Body, wick, colour — and why a long wick matters more than a long body.',
     },
-    figures: ['candle-anatomy'],
+    figures: ['candle-anatomy', 'candle-live'],
     body: [
       {
         vi: 'Một cây nến gói bốn con số của một khoảng thời gian: giá **mở**, **cao nhất**, **thấp nhất**, **đóng**. Phần **thân** là khoảng từ mở tới đóng; hai **râu** (bấc) là phần giá đã đi tới rồi quay lại. Nến xanh: đóng cao hơn mở. Nến đỏ: đóng thấp hơn mở.',

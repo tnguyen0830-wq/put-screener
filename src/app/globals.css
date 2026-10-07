@@ -3974,6 +3974,57 @@ body {
   display: block;
   margin: 0 auto;
 }
+/* Hình động của Learn (#246). Thứ tự và độ trễ do `learnanim.ts` gắn lên từng
+   phần tử; lớp `play` trên <svg> mới chạy. `backwards` giữ trạng thái "from"
+   trong lúc chờ độ trễ, nên phần tử chưa tới lượt thì ẩn, tới lượt thì hiện. */
+.learnfigbox {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  line-height: normal;
+}
+.learnreplay {
+  align-self: flex-end;
+  font: 600 11px/1.2 var(--data);
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.learnreplay:hover {
+  color: var(--stamp);
+  border-color: var(--stamp);
+}
+.learnfig.play .lf-c {
+  transform-box: fill-box;
+  animation: lfpop 0.32s ease-out backwards;
+}
+.learnfig.play .lf-draw {
+  stroke-dasharray: 1;
+  animation: lfdraw var(--lfdur, 1.1s) ease-in-out backwards;
+}
+.learnfig.play .lf-fade {
+  animation: lffade 0.45s ease-out backwards;
+}
+@keyframes lfpop {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@keyframes lfdraw {
+  from { stroke-dashoffset: 1; }
+}
+@keyframes lffade {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .learnfig.play .lf-c,
+  .learnfig.play .lf-draw,
+  .learnfig.play .lf-fade {
+    animation: none;
+  }
+}
 .learnbody p {
   margin: 0 0 10px;
   font-size: 14px;

@@ -25,6 +25,8 @@ export type SectionId = (typeof SECTION_IDS)[number];
  */
 export const FIGURE_IDS = [
   'candle-anatomy',
+  /* Cây nến lớn dần theo giá trong phiên — hình động (#246). */
+  'candle-live',
   'doji',
   'hammer',
   'engulfing',
