@@ -3984,8 +3984,12 @@ body {
   gap: 4px;
   line-height: normal;
 }
-.learnreplay {
+.learnplay {
   align-self: flex-end;
+  display: flex;
+  gap: 6px;
+}
+.learnplaybtn {
   font: 600 11px/1.2 var(--data);
   color: var(--muted);
   background: none;
@@ -3994,9 +3998,20 @@ body {
   padding: 3px 8px;
   cursor: pointer;
 }
-.learnreplay:hover {
+.learnplaybtn:hover:not(:disabled) {
   color: var(--stamp);
   border-color: var(--stamp);
+}
+/* Đang phát: nút ▶ sáng màu nhấn để nhìn là biết hình đang chạy lặp. */
+.learnplaybtn[aria-pressed='true'] {
+  color: var(--stamp);
+  border-color: var(--stamp);
+}
+.learnplaybtn:disabled {
+  cursor: default;
+}
+.learnplaybtn[data-act='stop']:disabled {
+  opacity: 0.45;
 }
 .learnfig.play .lf-c {
   transform-box: fill-box;

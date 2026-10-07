@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FigureId } from '@/lib/learn';
 import { useLang } from '@/lib/i18n';
 import { drawExtra } from './LearnFigureExtra';
-import { prepareFigure, PLAY_EVENT } from './learnanim';
+import { prepareFigure, PLAY_EVENT, STOP_EVENT } from './learnanim';
 
 /**
  * Hình minh hoạ của tab Learn — SVG vẽ bằng code, không phải ảnh tải về.
@@ -87,21 +87,56 @@ const L = (lang: Lang, vi: string, en: string) => (lang === 'en' ? en : vi);
  * tắt JS, bật "giảm chuyển động" hay chụp màn hình đều thấy đủ. Chuyển động
  * là một LỚP phủ: `prepareFigure()` gắn thứ tự (nến hiện lần lượt → khung
  * mẫu / đường cổ → đường giá kỳ vọng → chữ), và lớp `play` trên <svg> chạy
- * nó khi hình lọt vào màn hình, một lần. Nút ↻ chạy lại.
+ * nó khi hình lọt vào màn hình, một lần.
+ *
+ * Nút ▶ Phát / ■ Dừng (#247, chủ app hỏi): ▶ chạy LẶP — hết lượt nghỉ
+ * `LOOP_HOLD_MS` ở hình đầy đủ rồi chạy lại — cho tới khi bấm ■; ■ dừng
+ * ngay và hình đứng yên ở trạng thái ĐẦY ĐỦ (bỏ lớp `play`), không bao giờ
+ * dừng giữa chừng ở một hình thiếu nửa.
  */
+
+/** Nghỉ ở hình đầy đủ giữa hai lượt khi đang phát lặp — để kịp đọc. */
+const LOOP_HOLD_MS = 1500;
+
 export default function LearnFigure({ id, lang }: { id: FigureId; lang: Lang }) {
   const { t } = useLang();
   const body = draw(id, lang);
   const ref = useRef<SVGSVGElement>(null);
-  const [animatable, setAnimatable] = useState(false);
+  /** Thời lượng một lượt (ms); 0 = hình tĩnh, không có nút. */
+  const [duration, setDuration] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const durRef = useRef(0);
 
-  const play = () => {
+  const clearTimer = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = undefined;
+  };
+
+  /** Chạy một lượt từ đầu; `loop` thì hết lượt nghỉ một nhịp rồi chạy lại. */
+  const run = (loop: boolean) => {
     const svg = ref.current;
     if (!svg) return;
+    clearTimer();
     svg.classList.remove('play');
     void svg.getBoundingClientRect(); // ép trình duyệt bỏ trạng thái cũ để animation chạy lại từ đầu
     svg.classList.add('play');
     svg.dispatchEvent(new Event(PLAY_EVENT));
+    setPlaying(true);
+    timer.current = setTimeout(() => {
+      if (loop) run(true);
+      else { timer.current = undefined; setPlaying(false); }
+    }, durRef.current + (loop ? LOOP_HOLD_MS : 0));
+  };
+
+  /** Dừng ngay: bỏ lớp `play` là mọi phần tử về trạng thái đầy đủ (hình tĩnh). */
+  const stop = () => {
+    const svg = ref.current;
+    clearTimer();
+    setPlaying(false);
+    if (!svg) return;
+    svg.classList.remove('play');
+    svg.dispatchEvent(new Event(STOP_EVENT));
   };
 
   useEffect(() => {
@@ -109,15 +144,17 @@ export default function LearnFigure({ id, lang }: { id: FigureId; lang: Lang }) 
     if (!svg) return;
     const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) return; // hình tĩnh, không nút
-    const ok = prepareFigure(svg);
-    setAnimatable(ok);
-    if (!ok) return;
-    if (typeof IntersectionObserver !== 'function') { play(); return; }
+    const ms = prepareFigure(svg);
+    durRef.current = ms;
+    setDuration(ms);
+    if (!ms) return;
+    // Lọt vào màn hình thì chạy đúng MỘT lượt; lặp chỉ khi người dùng bấm ▶.
+    if (typeof IntersectionObserver !== 'function') { run(false); return clearTimer; }
     const io = new IntersectionObserver((es) => {
-      if (es.some((e) => e.isIntersecting)) { io.disconnect(); play(); }
+      if (es.some((e) => e.isIntersecting)) { io.disconnect(); run(false); }
     }, { threshold: 0.4 });
     io.observe(svg);
-    return () => io.disconnect();
+    return () => { io.disconnect(); clearTimer(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, lang]);
 
@@ -126,10 +163,15 @@ export default function LearnFigure({ id, lang }: { id: FigureId; lang: Lang }) 
       <svg ref={ref} className="learnfig" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={id} data-figure={id}>
         {body}
       </svg>
-      {animatable && (
-        <button type="button" className="learnreplay" onClick={play} title={t('learn.replay')} aria-label={t('learn.replay')}>
-          ↻ {t('learn.replay')}
-        </button>
+      {duration > 0 && (
+        <div className="learnplay" role="group" aria-label={t('learn.animation')}>
+          <button type="button" className="learnplaybtn" data-act="play" onClick={() => run(true)} disabled={playing} aria-pressed={playing}>
+            <span aria-hidden="true">▶</span> {t('learn.play')}
+          </button>
+          <button type="button" className="learnplaybtn" data-act="stop" onClick={stop} disabled={!playing}>
+            <span aria-hidden="true">■</span> {t('learn.stop')}
+          </button>
+        </div>
       )}
     </div>
   );

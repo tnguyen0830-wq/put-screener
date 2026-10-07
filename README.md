@@ -1017,7 +1017,8 @@ Mỗi bài có:
 - **Hình động** — hình nến và mẫu hình chạy theo thứ tự một người giảng sẽ
   vẽ trên bảng: nến hiện lần lượt → đường giá tự vẽ → đường cổ / khung đánh
   dấu mẫu → hướng phá vỡ → chữ chú thích. Chạy một lần khi hình lọt vào màn
-  hình; nút **↻ Phát lại** dưới mỗi hình chạy lại. Bài đầu tiên có thêm hình
+  hình; dưới mỗi hình có nút **▶ Phát** (chạy lặp, nghỉ 1,5 giây ở hình đầy đủ
+  giữa hai lượt) và **■ Dừng** (dừng ngay, hình đứng yên ở trạng thái đầy đủ). Bài đầu tiên có thêm hình
   **cây nến hình thành trong phiên** (giá chạy bên trái, cây nến lớn dần bên
   phải). Máy bật "giảm chuyển động" thì hình đứng yên và không có nút.
 - **Bẫy thường gặp** — vài câu, mỗi câu một cách đọc sai đã thấy thật.
