@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import type { FigureId } from '@/lib/learn';
+import { useLang } from '@/lib/i18n';
 import { drawExtra } from './LearnFigureExtra';
+import { prepareFigure, PLAY_EVENT } from './learnanim';
 
 /**
  * Hình minh hoạ của tab Learn — SVG vẽ bằng code, không phải ảnh tải về.
@@ -49,7 +52,7 @@ function Candles({ data, x0 = 20, step = 14, w = 8, lo, hi, top, bottom }: {
         const bt = y(Math.max(o, c));
         const bb = y(Math.min(o, c));
         return (
-          <g key={i}>
+          <g key={i} className="lf-c">
             <line x1={x} x2={x} y1={y(h)} y2={y(l)} style={st} strokeWidth={1} />
             <rect x={x - w / 2} y={bt} width={w} height={Math.max(1, bb - bt)} style={st} />
           </g>
@@ -78,12 +81,57 @@ function Dashed({ y, label, color = 'var(--warn)', x1 = 12, x2 = W - 12, lang: _
 
 const L = (lang: Lang, vi: string, en: string) => (lang === 'en' ? en : vi);
 
+/**
+ * Hình động (#246): chủ app muốn nến và mẫu hình "có hình động cho dễ hiểu".
+ * Hình vẫn là SVG tĩnh vẽ bằng code — server render ra đúng hình cuối, nên
+ * tắt JS, bật "giảm chuyển động" hay chụp màn hình đều thấy đủ. Chuyển động
+ * là một LỚP phủ: `prepareFigure()` gắn thứ tự (nến hiện lần lượt → khung
+ * mẫu / đường cổ → đường giá kỳ vọng → chữ), và lớp `play` trên <svg> chạy
+ * nó khi hình lọt vào màn hình, một lần. Nút ↻ chạy lại.
+ */
 export default function LearnFigure({ id, lang }: { id: FigureId; lang: Lang }) {
+  const { t } = useLang();
   const body = draw(id, lang);
+  const ref = useRef<SVGSVGElement>(null);
+  const [animatable, setAnimatable] = useState(false);
+
+  const play = () => {
+    const svg = ref.current;
+    if (!svg) return;
+    svg.classList.remove('play');
+    void svg.getBoundingClientRect(); // ép trình duyệt bỏ trạng thái cũ để animation chạy lại từ đầu
+    svg.classList.add('play');
+    svg.dispatchEvent(new Event(PLAY_EVENT));
+  };
+
+  useEffect(() => {
+    const svg = ref.current;
+    if (!svg) return;
+    const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return; // hình tĩnh, không nút
+    const ok = prepareFigure(svg);
+    setAnimatable(ok);
+    if (!ok) return;
+    if (typeof IntersectionObserver !== 'function') { play(); return; }
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) { io.disconnect(); play(); }
+    }, { threshold: 0.4 });
+    io.observe(svg);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, lang]);
+
   return (
-    <svg className="learnfig" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={id} data-figure={id}>
-      {body}
-    </svg>
+    <div className="learnfigbox">
+      <svg ref={ref} className="learnfig" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={id} data-figure={id}>
+        {body}
+      </svg>
+      {animatable && (
+        <button type="button" className="learnreplay" onClick={play} title={t('learn.replay')} aria-label={t('learn.replay')}>
+          ↻ {t('learn.replay')}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -687,8 +735,8 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <Candles data={data} x0={24} step={18} w={9} lo={96} hi={116} />
           <line x1={24} x2={24 + 13 * 18} y1={y(112.6)} y2={y(106.6)} style={WARN} strokeDasharray="4 3" />
           <line x1={24} x2={24 + 13 * 18} y1={y(99.4)} y2={y(106)} style={WARN} strokeDasharray="4 3" />
-          <line x1={270} x2={296} y1={y(106.3)} y2={y(111)} style={{ stroke: 'var(--credit)', fill: 'none' }} strokeWidth={2} />
-          <line x1={270} x2={296} y1={y(106.3)} y2={y(101.5)} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={2} />
+          <line className="lf-tgt" x1={270} x2={296} y1={y(106.3)} y2={y(111)} style={{ stroke: 'var(--credit)', fill: 'none' }} strokeWidth={2} />
+          <line className="lf-tgt" x1={270} x2={296} y1={y(106.3)} y2={y(101.5)} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={2} />
           <T x={24 + 5 * 18} y={y(115)} anchor="middle" ink>{l('tam giác cân', 'symmetrical triangle')}</T>
           <T x={16} y={H - 4}>{l('cả hai cạnh co lại; hướng do cạnh nào bị phá quyết định', 'both edges converge; the broken edge sets the direction')}</T>
         </g>

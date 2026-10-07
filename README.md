@@ -1014,6 +1014,12 @@ Mỗi bài có:
 - **Hình vẽ** — SVG vẽ bằng code, dùng đúng màu theme của app (nến xanh/đỏ,
   call/put của GEX, đường tham chiếu màu cảnh báo). Không có ảnh tải từ ngoài,
   nên không có ảnh vỡ, và đổi theme là hình đổi theo.
+- **Hình động** — hình nến và mẫu hình chạy theo thứ tự một người giảng sẽ
+  vẽ trên bảng: nến hiện lần lượt → đường giá tự vẽ → đường cổ / khung đánh
+  dấu mẫu → hướng phá vỡ → chữ chú thích. Chạy một lần khi hình lọt vào màn
+  hình; nút **↻ Phát lại** dưới mỗi hình chạy lại. Bài đầu tiên có thêm hình
+  **cây nến hình thành trong phiên** (giá chạy bên trái, cây nến lớn dần bên
+  phải). Máy bật "giảm chuyển động" thì hình đứng yên và không có nút.
 - **Bẫy thường gặp** — vài câu, mỗi câu một cách đọc sai đã thấy thật.
 - **Nút "Xem thật"** — nhảy sang đúng tab (và tab con) đang có dữ liệu sống:
   bài GEX mở Heatmap → GEX, bài Form 4 mở Insider Trade → Insiders.

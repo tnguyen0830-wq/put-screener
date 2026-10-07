@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import type { FigureId } from '@/lib/learn';
+import { PLAY_EVENT } from './learnanim';
 
 /**
  * Hình cho phần "Phân tích kỹ thuật căn bản" (bài chủ app gửi, 2026-10-07).
@@ -55,7 +57,7 @@ function Candle({ d, x, w, y }: { d: OHLC; x: number; w: number; y: (p: number) 
   const bt = y(Math.max(o, c));
   const bb = y(Math.min(o, c));
   return (
-    <g>
+    <g className="lf-c">
       <line x1={x} x2={x} y1={y(h)} y2={y(l)} style={st} strokeWidth={1} />
       <rect x={x - w / 2} y={bt} width={w} height={Math.max(1, bb - bt)} style={st} />
     </g>
@@ -300,7 +302,7 @@ function LineSet({ s, lang, id }: { s: LSet; lang: Lang; id: FigureId }) {
         <line key={i} x1={X(d[0])} y1={Y(d[1])} x2={X(d[2])} y2={Y(d[3])} stroke="var(--warn)" strokeDasharray="4 3" />
       ))}
       <polyline points={s.pts.map(([a, b]) => `${X(a)},${Y(b)}`).join(' ')} fill="none" stroke="var(--ink)" strokeWidth={1.8} strokeLinejoin="round" />
-      <line x1={X(s.tgt[0])} y1={Y(s.tgt[1])} x2={X(s.tgt[2])} y2={Y(s.tgt[3])} stroke={tgtColor} strokeWidth={2} />
+      <line className="lf-tgt" x1={X(s.tgt[0])} y1={Y(s.tgt[1])} x2={X(s.tgt[2])} y2={Y(s.tgt[3])} stroke={tgtColor} strokeWidth={2} />
       {s.side === 'neutral' && (
         <line x1={X(s.tgt[0])} y1={Y(s.tgt[1])} x2={X(s.tgt[2])} y2={Y(s.tgt[1] - (s.tgt[3] - s.tgt[1]))} stroke={tgtColor} strokeWidth={2} strokeDasharray="2 2" />
       )}
@@ -551,7 +553,81 @@ function RiskReward({ lang }: { lang: Lang }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Cây nến hình thành trong phiên — lấy ý từ bài gốc chủ app gửi: bên
+   trái là giá chạy từng nhịp, bên phải là cây nến tương ứng lớn dần. Đứng
+   yên ở trạng thái cuối cho tới khi LearnFigure phát `PLAY_EVENT` (hình lọt
+   vào màn hình, hoặc bấm ↻) — nên server và "giảm chuyển động" thấy đủ. */
+
+const LIVE_N = 64;
+const LIVE_TICKS: number[] = (() => {
+  const r = rng(42);
+  const out = [50];
+  for (let i = 1; i < LIVE_N; i++) out.push(out[i - 1] + 0.08 + (r() - 0.5) * 2.2);
+  return out;
+})();
+
+function LiveCandle({ lang }: { lang: Lang }) {
+  const ref = useRef<SVGGElement>(null);
+  const [k, setK] = useState(LIVE_N - 1);
+  useEffect(() => {
+    const svg = ref.current?.closest('svg');
+    if (!svg) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      if (timer) clearInterval(timer);
+      let i = 0;
+      setK(0);
+      timer = setInterval(() => {
+        i += 1;
+        setK(Math.min(i, LIVE_N - 1));
+        if (i >= LIVE_N - 1 && timer) clearInterval(timer);
+      }, 60);
+    };
+    svg.addEventListener(PLAY_EVENT, start);
+    return () => {
+      svg.removeEventListener(PLAY_EVENT, start);
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+  const lo = Math.min(...LIVE_TICKS) - 1;
+  const hi = Math.max(...LIVE_TICKS) + 1;
+  const y = scaler(lo, hi, 22, H - 22);
+  const x = (i: number) => 14 + (i * 176) / (LIVE_N - 1);
+  const ticks = LIVE_TICKS.slice(0, k + 1);
+  const o = ticks[0];
+  const c = ticks[k];
+  const h = Math.max(...ticks);
+  const l = Math.min(...ticks);
+  const st = c >= o ? UP : DN;
+  const cx = 248;
+  const tag = (v: number, label: Bi, right: boolean) => (
+    <g>
+      <line x1={right ? cx + 16 : cx - 30} x2={right ? cx + 30 : cx - 16} y1={y(v)} y2={y(v)} stroke="var(--muted)" />
+      <T x={right ? cx + 33 : cx - 33} y={y(v) + 3} anchor={right ? 'start' : 'end'}>{pickL(lang, label)}</T>
+    </g>
+  );
+  return (
+    <g ref={ref} data-noanim="1">
+      <line x1={14} x2={190} y1={y(o)} y2={y(o)} stroke="var(--warn)" strokeDasharray="4 3" />
+      <polyline points={ticks.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} fill="none" stroke="var(--ink)" strokeWidth={1.5} />
+      <circle cx={x(k)} cy={y(c)} r={3} style={{ fill: st.fill }} />
+      <line x1={198} x2={198} y1={16} y2={H - 16} stroke="var(--rule)" />
+      <line x1={cx} x2={cx} y1={y(h)} y2={y(l)} style={st} strokeWidth={2} />
+      <rect x={cx - 12} y={y(Math.max(o, c))} width={24} height={Math.max(1.5, Math.abs(y(o) - y(c)))} style={st} />
+      {tag(h, ['cao', 'high'], true)}
+      {tag(l, ['thấp', 'low'], true)}
+      {tag(o, ['mở', 'open'], false)}
+      {tag(c, ['đóng', 'close'], false)}
+      <T x={14} y={14} ink>{pickL(lang, ['Giá chạy trong phiên', 'Price during the session'])}</T>
+      <T x={cx} y={14} anchor="middle" ink>{pickL(lang, ['cây nến', 'the candle'])}</T>
+      <T x={14} y={H - 5}>{pickL(lang, ['bấm ↻ để xem cây nến hình thành lại từ đầu', 'press ↻ to watch the candle form again'])}</T>
+    </g>
+  );
+}
+
 export function drawExtra(id: FigureId, lang: Lang): React.ReactNode | null {
+  if (id === 'candle-live') return <LiveCandle lang={lang} />;
   const cs = CANDLE_SETS[id];
   if (cs) return <CandleSet s={cs} lang={lang} />;
   const ls = LINE_SETS[id];
@@ -571,5 +647,5 @@ export function drawExtra(id: FigureId, lang: Lang): React.ReactNode | null {
 export const EXTRA_FIGURE_IDS: string[] = [
   ...Object.keys(CANDLE_SETS),
   ...Object.keys(LINE_SETS),
-  'ma-cross', 'rsi', 'macd', 'bollinger', 'volume-confirm', 'risk-reward',
+  'ma-cross', 'rsi', 'macd', 'bollinger', 'volume-confirm', 'risk-reward', 'candle-live',
 ];
