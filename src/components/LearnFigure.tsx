@@ -1,6 +1,7 @@
 'use client';
 
 import type { FigureId } from '@/lib/learn';
+import { drawExtra } from './LearnFigureExtra';
 
 /**
  * Hình minh hoạ của tab Learn — SVG vẽ bằng code, không phải ảnh tải về.
@@ -175,7 +176,7 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <T x={W - 14} y={y(92.5) - 3} anchor="end">{l('vùng hỗ trợ · 2 lần chạm', 'support zone · 2 touches')}</T>
           <T x={W - 14} y={y(sma[sma.length - 1]) - 4} anchor="end" ink>SMA200 ↗</T>
           <rect x={16 + 18 * 12.5 - 4} y={12} width={5 * 12.5} height={H - 28} fill="var(--hover)" opacity={0.6} />
-          <T x={16 + 20.5 * 12.5} y={22} anchor="middle">{l('5 nến cuối: chưa xác nhận', 'last 5: unconfirmed')}</T>
+          <T x={W - 8} y={22} anchor="end">{l('5 nến cuối: chưa xác nhận', 'last 5: unconfirmed')}</T>
         </g>
       );
     }
@@ -300,7 +301,7 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <Dashed y={y(-600)} label="−600" />
           <line x1={16} x2={W - 12} y1={y(0)} y2={y(0)} style={MUT} />
           <polyline points={vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')} style={INK} strokeWidth={1.5} />
-          <T x={16} y={H - 6}>{l('TICK NYSE, từng phút · ngoài ±600 = cả sàn cùng một phía', 'NYSE TICK by minute · beyond ±600 = the whole exchange on one side')}</T>
+          <T x={16} y={H - 6}>{l('TICK NYSE, từng phút · ngoài ±600 = cả sàn cùng một phía', 'NYSE TICK per minute · past ±600 = whole exchange one-sided')}</T>
         </g>
       );
     }
@@ -323,7 +324,7 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <polygon points={`${cx - 30},${cy + 40} ${cx - 22},${cy + 32} ${cx - 20},${cy + 44}`} fill="var(--ink)" />
           <T x={cx + 120} y={cy + 12} anchor="end">{l('sức mạnh tương đối →', 'relative strength →')}</T>
           <T x={cx + 4} y={cy - 62}>{l('↑ đà', '↑ momentum')}</T>
-          <T x={16} y={H - 6}>{l('toạ độ của NGÀNH so với 10 ngành kia, quay theo chiều kim đồng hồ', 'the SECTOR\'s position against the other 10, rotating clockwise')}</T>
+          <T x={16} y={H - 6}>{l('toạ độ NGÀNH so với 10 ngành kia, quay chiều kim đồng hồ', 'the SECTOR\'s position against the other 10, rotating clockwise')}</T>
         </g>
       );
     }
@@ -438,13 +439,17 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <T x={130} y={H - 18} anchor="end">{l('khớp ở bid', 'at bid')}</T>
           <T x={190} y={H - 18}>{l('khớp ở ask', 'at ask')}</T>
           <T x={240} y={52} ink>{l('← imbalance', '← imbalance')}</T>
-          <T x={240} y={140}>{l('← 0 = auction chưa xong', '← 0 = unfinished auction')}</T>
+          <T x={232} y={134}>← 0 =</T>
+          <T x={232} y={146}>{l('auction chưa xong', 'unfinished auction')}</T>
           <T x={16} y={H - 6}>{l('app CHƯA có — cần dữ liệu từng giao dịch', 'NOT in the app yet — needs per-trade data')}</T>
         </g>
       );
     }
     case 'short-put-payoff': {
-      const xs = scale(70, 120, 24, W - 24);
+      /* Trục giá tăng sang PHẢI (chú thích dưới hình có mũi tên →). `scale()`
+         là thang dọc — đảo chiều — nên dùng nó cho trục ngang từng vẽ giá
+         thấp ở bên phải, tức vùng lỗ nằm sai phía. */
+      const xs = (p: number) => 24 + ((p - 70) / 50) * (W - 48);
       const ys = scale(-25, 5, 20, H - 26);
       const strike = 95;
       const prem = 2;
@@ -457,8 +462,8 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <line x1={xs(strike)} x2={xs(strike)} y1={ys(5)} y2={ys(-25)} style={WARN} strokeDasharray="4 3" />
           <T x={xs(strike)} y={ys(5) - 4} anchor="middle" ink>{l('strike 95', 'strike 95')}</T>
           <T x={xs(110)} y={ys(prem) - 6} anchor="middle">{l('lãi tối đa = premium', 'max profit = premium')}</T>
-          <T x={xs(93) - 4} y={ys(0) + 12} anchor="end">{l('hoà vốn 93', 'breakeven 93')}</T>
-          <T x={xs(76)} y={ys(-14)}>{l('lỗ như cầm cổ phiếu', 'loses like owning stock')}</T>
+          <T x={xs(93) - 4} y={ys(0) - 4} anchor="end">{l('hoà vốn 93', 'breakeven 93')}</T>
+          <T x={xs(87) - 12} y={ys(-6)} anchor="end">{l('lỗ như cầm cổ phiếu', 'loses like owning stock')}</T>
           <T x={16} y={H - 6}>{l('P/L lúc đáo hạn theo giá cổ phiếu →', 'P/L at expiry versus stock price →')}</T>
         </g>
       );
@@ -506,8 +511,10 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
               </g>
             );
           })}
-          <T x={200} y={46} anchor="start">{l('? = chưa có dữ liệu, KHÔNG phải ✓', '? = no data, NOT a ✓')}</T>
-          <T x={200} y={86} anchor="start">{l('✗ = loại, điểm không cứu', '✗ = dropped, score cannot rescue')}</T>
+          <T x={200} y={46} anchor="start">{l('? = chưa có dữ liệu,', '? = no data,')}</T>
+          <T x={200} y={58} anchor="start">{l('KHÔNG phải ✓', 'NOT a ✓')}</T>
+          <T x={200} y={86} anchor="start">{l('✗ = loại,', '✗ = dropped,')}</T>
+          <T x={200} y={98} anchor="start">{l('điểm không cứu', 'score cannot rescue')}</T>
         </g>
       );
     }
@@ -522,7 +529,7 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
           <polyline points={iv.map((v, i) => `${x(i)},${y(v)}`).join(' ')} style={{ stroke: 'var(--stamp)', fill: 'none' }} strokeWidth={1.5} />
           <polyline points={hv.map((v, i) => `${x(i)},${y(v)}`).join(' ')} style={INK} strokeWidth={1.5} strokeDasharray="4 3" />
           <T x={x(14) + 4} y={y(46) + 3}>IV</T>
-          <T x={x(14) + 4} y={y(34) + 3}>HV20</T>
+          <T x={W - 4} y={y(34) + 14} anchor="end">HV20</T>
           <T x={x(7)} y={y(60)} anchor="middle" ink>{l('khoảng cách = VRP (IV ÷ HV) > 1', 'the gap = VRP (IV ÷ HV) > 1')}</T>
           <T x={16} y={H - 6}>{l('thị trường định giá dao động nhiều hơn dao động thật', 'the market prices more movement than actually happens')}</T>
         </g>
@@ -535,12 +542,15 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
       const gamma = Array.from({ length: 46 }, (_, d) => 1 / (1 + d / 4));
       return (
         <g>
-          <polyline points={theta.map((v, d) => `${xs(45 - d)},${y(v)}`).join(' ')} style={{ stroke: 'var(--credit)', fill: 'none' }} strokeWidth={1.5} />
-          <polyline points={gamma.map((v, d) => `${xs(45 - d)},${y(v)}`).join(' ')} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={1.5} />
+          {/* d = số ngày còn lại. Trước đây vẽ ở xs(45 − d) nên hai đường bị lật:
+              gamma GIẢM dần khi tới đáo hạn, ngược với chính bài học. */}
+          <polyline points={theta.map((v, d) => `${xs(d)},${y(v)}`).join(' ')} style={{ stroke: 'var(--credit)', fill: 'none' }} strokeWidth={1.5} />
+          <polyline points={gamma.map((v, d) => `${xs(d)},${y(v)}`).join(' ')} style={{ stroke: 'var(--risk)', fill: 'none' }} strokeWidth={1.5} />
           <line x1={xs(21)} x2={xs(21)} y1={26} y2={H - 26} style={WARN} strokeDasharray="4 3" />
           <T x={xs(21)} y={20} anchor="middle" ink>21 DTE</T>
-          <T x={xs(40)} y={y(0.15)} anchor="middle">{l('giá trị thời gian còn lại', 'time value left')}</T>
-          <T x={xs(8)} y={y(0.85)} anchor="middle">{l('gamma (rủi ro cú rớt nhỏ)', 'gamma (risk of a small drop)')}</T>
+          <T x={30} y={y(0.6)} anchor="start">{l('giá trị thời gian còn lại', 'time value left')}</T>
+          <T x={xs(21) + 6} y={y(0.93)} anchor="start">gamma</T>
+          <T x={xs(21) + 6} y={y(0.93) + 11} anchor="start">{l('(rủi ro cú rớt nhỏ)', '(risk of a small drop)')}</T>
           <T x={xs(45)} y={H - 10} anchor="start">45</T>
           <T x={xs(0)} y={H - 10} anchor="end">0</T>
           <T x={W / 2} y={H - 10} anchor="middle">{l('← ngày còn lại tới đáo hạn', '← days to expiry')}</T>
@@ -716,6 +726,9 @@ function draw(id: FigureId, lang: Lang): React.ReactNode {
       );
     }
     default: {
+      /* Hình vẽ từ dữ liệu (LearnFigureExtra.tsx). */
+      const extra = drawExtra(id, lang);
+      if (extra) return extra;
       /* Một id mới thêm vào FIGURE_IDS mà quên vẽ: lộ ra trên màn hình, không im. */
       return (
         <g data-missing-figure={String(id)}>

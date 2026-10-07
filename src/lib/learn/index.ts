@@ -1,4 +1,6 @@
 import { CANDLE_LESSONS } from './candles';
+import { CANDLE_LESSONS_MORE } from './candles2';
+import { TA_LESSONS } from './ta';
 import { GEX_LESSONS } from './gex';
 import { FLOW_LESSONS } from './flow';
 import { PUT_LESSONS } from './putselling';
@@ -10,11 +12,13 @@ export { SECTION_IDS, FIGURE_IDS } from './types';
 export { REFERENCE, REF_GROUPS, refById, type RefEntry, type RefGroup } from './reference';
 
 /**
- * Bốn phần, thứ tự hiển thị. Tên phần là NHÃN GIAO DIỆN nên nằm ở `i18n.tsx`
+ * Năm phần, thứ tự hiển thị. Phần `ta` và ba bài cuối của `candles` đến từ
+ * bài "Phân tích kỹ thuật căn bản" chủ app gửi (2026-10-07). Tên phần là NHÃN GIAO DIỆN nên nằm ở `i18n.tsx`
  * (`learn.sec.<id>`), không ở đây — cùng luật với `tab.*`.
  */
 export const SECTIONS: { id: SectionId; lessons: Lesson[] }[] = [
-  { id: 'candles', lessons: CANDLE_LESSONS },
+  { id: 'candles', lessons: [...CANDLE_LESSONS, ...CANDLE_LESSONS_MORE] },
+  { id: 'ta', lessons: TA_LESSONS },
   { id: 'gex', lessons: GEX_LESSONS },
   { id: 'flow', lessons: FLOW_LESSONS },
   { id: 'putselling', lessons: PUT_LESSONS },

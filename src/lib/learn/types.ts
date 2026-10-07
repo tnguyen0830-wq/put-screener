@@ -14,7 +14,7 @@
 /** Một câu ở hai ngôn ngữ. Cả hai BẮT BUỘC có — test ghim điều đó. */
 export type L = { vi: string; en: string };
 
-export const SECTION_IDS = ['candles', 'gex', 'flow', 'putselling'] as const;
+export const SECTION_IDS = ['candles', 'ta', 'gex', 'flow', 'putselling'] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 
 /**
@@ -48,6 +48,47 @@ export const FIGURE_IDS = [
   'sym-triangle',
   'breakout',
   'resistance',
+  /* Bài "Phân tích kỹ thuật căn bản" chủ app gửi (2026-10-07): các nến,
+     cụm nến và mẫu giá còn thiếu, cộng xu hướng / chỉ báo / rủi ro. Phần lớn
+     vẽ từ DỮ LIỆU (`CANDLE_SETS` / `LINE_SETS` trong LearnFigure.tsx) chứ
+     không mỗi hình một nhánh tay — nhưng mỗi id vẫn phải có dữ liệu, không
+     thì rơi vào khung "?" và test bắt. */
+  'marubozu',
+  'bear-marubozu',
+  'spinning-top',
+  'dragonfly-doji',
+  'gravestone-doji',
+  'long-legged-doji',
+  'bull-harami',
+  'bear-harami',
+  'piercing',
+  'dark-cloud',
+  'tweezer-top',
+  'tweezer-bottom',
+  'three-soldiers',
+  'three-crows',
+  'three-inside-up',
+  'three-inside-down',
+  'abandoned-baby',
+  'rising-three',
+  'falling-three',
+  'triple-top',
+  'triple-bottom',
+  'rising-wedge',
+  'falling-wedge',
+  'rounding-bottom',
+  'cup-handle',
+  'pennant',
+  'rectangle',
+  'channel',
+  'trendline',
+  'sr-flip',
+  'ma-cross',
+  'rsi',
+  'macd',
+  'bollinger',
+  'volume-confirm',
+  'risk-reward',
   'gex-profile',
   'gamma-regime',
   'tick',

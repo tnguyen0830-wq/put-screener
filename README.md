@@ -998,12 +998,13 @@ Hàng nút **0.75× / 1× / 1.25× / 1.5× / 2×** chỉnh tốc độ đọc, n
 ## Learn — học đọc đúng những màn hình bên cạnh
 
 Tab thứ tám, cho người nhà mới dùng app (và cho chính chủ app khi quên một
-định nghĩa). Bốn phần, 22 bài, mỗi bài song ngữ Việt/Anh theo đúng cờ ngôn
+định nghĩa). Năm phần, 28 bài, mỗi bài song ngữ Việt/Anh theo đúng cờ ngôn
 ngữ của app:
 
 | Phần | Bài |
 |---|---|
-| **Nến & mẫu hình** | Cấu tạo nến · doji · búa/người treo cổ · nhấn chìm + sao mai/sao hôm · vùng hỗ trợ (đúng cách tab Đầu tư dài hạn tính: đáy xoay 5 nến mỗi bên, gom 2,5%, tối thiểu 2 lần chạm) · vai-đầu-vai + hai đỉnh/hai đáy · tam giác + cờ |
+| **Nến & mẫu hình** | Cấu tạo nến · doji · búa/người treo cổ · nhấn chìm + sao mai/sao hôm · vùng hỗ trợ (đúng cách tab Đầu tư dài hạn tính: đáy xoay 5 nến mỗi bên, gom 2,5%, tối thiểu 2 lần chạm) · vai-đầu-vai + hai đỉnh/hai đáy · tam giác + cờ · thêm nến đơn (marubozu, con xoay, họ doji) · cụm 2–3 nến (harami, đường nhọn/mây đen, nhíp, ba lính/ba quạ, em bé bị bỏ rơi, ba bước) · thêm mẫu giá (ba đỉnh/đáy, nêm, cờ đuôi nheo, chữ nhật, cốc-tay cầm, đáy tròn, kênh) |
+| **Xu hướng · Chỉ báo · Rủi ro** | Xu hướng + đường xu hướng + đổi vai hỗ trợ/kháng cự · MA/giao cắt vàng, khối lượng, RSI 14, MACD 12/26/9, Bollinger 20/2 (đúng bộ số tab Analyze in) · ghép tín hiệu, R : R, cỡ lệnh từ điểm cắt lỗ — và vì sao luật 2R không áp nguyên cho người BÁN put |
 | **GEX & bề rộng TT** | GEX là gì · đọc biểu đồ (put wall / call wall / abs gamma / zero gamma — tính trên gamma RÒNG, và vì sao zero gamma có thể trống) · gamma dương/âm · TICK ±600, ADD, VOLD, put/call · Fear & Greed + RRG |
 | **Flow · Dark pool · Insider** | Options flow (KL/OI > 1, và vì sao flow KHÔNG cho biết ai mua ai bán) · dark pool (≥ 1 triệu đô, 14 ngày) · Form 4 (chỉ mã P, loại 10b5-1, đếm NGƯỜI mua) · Quốc hội (khoảng tiền, độ trễ đo được ~116 ngày) · footprint — và thứ gần nhất app đang có |
 | **Bán put có bảo đảm** | Cash-secured put là gì · công thức điểm 45/25/15/15 · bảy hard gate và dấu `?` · IV so với HV · quản lý vị thế (21 DTE, sizing 5/20/50/30) |
@@ -1032,12 +1033,18 @@ một đáy đơn không phải hỗ trợ. Đọc xong bài là đọc được
 cạnh — đó là lý do tab này nằm trong app thay vì là một trang web riêng.
 
 **Hai chế độ trong tab**: **Bài học** (đọc một lần, ở trên) và **Tra cứu
-nhanh** — một trang có đủ 22 kiểu nến và mẫu hình để xem lại sau khi học
+nhanh** — một trang có 57 thẻ kiểu nến, mẫu hình và chỉ báo để xem lại sau khi học
 xong: mỗi thẻ một hình vẽ đứng riêng, một câu nó là gì, **xác nhận khi nào**
 (đúng luật máy dò ở tab Patterns: búa chỉ ✓ khi nến sau đóng cao hơn, hai
 đáy chỉ ✓ khi đóng trên đường cổ), **bẫy hay gặp**, bài học nói kỹ, và app
 có tự dò kiểu đó ở tab Patterns không. Lọc theo nhóm (nến / đảo chiều /
-tiếp diễn / mức giá) hoặc tìm theo tên.
+tiếp diễn / mức giá / chỉ báo) hoặc tìm theo tên.
+
+Phần **Xu hướng · Chỉ báo · Rủi ro** và các nến/mẫu thêm ở phần đầu lấy từ
+bài "Phân tích kỹ thuật căn bản" chủ app gửi (2026-10-07). Phần lớn các
+kiểu thêm đó app CHƯA tự dò ở Patterns, và thẻ nói thẳng như vậy; ba kiểu
+doji (chuồn chuồn, bia mộ, chân dài) thì máy dò thấy nhưng gọi chung là
+"doji". Mọi biểu đồ trong các thẻ đó là dữ liệu minh hoạ.
 
 Nhãn tab "Learn" giữ tiếng Anh ở cả hai ngôn ngữ, cùng luật với bảy tab kia.
 

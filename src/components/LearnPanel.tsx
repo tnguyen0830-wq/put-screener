@@ -38,19 +38,37 @@ function inline(text: string): ReactNode[] {
   return parts.map((p, i) => (i % 2 === 1 ? <strong key={i}>{p}</strong> : <span key={i}>{p}</span>));
 }
 
-/** Một đoạn: nếu MỌI dòng bắt đầu bằng `- ` thì là danh sách, còn lại là <p>. */
+/**
+ * Một đoạn. Dòng bắt đầu bằng `- ` là mục danh sách, dòng khác là văn xuôi;
+ * các dòng liền nhau cùng loại gộp thành một khối. Trước đây chỉ khi MỌI dòng
+ * là `- ` mới thành danh sách, nên một đoạn kiểu "ba luật:\n- …\n- …" (16 đoạn
+ * trong các bài cũ) bị dồn thành một dòng chữ, dấu gạch đầu dòng nằm giữa câu.
+ */
 function Para({ text }: { text: string }) {
   const lines = text.split('\n').filter((l) => l.trim());
-  if (lines.length && lines.every((l) => l.startsWith('- '))) {
-    return (
-      <ul className="learnlist">
-        {lines.map((l, i) => (
-          <li key={i}>{inline(l.slice(2))}</li>
-        ))}
-      </ul>
-    );
+  const blocks: { list: boolean; lines: string[] }[] = [];
+  for (const l of lines) {
+    const list = l.startsWith('- ');
+    const last = blocks[blocks.length - 1];
+    if (last && last.list === list) last.lines.push(l);
+    else blocks.push({ list, lines: [l] });
   }
-  return <p>{inline(text)}</p>;
+  if (!blocks.length) return <p>{inline(text)}</p>;
+  return (
+    <>
+      {blocks.map((b, i) =>
+        b.list ? (
+          <ul key={i} className="learnlist">
+            {b.lines.map((l, j) => (
+              <li key={j}>{inline(l.slice(2))}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i}>{inline(b.lines.join(' '))}</p>
+        ),
+      )}
+    </>
+  );
 }
 
 export default function LearnPanel({ onOpen }: { onOpen: (tab: string, sub?: string) => void }) {

@@ -1,4 +1,5 @@
 import type { FigureId, L } from './types';
+import { REFERENCE_MORE } from './reference2';
 
 /**
  * Bảng tra cứu nhanh — tab con "Tra cứu" của tab Learn.
@@ -15,7 +16,7 @@ import type { FigureId, L } from './types';
  * Thuần, không `node:fs`; `validateLessons()` kiểm cả file này.
  */
 
-export const REF_GROUPS = ['candle', 'reversal', 'continuation', 'level'] as const;
+export const REF_GROUPS = ['candle', 'reversal', 'continuation', 'level', 'indicator'] as const;
 export type RefGroup = (typeof REF_GROUPS)[number];
 
 export type RefEntry = {
@@ -36,7 +37,7 @@ export type RefEntry = {
   patternId?: string;
 };
 
-export const REFERENCE: RefEntry[] = [
+const REFERENCE_BASE: RefEntry[] = [
   /* ---------------- nến ---------------- */
   {
     id: 'anatomy', group: 'candle', figure: 'candle-anatomy', side: 'neutral',
@@ -221,6 +222,15 @@ export const REFERENCE: RefEntry[] = [
     lesson: 'support', patternId: 'breakout',
   },
 ];
+
+/**
+ * Thẻ gốc + thẻ từ bài "Phân tích kỹ thuật căn bản" (`reference2.ts`), xếp
+ * theo thứ tự nhóm để chế độ "Tất cả" đọc thành từng nhóm liền nhau; trong
+ * một nhóm giữ thứ tự viết (sort ổn định).
+ */
+export const REFERENCE: RefEntry[] = [...REFERENCE_BASE, ...REFERENCE_MORE].sort(
+  (a, b) => REF_GROUPS.indexOf(a.group) - REF_GROUPS.indexOf(b.group),
+);
 
 export function refById(id: string): RefEntry | undefined {
   return REFERENCE.find((r) => r.id === id);
