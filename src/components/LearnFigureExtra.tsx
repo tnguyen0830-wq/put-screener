@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { FigureId } from '@/lib/learn';
-import { PLAY_EVENT } from './learnanim';
+import { PLAY_EVENT, STOP_EVENT, LIVE_STEPS, LIVE_TICK_MS } from './learnanim';
 
 /**
  * Hình cho phần "Phân tích kỹ thuật căn bản" (bài chủ app gửi, 2026-10-07).
@@ -557,9 +557,10 @@ function RiskReward({ lang }: { lang: Lang }) {
 /* Cây nến hình thành trong phiên — lấy ý từ bài gốc chủ app gửi: bên
    trái là giá chạy từng nhịp, bên phải là cây nến tương ứng lớn dần. Đứng
    yên ở trạng thái cuối cho tới khi LearnFigure phát `PLAY_EVENT` (hình lọt
-   vào màn hình, hoặc bấm ↻) — nên server và "giảm chuyển động" thấy đủ. */
+   vào màn hình, hoặc bấm ▶) — nên server và "giảm chuyển động" thấy đủ.
+   `STOP_EVENT` (bấm ■) đưa nó về ngay trạng thái cuối. */
 
-const LIVE_N = 64;
+const LIVE_N = LIVE_STEPS;
 const LIVE_TICKS: number[] = (() => {
   const r = rng(42);
   const out = [50];
@@ -582,11 +583,18 @@ function LiveCandle({ lang }: { lang: Lang }) {
         i += 1;
         setK(Math.min(i, LIVE_N - 1));
         if (i >= LIVE_N - 1 && timer) clearInterval(timer);
-      }, 60);
+      }, LIVE_TICK_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+      setK(LIVE_N - 1);
     };
     svg.addEventListener(PLAY_EVENT, start);
+    svg.addEventListener(STOP_EVENT, stop);
     return () => {
       svg.removeEventListener(PLAY_EVENT, start);
+      svg.removeEventListener(STOP_EVENT, stop);
       if (timer) clearInterval(timer);
     };
   }, []);
@@ -621,7 +629,7 @@ function LiveCandle({ lang }: { lang: Lang }) {
       {tag(c, ['đóng', 'close'], false)}
       <T x={14} y={14} ink>{pickL(lang, ['Giá chạy trong phiên', 'Price during the session'])}</T>
       <T x={cx} y={14} anchor="middle" ink>{pickL(lang, ['cây nến', 'the candle'])}</T>
-      <T x={14} y={H - 5}>{pickL(lang, ['bấm ↻ để xem cây nến hình thành lại từ đầu', 'press ↻ to watch the candle form again'])}</T>
+      <T x={14} y={H - 5}>{pickL(lang, ['bấm ▶ để xem cây nến hình thành lại từ đầu', 'press ▶ to watch the candle form again'])}</T>
     </g>
   );
 }
