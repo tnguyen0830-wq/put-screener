@@ -246,6 +246,35 @@ Nhật ký nằm cạnh `SCAN_PATH` trên đĩa (`/var/data/activity.log`, cộn
 deploy nào. File tự dọn khi vượt 512 KB. Nó bắt đầu từ lần deploy đưa
 tính năng này lên — việc làm trước đó không có ở đây.
 
+### Member history — từng người đã làm gì và tốn bao nhiêu
+
+Ngay dưới phần Hoạt động. Bảng **Cost per member** cộng chi phí của từng
+người theo **hôm nay (giờ New York) / 7 ngày / 30 ngày**; bấm vào một tên (hoặc
+chọn ở hàng nút) để xem riêng người đó: **What … spent** (từng lượt gọi tính
+tiền: lúc nào, việc gì, chi phí, số token / số ký tự, model) và **What … did**
+(nhật ký hoạt động của riêng người đó).
+
+Tiền được tính từ con số **chính dịch vụ trả về sau mỗi lượt**, không đoán:
+
+- **Claude**: token vào, token ra (gồm cả token suy nghĩ — Anthropic tính tiền
+  chúng như token ra), token đọc/ghi cache, đổi ra USD theo bảng giá Anthropic
+  (claude-opus-5: $5 / 1 triệu token vào, $25 / 1 triệu token ra). Đây là
+  **ước tính**; hoá đơn thật nằm trên Console Anthropic. Model nào chưa có
+  trong bảng giá của app thì hiện `?`, không được cộng vào tổng, và cạnh tổng
+  có dấu `+?`.
+- **ElevenLabs**: số ký tự đã đọc — đúng đơn vị ElevenLabs trừ vào hạn mức
+  tháng.
+
+Lượt lấy lại từ bộ nhớ đệm (bản tóm tắt tin đã viết, bản dịch đã có, giọng đọc
+đã tạo) **không tốn gì và không được tính**. Không tính: Schwab và SEC (miễn
+phí), Unusual Whales và X (hạn mức chung của cả app, không gắn với người bấm),
+và một lượt Claude hỏng giữa chừng. Bản dịch hồ sơ công ty tự chạy ở tab
+Analyze cũng được tính cho người đang mở trang.
+
+Sổ chi phí nằm cạnh `SCAN_PATH` (`/var/data/usage.log`), giữ 90 ngày, **không có
+biến môi trường mới**, và bắt đầu từ lần deploy đưa tính năng này lên. Chỉ chủ
+app xem được; người nhà gọi `/api/users/usage` bị chặn 403.
+
 ### Ba điều cần biết
 
 Mọi người **dùng chung phiên Schwab và chung hạn mức** của bạn (người nhà quét

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ElevenError, MAX_CHARS, elevenConfigured, listVoices, pickElevenVoice, synthesize } from '@/lib/eleventts';
 import { cleanForSpeech } from '@/lib/tts';
 import { logActivity } from '@/lib/activity';
+import { recordEleven } from '@/lib/usage';
 import { currentUser } from '@/lib/users';
 
 /**
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
     const voice = pickElevenVoice(voices, process.env.ELEVENLABS_VOICE_ID, chosen);
     if (!voice) return NextResponse.json({ error: 'NO_VOICES', detail: 'Tài khoản ElevenLabs không có giọng nào trong /v1/voices.' }, { status: 502 });
     const s = await synthesize(text, voice.id);
+    /* Chỉ lượt tổng hợp MỚI tốn ký tự; lượt lấy từ cache trên đĩa là 0. */
+    if (!s.cached) await recordEleven(currentUser(req), s.chars, s.model, voice.name);
     return new NextResponse(new Uint8Array(s.audio), {
       headers: {
         'Content-Type': 'audio/mpeg',

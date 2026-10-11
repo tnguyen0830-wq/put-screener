@@ -140,7 +140,12 @@ export type HeadlineTranslateResult = {
  * cache mới tốn một lượt gọi Claude, và tất cả tiêu đề trong lô đi chung
  * MỘT lượt gọi (không phải một lượt mỗi tiêu đề).
  */
-export async function translateHeadlines(rawTitles: string[]): Promise<HeadlineTranslateResult> {
+export async function translateHeadlines(
+  rawTitles: string[],
+  /** Nhận câu trả lời Claude để ghi chi phí (lib/usage.ts). Chỉ được gọi khi
+   *  app THẬT SỰ gọi Claude — lượt toàn cache không tốn gì nên không gọi. */
+  meter?: (res: { model?: string; usage?: unknown }) => Promise<void> | void
+): Promise<HeadlineTranslateResult> {
   pruneHeadlineCache();
   const titles = [...new Set(rawTitles.map((t) => t.trim()).filter(Boolean))].slice(0, MAX_TITLES);
 
@@ -163,6 +168,7 @@ export async function translateHeadlines(rawTitles: string[]): Promise<HeadlineT
       system: HEADLINE_TRANSLATE_SYSTEM,
       messages: [{ role: 'user', content: buildNumberedList(missing) }],
     });
+    await meter?.(res);
     const block = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
     const lines = parseTranslatedLines(block?.text ?? '', missing.length);
     let any = false;

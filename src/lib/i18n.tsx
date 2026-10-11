@@ -880,6 +880,63 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: 'Every family-member login sends one line to your Telegram with the New York time and the IP address (at most one message per person per 30 minutes). Without TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID this part switches itself off; the log below still works.',
   },
 
+  /* ---- Lịch sử + chi phí theo từng thành viên ---- */
+  'acct.histTitle': { vi: 'Member history', en: 'Member history' },
+  'acct.histIntro': {
+    vi: 'Mỗi người đã làm gì và tốn bao nhiêu. Tiền chỉ tính cho dịch vụ trả theo lượt dùng: Claude (USD ước tính từ chính số token Claude trả về sau mỗi lượt, gồm cả token suy nghĩ) và giọng đọc ElevenLabs (số ký tự — đơn vị ElevenLabs trừ vào hạn mức tháng). Lượt lấy lại từ bộ nhớ đệm không tốn gì nên không được tính.',
+    en: 'What each person did and what it cost. Only pay-per-use services are counted: Claude (an estimated USD figure from the token counts Claude itself returns after each call, thinking tokens included) and the ElevenLabs voice (characters — the unit ElevenLabs deducts from the monthly quota). A replay served from cache costs nothing and is not counted.',
+  },
+  'acct.histTotals': { vi: 'Cost per member', en: 'Cost per member' },
+  'acct.histToday': { vi: 'Hôm nay (NY)', en: 'Today (NY)' },
+  'acct.hist7': { vi: '7 ngày', en: '7 days' },
+  'acct.hist30': { vi: '30 ngày', en: '30 days' },
+  'acct.histNone': { vi: 'không tốn gì', en: 'nothing spent' },
+  'acct.histCalls': {
+    vi: (n: number) => `${n} lượt`,
+    en: (n: number) => `${n} call${n === 1 ? '' : 's'}`,
+  },
+  'acct.histChars': {
+    vi: (n: number) => `${n.toLocaleString('vi-VN')} ký tự ElevenLabs`,
+    en: (n: number) => `${n.toLocaleString('en-US')} ElevenLabs characters`,
+  },
+  'acct.histPick': { vi: 'Xem chi tiết của', en: 'Show details for' },
+  'acct.histSpent': {
+    vi: (u: string) => `What ${u} spent`,
+    en: (u: string) => `What ${u} spent`,
+  },
+  'acct.histDid': {
+    vi: (u: string) => `What ${u} did`,
+    en: (u: string) => `What ${u} did`,
+  },
+  'acct.histNoSpent': {
+    vi: 'Chưa có lượt gọi tính tiền nào. Sổ chi phí bắt đầu từ lần deploy này — lượt trước đó không có ở đây.',
+    en: 'No billable calls yet. The cost log starts at this deploy — earlier calls are not here.',
+  },
+  'acct.histNoDid': {
+    vi: 'Không có hoạt động nào trong 14 ngày nhật ký giữ lại.',
+    en: 'No activity in the 14 days the log keeps.',
+  },
+  'acct.histColUse': { vi: 'Dùng', en: 'Usage' },
+  'acct.histColCost': { vi: 'Chi phí', en: 'Cost' },
+  'acct.histTok': {
+    vi: (v: { i: string; o: string; c: string }) => `${v.i} vào · ${v.o} ra${v.c !== '0' ? ` · ${v.c} cache` : ''}`,
+    en: (v: { i: string; o: string; c: string }) => `${v.i} in · ${v.o} out${v.c !== '0' ? ` · ${v.c} cached` : ''}`,
+  },
+  'acct.histElevenUnit': { vi: 'trừ hạn mức', en: 'from quota' },
+  'acct.histUnpriced': {
+    vi: (m: string) => `Model chưa có trong bảng giá của app: ${m}. Các lượt đó hiện "?" và KHÔNG được cộng vào tổng — dấu "+?" cạnh tổng nghĩa là tổng thật lớn hơn.`,
+    en: (m: string) => `Model not in the app's price table: ${m}. Those calls show "?" and are NOT added to the totals — a "+?" beside a total means the real total is higher.`,
+  },
+  'acct.histFailed': {
+    vi: (e: string) => `Không đọc được sổ chi phí: ${e}`,
+    en: (e: string) => `Could not load the cost log: ${e}`,
+  },
+  'acct.histNote': {
+    vi: 'USD là ƯỚC TÍNH theo bảng giá Anthropic (claude-opus-5: $5 / 1 triệu token vào, $25 / 1 triệu token ra); hoá đơn thật nằm trên Console Anthropic. Không tính: Schwab và SEC (miễn phí), Unusual Whales và X (hạn mức chung của cả app, không gắn với người bấm), và một lượt Claude bị hỏng giữa chừng (Claude vẫn có thể tính tiền phần đã viết). Sổ giữ 90 ngày.',
+    en: 'USD is an ESTIMATE from Anthropic\'s price table (claude-opus-5: $5 per million input tokens, $25 per million output tokens); the real bill is on the Anthropic Console. Not counted: Schwab and SEC (free), Unusual Whales and X (one shared app-wide quota, not tied to whoever pressed), and a Claude call that failed midway (Claude may still bill the part it wrote). The log keeps 90 days.',
+  },
+  'act.kind.profile': { vi: 'Dịch hồ sơ công ty (tự chạy)', en: 'Company profile translation (automatic)' },
+
   /* Nhãn từng loại việc. Loại LẠ in nguyên mã của nó chứ không in
      `act.kind.xxx` — cùng lý do `ruleLabel()` bên Options Flow: `t()` trả về
      khoá khi thiếu, mà một loại mới thêm ở server sẽ ra màn hình trước khi

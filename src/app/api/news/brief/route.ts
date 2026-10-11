@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { briefFacts, briefKey, briefSystem, sanitizeHeadlines } from '@/lib/newsbrief';
 import { logActivity } from '@/lib/activity';
+import { recordClaude } from '@/lib/usage';
 import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
@@ -80,6 +81,8 @@ export async function POST(req: Request) {
           }
         }
         const final = await s.finalMessage();
+        /* Chi phí THẬT của lượt này, từ `usage` Claude trả về — xem lib/usage.ts. */
+        await recordClaude(currentUser(req), 'brief', `${headlines.length} tin`, final);
         if (final.stop_reason === 'max_tokens') send('\n\n[AI_TRUNCATED]');
         else if (final.stop_reason === 'refusal') send('\n\n[REFUSED]');
         // Chỉ cache bản VIẾT XONG: một bản bị cắt mà cache 20 phút là 20 phút

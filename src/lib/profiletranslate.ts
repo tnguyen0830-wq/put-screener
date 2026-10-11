@@ -167,7 +167,10 @@ function stripFence(s: string): string {
  */
 export async function translateProfile(
   symbol: string,
-  f: ProfileFields
+  f: ProfileFields,
+  /** Nhận câu trả lời Claude để ghi chi phí (lib/usage.ts); lượt lấy từ
+   *  cache trên đĩa không gọi Claude nên không gọi hàm này. */
+  meter?: (res: { model?: string; usage?: unknown }) => Promise<void> | void
 ): Promise<TranslateResult> {
   const fields = presentFields(f);
   if (!fields.length) return { vi: null };
@@ -191,6 +194,7 @@ export async function translateProfile(
       output_config: { effort: 'low' },
       messages: [{ role: 'user', content: JSON.stringify(Object.fromEntries(fields)) }],
     });
+    await meter?.(res);
     const block = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
 
     // Kiểm tra trần TRƯỚC khi parse. Chạm trần thì hoặc không có khối text

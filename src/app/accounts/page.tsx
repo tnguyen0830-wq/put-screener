@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import Logo from '@/components/Logo';
+import MemberUsage from '@/components/MemberUsage';
 
 /**
  * Quản lý tài khoản người nhà. Chỉ chủ app mở được.
@@ -310,6 +311,11 @@ export default function AccountsPage() {
           )}
           <p className="cap">{t('acct.actNote')}</p>
           <p className="cap">{t('acct.actTelegram')}</p>
+
+          {/* Lịch sử + chi phí theo TỪNG người (chủ app hỏi "coi họ làm những
+              gì và tốn bao nhiêu credit"). Nhật ký ở trên trộn mọi người và
+              chỉ hiện 80 dòng; phần này lọc theo một người và cộng tiền. */}
+          <MemberUsage events={events} names={(users ?? []).map((u) => u.name)} />
 
           {loadError && <p className="hint hint-warn">{t('acct.loadFailed', loadError)}</p>}
 
