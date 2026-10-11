@@ -1,5 +1,6 @@
 import { translateHeadlines } from '@/lib/newstranslate';
 import { logActivity } from '@/lib/activity';
+import { recordClaude } from '@/lib/usage';
 import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,11 @@ export async function POST(req: Request) {
     : [];
   if (!titles.length) return Response.json({ translations: {} });
 
-  await logActivity(currentUser(req), 'translate', `${titles.length} tiêu đề`);
+  const who = currentUser(req);
+  await logActivity(who, 'translate', `${titles.length} tiêu đề`);
 
-  const result = await translateHeadlines(titles);
+  const result = await translateHeadlines(titles, (res) =>
+    recordClaude(who, 'translate', `${titles.length} tiêu đề`, res)
+  );
   return Response.json(result);
 }

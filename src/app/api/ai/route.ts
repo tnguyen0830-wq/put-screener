@@ -6,6 +6,7 @@ import { xFacts, type XSymbolResult } from '@/lib/xsymbol';
 import { socialFacts, type SocialResult } from '@/lib/social';
 import { chartImageRules, parseChartImages } from '@/lib/chartimage';
 import { logActivity } from '@/lib/activity';
+import { recordClaude } from '@/lib/usage';
 import { currentUser } from '@/lib/users';
 
 /**
@@ -188,6 +189,8 @@ export async function POST(req: Request) {
           if (!(e instanceof Anthropic.BadRequestError) || sent > 0) throw e;
           final = await run(false);
         }
+        /* Chi phí THẬT của lượt này, từ `usage` Claude trả về — xem lib/usage.ts. */
+        await recordClaude(currentUser(req), 'ai', String(analysis.symbol), final);
         if (final.stop_reason === 'refusal') {
           send('\n\n[REFUSED]');
         }

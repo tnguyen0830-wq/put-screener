@@ -3,6 +3,7 @@ import { symbolNewsAll, type NewsResult } from '@/lib/news';
 import { technicalSnapshot, type TechnicalSnapshot } from '@/lib/technical';
 import { whyFacts, whySystem } from '@/lib/ltwhy';
 import { logActivity } from '@/lib/activity';
+import { recordClaude } from '@/lib/usage';
 import { currentUser } from '@/lib/users';
 
 export const dynamic = 'force-dynamic';
@@ -114,6 +115,8 @@ export async function POST(req: Request) {
         /* Bị cắt giữa chừng phải NÓI RA. Một câu trả lời đứt ngang trông y
            hệt một câu trả lời viết xong - và #118 đã mất ba vòng sửa đúng vì
            chỗ này im lặng. */
+        /* Chi phí THẬT của lượt này, từ `usage` Claude trả về — xem lib/usage.ts. */
+        await recordClaude(currentUser(req), 'why', String(row.symbol), final);
         if (final.stop_reason === 'max_tokens') send('\n\n[AI_TRUNCATED]');
         if (final.stop_reason === 'refusal') send('\n\n[REFUSED]');
       } catch (e: any) {

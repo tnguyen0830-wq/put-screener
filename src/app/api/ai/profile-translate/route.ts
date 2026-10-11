@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { translateProfile, type ProfileFields } from '@/lib/profiletranslate';
+import { recordClaude } from '@/lib/usage';
+import { currentUser } from '@/lib/users';
 
 /**
  * Dịch sector/industry/country/description của Analyze tab sang tiếng
@@ -38,6 +40,12 @@ export async function POST(req: NextRequest) {
   // `reason` (khi có) phải đi kèm - nó là thứ duy nhất phân biệt "chưa có gì
   // để dịch" với "đã thử dịch và hỏng vì X", điều mà #112 từng bỏ sót và
   // khiến chủ app phải báo lại đúng một triệu chứng lần thứ hai.
-  const { vi: translated, reason } = await translateProfile(symbol, fields);
+  /* Bản dịch tự chạy (không có dòng trong nhật ký hoạt động — xem
+     activity.ts), nhưng lượt gọi Claude THẬT vẫn là tiền thật, nên sổ chi
+     phí ghi nó cho người đang mở trang. Lượt lấy từ cache không ghi gì. */
+  const who = currentUser(req);
+  const { vi: translated, reason } = await translateProfile(symbol, fields, (res) =>
+    recordClaude(who, 'profile', symbol.toUpperCase(), res)
+  );
   return NextResponse.json({ translated, reason });
 }

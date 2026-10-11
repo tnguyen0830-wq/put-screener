@@ -2844,6 +2844,93 @@ body {
   white-space: nowrap;
 }
 
+/* --- Lịch sử + chi phí theo thành viên -------------------------------
+   Chỉ dùng biến màu ĐÃ CÓ (bẫy ba khối theme). Số tiền dùng --ink chứ
+   không --risk: tiêu tiền là chuyện bình thường, không phải tin xấu; chỉ
+   chỗ "chưa có giá" mới dùng --warn. */
+.usgwrap {
+  overflow-x: auto;
+}
+.usgtable td,
+.usgcalls td {
+  vertical-align: top;
+}
+.usgusd {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.usgsub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.usgzero {
+  font-size: 12px;
+  color: var(--muted);
+}
+.usgwarn {
+  color: var(--warn);
+  font-weight: 700;
+}
+.usgnum {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.usgwhat {
+  color: var(--ink);
+}
+.usgname {
+  font: inherit;
+  font-weight: 700;
+  color: var(--stamp);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.usgname[aria-pressed='true'] {
+  text-decoration: none;
+}
+.usgsel th,
+.usgsel td {
+  background: var(--stamp-tint);
+}
+.usgpick {
+  margin-top: 14px;
+  align-items: center;
+}
+/* Màn hình hẹp: cho số xuống dòng thay vì đẩy cột Chi phí ra ngoài khung
+   — ở 400px cột đó (thứ người đọc cần nhất) từng nằm khuất bên phải. */
+@media (max-width: 560px) {
+  .usgnum {
+    white-space: normal;
+  }
+  /* Số tiền KHÔNG được bẻ giữa chừng ("$0.0" / "585" đọc thành hai số);
+     chỗ trống lấy từ cột giờ và cột "Dùng", vốn xuống dòng giữa các từ được. */
+  .usgnum.usgcost {
+    white-space: nowrap;
+  }
+  .usgsub {
+    overflow-wrap: anywhere;
+  }
+  .usgcalls td:first-child {
+    white-space: normal;
+  }
+  .acctlist.usgtable th,
+  .acctlist.usgtable td,
+  .acctlist.usgcalls th,
+  .acctlist.usgcalls td {
+    padding-right: 6px;
+    font-size: 13px;
+  }
+}
+.usgpicklabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .acctactions {
   display: flex;
   gap: 8px;
