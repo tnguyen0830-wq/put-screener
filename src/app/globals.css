@@ -316,6 +316,15 @@ select {
   cursor: default;
 }
 
+/* Giọng đọc ngay dưới tiêu đề khối Claude, câu trả lời ngay sau nó. */
+.aispeak {
+  margin-top: 10px;
+}
+
+.aispeakwait {
+  margin-top: 8px;
+}
+
 /* Claude writes short labelled sections in plain text, so newlines are the
    whole of the formatting and have to survive. */
 .aitext {

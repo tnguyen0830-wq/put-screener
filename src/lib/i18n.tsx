@@ -2803,6 +2803,10 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'ai.run': { vi: 'Nhờ Claude phân tích', en: 'Ask Claude' },
   'ai.rerun': { vi: 'Phân tích lại', en: 'Run again' },
   'ai.running': { vi: 'Đang đọc…', en: 'Reading…' },
+  'ai.voiceWait': {
+    vi: 'Nút Nghe hiện ở đây khi Claude viết xong.',
+    en: 'The Listen button appears here once Claude has finished writing.',
+  },
   'ai.idle': {
     vi: 'Một lượt Claude đọc HẾT theo đúng thứ tự: chart (ảnh bạn đính kèm bên dưới, nếu có) → chỉ báo kỹ thuật và biến động (SMA, RSI, MACD, ATR, Bollinger, IV so với HV) → cấu trúc gamma (put wall, call wall, zero gamma, net GEX) → dòng tiền Unusual Whales → tin tức và bàn tán trên X/StockTwits/Reddit → rồi KẾT LUẬN chung và XU HƯỚNG sắp tới (nghiêng về đâu + ba kịch bản chính/tăng/giảm). Mọi mức giá trong phần xu hướng phải chép từ bảng mức giá app tự tính bên dưới. Mỗi lần bấm tốn vài cent tiền API, nên nó chỉ chạy khi bạn bấm.',
     en: 'One Claude pass reads EVERYTHING in this order: the chart (images you attach below, if any) → technical and volatility indicators (SMA, RSI, MACD, ATR, Bollinger, IV vs HV) → the gamma structure (put wall, call wall, zero gamma, net GEX) → Unusual Whales money flow → the news and chatter on X/StockTwits/Reddit → then an overall CONCLUSION and the TREND AHEAD (which way it leans + three base/upside/downside scenarios). Every price in the trend part must be copied from the price map the app computes below. Each run costs a few cents of API credit, so it only runs when you ask.',
@@ -3243,9 +3247,9 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   },
   'tts.ai.tooLong': {
     vi: (d: { chars: number; max: number }) =>
-      `Bản tóm tắt ${d?.chars ?? '?'} ký tự, vượt trần ${d?.max ?? '?'} nên không gửi đi. Dùng tạm giọng trình duyệt (không có trần) cho bản này.`,
+      `Đoạn cần đọc dài ${d?.chars ?? '?'} ký tự, vượt trần ${d?.max ?? '?'} nên không gửi đi. Dùng tạm giọng trình duyệt (không có trần) cho bản này.`,
     en: (d: { chars: number; max: number }) =>
-      `The brief is ${d?.chars ?? '?'} characters, over the ${d?.max ?? '?'} ceiling, so it was not sent. Use the browser voice (no ceiling) for this one.`,
+      `The text is ${d?.chars ?? '?'} characters, over the ${d?.max ?? '?'} ceiling, so it was not sent. Use the browser voice (no ceiling) for this one.`,
   },
   'tts.ai.failed': { vi: 'Tạo giọng AI thất bại.', en: 'AI voice generation failed.' },
   'tts.howToAdd': {

@@ -508,8 +508,17 @@ và phải nói thẳng khi GEX thiếu, cũ, hay chỉ có mức của Unusual 
 mục vắng mặt rất dễ đọc thành "không có gì đáng nói". Mỗi lần bấm tốn vài cent
 API.
 
-**Chart TradingView cho Claude đọc.** Chart TradingView của mã nằm ngay trong
-khung Claude (theo theme sáng/tối và ngôn ngữ của app). Claude **không** tự
+**Bố cục khối Claude, và nghe câu trả lời.** Ngay dưới tiêu đề là nút **Nghe**
+(cùng bộ đọc với bản tóm tắt tab Tin tức: giọng AI ElevenLabs nếu server có
+key, không thì giọng trình duyệt; chọn được tốc độ). Nút chỉ hiện khi Claude
+đã viết **xong** — đọc một câu trả lời đang chạy là đọc nửa câu rồi im — và
+lúc đang viết thì chỗ đó ghi sẽ có nút khi xong. Câu trả lời đứng **trên**
+chart; chart, khối Unusual Whales và bảng mức giá (dữ kiện đầu vào) nằm bên
+dưới để đối chiếu. Giọng AI tính tiền theo ký tự như ở tab Tin tức, và nghe lại
+cùng câu trả lời không tốn thêm.
+
+**Chart TradingView cho Claude đọc.** Chart TradingView của mã nằm trong
+khung Claude, dưới câu trả lời (theo theme sáng/tối và ngôn ngữ của app). Claude **không** tự
 nhìn thấy khung chart đó: đó là trang của TradingView nhúng vào, app không đọc
 được bên trong. Muốn Claude đọc chart thì đính kèm **ảnh** (tối đa 3 ảnh):
 **Chụp chart này** (Chrome/Edge máy tính, chọn "Tab này" khi trình duyệt hỏi,
