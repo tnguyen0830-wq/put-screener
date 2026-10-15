@@ -111,6 +111,51 @@ function splitLong(s: string, max: number): string[] {
   return out;
 }
 
+/**
+ * Giọng AI (ElevenLabs): văn bản dài được gửi thành NHIỀU lượt và phát nối
+ * tiếp, thay vì từ chối cả bản. Lý do (#251): câu trả lời tám mục của tab
+ * Analyze dài ~9.000 ký tự đã dọn, vượt trần 8.000 MỖI LƯỢT của `/api/tts`
+ * (`MAX_CHARS` trong eleventts.ts) — chủ app bấm Nghe và chỉ nhận một dòng
+ * "vượt trần".
+ *
+ * - Cắt ở ranh giới ĐOẠN (xuống dòng), rồi ở ranh giới câu nếu một đoạn tự
+ *   nó dài quá — dùng lại `ttsChunks()` chứ không viết bộ cắt câu thứ hai.
+ *   Không bao giờ cắt giữa một từ: giọng đọc vấp ở chỗ cắt nghe rõ ngay.
+ * - Phần đầu NGẮN hơn (`TTS_FIRST_PART`): thời gian chờ tới khi nghe được
+ *   tiếng đầu tiên tỉ lệ với độ dài lượt đầu, trong khi các phần sau được
+ *   tải trước lúc phần trước đang phát.
+ * - Trần TỔNG (`TTS_TOTAL_MAX`) vẫn là chốt chặn chi phí như trần cũ: dài
+ *   hơn thì TỪ CHỐI cả bản chứ không đọc nửa chừng rồi im (#184).
+ */
+export const TTS_PART_MAX = 3000;
+export const TTS_FIRST_PART = 1200;
+export const TTS_TOTAL_MAX = 30000;
+
+export function ttsParts(text: string, max = TTS_PART_MAX, first = TTS_FIRST_PART): string[] {
+  const clean = cleanForSpeech(text);
+  if (!clean) return [];
+  const paras: string[] = [];
+  for (const line of clean.split(/\n+/)) {
+    const l = line.trim();
+    if (!l) continue;
+    if (l.length <= Math.min(max, first)) paras.push(l);
+    else paras.push(...ttsChunks(l, Math.min(max, first)));
+  }
+  const out: string[] = [];
+  let cur = '';
+  for (const p of paras) {
+    const cap = out.length === 0 ? first : max;
+    if (cur && cur.length + 1 + p.length > cap) {
+      out.push(cur);
+      cur = p;
+    } else {
+      cur = cur ? `${cur}\n${p}` : p;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 export type VoiceInfo = { name: string; lang: string; localService?: boolean; default?: boolean };
 
 /** Giọng nói được ngôn ngữ đích không: `vi` khớp `vi-VN`, `vi_VN`, `vi`. */

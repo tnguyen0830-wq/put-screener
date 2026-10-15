@@ -1015,7 +1015,7 @@ tiêu đề mỗi lần mở tab là 60 lượt gọi cho thứ người đọc 
 **Nghe bản tóm tắt.** Dưới bản tóm tắt có nút **Nghe** (kèm Tạm dừng / Dừng)
 với hai máy đọc chọn được. **Giọng AI (ElevenLabs)** — giọng neural tự nhiên,
 cần `ELEVENLABS_API_KEY`, tính tiền theo ký tự; app cache audio theo nội dung
-nên bấm lại hay người thứ hai bấm là 0 ký tự, từ chối văn bản quá 8.000 ký tự,
+nên bấm lại hay người thứ hai bấm là 0 ký tự; văn bản dài (như câu trả lời tám mục ở tab Analyze) được gửi thành nhiều phần ≤ 3.000 ký tự và phát nối tiếp — phần đầu ngắn để nghe được sớm, phần sau tải trong lúc phần trước đang đọc — chỉ từ chối khi cả bản quá 30.000 ký tự,
 và in ra mỗi lần "đã dùng N ký tự" hay "bản đã tạo trước". Chọn giọng ngay
 trong ô giọng (danh sách lấy từ chính tài khoản của bạn); hết ký tự, key sai,
 giọng bị xoá — mỗi lỗi một câu riêng vì cách sửa khác nhau. Vừa thêm giọng
