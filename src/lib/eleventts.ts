@@ -42,9 +42,10 @@ import { cleanForSpeech } from './tts';
  * như "dịch vụ hỏng". Thứ tự: `ELEVENLABS_VOICE_ID` (chủ app đặt) → giọng
  * người dùng chọn trên màn hình (từ CHÍNH danh sách `/v1/voices` của tài
  * khoản) → giọng đầu tiên trong danh sách đó. Model mặc định
- * `eleven_multilingual_v2` (chất lượng cao nhất cho tiếng Việt theo tài
- * liệu nhớ được); `ELEVENLABS_MODEL` để đổi sang `eleven_flash_v2_5` (rẻ
- * một nửa) mà không deploy.
+ * `eleven_flash_v2_5` — xem `NO_VIETNAMESE` bên dưới: model mặc định cũ
+ * `eleven_multilingual_v2` KHÔNG có tiếng Việt, và đọc văn bản Việt bằng
+ * nó ra giọng "không giống tiếng Việt" (chủ app nghe ở production, #252).
+ * `ELEVENLABS_MODEL` vẫn đổi được model mà không deploy.
  *
  * Không có `ELEVENLABS_API_KEY` thì tự tắt như UW/X/Telegram: màn hình rơi
  * về giọng trình duyệt và NÓI ra là đang dùng đường lùi.
@@ -54,8 +55,41 @@ const BASE = 'https://api.elevenlabs.io/v1';
 const UA = 'put-screener/1.0 (news brief reader)';
 
 export const elevenConfigured = () => !!process.env.ELEVENLABS_API_KEY;
-export const DEFAULT_MODEL = 'eleven_multilingual_v2';
+export const DEFAULT_MODEL = 'eleven_flash_v2_5';
 export const modelId = () => process.env.ELEVENLABS_MODEL?.trim() || DEFAULT_MODEL;
+
+export type SpeechLang = 'vi' | 'en';
+
+/** Model ĐÃ BIẾT là không có tiếng Việt. Theo bảng model trong tài liệu
+ *  ElevenLabs (đọc 2026-10-15, chưa đo bằng một lượt gọi): `vi` có ở họ
+ *  v2.5 (flash/turbo — "mọi ngôn ngữ của multilingual_v2 cộng hu, no, vi")
+ *  mà KHÔNG có trong danh sách của `eleven_multilingual_v2`; các model đời
+ *  v1 chỉ tiếng Anh hoặc ít ngôn ngữ hơn nữa. Danh sách CẤM chứ không phải
+ *  danh sách cho phép: model mới hơn (v3…) không bị chặn vì app chưa biết
+ *  tên nó. */
+export const NO_VIETNAMESE = new Set([
+  'eleven_multilingual_v2',
+  'eleven_multilingual_v1',
+  'eleven_monolingual_v1',
+  'eleven_english_sts_v2',
+  'eleven_turbo_v2',
+  'eleven_flash_v2',
+]);
+
+/** Model THẬT dùng cho một lượt đọc. Văn bản tiếng Việt mà model đang đặt
+ *  (env) không có tiếng Việt thì dùng mặc định — đọc tiếng Việt bằng model
+ *  không biết tiếng Việt là ra âm thanh trông như chạy được mà nghe không
+ *  ra chữ; model thật được trả trong header `X-TTS-Model` và in lên màn
+ *  hình nên việc thay không im lặng. */
+export function modelFor(lang: SpeechLang): string {
+  const m = modelId();
+  return lang === 'vi' && NO_VIETNAMESE.has(m) ? DEFAULT_MODEL : m;
+}
+
+/** `language_code` ép ngôn ngữ đọc — theo tài liệu nhớ được chỉ họ v2.5
+ *  nhận (model khác trả lỗi nếu gửi). Ép ngôn ngữ giữ cho giọng clone không
+ *  trôi sang giọng Anh ở mã cổ phiếu và con số. */
+export const acceptsLanguageCode = (model: string) => /^eleven_(flash|turbo)_v2_5$/.test(model);
 
 /** Trần ký tự một lượt, đo TRÊN văn bản đã dọn Markdown (`cleanForSpeech`).
  *  Tài liệu nhớ được nói multilingual_v2 nhận tới 10.000/request — 8.000 là
@@ -336,7 +370,7 @@ export type Synth = { audio: Buffer; cached: boolean; voiceId: string; model: st
  * Tổng hợp một đoạn văn. Cache trước, mạng sau. `text` đã được route kiểm
  * trần; ở đây kiểm lại vì đây là chỗ TIÊU TIỀN.
  */
-export async function synthesize(text: string, voiceId: string): Promise<Synth> {
+export async function synthesize(text: string, voiceId: string, lang: SpeechLang = 'vi'): Promise<Synth> {
   // Dọn Markdown TRƯỚC khi đếm/gửi/cache: `**`/`##`/gạch đầu dòng không ai
   // nghe thấy nhưng vẫn tính vào ký tự trả tiền và vào trần MAX_CHARS —
   // đếm trên bản còn nguyên ký hiệu là tự cộng thêm vào đúng con số đã gây
@@ -346,16 +380,24 @@ export async function synthesize(text: string, voiceId: string): Promise<Synth> 
   const t = cleanForSpeech(text.trim());
   if (!t) throw new ElevenError('văn bản rỗng', 'unavailable');
   if (t.length > MAX_CHARS) throw new ElevenError(`văn bản ${t.length} ký tự vượt trần ${MAX_CHARS}`, 'unavailable');
-  const model = modelId();
-  const key = cacheKey(t, voiceId, model);
+  const model = modelFor(lang);
+  const withLang = acceptsLanguageCode(model);
+  // Ngôn ngữ nằm trong khoá: cùng chữ đọc ép `vi` và không ép là hai file khác.
+  const key = cacheKey(t, voiceId, withLang ? `${model}:${lang}` : model);
   const hit = await readCached(key);
   if (hit) return { audio: hit, cached: true, voiceId, model, chars: t.length };
 
-  const r = await elevenFetch(`/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({ text: t, model_id: model }),
-  });
+  const send = (lc: boolean) =>
+    elevenFetch(`/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+      body: JSON.stringify(lc ? { text: t, model_id: model, language_code: lang } : { text: t, model_id: model }),
+    });
+  let r = await send(withLang);
+  /* `language_code` là tham số NHỚ ĐƯỢC chứ chưa đo: bị từ chối (400/422)
+     thì hỏi lại đúng một lần không kèm nó, thay vì làm hỏng cả lượt đọc vì
+     một tham số phụ. Lỗi khác (khoá, hạn mức, giọng) giữ nguyên. */
+  if (withLang && (r.status === 400 || r.status === 422)) r = await send(false);
   if (!r.ok) await failFrom(r, `/text-to-speech`);
   const ct = r.headers.get('content-type') ?? '';
   const buf = Buffer.from(await r.arrayBuffer());

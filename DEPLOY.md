@@ -739,7 +739,9 @@ neural có key. Chủ app chọn ElevenLabs.
    tháng và danh sách giọng của tài khoản kèm nhãn ngôn ngữ. Chọn một giọng
    hợp tiếng Việt rồi đặt `ELEVENLABS_VOICE_ID`, hoặc chọn thẳng trong ô
    giọng trên tab Tin tức (app nhớ lựa chọn).
-4. Tuỳ chọn `ELEVENLABS_MODEL=eleven_flash_v2_5` nếu muốn rẻ một nửa.
+4. Model mặc định là `eleven_flash_v2_5` vì nó có tiếng Việt; `eleven_multilingual_v2`
+   (mặc định cũ) KHÔNG có, nên đặt nó trong `ELEVENLABS_MODEL` thì bản tiếng Việt
+   vẫn tự dùng `eleven_flash_v2_5` (dòng dưới nút Nghe in model thật đã đọc).
 
 App giữ chi phí xuống bằng ba cách: cache audio trên đĩa theo nội dung +
 giọng (bấm lại hoặc người thứ hai bấm là 0 ký tự; `.cache/` mất khi deploy),
