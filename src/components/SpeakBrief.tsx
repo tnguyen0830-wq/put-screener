@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
-import { RATES, fmtRate, parseRate, pickVoice, ttsChunks, voiceMatches, type Rate } from '@/lib/tts';
+import { RATES, TTS_TOTAL_MAX, fmtRate, parseRate, pickVoice, ttsChunks, ttsParts, voiceMatches, type Rate } from '@/lib/tts';
 
 /**
  * Nghe bản tóm tắt. Hai "máy đọc", chọn được, cùng một hàng nút và cùng
@@ -31,6 +31,13 @@ type Engine = (typeof ENGINES)[number];
 
 type AiVoice = { id: string; name: string; labels: Record<string, string>; category: string | null };
 type VoicesPayload = { configured: boolean; voices: AiVoice[]; defaultId: string | null; envVoiceMissing?: boolean; envVoiceId?: string; listedAt?: number | null; model: string; error?: string; detail?: string };
+
+/* Một tích tắc im lặng phát NGAY trong cú bấm Nghe (trước mọi lượt tải):
+   Safari trên iPhone chỉ cho một thẻ <audio> phát khi lần play() đầu của nó
+   nằm trong thao tác của người dùng. Thẻ đã "mở khoá" như vậy được đổi src
+   phát tiếp mà không cần bấm lại — đó là điều cho phép nhiều phần (#251) nối
+   nhau trên điện thoại. */
+const SILENT_WAV = 'data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YcgAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
 
 const ERR_KEY: Record<string, string> = {
   TTS_NOT_CONFIGURED: 'tts.ai.notConfigured',
@@ -169,9 +176,22 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
   const [state, setState] = useState<State>('idle');
   const [err, setErr] = useState<{ key: string; detail?: string | { chars: number; max: number } } | null>(null);
   const [meta, setMeta] = useState<{ cached: boolean; chars: number; voice: string } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const urlRef = useRef<string | null>(null);
-  const forRef = useRef<string>(''); // văn bản+giọng mà blob hiện tại thuộc về
+  /* Văn bản dài được gửi thành NHIỀU lượt (`ttsParts`, #251) và phát nối
+     tiếp. `partsRef` giữ blob đã tải của đúng văn bản+giọng hiện tại, nên
+     bấm Nghe lại không POST lần nữa; `runRef` tăng mỗi lần dừng/đổi để một
+     lượt tải hay `onended` của lượt cũ không phát tiếp phần kế. */
+  const partsRef = useRef<{
+    key: string;
+    texts: string[];
+    urls: (string | null)[];
+    pending: (Promise<string> | null)[];
+    meta: { cached: boolean; chars: number; voice: string };
+  } | null>(null);
+  const runRef = useRef(0);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
 
   useEffect(() => {
     const remembered = readRemembered(AI_VOICE_KEY);
@@ -179,11 +199,11 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
   }, [voices]);
 
   const dispose = useCallback(() => {
+    runRef.current++;
     audioRef.current?.pause();
-    audioRef.current = null;
-    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-    urlRef.current = null;
-    forRef.current = '';
+    for (const u of partsRef.current?.urls ?? []) if (u) URL.revokeObjectURL(u);
+    partsRef.current = null;
+    setProgress(null);
   }, []);
 
   // Văn bản mới hoặc rời tab: dừng, thả blob.
@@ -197,70 +217,132 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
 
   // Tốc độ áp NGAY cả khi đang phát — <audio> đổi playbackRate được giữa chừng.
   useEffect(() => {
-    if (audioRef.current) audioRef.current.playbackRate = rate;
+    const a = audioRef.current;
+    if (a) {
+      a.playbackRate = rate;
+      a.defaultPlaybackRate = rate;
+    }
   }, [rate]);
 
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    runRef.current++;
+    audioRef.current?.pause();
+    setProgress(null);
     setState('idle');
   }, []);
 
-  const play = useCallback(async () => {
-    setErr(null);
-    const key = `${voiceId}\n${text}`;
-    if (audioRef.current && forRef.current === key) {
-      audioRef.current.playbackRate = rate;
-      await audioRef.current.play().catch(() => {});
-      setState('speaking');
-      return;
-    }
-    dispose();
-    setState('loading');
-    try {
+  /** Tải phần i (một lượt /api/tts). Lỗi ném ra dạng `{key, detail}`. */
+  const fetchPart = useCallback((i: number): Promise<string> => {
+    const P = partsRef.current!;
+    if (P.urls[i]) return Promise.resolve(P.urls[i]!);
+    if (P.pending[i]) return P.pending[i]!;
+    const pr = (async () => {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId }),
+        body: JSON.stringify({ text: P.texts[i], voiceId }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        if (j?.error === 'TOO_LONG') {
-          // Trần đo trên chuỗi đã dọn Markdown (#188) - trả về SỐ THẬT, không
-          // phải chuỗi "HTTP 413" người dùng không đọc ra được gì từ đó.
-          setErr({ key: 'tts.ai.tooLong', detail: { chars: Number(j?.chars ?? 0), max: Number(j?.max ?? 0) } });
-        } else {
-          setErr({ key: ERR_KEY[j?.error] ?? 'tts.ai.failed', detail: j?.detail ?? `HTTP ${res.status}` });
-        }
-        setState('idle');
-        return;
+        if (j?.error === 'TOO_LONG') throw { key: 'tts.ai.tooLong', detail: { chars: Number(j?.chars ?? 0), max: Number(j?.max ?? 0) } };
+        throw { key: ERR_KEY[j?.error] ?? 'tts.ai.failed', detail: j?.detail ?? `HTTP ${res.status}` };
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = new Audio(url);
-      a.playbackRate = rate;
-      a.onended = () => setState('idle');
+      if (partsRef.current !== P) {
+        URL.revokeObjectURL(url); // văn bản/giọng đã đổi trong lúc tải
+        throw { key: 'stale' };
+      }
+      P.urls[i] = url;
+      const cached = res.headers.get('X-TTS-Cached') === '1';
+      P.meta = {
+        cached: P.meta.cached && cached,
+        chars: P.meta.chars + (cached ? 0 : Number(res.headers.get('X-TTS-Chars') ?? 0)),
+        voice: decodeURIComponent(res.headers.get('X-TTS-Voice') ?? '') || P.meta.voice,
+      };
+      setMeta({ ...P.meta });
+      return url;
+    })();
+    pr.catch(() => {}).finally(() => {
+      if (partsRef.current === P) P.pending[i] = null;
+    });
+    P.pending[i] = pr;
+    return pr;
+  }, [voiceId]);
+
+  const playFrom = useCallback(async (i: number, run: number) => {
+    const P = partsRef.current;
+    if (!P) return;
+    try {
+      if (!P.urls[i]) setState('loading');
+      const url = await fetchPart(i);
+      if (run !== runRef.current) return;
+      const a = audioRef.current;
+      if (!a) return;
+      a.onended = null;
+      a.onerror = null;
+      a.src = url;
+      // Nạp src mới đặt playbackRate về defaultPlaybackRate — đặt cả hai.
+      a.defaultPlaybackRate = rateRef.current;
+      a.playbackRate = rateRef.current;
+      a.onended = () => {
+        if (run !== runRef.current) return;
+        if (i + 1 < P.texts.length) void playFrom(i + 1, run);
+        else {
+          setProgress(null);
+          setState('idle');
+        }
+      };
       a.onerror = () => {
+        if (run !== runRef.current) return;
         setErr({ key: 'tts.ai.failed', detail: 'audio element error' });
         setState('idle');
       };
-      audioRef.current = a;
-      urlRef.current = url;
-      forRef.current = key;
-      setMeta({
-        cached: res.headers.get('X-TTS-Cached') === '1',
-        chars: Number(res.headers.get('X-TTS-Chars') ?? 0),
-        voice: decodeURIComponent(res.headers.get('X-TTS-Voice') ?? ''),
-      });
+      setProgress(P.texts.length > 1 ? { done: i, total: P.texts.length } : null);
       await a.play();
+      if (run !== runRef.current) return;
       setState('speaking');
+      // Tải trước phần kế trong lúc phần này đang phát — để chỗ nối không im
+      // lâu. Lỗi của nó hiện ra khi tới lượt phát, không phải bây giờ.
+      if (i + 1 < P.texts.length) fetchPart(i + 1).catch(() => {});
     } catch (e: any) {
-      setErr({ key: 'tts.ai.failed', detail: String(e?.message ?? e) });
+      if (run !== runRef.current || e?.key === 'stale') return;
+      setErr(e?.key ? e : { key: 'tts.ai.failed', detail: String(e?.message ?? e) });
       setState('idle');
     }
-  }, [text, voiceId, rate, dispose]);
+  }, [fetchPart]);
+
+  const play = useCallback(async () => {
+    setErr(null);
+    // Mở khoá thẻ <audio> NGAY trong cú bấm, trước mọi `await` (xem SILENT_WAV).
+    if (!audioRef.current) audioRef.current = new Audio();
+    const el = audioRef.current;
+    el.onended = null;
+    el.onerror = null;
+    el.src = SILENT_WAV;
+    el.play().catch(() => {});
+    const key = `${voiceId}\n${text}`;
+    if (partsRef.current?.key !== key) {
+      dispose();
+      const texts = ttsParts(text);
+      const total = texts.reduce((n, x) => n + x.length, 0);
+      if (!texts.length) return;
+      if (total > TTS_TOTAL_MAX) {
+        // Trần TỔNG là chốt chặn chi phí: từ chối cả bản, không đọc nửa chừng.
+        setErr({ key: 'tts.ai.tooLong', detail: { chars: total, max: TTS_TOTAL_MAX } });
+        return;
+      }
+      partsRef.current = {
+        key,
+        texts,
+        urls: texts.map(() => null),
+        pending: texts.map(() => null),
+        meta: { cached: true, chars: 0, voice: '' },
+      };
+    }
+    const run = ++runRef.current;
+    await playFrom(0, run);
+  }, [text, voiceId, dispose, playFrom]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -295,7 +377,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
       ) : (
         <button type="button" className="rrgfullbtn ttsbtn" onClick={resume}>▶ {t('tts.resume')}</button>
       )}
-      {(state === 'speaking' || state === 'paused') && (
+      {(state === 'speaking' || state === 'paused' || (state === 'loading' && progress)) && (
         <button type="button" className="rrgfullbtn ttsbtn" onClick={stop}>⏹ {t('tts.stop')}</button>
       )}
       <select
@@ -314,6 +396,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
           <option key={v.id} value={v.id}>{label(v)}</option>
         ))}
       </select>
+      {progress && state !== 'idle' && <span className="newsat">{t('tts.progress', progress)}</span>}
       {meta && (
         <span className="newsat">
           {meta.cached ? t('tts.ai.cached') : t('tts.ai.charged', meta.chars)} · {model}
