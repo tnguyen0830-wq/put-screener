@@ -149,7 +149,7 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
         /* key = danh sách giọng: tải lại ra danh sách khác thì dựng lại máy
            đọc, để giọng mặc định mới (ví dụ giọng vừa Add to my voices) được
            chọn thay vì giữ lựa chọn tính từ danh sách cũ. */
-        <AiSpeaker key={ai.voices.map((v) => v.id).join(',')} text={text} voices={ai.voices} defaultId={ai.defaultId} model={ai.model} rate={rate} t={t} />
+        <AiSpeaker key={ai.voices.map((v) => v.id).join(',')} text={text} voices={ai.voices} defaultId={ai.defaultId} model={ai.model} rate={rate} lang={lang} t={t} />
       ) : (
         <BrowserSpeaker text={text} lang={lang} rateRef={rateRef} t={t} />
       )}
@@ -169,13 +169,13 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
  *  Giọng AI: một file mp3 từ /api/tts, phát bằng <audio>.
  * ------------------------------------------------------------------ */
 
-function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
-  text: string; voices: AiVoice[]; defaultId: string | null; model: string; rate: Rate; t: (k: string, v?: any) => string;
+function AiSpeaker({ text, voices, defaultId, model, rate, lang, t }: {
+  text: string; voices: AiVoice[]; defaultId: string | null; model: string; rate: Rate; lang: 'vi' | 'en'; t: (k: string, v?: any) => string;
 }) {
   const [voiceId, setVoiceId] = useState<string>(() => defaultId ?? voices[0].id);
   const [state, setState] = useState<State>('idle');
   const [err, setErr] = useState<{ key: string; detail?: string | { chars: number; max: number } } | null>(null);
-  const [meta, setMeta] = useState<{ cached: boolean; chars: number; voice: string } | null>(null);
+  const [meta, setMeta] = useState<{ cached: boolean; chars: number; voice: string; model?: string } | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   /* Văn bản dài được gửi thành NHIỀU lượt (`ttsParts`, #251) và phát nối
@@ -187,7 +187,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
     texts: string[];
     urls: (string | null)[];
     pending: (Promise<string> | null)[];
-    meta: { cached: boolean; chars: number; voice: string };
+    meta: { cached: boolean; chars: number; voice: string; model?: string };
   } | null>(null);
   const runRef = useRef(0);
   const rateRef = useRef(rate);
@@ -240,7 +240,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: P.texts[i], voiceId }),
+        body: JSON.stringify({ text: P.texts[i], voiceId, lang }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -259,6 +259,8 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
         cached: P.meta.cached && cached,
         chars: P.meta.chars + (cached ? 0 : Number(res.headers.get('X-TTS-Chars') ?? 0)),
         voice: decodeURIComponent(res.headers.get('X-TTS-Voice') ?? '') || P.meta.voice,
+        // Model THẬT đã đọc (server có thể thay model không biết tiếng Việt).
+        model: res.headers.get('X-TTS-Model') || P.meta.model,
       };
       setMeta({ ...P.meta });
       return url;
@@ -268,7 +270,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
     });
     P.pending[i] = pr;
     return pr;
-  }, [voiceId]);
+  }, [voiceId, lang]);
 
   const playFrom = useCallback(async (i: number, run: number) => {
     const P = partsRef.current;
@@ -399,7 +401,7 @@ function AiSpeaker({ text, voices, defaultId, model, rate, t }: {
       {progress && state !== 'idle' && <span className="newsat">{t('tts.progress', progress)}</span>}
       {meta && (
         <span className="newsat">
-          {meta.cached ? t('tts.ai.cached') : t('tts.ai.charged', meta.chars)} · {model}
+          {meta.cached ? t('tts.ai.cached') : t('tts.ai.charged', meta.chars)} · {meta.model || model}
         </span>
       )}
       {err && (

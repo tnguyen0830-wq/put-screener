@@ -51,7 +51,8 @@ export async function POST(req: Request) {
     if (!has(chosen) || !has(envId)) voices = await listVoices(false, MISS_REFRESH_MS);
     const voice = pickElevenVoice(voices, envId, chosen);
     if (!voice) return NextResponse.json({ error: 'NO_VOICES', detail: 'Tài khoản ElevenLabs không có giọng nào trong /v1/voices.' }, { status: 502 });
-    const s = await synthesize(text, voice.id);
+    const lang = body?.lang === 'en' ? 'en' : 'vi';
+    const s = await synthesize(text, voice.id, lang);
     /* Chỉ lượt tổng hợp MỚI tốn ký tự; lượt lấy từ cache trên đĩa là 0. */
     if (!s.cached) await recordEleven(currentUser(req), s.chars, s.model, voice.name);
     return new NextResponse(new Uint8Array(s.audio), {
