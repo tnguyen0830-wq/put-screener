@@ -6,6 +6,7 @@ import { buildOutlook } from '@/lib/outlook';
 import OutlookMap from './OutlookMap';
 import UwContextCard from './UwContextCard';
 import ChartForClaude, { type Shot } from './ChartForClaude';
+import SpeakBrief from './SpeakBrief';
 import type { UwContext } from '@/lib/uwsummary';
 import type { XSymbolResult } from '@/lib/xsymbol';
 import type { SocialLoad, SocialResult } from '@/lib/social';
@@ -194,7 +195,33 @@ export default function AiRead({
         </button>
       </div>
 
+      {/* Giọng đọc NGAY dưới tiêu đề (chủ app hỏi): câu trả lời dài ~900 chữ,
+          nút Nghe nằm cuối nó là nút phải cuộn mới thấy. Chỉ hiện khi Claude
+          ĐÃ VIẾT XONG — đọc bản đang stream là đọc nửa câu rồi im, và bản bị
+          ngắt giữa chừng (state 'error') không đáng tốn ký tự ElevenLabs. */}
+      {state === 'done' && text && (
+        <div className="aispeak">
+          <SpeakBrief text={text} lang={lang === 'en' ? 'en' : 'vi'} />
+        </div>
+      )}
+      {state === 'running' && <p className="cap aispeakwait">{t('ai.voiceWait')}</p>}
+
       {state === 'idle' && !text && <p className="cap">{t('ai.idle')}</p>}
+
+      {/* Câu trả lời đứng TRƯỚC chart (chủ app hỏi): nó là thứ người ta bấm
+          nút để đọc; chart, bảng UW và bản đồ mức giá là dữ kiện đầu vào,
+          vẫn nằm đó để đối chiếu. */}
+      {text && <div className="aitext">{text}</div>}
+
+      {state === 'error' && <p className="hint hint-warn">{t(errKey)}</p>}
+
+      {(state === 'done' || state === 'running') && text && sentShots > 0 && (
+        <p className="cap">{t('ci.sent', sentShots)}</p>
+      )}
+
+      {(state === 'done' || state === 'running') && text && (
+        <p className="cap">{t('ai.fullCaveat')}</p>
+      )}
 
       <ChartForClaude
         symbol={symbol}
@@ -207,18 +234,6 @@ export default function AiRead({
       <UwContextCard uw={uw} loading={uwLoading} />
 
       {outlook && <OutlookMap o={outlook} />}
-
-      {text && <div className="aitext">{text}</div>}
-
-      {state === 'error' && <p className="hint hint-warn">{t(errKey)}</p>}
-
-      {(state === 'done' || state === 'running') && text && sentShots > 0 && (
-        <p className="cap">{t('ci.sent', sentShots)}</p>
-      )}
-
-      {(state === 'done' || state === 'running') && text && (
-        <p className="cap">{t('ai.fullCaveat')}</p>
-      )}
     </section>
   );
 }
