@@ -258,8 +258,21 @@ async function failFrom(r: Response, what: string): Promise<never> {
 let voicesCache: { at: number; voices: ElevenVoice[] } | null = null;
 const VOICES_MS = 60 * 60_000;
 
-export async function listVoices(force = false): Promise<ElevenVoice[]> {
-  if (!force && voicesCache && Date.now() - voicesCache.at < VOICES_MS) return voicesCache.voices;
+/** Khi một giọng được HỎI ĐÍCH DANH (ELEVENLABS_VOICE_ID, hoặc giọng người
+ *  dùng chọn) mà không có trong bản đang giữ, hỏi lại ElevenLabs — nhưng
+ *  không quá một lần mỗi phút. Thiếu chốt này thì chủ app thêm giọng bên
+ *  ElevenLabs xong phải chờ tới MỘT GIỜ mới thấy nó trong ô chọn giọng, và
+ *  trông y hệt "thêm không được". Một phút là trần chi phí: `/v1/voices`
+ *  không tốn ký tự, nhưng env trỏ vào giọng không tồn tại thì mỗi lần mở
+ *  trang đều sẽ hỏi lại. */
+export const MISS_REFRESH_MS = 60_000;
+
+export function voicesListedAt(): number | null {
+  return voicesCache?.at ?? null;
+}
+
+export async function listVoices(force = false, maxAgeMs = VOICES_MS): Promise<ElevenVoice[]> {
+  if (!force && voicesCache && Date.now() - voicesCache.at < maxAgeMs) return voicesCache.voices;
   const r = await elevenFetch('/voices');
   if (!r.ok) await failFrom(r, '/voices');
   const voices = parseVoices(await r.json());

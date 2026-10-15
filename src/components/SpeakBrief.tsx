@@ -30,7 +30,7 @@ const ENGINES = ['ai', 'browser'] as const;
 type Engine = (typeof ENGINES)[number];
 
 type AiVoice = { id: string; name: string; labels: Record<string, string>; category: string | null };
-type VoicesPayload = { configured: boolean; voices: AiVoice[]; defaultId: string | null; envVoiceMissing?: boolean; model: string; error?: string; detail?: string };
+type VoicesPayload = { configured: boolean; voices: AiVoice[]; defaultId: string | null; envVoiceMissing?: boolean; envVoiceId?: string; listedAt?: number | null; model: string; error?: string; detail?: string };
 
 const ERR_KEY: Record<string, string> = {
   TTS_NOT_CONFIGURED: 'tts.ai.notConfigured',
@@ -48,6 +48,7 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
   const rateRef = useRef<Rate>(1);
   const [engine, setEngine] = useState<Engine | null>(null);
   const [ai, setAi] = useState<VoicesPayload | null>(null);
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     const r = parseRate(readRemembered(RATE_KEY));
@@ -70,6 +71,26 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
       alive = false;
     };
   }, []);
+
+  /* "Tải lại danh sách giọng": hỏi ElevenLabs NGAY (`?fresh=1`), không đợi
+     hết hạn bản server đang giữ. Giữ nguyên máy đọc đang chọn; chỉ khi AI
+     vừa từ không-dùng-được thành dùng-được mới tự chuyển sang AI. */
+  const reloadVoices = async () => {
+    setReloading(true);
+    try {
+      const res = await fetch('/api/tts/voices?fresh=1', { cache: 'no-store' });
+      const p: VoicesPayload = await res.json();
+      setAi((prev) => {
+        const wasUsable = !!prev && prev.configured && prev.voices.length > 0;
+        if (!wasUsable && p.configured && p.voices.length > 0) setEngine('ai');
+        return p;
+      });
+    } catch (e: any) {
+      setAi((prev) => (prev ? { ...prev, error: 'TTS_FAILED', detail: String(e?.message ?? e) } : prev));
+    } finally {
+      setReloading(false);
+    }
+  };
 
   const pickRate = (r: Rate) => {
     setRate(r);
@@ -101,10 +122,27 @@ export default function SpeakBrief({ text, lang }: { text: string; lang: 'vi' | 
       {ai.configured && !aiUsable && (
         <p className="cap warnline">{ai.error ? t('tts.ai.listFailed', ai.detail ?? ai.error) : t('tts.ai.noVoices')}</p>
       )}
-      {ai.envVoiceMissing && <p className="cap warnline">{t('tts.ai.envVoiceMissing')}</p>}
+      {ai.envVoiceMissing && (
+        <p className="cap warnline ttserr">
+          {t('tts.ai.envVoiceMissing', {
+            id: ai.envVoiceId ?? '?',
+            at: ai.listedAt ? new Date(ai.listedAt).toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '?',
+          })}
+        </p>
+      )}
+      {ai.configured && (
+        <span className="ttsrow">
+          <button type="button" className="rrgfullbtn ttsbtn ttsreload" onClick={reloadVoices} disabled={reloading}>
+            {reloading ? t('tts.ai.reloading') : t('tts.ai.reload')}
+          </button>
+        </span>
+      )}
 
       {engine === 'ai' && aiUsable ? (
-        <AiSpeaker text={text} voices={ai.voices} defaultId={ai.defaultId} model={ai.model} rate={rate} t={t} />
+        /* key = danh sách giọng: tải lại ra danh sách khác thì dựng lại máy
+           đọc, để giọng mặc định mới (ví dụ giọng vừa Add to my voices) được
+           chọn thay vì giữ lựa chọn tính từ danh sách cũ. */
+        <AiSpeaker key={ai.voices.map((v) => v.id).join(',')} text={text} voices={ai.voices} defaultId={ai.defaultId} model={ai.model} rate={rate} t={t} />
       ) : (
         <BrowserSpeaker text={text} lang={lang} rateRef={rateRef} t={t} />
       )}

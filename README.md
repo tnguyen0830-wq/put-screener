@@ -1015,10 +1015,14 @@ tiêu đề mỗi lần mở tab là 60 lượt gọi cho thứ người đọc 
 **Nghe bản tóm tắt.** Dưới bản tóm tắt có nút **Nghe** (kèm Tạm dừng / Dừng)
 với hai máy đọc chọn được. **Giọng AI (ElevenLabs)** — giọng neural tự nhiên,
 cần `ELEVENLABS_API_KEY`, tính tiền theo ký tự; app cache audio theo nội dung
-nên bấm lại hay người thứ hai bấm là 0 ký tự, từ chối văn bản quá 4.000 ký tự,
+nên bấm lại hay người thứ hai bấm là 0 ký tự, từ chối văn bản quá 8.000 ký tự,
 và in ra mỗi lần "đã dùng N ký tự" hay "bản đã tạo trước". Chọn giọng ngay
 trong ô giọng (danh sách lấy từ chính tài khoản của bạn); hết ký tự, key sai,
-giọng bị xoá — mỗi lỗi một câu riêng vì cách sửa khác nhau. **Giọng trình
+giọng bị xoá — mỗi lỗi một câu riêng vì cách sửa khác nhau. Vừa thêm giọng
+bên ElevenLabs (Voice Library → **Add to my voices**) mà ô chưa có: bấm
+**↻ Tải lại danh sách giọng** — app hỏi lại ElevenLabs ngay. Đặt
+`ELEVENLABS_VOICE_ID` trên Render trỏ vào giọng chưa có trong tài khoản thì
+màn hình in đúng id đó kèm cách sửa. **Giọng trình
 duyệt** là đường lùi khi chưa có key hoặc ElevenLabs hỏng: đọc bằng **giọng có
 sẵn của chính trình duyệt** (Web Speech API) — không key, không tốn tiền,
 không gửi văn bản đi đâu. Vì vậy giọng tiếng Việt tuỳ máy:
