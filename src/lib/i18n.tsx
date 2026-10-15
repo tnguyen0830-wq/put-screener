@@ -3219,9 +3219,13 @@ const DICT: Record<string, Record<Lang, Entry>> = {
     en: (d: string) => `Could not list ElevenLabs voices: ${d}. Browser voice for now.`,
   },
   'tts.ai.envVoiceMissing': {
-    vi: 'ELEVENLABS_VOICE_ID trên Render không có trong tài khoản — bỏ qua, dùng giọng đầu tiên. Kiểm lại id qua /api/ttsprobe.',
-    en: 'ELEVENLABS_VOICE_ID on Render is not in the account — ignored, first voice used. Check the id via /api/ttsprobe.',
+    vi: (d: { id: string; at: string }) =>
+      `Giọng ${d.id} (ELEVENLABS_VOICE_ID trên Render) KHÔNG có trong danh sách giọng của tài khoản ElevenLabs — danh sách hỏi lúc ${d.at}. Vào elevenlabs.io → Voice Library → mở giọng đó → bấm "Add to my voices", rồi bấm "Tải lại danh sách giọng" bên dưới. Còn thấy dòng này thì kiểm lại id có gõ đúng không. Trong lúc đó app dùng giọng đầu tiên trong danh sách.`,
+    en: (d: { id: string; at: string }) =>
+      `Voice ${d.id} (ELEVENLABS_VOICE_ID on Render) is NOT in the ElevenLabs account's voice list — list fetched at ${d.at}. On elevenlabs.io open Voice Library → that voice → "Add to my voices", then press "Reload voice list" below. If this line stays, check the id for a typo. Meanwhile the first voice in the list is used.`,
   },
+  'tts.ai.reload': { vi: '↻ Tải lại danh sách giọng', en: '↻ Reload voice list' },
+  'tts.ai.reloading': { vi: 'Đang hỏi ElevenLabs…', en: 'Asking ElevenLabs…' },
   'tts.ai.notConfigured': { vi: 'Server chưa có ELEVENLABS_API_KEY.', en: 'The server has no ELEVENLABS_API_KEY.' },
   'tts.ai.badKey': {
     vi: (d: string) => `ElevenLabs từ chối key: ${d}. Kiểm lại ELEVENLABS_API_KEY trên Render.`,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ElevenError, MAX_CHARS, elevenConfigured, listVoices, pickElevenVoice, synthesize } from '@/lib/eleventts';
+import { ElevenError, MAX_CHARS, MISS_REFRESH_MS, elevenConfigured, listVoices, pickElevenVoice, synthesize } from '@/lib/eleventts';
 import { cleanForSpeech } from '@/lib/tts';
 import { logActivity } from '@/lib/activity';
 import { recordEleven } from '@/lib/usage';
@@ -43,8 +43,13 @@ export async function POST(req: Request) {
   await logActivity(currentUser(req), 'tts', `${text.length} ký tự`);
 
   try {
-    const voices = await listVoices();
-    const voice = pickElevenVoice(voices, process.env.ELEVENLABS_VOICE_ID, chosen);
+    const envId = process.env.ELEVENLABS_VOICE_ID || undefined;
+    let voices = await listVoices();
+    /* Giọng được hỏi đích danh mà bản đang giữ chưa có: hỏi lại ElevenLabs
+       (mỗi phút tối đa một lần) thay vì lặng lẽ đọc bằng giọng đầu tiên. */
+    const has = (id: string | null | undefined) => !id || voices.some((v) => v.id === id);
+    if (!has(chosen) || !has(envId)) voices = await listVoices(false, MISS_REFRESH_MS);
+    const voice = pickElevenVoice(voices, envId, chosen);
     if (!voice) return NextResponse.json({ error: 'NO_VOICES', detail: 'Tài khoản ElevenLabs không có giọng nào trong /v1/voices.' }, { status: 502 });
     const s = await synthesize(text, voice.id);
     /* Chỉ lượt tổng hợp MỚI tốn ký tự; lượt lấy từ cache trên đĩa là 0. */
