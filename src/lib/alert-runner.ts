@@ -10,6 +10,7 @@ import { syncOptionFlow } from './optionflow';
 import { syncDarkpool } from './darkpool';
 import { collectEventAlerts, type EventReport } from './liveevents';
 import { sampleInternals } from './internals';
+import { runPriceAlerts, type PriceReport } from './pricewatch';
 
 /**
  * Vòng kiểm tra tự chạy.
@@ -69,6 +70,9 @@ export type RunReport = {
   marketOpen: boolean;
   /** Tình trạng phần cảnh báo sự kiện; null = lượt này không chạy được. */
   events: EventReport | null;
+  /** Tab Alerts: gần hỗ trợ + mức giá tự đặt; null = lượt này không chạy được.
+   *  Thiếu ở bản ghi cũ. */
+  price?: PriceReport | null;
 };
 
 let lastRun: RunReport | null = null;
@@ -105,10 +109,20 @@ export async function runOnce(force = false, pressDue = force): Promise<RunRepor
   /* Cổng "chưa cấu hình kênh nào" lên TRƯỚC: tính toán xong mà không có chỗ
      gửi thì chỉ tốn request. Cổng giờ giao dịch KHÔNG còn chặn cả lượt chạy
      nữa - nó chỉ quyết định nguồn nào chạy (xem dưới). */
+  /* Tab Alerts chạy TRƯỚC cổng kênh: nó ghi ảnh chụp "gần hỗ trợ" và đánh
+     dấu mức giá đã chạm cho chính cái tab đó đọc, nên vẫn phải chạy khi
+     chưa có Telegram/web push — không có kênh thì chỉ là không RUNG, bảng
+     trong app vẫn phải đúng. Tự gác giờ giao dịch bên trong. */
+  const priceSettled = await runPriceAlerts(force).then(
+    (v) => ({ ok: true as const, v }),
+    (e: any) => ({ ok: false as const, e: String(e?.message ?? e) })
+  );
+  const price: PriceReport | null = priceSettled.ok ? priceSettled.v.report : null;
+
   if (!telegramConfigured() && !webPushConfigured()) {
     lastRun = {
       at, skipped: 'no-channel', found: 0, sent: 0, channels: [], errors: [],
-      marketOpen, events: null,
+      marketOpen, events: null, price,
     };
     return lastRun;
   }
@@ -118,6 +132,7 @@ export async function runOnce(force = false, pressDue = force): Promise<RunRepor
   let sent = 0;
   let channels: string[] = [];
   let events: EventReport | null = null;
+  if (!priceSettled.ok) errors.push(`price: ${priceSettled.e}`);
 
   try {
     const day = tradingDay();
@@ -139,6 +154,7 @@ export async function runOnce(force = false, pressDue = force): Promise<RunRepor
     ]);
 
     const all: Alert[] = [];
+    if (priceSettled.ok) all.push(...priceSettled.v.alerts);
     if (pfSettled.status === 'fulfilled') all.push(...pfSettled.value);
     else errors.push(`portfolio: ${String(pfSettled.reason?.message ?? pfSettled.reason)}`);
 
@@ -170,7 +186,7 @@ export async function runOnce(force = false, pressDue = force): Promise<RunRepor
     errors.push(String(e?.message ?? e));
   }
 
-  lastRun = { at, skipped: null, found, sent, channels, errors, marketOpen, events };
+  lastRun = { at, skipped: null, found, sent, channels, errors, marketOpen, events, price };
   return lastRun;
 }
 

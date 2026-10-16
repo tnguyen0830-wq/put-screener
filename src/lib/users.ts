@@ -116,6 +116,11 @@ const OWNER_ONLY = [
   // TRẢ PHÍ của chủ app. Chỉ hình dạng, không key — nhưng vẫn là tài khoản
   // của chủ app, cùng lý do với ttprobe/xprobe.
   '/api/ttsprobe',
+  // Tab Alerts, nút "Kiểm tra ngay": một lượt quote + nến cho cả phạm vi
+  // theo dõi trên hạn mức Schwab của chủ app, và gửi thật qua kênh của chủ
+  // app. GET/POST/DELETE của `/api/pricealerts` (mức giá riêng từng người)
+  // vẫn mở cho người nhà.
+  '/api/pricealerts/run',
   // Probe Unusual Whales: bốn lượt gọi trên hạn mức TRẢ PHÍ của chủ app.
   // Ra đời (#105) TRƯỚC khi có tài khoản người nhà (#119) nên bị bỏ sót khi
   // lập danh sách này — bốn probe kia đều đã nằm đây với đúng lý do đó.

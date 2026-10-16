@@ -5098,3 +5098,83 @@ a.citvbtn { display: inline-block; text-decoration: none; flex: none; }
   cursor: pointer;
 }
 .ciwarn { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------------- Tab Alerts (AlertsPanel.tsx) ----------------
+   Chỉ THÊM lớp, chỉ dùng biến màu có sẵn — không đụng ba khối theme.
+   Chip trạng thái: "gần hỗ trợ" là `--warn` (đáng nhìn), "vừa thủng" là
+   `--risk` (mất mức), "còn xa" là `--muted`; KHÔNG dùng `--credit` cho cái
+   nào — gần hỗ trợ không phải tin tốt, nó là một câu hỏi. */
+.pa-h {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.pa-h:first-of-type { margin-top: 14px; }
+.pa-intro { margin-top: 0; }
+.pa-status { margin-bottom: 8px; }
+.pa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.pa-actions .run { width: auto; padding: 8px 14px; }
+.pa-runmsg { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* Lỗi mạng/nến là chuỗi dài không có khoảng trắng — phải xuống dòng được,
+   nếu không nửa câu nằm ngoài màn hình 400px (bẫy `.ttserr` #195). */
+.pa-wrap { min-width: 0; overflow-wrap: anywhere; }
+.pa-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.pa-chip.pa-near { color: var(--warn); border-color: var(--warn); }
+.pa-chip.pa-broken { color: var(--risk); border-color: var(--risk); }
+.pa-chip.pa-ok { color: var(--muted); }
+.pa-table th.num, .pa-table td.num { text-align: right; }
+.pa-table td.pa-notecell { white-space: normal; min-width: 120px; max-width: 260px; overflow-wrap: anywhere; }
+.pa-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 10px 0 8px;
+}
+.pa-form label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 120px; min-width: 0; }
+.pa-form label.pa-note { flex: 2 1 200px; }
+.pa-form label > span {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pa-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--data);
+  font-size: 14px;
+}
+.pa-form .run { width: auto; padding: 9px 14px; flex: none; }
+.pa-btns { white-space: nowrap; }
+.pa-small {
+  padding: 4px 9px;
+  margin-right: 6px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  font-family: var(--data);
+  font-size: 11px;
+  cursor: pointer;
+}
+.pa-small:last-child { margin-right: 0; }
