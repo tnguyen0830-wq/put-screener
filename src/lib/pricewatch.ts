@@ -8,6 +8,7 @@ import {
   MAX_LEVELS,
   checkLevels,
   parseLevelInput,
+  smaAlertsFrom,
   sortRows,
   supportAlertsFrom,
   watchSupport,
@@ -128,6 +129,9 @@ export type PriceReport = {
   candleErrors: string[];
   near: number;
   broken: number;
+  /** Số mã có ÍT NHẤT một SMA gần / vừa thủng. Thiếu ở bản ghi cũ. */
+  smaNear?: number;
+  smaBroken?: number;
   levels: number;
   levelsHit: number;
 };
@@ -180,6 +184,8 @@ export async function runPriceAlerts(force = false): Promise<{ alerts: Alert[]; 
     candleErrors: [],
     near: 0,
     broken: 0,
+    smaNear: 0,
+    smaBroken: 0,
     levels: 0,
     levelsHit: 0,
   };
@@ -231,9 +237,12 @@ export async function runPriceAlerts(force = false): Promise<{ alerts: Alert[]; 
   const sorted = sortRows(rows);
   report.near = sorted.filter((r) => r.status === 'near').length;
   report.broken = sorted.filter((r) => r.status === 'broken').length;
+  report.smaNear = sorted.filter((r) => (r.smas ?? []).some((m) => m.status === 'near')).length;
+  report.smaBroken = sorted.filter((r) => (r.smas ?? []).some((m) => m.status === 'broken')).length;
 
   const { tradingDay } = await import('./alerts');
-  const alerts: Alert[] = report.quoteError ? [] : supportAlertsFrom(sorted, tradingDay());
+  const day = tradingDay();
+  const alerts: Alert[] = report.quoteError ? [] : [...supportAlertsFrom(sorted, day), ...smaAlertsFrom(sorted, day)];
 
   /* Mức giá: quét mọi người, ghi dấu chạm, chỉ gửi của chủ app. */
   if (!report.quoteError) {

@@ -95,6 +95,21 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'pa.quoteError': { vi: (e: string) => `Không lấy được giá từ Schwab: ${e}`, en: (e: string) => `Could not get quotes from Schwab: ${e}` },
   'pa.heldError': { vi: (e: string) => `Không đọc được danh mục (chỉ kiểm watchlist): ${e}`, en: (e: string) => `Could not read the portfolio (watchlist only): ${e}` },
   'pa.candleErrors': { vi: (n: number) => `${n} mã không lấy được nến:`, en: (n: number) => `${n} symbols without daily bars:` },
+  'pa.smaIntro': {
+    vi: ({ near, fall }: { near: number; fall: number }) =>
+      `Ba cột SMA 50/100/200 (trung bình giá đóng cửa) báo RIÊNG với vùng hỗ trợ: "gần" = trên SMA không quá ${near}% VÀ đang rớt; "vừa thủng" = đang dưới SMA mà ${fall} phiên trước còn trên. SMA là đường nhiều người nhìn, không phải nơi giá đã từng bật lên. Thủng SMA200 là cảnh báo khẩn.`,
+    en: ({ near, fall }: { near: number; fall: number }) =>
+      `The SMA 50/100/200 columns (average closing price) alert SEPARATELY from support zones: "near" = no more than ${near}% above the SMA AND falling; "just broke" = below the SMA while ${fall} sessions ago it was above. An SMA is a widely watched line, not a place price has actually bounced. Breaking SMA200 is an urgent alert.`,
+  },
+  'pa.smaCounts': {
+    vi: ({ near, broken }: { near: number; broken: number }) => `SMA: ${near} gần · ${broken} vừa thủng`,
+    en: ({ near, broken }: { near: number; broken: number }) => `SMA: ${near} near · ${broken} just broke`,
+  },
+  'pa.sma.near': { vi: 'gần', en: 'near' },
+  'pa.sma.broken': { vi: 'vừa thủng', en: 'just broke' },
+  'pa.sma.above': { vi: 'trên SMA', en: 'above SMA' },
+  'pa.sma.below': { vi: 'dưới SMA', en: 'below SMA' },
+  'pa.sma.nodata': { vi: 'chưa đủ nến', en: 'not enough bars' },
   'pa.counts': {
     vi: ({ sym, quoted, near, broken }: { sym: number; quoted: number; near: number; broken: number }) => `${sym} mã trong phạm vi · ${quoted} có giá · ${near} gần hỗ trợ · ${broken} vừa thủng`,
     en: ({ sym, quoted, near, broken }: { sym: number; quoted: number; near: number; broken: number }) => `${sym} symbols in scope · ${quoted} quoted · ${near} near support · ${broken} just broke`,

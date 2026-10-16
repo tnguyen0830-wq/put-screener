@@ -1285,6 +1285,14 @@ Tab **Alerts** làm hai việc, cả hai là phép ĐỌC GIÁ chứ không ph�
    "vừa thủng" = giá rơi dưới biên dưới của vùng trong 5 phiên qua (một vùng
    mất từ ba tháng trước là lịch sử, không báo). Mỗi vùng báo một lần mỗi
    ngày giao dịch.
+
+   **SMA 50 / 100 / 200** (trung bình giá đóng cửa) là ba cột riêng, báo
+   RIÊNG với vùng hỗ trợ và cùng hai luật: "gần" = trên SMA không quá 3% và
+   đang rớt; "vừa thủng" = đang dưới SMA mà 5 phiên trước giá còn trên SMA
+   của chính lúc đó. Thủng SMA200 là cảnh báo khẩn, SMA50/100 là cảnh báo
+   thường. SMA là đường nhiều người nhìn, không phải nơi giá đã từng bật lên —
+   nên không gộp với vùng đáy xoay. Tính từ cùng nến ngày đã tải, không tốn
+   thêm request.
 2. **Mức giá bạn tự đặt cho một mã.** Mức DƯỚI giá hiện tại thì báo khi rớt
    xuống tới, mức TRÊN thì báo khi lên tới. Chạm một lần rồi im cho tới khi
    bấm **Đặt lại** hoặc **Xoá**. Mức là của riêng từng người (người nhà có

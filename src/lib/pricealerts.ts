@@ -1,5 +1,5 @@
 import type { Alert } from './alerts';
-import { pivotLows, readSupport, supportZones, type Candle, type SupportZone } from './support';
+import { pivotLows, readSupport, sma, supportZones, type Candle, type SupportZone } from './support';
 
 /**
  * Tab Alerts — hai thứ, cả hai là phép ĐỌC GIÁ chứ không phải phép đoán:
@@ -53,7 +53,93 @@ export type SupportWatchRow = {
   falling: boolean | null;
   zones: number;
   candles: number;
+  /** SMA 50/100/200 đọc cùng luật. Thiếu ở ảnh chụp cũ (trước khi có SMA). */
+  smas?: SmaRead[];
 };
+
+/* ------------------------------------------------------------------ *
+ *  SMA 50 / 100 / 200 — mức thứ hai, TÁCH RIÊNG khỏi vùng đáy xoay.
+ *
+ *  Vùng hỗ trợ là nơi giá ĐÃ quay đầu nhiều lần; SMA là trung bình giá
+ *  đóng cửa, một đường nhiều người nhìn nhưng giá chưa chắc từng bật lên ở
+ *  đó. Hai thứ khác nhau nên báo riêng, khoá riêng, và màn hình ghi rõ đang
+ *  nói về cái nào.
+ *
+ *  Cùng hai luật với vùng hỗ trợ:
+ *   - "gần" = giá trên SMA không quá NEAR_PCT VÀ đang rớt;
+ *   - "vừa thủng" = giá đang dưới SMA, mà FALL_SESSIONS phiên trước giá
+ *     đóng cửa còn trên SMA CỦA CHÍNH LÚC ĐÓ (SMA cũng trôi, so với SMA hôm
+ *     nay là so lệch thời điểm). Dưới SMA từ lâu thì là "dưới", không báo.
+ * ------------------------------------------------------------------ */
+
+export const SMA_PERIODS = [50, 100, 200] as const;
+export type SmaPeriod = (typeof SMA_PERIODS)[number];
+export type SmaStatus = 'near' | 'broken' | 'above' | 'below' | 'nodata';
+
+export type SmaRead = {
+  period: SmaPeriod;
+  /** null khi chưa đủ nến — không bao giờ là trung bình của ít nến hơn. */
+  value: number | null;
+  /** Giá cao hơn SMA bao nhiêu % (âm = đang dưới). */
+  distancePct: number | null;
+  status: SmaStatus;
+};
+
+export function watchSmas(price: number | null, candles: Candle[]): SmaRead[] {
+  const closes = candles.map((c) => c.close).filter((c) => Number.isFinite(c));
+  const p = price !== null && Number.isFinite(price) ? price : null;
+  const ref = closeBack(candles, FALL_SESSIONS);
+  const falling = p !== null && ref !== null ? p < ref : null;
+  return SMA_PERIODS.map((period) => {
+    const value = sma(closes, period);
+    if (value === null || value <= 0 || p === null) {
+      return { period, value: value !== null ? round2(value) : null, distancePct: null, status: 'nodata' as const };
+    }
+    const d = round2(((p - value) / value) * 100);
+    let status: SmaStatus;
+    if (p >= value) {
+      status = d <= NEAR_PCT && falling === true ? 'near' : 'above';
+    } else {
+      const prevSma = closes.length > FALL_SESSIONS ? sma(closes.slice(0, closes.length - FALL_SESSIONS), period) : null;
+      status = ref !== null && prevSma !== null && ref >= prevSma ? 'broken' : 'below';
+    }
+    return { period, value: round2(value), distancePct: d, status };
+  });
+}
+
+export const smaKey = (status: 'near' | 'broken', day: string, symbol: string, period: SmaPeriod) =>
+  `sma-${status}-${day}-${symbol}-${period}`;
+
+/** Thủng SMA200 là urgent (đường xu hướng dài hạn), thủng SMA50/100 là warn. */
+export function smaAlertsFrom(rows: SupportWatchRow[], day: string): Alert[] {
+  const out: Alert[] = [];
+  for (const r of rows) {
+    if (r.price === null) continue;
+    for (const m of r.smas ?? []) {
+      if (m.value === null || m.distancePct === null) continue;
+      if (m.status === 'near') {
+        out.push({
+          key: smaKey('near', day, r.symbol, m.period),
+          severity: 'warn',
+          title: `${r.symbol} đang rớt về SMA${m.period} ${money(m.value)}`,
+          body:
+            `Giá ${money(r.price)}, cao hơn SMA${m.period} ${m.distancePct.toFixed(1)}%. ` +
+            `${FALL_SESSIONS} phiên: ${r.chgPct?.toFixed(1)}%. SMA là trung bình giá đóng cửa ${m.period} phiên, không phải vùng giá đã từng bật lên.`,
+        });
+      } else if (m.status === 'broken') {
+        out.push({
+          key: smaKey('broken', day, r.symbol, m.period),
+          severity: m.period === 200 ? 'urgent' : 'warn',
+          title: `${r.symbol} vừa thủng SMA${m.period} ${money(m.value)}`,
+          body:
+            `Giá ${money(r.price)}, dưới SMA${m.period} ${Math.abs(m.distancePct).toFixed(1)}%; ` +
+            `${FALL_SESSIONS} phiên trước giá còn trên đường này. ${FALL_SESSIONS} phiên: ${r.chgPct?.toFixed(1)}%.`,
+        });
+      }
+    }
+  }
+  return out;
+}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -74,6 +160,7 @@ function closeBack(candles: Candle[], back: number): number | null {
  */
 export function watchSupport(symbol: string, price: number | null, candles: Candle[]): SupportWatchRow {
   const zones = supportZones(pivotLows(candles));
+  const smas = watchSmas(price, candles);
   const base: SupportWatchRow = {
     symbol,
     price: price !== null && Number.isFinite(price) ? price : null,
@@ -84,6 +171,7 @@ export function watchSupport(symbol: string, price: number | null, candles: Cand
     falling: null,
     zones: zones.length,
     candles: candles.length,
+    smas,
   };
   if (base.price === null) return base;
   const p = base.price;
@@ -259,9 +347,18 @@ export function checkLevels(
 
 /** Thứ tự bảng: near → broken → ok (gần nhất trước) → nozone → noquote. */
 const ORDER: Record<SupportStatus, number> = { near: 0, broken: 1, ok: 2, nozone: 3, noquote: 4 };
+/** Mã có SMA gần/vừa thủng cũng được kéo lên đầu, ngang với vùng hỗ trợ. */
+function rank(r: SupportWatchRow): number {
+  let k = ORDER[r.status];
+  for (const m of r.smas ?? []) {
+    if (m.status === 'near') k = Math.min(k, 0);
+    else if (m.status === 'broken') k = Math.min(k, 1);
+  }
+  return k;
+}
 export function sortRows(rows: SupportWatchRow[]): SupportWatchRow[] {
   return [...rows].sort((a, b) => {
-    const d = ORDER[a.status] - ORDER[b.status];
+    const d = rank(a) - rank(b);
     if (d) return d;
     const da = a.distancePct ?? Infinity;
     const db = b.distancePct ?? Infinity;
