@@ -40,9 +40,113 @@ const DICT: Record<string, Record<Lang, Entry>> = {
   'tab.patterns': { vi: 'Patterns', en: 'Patterns' },
   /* Nhãn tab giữ nguyên tiếng Anh ở cả hai ngôn ngữ, đúng luật #189. */
   'tab.daytrade': { vi: 'Daytrade', en: 'Daytrade' },
+  'tab.alerts': { vi: 'Alerts', en: 'Alerts' },
   'tab.mmexposure': { vi: 'MM Exposure', en: 'MM Exposure' },
   'tab.liveflow': { vi: 'Live Flow', en: 'Live Flow' },
   'brand.sub': { vi: 'Cash is king', en: 'Cash is king' },
+
+  /* ---- Tab Alerts (lib/pricealerts.ts, lib/pricewatch.ts) ---- */
+  /* Tiêu đề giữ tiếng Anh ở cả hai ngôn ngữ (#215). */
+  'pa.title': { vi: 'Alerts', en: 'Alerts' },
+  'pa.supportTitle': { vi: 'Falling toward support', en: 'Falling toward support' },
+  'pa.levelsTitle': { vi: 'My price levels', en: 'My price levels' },
+  'pa.intro': {
+    vi: ({ near, fall }: { near: number; fall: number }) =>
+      `Tự kiểm mỗi 15 phút trong giờ giao dịch: mã đang nắm và mã trong watchlist. "Gần hỗ trợ" = giá cao hơn tâm vùng hỗ trợ không quá ${near}% VÀ đang rớt (thấp hơn giá đóng cửa ${fall} phiên trước). "Vừa thủng" = giá rơi dưới biên dưới của vùng trong ${fall} phiên qua. Vùng hỗ trợ do app tự tính từ đáy xoay trên nến ngày 3 năm — cùng phép tính với tab Long-term; không phải khuyến nghị mua.`,
+    en: ({ near, fall }: { near: number; fall: number }) =>
+      `Checked every 15 minutes in market hours for held positions and watchlist symbols. "Near support" = price no more than ${near}% above the zone centre AND falling (below the close ${fall} sessions ago). "Just broke" = price fell under the zone's lower edge within the last ${fall} sessions. Zones are computed by the app from swing lows on 3 years of daily bars — the same arithmetic as the Long-term tab; not a buy recommendation.`,
+  },
+  'pa.levelsIntro': {
+    vi: 'Đặt một mức giá cho một mã: mức DƯỚI giá hiện tại thì báo khi rớt xuống tới, mức TRÊN thì báo khi lên tới. Chạm một lần rồi im cho tới khi bạn Đặt lại hoặc Xoá. Mức của bạn là của riêng bạn.',
+    en: 'Set a price for a symbol: a level BELOW the current price fires when price falls to it, a level ABOVE fires when price rises to it. It fires once, then stays quiet until you Re-arm or Delete it. Your levels are yours alone.',
+  },
+  'pa.channels': {
+    vi: ({ tg, wp }: { tg: boolean; wp: boolean }) =>
+      tg || wp
+        ? `Báo về: ${[tg && 'Telegram', wp && 'web push'].filter(Boolean).join(' + ')} (kênh của chủ app) và bảng này.`
+        : 'Chưa cấu hình Telegram hay web push: bảng này vẫn cập nhật, nhưng không có gì rung điện thoại. Cấu hình ở My Portfolio → Thông báo.',
+    en: ({ tg, wp }: { tg: boolean; wp: boolean }) =>
+      tg || wp
+        ? `Delivered to: ${[tg && 'Telegram', wp && 'web push'].filter(Boolean).join(' + ')} (the owner\'s channels) and this table.`
+        : 'No Telegram or web push configured: this table still updates, but nothing reaches a phone. Configure under My Portfolio → Notifications.',
+  },
+  'pa.memberNote': {
+    vi: 'Telegram/web push là kênh của chủ app. Mức bạn đặt vẫn được đánh dấu "đã chạm" ở đây, nhưng không gửi đi đâu.',
+    en: 'Telegram/web push belong to the owner. Your levels are still marked "hit" here, but nothing is sent anywhere.',
+  },
+  'pa.lastRun': {
+    vi: ({ at, ran, open }: { at: number; ran: boolean; open: boolean }) => {
+      const d = new Date(at);
+      const gio = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const ngay = d.toLocaleDateString('vi-VN');
+      return ran ? `Kiểm lúc ${gio} ${ngay}.` : open ? `Lượt ${gio} ${ngay} không kiểm được.` : `Lượt ${gio} ${ngay}: ngoài giờ giao dịch, giữ bảng của lượt trước.`;
+    },
+    en: ({ at, ran, open }: { at: number; ran: boolean; open: boolean }) => {
+      const d = new Date(at);
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const day = d.toLocaleDateString('en-US');
+      return ran ? `Checked at ${time} ${day}.` : open ? `Run at ${time} ${day} could not check.` : `Run at ${time} ${day}: outside market hours, keeping the previous table.`;
+    },
+  },
+  'pa.never': {
+    vi: 'Chưa có lượt kiểm nào kể từ khi server khởi động. Vòng lặp vừa được bật khi bạn mở tab này; lượt đầu chạy ngay nếu trong giờ giao dịch, hoặc bấm Kiểm tra ngay.',
+    en: 'No check has run since the server started. The loop was just started by opening this tab; the first run happens now if the market is open, or press Check now.',
+  },
+  'pa.quoteError': { vi: (e: string) => `Không lấy được giá từ Schwab: ${e}`, en: (e: string) => `Could not get quotes from Schwab: ${e}` },
+  'pa.heldError': { vi: (e: string) => `Không đọc được danh mục (chỉ kiểm watchlist): ${e}`, en: (e: string) => `Could not read the portfolio (watchlist only): ${e}` },
+  'pa.candleErrors': { vi: (n: number) => `${n} mã không lấy được nến:`, en: (n: number) => `${n} symbols without daily bars:` },
+  'pa.counts': {
+    vi: ({ sym, quoted, near, broken }: { sym: number; quoted: number; near: number; broken: number }) => `${sym} mã trong phạm vi · ${quoted} có giá · ${near} gần hỗ trợ · ${broken} vừa thủng`,
+    en: ({ sym, quoted, near, broken }: { sym: number; quoted: number; near: number; broken: number }) => `${sym} symbols in scope · ${quoted} quoted · ${near} near support · ${broken} just broke`,
+  },
+  'pa.run': { vi: 'Kiểm tra ngay', en: 'Check now' },
+  'pa.running': { vi: 'Đang kiểm…', en: 'Checking…' },
+  'pa.runDone': {
+    vi: ({ found, sent }: { found: number; sent: number }) => `Xong: ${found} cảnh báo, ${sent} gửi mới (số còn lại đã gửi hôm nay).`,
+    en: ({ found, sent }: { found: number; sent: number }) => `Done: ${found} alerts, ${sent} newly sent (the rest were already sent today).`,
+  },
+  'pa.empty': { vi: 'Không có mã nào trong phạm vi (chưa có vị thế và watchlist trống).', en: 'No symbols in scope (no positions and an empty watchlist).' },
+  'pa.col.symbol': { vi: 'Mã', en: 'Symbol' },
+  'pa.col.price': { vi: 'Giá', en: 'Price' },
+  'pa.col.status': { vi: 'Trạng thái', en: 'Status' },
+  'pa.col.zone': { vi: 'Vùng hỗ trợ', en: 'Support zone' },
+  'pa.col.dist': { vi: 'Cách tâm', en: 'From centre' },
+  'pa.col.touches': { vi: 'Chạm', en: 'Touches' },
+  'pa.col.last': { vi: 'Chạm gần nhất', en: 'Last touch' },
+  'pa.col.chg': { vi: (n: number) => `${n} phiên`, en: (n: number) => `${n} sessions` },
+  'pa.st.near': { vi: 'Gần hỗ trợ', en: 'Near support' },
+  'pa.st.broken': { vi: 'Vừa thủng', en: 'Just broke' },
+  'pa.st.ok': { vi: 'Còn xa', en: 'Not near' },
+  'pa.st.nozone': { vi: 'Không có vùng', en: 'No zone' },
+  'pa.st.noquote': { vi: 'Không có giá', en: 'No quote' },
+  'pa.form.symbol': { vi: 'Mã', en: 'Symbol' },
+  'pa.form.price': { vi: 'Mức giá', en: 'Price level' },
+  'pa.form.note': { vi: 'Ghi chú (tuỳ chọn)', en: 'Note (optional)' },
+  'pa.form.add': { vi: 'Thêm mức', en: 'Add level' },
+  'pa.form.adding': { vi: 'Đang thêm…', en: 'Adding…' },
+  'pa.err.BAD_SYMBOL': { vi: 'Mã không hợp lệ.', en: 'Invalid symbol.' },
+  'pa.err.BAD_PRICE': { vi: 'Mức giá phải là số dương.', en: 'Price must be a positive number.' },
+  'pa.err.TOO_MANY': { vi: (n: number) => `Tối đa ${n} mức.`, en: (n: number) => `At most ${n} levels.` },
+  'pa.err.http': { vi: (s: number) => `Lỗi HTTP ${s}.`, en: (s: number) => `HTTP ${s}.` },
+  'pa.col.level': { vi: 'Mức', en: 'Level' },
+  'pa.col.dir': { vi: 'Chờ', en: 'Waiting for' },
+  'pa.dir.below': { vi: 'rớt xuống', en: 'fall to' },
+  'pa.dir.above': { vi: 'lên tới', en: 'rise to' },
+  'pa.col.now': { vi: 'Giá hiện tại', en: 'Current' },
+  'pa.col.gap': { vi: 'Còn cách', en: 'Gap' },
+  'pa.col.note': { vi: 'Ghi chú', en: 'Note' },
+  'pa.col.state': { vi: 'Trạng thái', en: 'State' },
+  'pa.armed': { vi: 'Đang chờ', en: 'Armed' },
+  'pa.hit': {
+    vi: ({ at, p }: { at: string; p: number }) => `Đã chạm ${new Date(at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })} ở $${p.toFixed(2)}`,
+    en: ({ at, p }: { at: string; p: number }) => `Hit ${new Date(at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })} at $${p.toFixed(2)}`,
+  },
+  'pa.rearm': { vi: 'Đặt lại', en: 'Re-arm' },
+  'pa.delete': { vi: 'Xoá', en: 'Delete' },
+  'pa.noLevels': { vi: 'Chưa có mức nào. Thêm một mức ở trên.', en: 'No levels yet. Add one above.' },
+  'pa.noNow': { vi: 'Giá hiện tại chỉ biết cho mã trong phạm vi kiểm (vị thế/watchlist); mã ngoài phạm vi vẫn được quote lúc kiểm, chỉ không in ở đây.', en: 'The current price is only shown for symbols in the check scope (positions/watchlist); other symbols are still quoted during a check, just not printed here.' },
+  'pa.loopErrors': { vi: 'Lỗi của vòng lặp ở lượt gần nhất:', en: 'Loop errors on the latest run:' },
+  'pa.loadError': { vi: (e: string) => `Không tải được tab Alerts: ${e}`, en: (e: string) => `Could not load the Alerts tab: ${e}` },
 
   /* ---- Tab Daytrade (lib/daytrade.ts, lib/zerodte.ts) ---- */
   'dt.title': { vi: 'Intraday trading', en: 'Intraday trading' },

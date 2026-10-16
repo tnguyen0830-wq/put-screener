@@ -29,6 +29,7 @@ export const TABS = [
   'learn',
   'daytrade',
   'portfolio',
+  'alerts',
 ] as const;
 
 export type Tab = (typeof TABS)[number];

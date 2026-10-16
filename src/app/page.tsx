@@ -25,6 +25,7 @@ import LearnPanel from '@/components/LearnPanel';
 import DaytradePanel from '@/components/DaytradePanel';
 import MmExposurePanel from '@/components/MmExposurePanel';
 import LiveFlowPanel from '@/components/LiveFlowPanel';
+import AlertsPanel from '@/components/AlertsPanel';
 import { useLang } from '@/lib/i18n';
 import { readRemembered, readRememberedOneOf, remember } from '@/lib/remember';
 import { TABS, type Tab } from '@/lib/tabs';
@@ -440,6 +441,12 @@ export default function Page() {
           >
             {t('tab.daytrade')}
           </button>
+          <button
+            className={tab === 'alerts' ? 'on' : undefined}
+            onClick={() => setTab('alerts')}
+          >
+            {t('tab.alerts')}
+          </button>
           {role === 'owner' && (
             <button
               className={tab === 'portfolio' ? 'on' : undefined}
@@ -536,6 +543,10 @@ export default function Page() {
       ) : tab === 'daytrade' ? (
         <div className="shell solo">
           <DaytradePanel />
+        </div>
+      ) : tab === 'alerts' ? (
+        <div className="shell solo">
+          <AlertsPanel />
         </div>
       ) : tab === 'insider' ? (
         <div className="shell solo">

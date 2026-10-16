@@ -1272,6 +1272,38 @@ chọn, không từ lịch sử giá. Nút ±0,5/±1/±2% cắt cửa sổ quanh
 trình duyệt, không tốn thêm request.
 
 
+## Alerts — rớt gần hỗ trợ, và mức giá tự đặt
+
+Tab **Alerts** làm hai việc, cả hai là phép ĐỌC GIÁ chứ không phải phép đoán:
+
+1. **Tự báo mã đang rớt gần vùng hỗ trợ.** Phạm vi là vị thế đang nắm ∪
+   watchlist (cố ý KHÔNG phải cả S&P 500 — 500 mã là một hộp thư bị tắt thông
+   báo trong tuần đầu, và là 500 lượt nến mỗi ngày). Vùng hỗ trợ do app tự
+   tính từ đáy xoay trên nến ngày 3 năm — đúng phép tính của tab Đầu tư dài
+   hạn, không có đường tính thứ hai. "Gần hỗ trợ" = giá cao hơn tâm vùng
+   không quá **3%** VÀ đang rớt (thấp hơn giá đóng cửa **5 phiên** trước);
+   "vừa thủng" = giá rơi dưới biên dưới của vùng trong 5 phiên qua (một vùng
+   mất từ ba tháng trước là lịch sử, không báo). Mỗi vùng báo một lần mỗi
+   ngày giao dịch.
+2. **Mức giá bạn tự đặt cho một mã.** Mức DƯỚI giá hiện tại thì báo khi rớt
+   xuống tới, mức TRÊN thì báo khi lên tới. Chạm một lần rồi im cho tới khi
+   bấm **Đặt lại** hoặc **Xoá**. Mức là của riêng từng người (người nhà có
+   mức của họ); tối đa 100 mức mỗi người.
+
+Chạy trong chính vòng lặp cảnh báo 15 phút (chỉ trong giờ giao dịch — ngoài
+giờ giá không đổi, bảng giữ của lượt trước và nói rõ). Báo về Telegram/web
+push **của chủ app** nếu đã cấu hình (My Portfolio → Thông báo) và luôn hiện
+trong bảng của tab; mức của người nhà được đánh dấu "đã chạm" trong tab nhưng
+không gửi đi đâu. Nút **Kiểm tra ngay** (chủ app) chạy một lượt ngay kể cả
+ngoài giờ và gửi thật. Bảng nói ra lượt kiểm gần nhất, số mã có giá, và nguyên
+văn lỗi Schwab nếu có — bảng trống trông y hệt "không mã nào gần hỗ trợ", nên
+nó không bao giờ được phép im.
+
+Chi phí: một request `/quotes` gộp cho cả phạm vi mỗi lượt; nến ngày cache theo
+ngày (chung với tab Đầu tư dài hạn), nên chỉ lượt đầu mỗi ngày mới ra mạng.
+Kho `price-levels.json` và ảnh chụp `support-watch.json` nằm cạnh `SCAN_PATH`
+(`/var/data` trên Render), không biến môi trường mới.
+
 ## NinjaTrader web / Tradovate — ĐANG DỪNG, probe giữ lại
 
 Chủ app đăng nhập được `web.ninjatrader.com` (nền Tradovate) và muốn một tab
