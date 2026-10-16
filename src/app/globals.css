@@ -5178,3 +5178,15 @@ a.citvbtn { display: inline-block; text-decoration: none; flex: none; }
   cursor: pointer;
 }
 .pa-small:last-child { margin-right: 0; }
+/* Ô SMA trong tab Alerts: giá trên một dòng, % + trạng thái dòng nhỏ dưới.
+   Màu chỉ cho gần (--warn) và vừa thủng (--risk); selector ghép để không
+   thua `.pftable td` (bẫy độ ưu tiên #117). */
+.pa-table td.pa-sma { line-height: 1.25; }
+.pa-table td.pa-sma .pa-smav { display: block; }
+.pa-table td.pa-sma .pa-smad { display: block; font-size: 11px; color: var(--muted); }
+.pa-table td.pa-sma.pa-near .pa-smad { color: var(--warn); }
+.pa-table td.pa-sma.pa-broken .pa-smad { color: var(--risk); }
+/* Bảng Alerts giờ 11 cột: đệm phải để số của cột này không chạm chữ cột kế
+   (đo trên ảnh chụp: "−1.7% · vừa thủng" dính vào SMA200). */
+.pa-table th,
+.pa-table td { padding-right: 14px; }

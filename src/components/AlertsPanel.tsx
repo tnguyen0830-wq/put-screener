@@ -7,7 +7,9 @@ import {
   FALL_SESSIONS,
   MAX_LEVELS,
   NEAR_PCT,
+  SMA_PERIODS,
   type PriceLevel,
+  type SmaRead,
   type SupportStatus,
   type SupportWatchRow,
 } from '@/lib/pricealerts';
@@ -45,6 +47,30 @@ const STATUS_CLASS: Record<SupportStatus, string> = {
   nozone: 'pa-none',
   noquote: 'pa-none',
 };
+
+/* SMA: gần = --warn, vừa thủng = --risk, trên/dưới bình thường = màu chữ
+   thường. Cố ý không --credit cho "trên SMA" — trên SMA không phải tín hiệu
+   mua, nó chỉ là vị trí. */
+const SMA_CLASS: Record<SmaRead['status'], string> = {
+  near: 'pa-near',
+  broken: 'pa-broken',
+  above: '',
+  below: '',
+  nodata: 'pa-none',
+};
+
+function SmaCell({ m, t }: { m: SmaRead | undefined; t: (k: string, v?: any) => string }) {
+  if (!m || m.value === null) return <td className="num pa-sma">—</td>;
+  return (
+    <td className={`num pa-sma ${SMA_CLASS[m.status]}`} title={t(`pa.sma.${m.status}`)}>
+      <span className="pa-smav">{money(m.value)}</span>
+      <span className="pa-smad">
+        {pct(m.distancePct)}
+        {m.status === 'near' || m.status === 'broken' ? ` · ${t(`pa.sma.${m.status}`)}` : ''}
+      </span>
+    </td>
+  );
+}
 
 export default function AlertsPanel() {
   const { t } = useLang();
@@ -140,7 +166,7 @@ export default function AlertsPanel() {
     <section className="panel pa">
       <div className="panel-head">{t('pa.title')}</div>
       <div className="panel-body">
-        <p className="cap pa-intro">{t('pa.intro', { near: NEAR_PCT, fall: FALL_SESSIONS })}</p>
+        <p className="cap pa-intro">{t('pa.intro', { near: NEAR_PCT, fall: FALL_SESSIONS })} {t('pa.smaIntro', { near: NEAR_PCT, fall: FALL_SESSIONS })}</p>
         {loadError && <p className="cap warnline">{t('pa.loadError', loadError)}</p>}
         {data && (
           <p className={`cap ${data.channels.telegram || data.channels.webPush ? '' : 'warnline'}`}>
@@ -156,6 +182,7 @@ export default function AlertsPanel() {
               <p className={`cap ${!rep.ran && rep.marketOpen ? 'warnline' : ''}`}>
                 {t('pa.lastRun', { at: rep.at, ran: rep.ran, open: rep.marketOpen })}{' '}
                 {t('pa.counts', { sym: rep.symbols, quoted: rep.quoted, near: rep.near, broken: rep.broken })}
+                {typeof rep.smaNear === 'number' ? ` · ${t('pa.smaCounts', { near: rep.smaNear, broken: rep.smaBroken ?? 0 })}` : ''}
               </p>
             ) : (
               <p className="cap warnline">{t('pa.never')}</p>
@@ -195,6 +222,9 @@ export default function AlertsPanel() {
                   <th className="num">{t('pa.col.dist')}</th>
                   <th className="num">{t('pa.col.touches')}</th>
                   <th>{t('pa.col.last')}</th>
+                  {SMA_PERIODS.map((n) => (
+                    <th key={n} className="num">SMA{n}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -210,6 +240,9 @@ export default function AlertsPanel() {
                     <td className="num">{pct(r.distancePct)}</td>
                     <td className="num">{r.zone ? r.zone.touches : '—'}</td>
                     <td>{r.zone ? r.zone.lastTouch : '—'}</td>
+                    {SMA_PERIODS.map((n) => (
+                      <SmaCell key={n} m={(r.smas ?? []).find((x) => x.period === n)} t={t} />
+                    ))}
                   </tr>
                 ))}
               </tbody>
